@@ -9,7 +9,7 @@
 [![ECharts 5](https://img.shields.io/badge/ECharts-5-AA344D)](vendor/echarts.min.js)
 [![Three.js](https://img.shields.io/badge/Three.js-r160-black)](vendor/three.min.js)
 
-[简体中文](#简介) | [English](#english-summary)
+[简体中文](README.md) | [English](README_EN.md)
 
 ![Showcase 总览](docs/screenshots/showcase.png)
 
@@ -40,7 +40,7 @@
 | **SCADA 场景设计器** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
 <details>
-<summary><b>点击展开 10 套场景全量截图</b></summary>
+<summary><b>点击展开 11 套场景全量截图</b></summary>
 
 ### 水处理 · 工艺驾驶舱
 
@@ -533,21 +533,7 @@ python -X utf8 tests/interaction_check.py
 
 ---
 
-<a id="english-summary"></a>
-## English Summary
+## English Version
 
-**Industrial Dashboard Studio** is an offline-first SCADA/HMI dashboard productization workspace. 11 ready-to-run 1920×1080 dashboards (water-treatment / predictive-maintenance / reactor-safety), a reusable runtime, a SCADA designer and 4 deliverable Skills. All deps vendored. Demo data by default; real data via `demo`/`rest`/`websocket` adapters after contract confirmation.
-
-```bash
-git clone https://github.com/Migeking/industrial-dashboard-studio.git
-open apps/showcase/index.html          # showcase
-open apps/scada-designer/index.html    # designer
-```
-
-- Skills: `industrial-dashboard` (precision dashboard), `industrial-hmi-classic` (ISA-101 + Siemens Faceplate), `industrial-scada` (SBO + alarm + audit), `light-3d-water-hmi` (light 3D twin)
-- Validate: `node skills/industrial-dashboard/scripts/validate-dashboard.js scenarios`
-- Screenshots: `docs/screenshots/` (14 images, 1920×1080, Playwright auto-captured)
-- Offline bundle: `scripts/build-release.ps1` → `release/industrial-dashboard-offline.zip`
-
-See `docs/screenshots/` for full gallery and `skills/*/SKILL.md` for detailed contracts.
+Full English documentation lives in **[README_EN.md](README_EN.md)** — same structure, galleries, Skill contracts and usage as the Chinese version above.
 
