@@ -117,6 +117,17 @@ open apps/scada-designer/index.html
 - **信息问题**：介质从哪里来、流向哪里、哪个环节偏离、控制策略是否有效
 - **文件**：`scenarios/water-treatment/01-A2O脱氮除磷精准调控驾驶舱.html`
 
+<details>
+<summary>查看 01 多工况演练截图</summary>
+
+| 标准稳态 | 高峰负荷 | 低温补偿 |
+|---|---|---|
+| ![01 stable](docs/screenshots/states/01-state-stable.png) | ![01 peak](docs/screenshots/states/01-state-peak.png) | ![01 lowtemp](docs/screenshots/states/01-state-lowtemp.png) |
+
+> 点击顶部工况 Tab 切换，ECharts 趋势与 SVG 流速联动，`scenarioData` 驱动固定脚本而非随机数。
+
+</details>
+
 ### 02 关键机组预测性维护驾驶舱
 - **布局**：`asset-health` — 左翼风险排序设备列表，中央结构图+测点，中央下部频谱/RUL，右翼诊断证据与工单
 - **信息问题**：哪台设备、什么异常、证据是什么、还能运行多久、需要采取什么动作
@@ -128,6 +139,17 @@ open apps/scada-designer/index.html
 
 ### 04 污泥回流泵联动控制驾驶舱
 - 厂区全景联动视角，泵组启停联动与回流比控制策略可视化
+
+<details>
+<summary>查看 04 多工况演练截图</summary>
+
+| PID 智能变频稳态 | 洪峰增泵演练 | 分级液位备用 | 超限联锁演练 |
+|---|---|---|---|
+| ![04 pid](docs/screenshots/states/04-state-pid.png) | ![04 flood](docs/screenshots/states/04-state-flood.png) | ![04 level](docs/screenshots/states/04-state-level.png) | ![04 interlock](docs/screenshots/states/04-state-interlock.png) |
+
+> 覆盖稳态/洪峰/液位/联锁四工况，验证泵组联锁链与回流比策略。
+
+</details>
 
 ### 05 污泥回流泵站 SCADA 操作终端
 - 经典 SCADA 终端形态，泵站工艺图 + 实时点位 + 报警条
@@ -141,9 +163,50 @@ open apps/scada-designer/index.html
 ### 08 预处理进水井 3D 交互 HMI（深色）
 - Three.js 程序化白模 + 混凝土/金属/水体材质差异，OrbitControls 交互，流动与格栅动作绑定运行状态
 
+<details>
+<summary>查看 08 交互细节与多分辨率</summary>
+
+**Faceplate 阀门小面板（点击阀位触发）**
+
+![08 faceplate](docs/screenshots/states/08-faceplate.png)
+
+**多分辨率（1366 / 3840）**
+
+| 1920 基准 | 1366×768 | 3840×2160 |
+|---|---|---|
+| ![08 1920](docs/screenshots/08-pretreatment-3d.png) | ![08 1366](docs/screenshots/responsive/08-1366.png) | ![08 3840](docs/screenshots/responsive/08-3840.png) |
+
+> 深色主题，1.8–3.2s 管道循环，停机暂停，支持 `prefers-reduced-motion`。
+
+**设计过程稿 `works/08-*`**
+
+| 1366 | 1920 | 3840 |
+|---|---|---|
+| ![works 08 1366](works/08-hmi-1366.png) | ![works 08 1920](works/08-hmi-1920.png) | ![works 08 3840](works/08-hmi-3840.png) |
+
+</details>
+
 ### 09 预处理进水井浅色 3D 数字孪生 HMI（浅色）
 - 浅灰蓝单主题，双层顶栏，右侧单一控制面板，底部连续状态模块，长期值守低疲劳
-- 多分辨率设计稿见 `works/09-*`
+
+<details>
+<summary>查看 09 多分辨率与设计稿</summary>
+
+| 1920 基准 | 1366×768 | 3840×2160 |
+|---|---|---|
+| ![09 1920](docs/screenshots/09-pretreatment-light3d.png) | ![09 1366](docs/screenshots/responsive/09-1366.png) | ![09 3840](docs/screenshots/responsive/09-3840.png) |
+
+**设计过程稿 `works/`（1366/1920/3840 迭代）**
+
+| 1366 v1 | 1366 v2 | 1920 v1 | 1920 v2 |
+|---|---|---|---|
+| ![works 1366 v1](works/09-light-hmi-1366.png) | ![works 1366 v2](works/09-light-hmi-1366-v2.png) | ![works 1920 v1](works/09-light-hmi-1920.png) | ![works 1920 v2](works/09-light-hmi-1920-v2.png) |
+
+| 3840 v1 | 3840 v2 | 可读性优化 | 工艺精细化 |
+|---|---|---|---|
+| ![works 3840 v1](works/09-light-hmi-3840.png) | ![works 3840 v2](works/09-light-hmi-3840-v2.png) | ![works readable](works/09-readable-labels.png) | ![works refined](works/09-refined-process.png) |
+
+</details>
 
 ### 10 地下调蓄池水力冲洗数字孪生 HMI
 - 调蓄池冲洗工艺数字孪生，水力路径与阀位联动
@@ -165,6 +228,17 @@ open apps/scada-designer/index.html
 - 适合：快速拼装新场景、客户现场参数化配置
 
 ![SCADA Designer](docs/screenshots/scada-designer.png)
+
+<details>
+<summary><b>Showcase 多分辨率适配（点击展开）</b></summary>
+
+| 1920×1080（基准） | 1366×768 | 3840×2160 |
+|---|---|---|
+| ![showcase 1920](docs/screenshots/showcase.png) | ![showcase 1366](docs/screenshots/responsive/showcase-1366.png) | ![showcase 3840](docs/screenshots/responsive/showcase-3840.png) |
+
+> 基准画布 1920×1080 等比缩放，安全边距 16–24px，拼接屏直接可用。
+
+</details>
 
 ---
 
@@ -205,7 +279,10 @@ assets/models/         # 三维模型
 docs/
   architecture.md      # 架构基线
   offline-delivery.md  # 离线交付说明
-  screenshots/         # 13 张自动截图（本 README 引用）
+  screenshots/         # 28 张截图（含 states/ 多工况 + responsive/ 多分辨率）
+    states/            # 01/04 多工况演练 + 08 Faceplate
+    responsive/        # showcase/08/09 的 1366/3840 适配
+  works/               # 11 张设计过程稿（本 README 画廊引用）
 tests/interaction_check.py
 release/               # 离线交付包与预览图
 works/                 # 11 张设计过程稿（多分辨率）
