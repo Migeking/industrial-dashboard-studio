@@ -1,0 +1,15 @@
+:root{
+  --ids-bg:#071016;
+  --ids-surface:#0d1d25;
+  --ids-surface-raised:#112831;
+  --ids-line:#244451;
+  --ids-text:#e8f3f4;
+  --ids-muted:#91aeb0;
+  --ids-primary:#61c9ff;
+  --ids-normal:#62e6bd;
+  --ids-warning:#f4b85c;
+  --ids-danger:#ff7373;
+  --ids-radius:8px;
+  --ids-font:"Microsoft YaHei","PingFang SC",sans-serif;
+  --ids-number:"Bahnschrift","Segoe UI",sans-serif;
+}

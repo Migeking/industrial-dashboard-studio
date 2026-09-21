@@ -1,0 +1,42 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+
+# Build / Release staging
+release/industrial-dashboard-offline/
+*.tmp
+*.log
+
+# Env / Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Large local exports (optional)
+# uncomment if you don't want to track works drafts
+# works/

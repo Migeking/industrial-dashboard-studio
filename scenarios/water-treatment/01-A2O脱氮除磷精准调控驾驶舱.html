@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>A²/O 脱氮除磷精准调控驾驶舱</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#02070b;color:#f2f7fa;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif}body{display:flex;align-items:center;justify-content:center}.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}button{font:inherit} [v-cloak]{display:none}
+:root{--bg:#071019;--surface-1:#0b1622;--surface-2:#0f1d2a;--surface-3:#132536;--line:#20394a;--line-strong:#31566d;--accent:#36c2ff;--accent-soft:rgba(54,194,255,.14);--success:#35d07f;--warning:#ffb547;--danger:#ff5d5d;--offline:#708594;--text-1:#f2f7fa;--text-2:#a8bac8;--text-3:#708594}
+#screen{width:1920px;height:1080px;position:absolute;left:50%;top:50%;transform-origin:center center;display:grid;grid-template-rows:76px 1fr 42px;overflow:hidden;background:radial-gradient(circle at 52% 31%,rgba(54,194,255,.07),transparent 34%),repeating-linear-gradient(90deg,rgba(255,255,255,.014) 0,rgba(255,255,255,.014) 1px,transparent 1px,transparent 4px),linear-gradient(145deg,#091522 0%,#071019 54%,#050c13 100%)}
+#screen:after{content:"";position:absolute;inset:76px 0 42px;pointer-events:none;background-image:linear-gradient(rgba(54,194,255,.024) 1px,transparent 1px),linear-gradient(90deg,rgba(54,194,255,.02) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.55),transparent 80%)}
+.topbar{position:relative;z-index:4;display:grid;grid-template-columns:480px 1fr 530px;align-items:center;padding:0 22px;border-bottom:1px solid var(--line);background:rgba(5,13,21,.9);box-shadow:0 8px 34px rgba(0,0,0,.24)}.brand{display:flex;align-items:center;gap:13px}.brand-mark{width:42px;height:42px;border:1px solid var(--line-strong);display:grid;place-items:center;color:var(--accent);border-radius:8px;background:linear-gradient(145deg,#132638,#09131d);box-shadow:inset 0 1px rgba(255,255,255,.05)}.brand-mark svg{width:25px;height:25px}.brand-copy strong{display:block;font-size:16px;letter-spacing:2px}.brand-copy span{font-size:11px;color:var(--text-3);letter-spacing:1.6px}.title{text-align:center}.title h1{margin:0;font-size:30px;letter-spacing:3px;font-weight:720}.title p{margin:5px 0 0;color:var(--accent);font-size:11px;letter-spacing:5px}.head-right{display:flex;justify-content:flex-end;align-items:center;gap:18px}.scenario-tabs{display:flex;padding:4px;border:1px solid var(--line);border-radius:7px;background:#08121c}.scenario-tabs button{height:30px;padding:0 12px;border:0;border-radius:5px;background:transparent;color:var(--text-3);cursor:pointer;font-size:13px}.scenario-tabs button.active{background:var(--accent-soft);color:var(--text-1);box-shadow:inset 0 0 0 1px rgba(54,194,255,.35)}.clock{text-align:right;min-width:120px}.clock strong{display:block;font-size:20px;letter-spacing:1px}.clock span{font-size:11px;color:var(--text-3)}
+.main{position:relative;z-index:2;min-height:0;display:grid;grid-template-columns:344px 1fr 344px;gap:14px;padding:14px 16px}.column{min-height:0;display:grid;gap:14px}.left{grid-template-rows:276px 292px 1fr}.center{grid-template-rows:112px 488px 1fr}.right{grid-template-rows:226px 310px 1fr}.panel{position:relative;min-height:0;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:linear-gradient(145deg,rgba(15,29,42,.94),rgba(8,18,28,.95));box-shadow:inset 0 1px rgba(255,255,255,.035),0 12px 34px rgba(0,0,0,.18)}.panel:before{content:"";position:absolute;left:0;top:0;width:3px;height:42px;background:var(--accent)}.panel-head{height:45px;padding:0 14px 0 17px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(49,86,109,.5)}.panel-title{font-size:17px;font-weight:680;letter-spacing:.5px}.panel-meta{font-size:11px;color:var(--text-3);padding:4px 7px;border:1px solid var(--line);border-radius:4px}.panel-body{padding:14px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.kpi{position:relative;padding:13px 16px;border:1px solid var(--line);border-radius:8px;background:linear-gradient(150deg,rgba(19,37,54,.92),rgba(9,20,30,.95));overflow:hidden}.kpi:after{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;background:var(--kpi,var(--accent))}.k-label{font-size:13px;color:var(--text-2)}.k-value{margin-top:5px;font-size:29px;font-weight:720;color:var(--kpi,var(--text-1));line-height:1}.k-value small{font-size:13px;margin-left:5px;color:var(--text-2);font-weight:500}.k-sub{margin-top:8px;font-size:11px;color:var(--text-3)}
+.status-hero{display:flex;align-items:center;gap:14px;padding:16px;border:1px solid rgba(53,208,127,.28);background:linear-gradient(135deg,rgba(53,208,127,.1),rgba(53,208,127,.025));border-radius:7px}.status-ring{width:62px;height:62px;border:8px solid rgba(53,208,127,.17);border-top-color:var(--success);border-radius:50%;display:grid;place-items:center;color:var(--success);font-size:11px;animation:slowspin 8s linear infinite}.status-copy strong{font-size:21px;color:var(--success)}.status-copy p{margin:5px 0 0;color:var(--text-2);font-size:13px;line-height:1.5}.overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}.micro-card{padding:10px 11px;border:1px solid var(--line);background:rgba(5,13,21,.38);border-radius:6px}.micro-card span{display:block;font-size:11px;color:var(--text-3)}.micro-card strong{display:block;margin-top:5px;font-size:18px}.compliance-row{display:grid;grid-template-columns:72px 1fr 64px;align-items:center;gap:10px;margin-bottom:15px}.compliance-row label{font-size:13px;color:var(--text-2)}.bar{height:7px;border-radius:5px;background:#182b3a;overflow:hidden}.bar i{display:block;height:100%;border-radius:5px;background:var(--bar,var(--success))}.compliance-row strong{text-align:right;font-size:13px}.target-box{margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:6px;background:#08131d}.target-box h4{margin:0 0 9px;font-size:12px;color:var(--text-2);font-weight:500}.target-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.target-grid div{text-align:center;padding:7px 4px;border-right:1px solid var(--line)}.target-grid div:last-child{border:0}.target-grid b{display:block;font-size:17px}.target-grid span{font-size:10px;color:var(--text-3)}
+.process-panel .panel-body{height:443px;padding:8px 12px 10px}.process-svg{width:100%;height:100%;display:block}.tank-shell{fill:url(#tankMetal);stroke:#31566d;stroke-width:2}.tank-water{fill:url(#waterFill)}.tank-title{fill:#f2f7fa;font-size:18px;font-weight:700}.tank-sub{fill:#a8bac8;font-size:12px}.metric-pill{fill:#0b1824;stroke:#31566d}.metric-name{fill:#708594;font-size:10px}.metric-value{fill:#f2f7fa;font-size:16px;font-weight:700}.flow-base{fill:none;stroke:#1f3a4d;stroke-width:9;stroke-linecap:round}.flow-active{fill:none;stroke:#36c2ff;stroke-width:3;stroke-linecap:round;stroke-dasharray:9 13;animation:flow 1.8s linear infinite}.flow-return{stroke:#35d07f}.bubble{fill:rgba(54,194,255,.55);animation:bubble 2.8s ease-in infinite}.equipment-dot{fill:#35d07f;filter:drop-shadow(0 0 5px rgba(53,208,127,.45))}.warn-dot{fill:#ffb547}.flow-label{fill:#a8bac8;font-size:11px}.chart{width:100%;height:100%}.chart-panel .panel-body{height:251px;padding:4px 8px 8px}.small-chart{height:245px}.alarm-list{display:grid;gap:9px}.alarm-item{display:grid;grid-template-columns:9px 1fr auto;gap:10px;align-items:start;padding:10px 10px;border:1px solid var(--line);border-radius:6px;background:rgba(5,13,21,.42)}.alarm-item i{width:7px;height:7px;margin-top:5px;border-radius:50%;background:var(--level,var(--success))}.alarm-item b{display:block;font-size:13px}.alarm-item span{display:block;margin-top:4px;font-size:11px;color:var(--text-3)}.alarm-item time{font-size:11px;color:var(--text-3)}.equipment-list{display:grid;gap:9px}.equipment{display:grid;grid-template-columns:1fr 64px 54px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:6px;background:rgba(5,13,21,.42)}.equipment b{font-size:13px}.equipment small{display:block;margin-top:4px;color:var(--text-3)}.equipment .hz{text-align:right;color:var(--accent);font-size:15px}.state{justify-self:end;font-size:11px;color:var(--success);padding:3px 6px;border:1px solid rgba(53,208,127,.3);border-radius:3px;background:rgba(53,208,127,.08)}.state.warn{color:var(--warning);border-color:rgba(255,181,71,.3);background:rgba(255,181,71,.08)}.strategy{padding:14px}.decision{padding:13px;border:1px solid rgba(54,194,255,.28);border-radius:6px;background:linear-gradient(135deg,rgba(54,194,255,.09),transparent)}.decision-head{display:flex;align-items:center;justify-content:space-between}.decision-head b{font-size:15px}.confidence{color:var(--accent);font-size:12px}.decision p{margin:10px 0 0;color:var(--text-2);font-size:13px;line-height:1.65}.action-list{margin-top:13px;display:grid;gap:8px}.action{display:grid;grid-template-columns:26px 1fr;gap:9px;padding:9px;border-bottom:1px solid rgba(32,57,74,.7)}.action em{width:24px;height:24px;display:grid;place-items:center;border-radius:50%;font-style:normal;background:var(--accent-soft);color:var(--accent);font-size:11px}.action b{display:block;font-size:12px}.action span{font-size:11px;color:var(--text-3)}
+.statusbar{position:relative;z-index:4;display:grid;grid-template-columns:390px 1fr 520px;align-items:center;padding:0 18px;border-top:1px solid var(--line);background:#050d15;font-size:12px;color:var(--text-2)}.statusbar>div{display:flex;align-items:center;gap:9px;white-space:nowrap;overflow:hidden}.live-dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 10px rgba(53,208,127,.6)}.status-center{justify-content:center;color:var(--text-3)}.status-right{justify-content:flex-end}.quality{color:var(--success)}.sep{color:#284356}
+@keyframes flow{to{stroke-dashoffset:-44}}@keyframes bubble{0%{transform:translateY(25px);opacity:0}30%{opacity:.8}100%{transform:translateY(-58px);opacity:0}}@keyframes slowspin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.status-hero{gap:12px;padding:11px 13px}.status-ring{width:54px;height:54px;border-width:7px;font-size:10px}.status-copy strong{font-size:19px}.status-copy p{margin-top:4px;font-size:12px;line-height:1.4}.overview-grid{gap:7px;margin-top:9px}.micro-card{padding:7px 9px}.micro-card span{font-size:10px}.micro-card strong{margin-top:3px;font-size:16px}.equipment-list{gap:7px}.equipment{padding:8px 9px}.equipment small{margin-top:2px}
+.right{grid-template-rows:250px 288px 1fr}.strategy{padding:12px}.decision{padding:11px}.action-list{margin-top:8px;gap:4px}.action{padding:7px}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+<div id="screen" :class="'mode-'+scenario">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark"><svg viewBox="0 0 32 32" fill="none"><path d="M5 22c6-2 7-13 12-13s5 10 10 8" stroke="currentColor" stroke-width="2"/><circle cx="5" cy="22" r="2" fill="currentColor"/><circle cx="17" cy="9" r="2" fill="currentColor"/><circle cx="27" cy="17" r="2" fill="currentColor"/></svg></div>
+      <div class="brand-copy"><strong>智慧水务 · 生化处理单元</strong><span>WATER PROCESS CONTROL UNIT</span></div>
+    </div>
+    <div class="title"><h1>A²/O 脱氮除磷精准调控驾驶舱</h1><p>PROCESS · ENERGY · COMPLIANCE</p></div>
+    <div class="head-right">
+      <div class="scenario-tabs">
+        <button v-for="item in scenarios" :key="item.id" :class="{active:scenario===item.id}" @click="applyScenario(item.id)">{{item.label}}</button>
+      </div>
+      <div class="clock num"><strong>{{clock}}</strong><span>{{date}}</span></div>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="column left">
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">全流程运行态势</div><span class="panel-meta">实时</span></div>
+        <div class="panel-body">
+          <div class="status-hero">
+            <div class="status-ring"><span>RUN</span></div>
+            <div class="status-copy"><strong>{{current.status}}</strong><p>{{current.statusText}}</p></div>
+          </div>
+          <div class="overview-grid">
+            <div class="micro-card"><span>当前处理量</span><strong class="num">{{current.flow}} <small>m³/h</small></strong></div>
+            <div class="micro-card"><span>在线仪表</span><strong class="num">48/48</strong></div>
+            <div class="micro-card"><span>生化池水温</span><strong class="num">{{current.temp}} ℃</strong></div>
+            <div class="micro-card"><span>数据时延</span><strong class="num">0.8 s</strong></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">进出水达标矩阵</div><span class="panel-meta">GB 18918 一级A</span></div>
+        <div class="panel-body">
+          <div class="compliance-row" v-for="m in compliance" :key="m.name"><label>{{m.name}}</label><div class="bar"><i :style="{width:m.rate+'%', '--bar':m.color}"></i></div><strong class="num">{{m.value}}</strong></div>
+          <div class="target-box"><h4>控制目标</h4><div class="target-grid"><div><b class="num">≤15</b><span>出水 TN mg/L</span></div><div><b class="num">≤0.5</b><span>出水 TP mg/L</span></div><div><b class="num">≥92%</b><span>氨氮去除率</span></div></div></div>
+        </div>
+      </article>
+
+      <article class="panel chart-panel">
+        <div class="panel-head"><div class="panel-title">进水负荷与总氮趋势</div><span class="panel-meta">8 小时</span></div>
+        <div class="panel-body"><div id="loadChart" class="chart small-chart"></div></div>
+      </article>
+    </section>
+
+    <section class="column center">
+      <div class="kpis">
+        <div class="kpi" style="--kpi:#36c2ff"><div class="k-label">外回流比</div><div class="k-value num">{{current.external}}<small>%</small></div><div class="k-sub">目标 50–100% · 自动跟随负荷</div></div>
+        <div class="kpi" style="--kpi:#35d07f"><div class="k-label">内回流比</div><div class="k-value num">{{current.internal}}<small>%</small></div><div class="k-sub">目标 150–250% · 硝酸盐回流</div></div>
+        <div class="kpi" style="--kpi:#ffb547"><div class="k-label">碳源投加量</div><div class="k-value num">{{current.carbon}}<small>L/h</small></div><div class="k-sub">前馈 + 反馈复合控制</div></div>
+        <div class="kpi" style="--kpi:#35d07f"><div class="k-label">总氮去除率</div><div class="k-value num">{{current.removal}}<small>%</small></div><div class="k-sub">较控制基线提升 6.4%</div></div>
+      </div>
+
+      <article class="panel process-panel">
+        <div class="panel-head"><div class="panel-title">A²/O 工艺数字流程</div><span class="panel-meta">测点与介质流向联动</span></div>
+        <div class="panel-body">
+          <svg class="process-svg" viewBox="0 0 1120 420" role="img" aria-label="A2O 工艺流程图">
+            <defs>
+              <linearGradient id="tankMetal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#183247"/><stop offset=".5" stop-color="#0d1e2c"/><stop offset="1" stop-color="#142a3b"/></linearGradient>
+              <linearGradient id="waterFill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#16789f" stop-opacity=".62"/><stop offset="1" stop-color="#0b3d59" stop-opacity=".84"/></linearGradient>
+              <filter id="softGlow"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <path class="flow-base" d="M22 212H105 M295 212H358 M548 212H611 M801 212H864 M1054 212H1098"/><path class="flow-active" d="M22 212H105 M295 212H358 M548 212H611 M801 212H864 M1054 212H1098"/>
+            <path class="flow-base" d="M960 340H1035V382H228V332"/><path class="flow-active flow-return" d="M960 340H1035V382H228V332"/>
+            <path class="flow-base" d="M705 106V62H470V106"/><path class="flow-active" d="M705 106V62H470V106"/>
+            <g transform="translate(105 105)"><rect class="tank-shell" width="190" height="230" rx="9"/><rect class="tank-water" x="9" y="62" width="172" height="159" rx="4"/><text class="tank-title" x="95" y="32" text-anchor="middle">厌氧池</text><text class="tank-sub" x="95" y="51" text-anchor="middle">ANAEROBIC</text><circle class="equipment-dot" cx="160" cy="25" r="5"/><g transform="translate(19 82)"><rect class="metric-pill" width="152" height="48" rx="6"/><text class="metric-name" x="12" y="18">ORP</text><text class="metric-value num" x="12" y="38">{{current.orp}} mV</text></g><g transform="translate(19 141)"><rect class="metric-pill" width="152" height="48" rx="6"/><text class="metric-name" x="12" y="18">正磷酸盐</text><text class="metric-value num" x="12" y="38">5.2 mg/L</text></g></g>
+            <g transform="translate(358 105)"><rect class="tank-shell" width="190" height="230" rx="9"/><rect class="tank-water" x="9" y="50" width="172" height="171" rx="4"/><text class="tank-title" x="95" y="32" text-anchor="middle">缺氧池</text><text class="tank-sub" x="95" y="51" text-anchor="middle">ANOXIC</text><circle class="equipment-dot" cx="160" cy="25" r="5"/><g transform="translate(19 82)"><rect class="metric-pill" width="152" height="48" rx="6"/><text class="metric-name" x="12" y="18">DO</text><text class="metric-value num" x="12" y="38">{{current.doAnoxic}} mg/L</text></g><g transform="translate(19 141)"><rect class="metric-pill" width="152" height="48" rx="6"/><text class="metric-name" x="12" y="18">NO₃-N</text><text class="metric-value num" x="12" y="38">6.8 mg/L</text></g></g>
+            <g transform="translate(611 105)"><rect class="tank-shell" width="190" height="230" rx="9"/><rect class="tank-water" x="9" y="44" width="172" height="177" rx="4"/><text class="tank-title" x="95" y="32" text-anchor="middle">好氧池</text><text class="tank-sub" x="95" y="51" text-anchor="middle">AEROBIC</text><circle :class="current.doAerobic<2?'warn-dot':'equipment-dot'" cx="160" cy="25" r="5"/><g transform="translate(19 82)"><rect class="metric-pill" width="152" height="48" rx="6"/><text class="metric-name" x="12" y="18">DO</text><text class="metric-value num" x="12" y="38">{{current.doAerobic}} mg/L</text></g><g transform="translate(19 141)"><rect class="metric-pill" width="152" height="48" rx="6"/><text class="metric-name" x="12" y="18">NH₄-N</text><text class="metric-value num" x="12" y="38">1.8 mg/L</text></g><circle class="bubble" cx="52" cy="196" r="3"/><circle class="bubble" cx="80" cy="204" r="2" style="animation-delay:.6s"/><circle class="bubble" cx="118" cy="192" r="3" style="animation-delay:1.2s"/><circle class="bubble" cx="145" cy="205" r="2" style="animation-delay:1.8s"/></g>
+            <g transform="translate(864 105)"><rect class="tank-shell" width="190" height="230" rx="9"/><path d="M10 58h170v163H10z" fill="#123046"/><path d="M24 72h142l-40 130H64z" fill="#18405a" opacity=".68"/><text class="tank-title" x="95" y="32" text-anchor="middle">二沉池</text><text class="tank-sub" x="95" y="51" text-anchor="middle">SECONDARY</text><circle class="equipment-dot" cx="160" cy="25" r="5"/><g transform="translate(19 82)"><rect class="metric-pill" width="152" height="48" rx="6"/><text class="metric-name" x="12" y="18">MLSS</text><text class="metric-value num" x="12" y="38">3.32 g/L</text></g><g transform="translate(19 141)"><rect class="metric-pill" width="152" height="48" rx="6"/><text class="metric-name" x="12" y="18">泥位</text><text class="metric-value num" x="12" y="38">1.18 m</text></g></g>
+            <text class="flow-label" x="26" y="197">进水</text><text class="flow-label" x="1062" y="197">出水</text><text class="flow-label" x="742" y="50">内回流 {{current.internal}}%</text><text class="flow-label" x="555" y="403">外回流 {{current.external}}%</text>
+          </svg>
+        </div>
+      </article>
+
+      <article class="panel chart-panel">
+        <div class="panel-head"><div class="panel-title">碳源投加与出水 TN 闭环趋势</div><span class="panel-meta">前馈 + 反馈</span></div>
+        <div class="panel-body"><div id="controlChart" class="chart"></div></div>
+      </article>
+    </section>
+
+    <section class="column right">
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">当前事件</div><span class="panel-meta">1 条关注</span></div>
+        <div class="panel-body alarm-list">
+          <div class="alarm-item"><i style="--level:#ffb547"></i><div><b>缺氧池硝酸盐轻微偏高</b><span>建议内回流比上调 5%，观察 15 分钟</span></div><time class="num">17:22</time></div>
+          <div class="alarm-item"><i></i><div><b>出水 TN 稳定达标</b><span>连续 8 小时低于 13 mg/L</span></div><time class="num">17:18</time></div>
+          <div class="alarm-item"><i></i><div><b>在线仪表质量正常</b><span>48 个测点质量 GOOD</span></div><time class="num">17:15</time></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">关键设备群</div><span class="panel-meta">自动模式</span></div>
+        <div class="panel-body equipment-list">
+          <div class="equipment"><div><b>1# 内回流泵</b><small>流量 326 m³/h · 12.4 A</small></div><div class="hz num">{{current.pumpHz}} Hz</div><span class="state">运行</span></div>
+          <div class="equipment"><div><b>2# 外回流泵</b><small>流量 182 m³/h · 8.7 A</small></div><div class="hz num">31 Hz</div><span class="state">运行</span></div>
+          <div class="equipment"><div><b>1# 磁悬浮鼓风机</b><small>风量 4,820 Nm³/h</small></div><div class="hz num">{{current.blowerHz}} Hz</div><span class="state">运行</span></div>
+          <div class="equipment"><div><b>碳源计量泵</b><small>冲程 62% · 自动跟踪</small></div><div class="hz num">{{current.carbon}}</div><span class="state warn">关注</span></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">智能调控建议</div><span class="panel-meta">机理 + 数据</span></div>
+        <div class="strategy">
+          <div class="decision"><div class="decision-head"><b>维持稳定脱氮区间</b><span class="confidence num">置信度 94%</span></div><p>{{current.advice}}</p></div>
+          <div class="action-list">
+            <div class="action"><em>01</em><div><b>内回流微调</b><span>目标 {{current.internal}}%，限制变化率 ≤ 8%/min</span></div></div>
+            <div class="action"><em>02</em><div><b>好氧池 DO 控制</b><span>维持 2.0–2.8 mg/L，避免过曝气</span></div></div>
+            <div class="action"><em>03</em><div><b>碳源经济性</b><span>当前吨水药耗 0.036 元，处于优良区间</span></div></div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer class="statusbar">
+    <div><i class="live-dot"></i><b>系统在线</b><span class="sep">|</span><span>自动控制回路 8/8 投用</span></div>
+    <div class="status-center">数据来源：PLC / OPC UA · 采样周期 2s · 最近报警已确认</div>
+    <div class="status-right"><span class="quality">数据质量 GOOD</span><span class="sep">|</span><span>更新时间 {{clock}}</span><span class="sep">|</span><span>网络时延 0.8s</span></div>
+  </footer>
+</div>
+</div>
+<script>
+(function(){
+  'use strict';
+  const $id=(id)=>document.getElementById(id);
+  const safeInit=(id)=>{try{const el=$id(id);if(!el)return null;return echarts.init(el);}catch(e){console.error(e);return null;}};
+  const scenarioData={
+    stable:{status:'稳定运行',statusText:'出水达标，生化系统处于高效脱氮区间',flow:'532',temp:'24.6',external:79,internal:205,carbon:118,removal:92,orp:-186,doAnoxic:'0.32',doAerobic:'2.38',pumpHz:39,blowerHz:43,advice:'进水负荷波动较小，现有内回流与碳源投加匹配。建议保持设定，仅对缺氧池硝酸盐偏高做小幅修正。'},
+    peak:{status:'高负荷受控',statusText:'进水负荷上升 12%，控制回路已自动跟随',flow:'596',temp:'24.8',external:86,internal:220,carbon:132,removal:91,orp:-174,doAnoxic:'0.38',doAerobic:'2.12',pumpHz:44,blowerHz:47,advice:'高峰负荷预计持续 40 分钟。建议提高内回流并维持好氧池 DO 下限，避免过量碳源投加。'},
+    lowtemp:{status:'低温补偿',statusText:'水温下降，硝化速率补偿策略已启用',flow:'516',temp:'16.8',external:82,internal:215,carbon:124,removal:89,orp:-168,doAnoxic:'0.41',doAerobic:'2.62',pumpHz:42,blowerHz:46,advice:'低温使氨氧化速率下降。建议适当延长污泥龄，并将 DO 目标上调 0.2 mg/L，持续观察出水氨氮。'}
+  };
+  const app=Vue.createApp({
+    data(){return{clock:'--:--:--',date:'----/--/--',scenario:'stable',scenarios:[{id:'stable',label:'标准稳态'},{id:'peak',label:'高峰负荷'},{id:'lowtemp',label:'低温补偿'}],compliance:[{name:'COD',value:'23.6',rate:78,color:'#35d07f'},{name:'NH₄-N',value:'1.2',rate:91,color:'#35d07f'},{name:'TN',value:'12.4',rate:83,color:'#35d07f'},{name:'TP',value:'0.38',rate:76,color:'#36c2ff'}]};},
+    computed:{current(){return scenarioData[this.scenario];}},
+    methods:{tick(){try{const d=new Date();this.clock=d.toLocaleTimeString('zh-CN',{hour12:false});this.date=d.toLocaleDateString('zh-CN').replaceAll('/',' · ');}catch(e){}},applyScenario(id){this.scenario=id;try{if(window.updateScenarioCharts)window.updateScenarioCharts(id);}catch(e){}}},
+    mounted(){this.tick();setInterval(()=>{try{this.tick();}catch(e){}},1000);}
+  });
+  app.mount('#app');
+
+  const text='#a8bac8',muted='#708594',grid='rgba(168,186,200,.09)',accent='#36c2ff',success='#35d07f',warning='#ffb547';
+  const axis={axisLine:{lineStyle:{color:'#284355'}},axisTick:{show:false},axisLabel:{color:muted,fontSize:12}};
+  const loadChart=safeInit('loadChart');
+  const controlChart=safeInit('controlChart');
+  const charts=[loadChart,controlChart].filter(Boolean);
+  const times=['10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
+  function renderCharts(mode){
+    try{
+      const factor=mode==='peak'?1.12:(mode==='lowtemp'?0.96:1);
+      if(loadChart)loadChart.setOption({animationDuration:500,grid:{left:48,right:26,top:38,bottom:32},tooltip:{trigger:'axis'},legend:{top:7,right:8,textStyle:{color:text,fontSize:11}},xAxis:{type:'category',data:times,...axis},yAxis:[{type:'value',name:'m³/h',nameTextStyle:{color:muted},splitLine:{lineStyle:{color:grid}},...axis},{type:'value',name:'mg/L',nameTextStyle:{color:muted},splitLine:{show:false},...axis}],series:[{name:'进水流量',type:'bar',barWidth:12,data:[486,501,518,526,541,535,529,532].map(v=>Math.round(v*factor)),itemStyle:{color:accent,borderRadius:[3,3,0,0]}},{name:'进水 TN',type:'line',yAxisIndex:1,symbol:'circle',symbolSize:5,data:[38.2,39.8,41.1,40.6,43.2,42.4,41.7,41.2],lineStyle:{color:warning,width:2},itemStyle:{color:warning}}]});
+      const add=mode==='peak'?12:mode==='lowtemp'?6:0;
+      if(controlChart)controlChart.setOption({animationDuration:500,grid:{left:52,right:52,top:42,bottom:32},tooltip:{trigger:'axis'},legend:{top:8,right:18,textStyle:{color:text,fontSize:12}},xAxis:{type:'category',data:times,...axis},yAxis:[{type:'value',name:'L/h',min:80,max:150,nameTextStyle:{color:muted},splitLine:{lineStyle:{color:grid}},...axis},{type:'value',name:'TN mg/L',min:8,max:18,nameTextStyle:{color:muted},splitLine:{show:false},...axis}],series:[{name:'碳源投加',type:'line',smooth:true,data:[108,110,112,116,115,118,117,118].map(v=>v+add),symbolSize:5,lineStyle:{color:accent,width:3},itemStyle:{color:accent},areaStyle:{color:'rgba(54,194,255,.10)'}},{name:'出水 TN',type:'line',yAxisIndex:1,smooth:true,data:[13.2,13.0,12.8,12.9,12.6,12.5,12.3,12.4],symbolSize:5,lineStyle:{color:success,width:2},itemStyle:{color:success}}]});
+    }catch(e){console.error(e);}
+  }
+  window.updateScenarioCharts=renderCharts;renderCharts('stable');
+  function fit(){try{const screen=$id('screen');if(!screen)return;const scale=Math.min(window.innerWidth/1920,window.innerHeight/1080);screen.style.transform=`translate(-50%,-50%) scale(${scale})`;}catch(e){}}
+  fit();window.addEventListener('resize',()=>{try{fit();charts.forEach(c=>{try{c.resize();}catch(e){}});}catch(e){}});
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NGT200 空气悬浮鼓风机 · 3D 模型预览</title>
+<style>
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;background:#061019;color:#eaf5f6;font-family:"Microsoft YaHei",sans-serif;overflow:hidden}.shell{height:100%;display:grid;grid-template-rows:64px 1fr 52px;background:radial-gradient(circle at 50% 30%,rgba(54,194,255,.1),transparent 44%),#061019}.top,.bottom{display:flex;align-items:center;justify-content:space-between;padding:0 22px;border-color:#1e4051;border-style:solid;border-width:0 0 1px;background:rgba(4,13,20,.86)}.bottom{border-width:1px 0 0;color:#7994a3;font-size:12px}.top h1{font-size:18px;letter-spacing:.08em}.top p{margin:4px 0 0;color:#7994a3;font-size:11px}.actions{display:flex;gap:8px}.actions button{height:34px;padding:0 13px;border:1px solid #31566d;border-radius:5px;background:#0a1924;color:#a8bac8;cursor:pointer}.actions button.active{border-color:#36c2ff;color:#36c2ff;background:rgba(54,194,255,.1)}#model{min-height:0;position:relative}.hint{position:absolute;left:18px;bottom:15px;color:#6f8b99;font-size:11px;pointer-events:none}.spec{display:flex;gap:22px}.spec b{color:#eaf5f6}.source{color:#35d07f}
+</style>
+</head>
+<body>
+<div class="shell"><header class="top"><div><h1>SeAH NGT200 · 空气悬浮高速离心鼓风机</h1><p>参数化数字孪生近似模型 · 非厂家 CAD</p></div><div class="actions"><button id="cutaway" class="active">剖切模式</button><button id="impeller">叶轮细节</button><button id="exterior">整机外观</button></div></header><main id="model"><div class="hint">拖动旋转 · 滚轮缩放 · 三视角查看</div></main><footer class="bottom"><div class="spec"><span>尺寸 <b>950 × 2050 × 1550 mm</b></span><span>铭牌功率 <b>123 kW</b></span><span>出口压力 <b>75 kPa(g)</b></span><span>监测示例 <b>142 / 284 Hz</b></span></div><span class="source">NGT200 / AIR FOIL BEARING</span></footer></div>
+<script src="../../../vendor/three.min.js"></script>
+<script src="../../../vendor/OrbitControls.js"></script>
+<script src="./ngt200-model.js"></script>
+<script>
+(() => { const controller = NGT200Model.mount(document.getElementById('model'), { mode: 'cutaway' }); const buttons = [document.getElementById('cutaway'), document.getElementById('impeller'), document.getElementById('exterior')]; buttons.forEach(button => button.addEventListener('click', () => { const mode = button.id; controller.setMode(mode === 'exterior' ? 'exterior' : 'cutaway'); controller.setView(mode === 'impeller' ? 'impeller' : 'overview'); buttons.forEach(item => item.classList.toggle('active', item === button)); })); })();
+</script>
+</body>
+</html>

@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>污泥回流泵站 SCADA 综合监控与操作终端</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#03080e;color:#f2f7fa;font-family:"Microsoft YaHei","PingFang SC",Segoe UI,sans-serif}
+.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+button,input{font:inherit}
+[v-cloak]{display:none}
+:root{
+  --scada-bg:#060e16;
+  --panel-bg:#0a1722;
+  --panel-sub:#0e202f;
+  --line:#1c374b;
+  --line-light:#294f6b;
+  --accent:#36c2ff;
+  --success:#35d07f;
+  --warning:#ffb547;
+  --danger:#ff5d5d;
+  --offline:#708594;
+  --text-main:#f2f7fa;
+  --text-muted:#8ba3b5;
+}
+#screen{
+  width:1920px;
+  height:1080px;
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform-origin:center center;
+  display:grid;
+  grid-template-rows:54px 38px 1fr 180px;
+  overflow:hidden;
+  background:radial-gradient(circle at 50% 15%,rgba(54,194,255,.05),transparent 45%),var(--scada-bg);
+}
+
+/* 顶部 SCADA 标题栏 */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 20px;
+  background:#050c14;
+  border-bottom:1px solid var(--line);
+}
+.logo-title{display:flex;align-items:center;gap:12px}
+.logo-icon{
+  width:32px;
+  height:32px;
+  border:1px solid var(--line-light);
+  border-radius:6px;
+  background:linear-gradient(135deg,#122a3d,#071420);
+  display:grid;
+  place-items:center;
+  color:var(--accent);
+}
+.logo-icon svg{width:18px;height:18px}
+.logo-text b{display:block;font-size:16px;letter-spacing:1px}
+.logo-text span{font-size:10px;color:var(--text-muted);letter-spacing:1px}
+.top-center-status{display:flex;align-items:center;gap:20px;font-size:12px;color:var(--text-muted)}
+.top-center-status b{color:var(--text-main)}
+.top-right-bar{display:flex;align-items:center;gap:16px}
+.auth-badge{
+  font-size:11px;
+  padding:3px 9px;
+  border-radius:4px;
+  background:rgba(53,208,127,.12);
+  color:var(--success);
+  border:1px solid rgba(53,208,127,.35);
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+.auth-badge i{width:6px;height:6px;border-radius:50%;background:var(--success)}
+
+/* ISA-18.2 常驻报警条 Alarm Banner */
+.alarm-banner{
+  background:#140809;
+  border-bottom:1px solid rgba(255,93,93,.35);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 20px;
+  font-size:12px;
+}
+.banner-left{display:flex;align-items:center;gap:10px}
+.alarm-tag{
+  background:var(--danger);
+  color:#fff;
+  font-weight:700;
+  font-size:10px;
+  padding:2px 6px;
+  border-radius:3px;
+  animation:alarmBlink 1s infinite alternate;
+}
+.alarm-tag.ack{animation:none;background:#b33e3e}
+.banner-text{color:#ffb8b8}
+.banner-actions{display:flex;gap:8px}
+.btn-sm{
+  padding:3px 10px;
+  font-size:11px;
+  border:1px solid var(--line-light);
+  border-radius:4px;
+  background:#0a1c28;
+  color:var(--text-main);
+  cursor:pointer;
+  transition:all .15s;
+}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm.silence{border-color:#ff9800;color:#ffb547}
+
+/* 工艺主画面区 */
+.main-stage{
+  position:relative;
+  display:grid;
+  grid-template-columns:300px 1fr 340px;
+  gap:12px;
+  padding:12px 18px;
+  min-height:0;
+}
+.panel{
+  background:var(--panel-bg);
+  border:1px solid var(--line);
+  border-radius:6px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.panel-head{
+  height:36px;
+  padding:0 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid var(--line);
+  background:rgba(8,20,30,.85);
+  font-size:13px;
+  font-weight:600;
+}
+.panel-body{padding:12px;flex:1;overflow:auto}
+
+/* SCADA 工艺模拟图 (中间) */
+.schematic-wrapper{position:relative;background:#050c13;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.schematic-svg{width:100%;height:100%;display:block}
+.device-interactive{cursor:pointer}
+.device-interactive:hover .pump-shell{stroke:var(--accent);stroke-width:2.5;filter:drop-shadow(0 0 8px rgba(54,194,255,.6))}
+.device-interactive:hover .well-shell{stroke:var(--accent);stroke-width:2}
+.pump-shell{fill:#112433;stroke:#274960;stroke-width:1.8;transition:all .2s}
+.pump-shell.running{fill:#113a30;stroke:var(--success)}
+.pump-shell.fault{fill:#381315;stroke:var(--danger)}
+
+/* 现场管路 */
+.pipe-base{fill:none;stroke:#172e3d;stroke-width:7;stroke-linecap:round}
+.pipe-flow{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-dasharray:8 12;animation:flow 2s linear infinite}
+.pipe-flow.stop{animation:none;stroke:#223c4e;opacity:.3}
+
+/* 底部操作与审计追踪日志 Audit Trail */
+.audit-bar{
+  background:#050b12;
+  border-top:1px solid var(--line);
+  display:grid;
+  grid-template-rows:30px 1fr;
+  padding:0 18px 8px;
+}
+.audit-head{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text-muted);border-bottom:1px solid #102433}
+.audit-table{width:100%;border-collapse:collapse;font-size:11px;text-align:left}
+.audit-table th{color:var(--text-muted);padding:6px 8px;font-weight:500;border-bottom:1px solid #142c3d}
+.audit-table td{padding:5px 8px;border-bottom:1px solid #0d1e2b;color:var(--text-main)}
+.audit-table tr:hover{background:rgba(54,194,255,.04)}
+.status-tag{padding:1px 5px;border-radius:2px;font-size:10px}
+.status-tag.success{background:rgba(53,208,127,.15);color:var(--success)}
+.status-tag.reject{background:rgba(255,93,93,.15);color:var(--danger)}
+
+/* 浮动操作小面板 (Faceplate) */
+.faceplate-modal{
+  position:absolute;
+  z-index:90;
+  width:420px;
+  background:#091926;
+  border:1px solid var(--line-light);
+  border-radius:8px;
+  box-shadow:0 16px 40px rgba(0,0,0,.7),0 0 0 1px rgba(54,194,255,.2);
+  top:80px;
+  left:540px;
+  overflow:hidden;
+}
+.faceplate-head{
+  height:40px;
+  padding:0 14px;
+  background:linear-gradient(90deg,#0f273b,#0b1e2e);
+  border-bottom:1px solid var(--line-light);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.faceplate-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}
+.faceplate-close{cursor:pointer;background:transparent;border:0;color:var(--text-muted);font-size:16px}
+.faceplate-close:hover{color:#fff}
+.faceplate-body{padding:14px;font-size:12px}
+.faceplate-section{margin-bottom:14px;border:1px solid var(--line);background:#071420;border-radius:6px;padding:10px}
+.faceplate-section h5{margin:0 0 8px;font-size:11px;color:var(--text-muted);letter-spacing:.5px}
+
+/* SBO 两步确认弹窗 */
+.sbo-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(2,7,12,.75);
+  backdrop-filter:blur(3px);
+  z-index:100;
+  display:grid;
+  place-items:center;
+}
+.sbo-box{
+  width:460px;
+  background:#0d1d2b;
+  border:1px solid #ffb547;
+  box-shadow:0 20px 50px rgba(0,0,0,.8);
+  border-radius:8px;
+  overflow:hidden;
+  animation:pop .2s ease-out;
+}
+.sbo-head{
+  height:42px;
+  padding:0 16px;
+  background:#261b0c;
+  border-bottom:1px solid rgba(255,181,71,.3);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#ffb547;
+  font-weight:700;
+  font-size:13px;
+}
+.sbo-body{padding:16px;font-size:13px;line-height:1.6}
+.sbo-foot{
+  padding:12px 16px;
+  background:#091622;
+  border-top:1px solid var(--line);
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+.btn-primary{
+  background:var(--accent);
+  color:#040c14;
+  border:0;
+  padding:6px 14px;
+  border-radius:4px;
+  font-weight:700;
+  cursor:pointer;
+}
+.btn-danger{
+  background:var(--danger);
+  color:#fff;
+  border:0;
+  padding:6px 14px;
+  border-radius:4px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+/* 控制按钮组 */
+.ctrl-row{display:flex;gap:8px;margin-bottom:8px}
+.ctrl-btn{
+  flex:1;
+  padding:8px 0;
+  border:1px solid var(--line-light);
+  border-radius:5px;
+  background:#0c1f2e;
+  color:var(--text-main);
+  cursor:pointer;
+  font-size:12px;
+  font-weight:600;
+}
+.ctrl-btn.active{background:rgba(54,194,255,.18);border-color:var(--accent);color:var(--accent)}
+.ctrl-btn.start{border-color:rgba(53,208,127,.4);color:var(--success)}
+.ctrl-btn.start:hover{background:rgba(53,208,127,.15)}
+.ctrl-btn.stop{border-color:rgba(255,93,93,.4);color:var(--danger)}
+.ctrl-btn.stop:hover{background:rgba(255,93,93,.15)}
+
+/* 滑块微调 */
+.slider-group{display:flex;align-items:center;gap:10px;margin-top:6px}
+.slider-group input[type=range]{flex:1;accent-color:var(--accent)}
+.slider-val{width:56px;text-align:right;font-size:14px;font-weight:700;color:var(--accent)}
+
+@keyframes flow{to{stroke-dashoffset:-40}}
+@keyframes alarmBlink{from{opacity:1}to{opacity:.3}}
+@keyframes pop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+<div id="screen">
+  <!-- 顶栏 SCADA 态势 -->
+  <header class="topbar">
+    <div class="logo-title">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><path d="M7 12h10M12 7v10" stroke="currentColor" stroke-width="2"/></svg>
+      </div>
+      <div class="logo-text">
+        <b>污泥回流泵站 SCADA 监控终端</b>
+      </div>
+    </div>
+    <div class="top-center-status">
+      <span>控制权: <b>中控调度</b></span>
+      <span>PLC 通信: <b style="color:var(--success)">正常 (50ms)</b></span>
+      <span>当前模式: <b style="color:var(--accent)">方案二 PID 闭环调速</b></span>
+    </div>
+    <div class="top-right-bar">
+      <div class="auth-badge"><i></i>操作员已鉴权 (OP-104)</div>
+      <div style="font-size:11px;color:var(--text-muted)"><span>数据质量 GOOD</span><span style="margin:0 6px">|</span><span>更新时间 {{clock}}</span></div>
+    </div>
+  </header>
+
+  <!-- ISA-18.2 常驻报警条 -->
+  <div class="alarm-banner">
+    <div class="banner-left">
+      <span class="alarm-tag" :class="{ack: alarmAcknowledged}">
+        {{currentAlarm ? currentAlarm.level : '正常'}}
+      </span>
+      <span class="banner-text">
+        {{currentAlarm ? currentAlarm.msg : '系统运行平稳，无未确认报警。'}}
+      </span>
+    </div>
+    <div class="banner-actions" v-if="currentAlarm">
+      <button class="btn-sm silence" @click="silenceAlarm">消音</button>
+      <button class="btn-sm" @click="ackAlarm">确认告警</button>
+    </div>
+  </div>
+
+  <!-- 工艺主画面 -->
+  <main class="main-stage">
+    <!-- 左侧：全局控制与回路 -->
+    <section class="panel">
+      <div class="panel-head">
+        <span>控制回路参数 (Tag: SR.SUMP)</span>
+        <span class="btn-sm" @click="openPidFaceplate">回路面板</span>
+      </div>
+      <div class="panel-body">
+        <div style="padding:10px;border:1px solid var(--line);background:#071420;border-radius:6px;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;color:var(--text-muted);font-size:11px">
+            <span>集泥井液位 PV</span>
+            <span>设定值 SP</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px">
+            <strong class="num" style="font-size:26px;color:var(--accent)">{{tags['SR.SUMP.LT101.PV'].value.toFixed(2)}} m</strong>
+            <span class="num" style="font-size:18px;color:var(--text-main)">{{tags['SR.SUMP.LT101.SP'].value.toFixed(2)}} m</span>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+          <div style="padding:8px;border:1px solid var(--line);background:#071420;border-radius:6px">
+            <span style="font-size:11px;color:var(--text-muted)">主令频率 Fcmd</span>
+            <strong class="num" style="display:block;font-size:18px;color:var(--accent);margin-top:3px">{{fcmd.toFixed(1)}} Hz</strong>
+          </div>
+          <div style="padding:8px;border:1px solid var(--line);background:#071420;border-radius:6px">
+            <span style="font-size:11px;color:var(--text-muted)">运行/需求</span>
+            <strong class="num" style="display:block;font-size:18px;color:var(--success);margin-top:3px">{{runningCount}} / {{demandCount}} 台</strong>
+          </div>
+        </div>
+
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.6">
+          <p>💡 <b>SCADA 操作指引</b>：</p>
+          <p>1. 点击中间工艺图的任意水泵或集泥池，唤起专用 <b>Faceplate 操作小面板</b>；</p>
+          <p>2. 点击启动/停止命令触发 <b>SBO 两步确认</b> 防误触保护；</p>
+          <p>3. 任何参数下发与模式切换均实时写入底部 <b>Audit Trail 审计追踪</b>。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 中间：可微操数字工艺流程图 -->
+    <section class="schematic-wrapper">
+      <svg class="schematic-svg" viewBox="0 0 1000 480">
+        <!-- 二沉池集泥井 (点击可开回路 Faceplate) -->
+        <g class="device-interactive" @click="openPidFaceplate">
+          <rect class="well-shell" x="30" y="50" width="160" height="340" rx="6" fill="#0c1e2c" stroke="#25485f" stroke-width="1.8"/>
+          <!-- 动态水体 -->
+          <rect x="36" :y="384 - (tags['SR.SUMP.LT101.PV'].value * 60)" width="148" :height="tags['SR.SUMP.LT101.PV'].value * 60" fill="#135b7d" opacity=".7"/>
+          <text x="110" y="80" fill="#f2f7fa" font-size="14" font-weight="700" text-anchor="middle">二沉池集泥井</text>
+          <text x="110" y="98" fill="#8ba3b5" font-size="10" text-anchor="middle">点击查看 PID 调节</text>
+          <!-- 液位文字 -->
+          <text x="110" y="210" fill="#36c2ff" font-size="20" font-weight="700" text-anchor="middle">{{tags['SR.SUMP.LT101.PV'].value.toFixed(2)}} m</text>
+        </g>
+
+        <!-- 吸水总管及通往 4 台泵的吸入支管 (底色管线，完整连接至各泵进口) -->
+        <path class="pipe-base" d="M 190 320 L 260 320 L 260 95 L 480 95"/>
+        <path class="pipe-base" d="M 260 175 L 480 175"/>
+        <path class="pipe-base" d="M 260 255 L 480 255"/>
+        <path class="pipe-base" d="M 260 335 L 480 335"/>
+
+        <!-- 水流流动层 (各支管与对应水泵启停状态精确联动) -->
+        <path :class="['pipe-base', runningCount > 0 ? 'pipe-flow' : 'pipe-flow stop']" d="M 190 320 L 260 320 L 260 95"/>
+        <path :class="['pipe-base', pumps[0].running ? 'pipe-flow' : 'pipe-flow stop']" d="M 260 95 L 480 95"/>
+        <path :class="['pipe-base', pumps[1].running ? 'pipe-flow' : 'pipe-flow stop']" d="M 260 175 L 480 175"/>
+        <path :class="['pipe-base', pumps[2].running ? 'pipe-flow' : 'pipe-flow stop']" d="M 260 255 L 480 255"/>
+        <path :class="['pipe-base', pumps[3].running ? 'pipe-flow' : 'pipe-flow stop']" d="M 260 335 L 480 335"/>
+
+        <!-- 4台泵组 (可点击唤起 Faceplate) -->
+        <g v-for="(p, idx) in pumps" :key="p.id" :transform="'translate(0, ' + (idx * 80) + ')'">
+          <!-- 变频柜 (小型指示) -->
+          <rect x="365" y="60" width="70" height="24" rx="3" fill="#081520" stroke="#1d3b52"/>
+          <text x="400" y="76" fill="#36c2ff" font-size="11" font-weight="700" text-anchor="middle">{{p.running ? p.hz.toFixed(1) + 'Hz' : '停机'}}</text>
+
+          <!-- 水泵本体交互热区 -->
+          <g class="device-interactive" @click="openPumpFaceplate(p)">
+            <circle class="pump-shell" :class="{running: p.running, fault: p.fault}" cx="480" cy="95" r="22"/>
+            <text x="480" y="99" fill="#fff" font-size="11" font-weight="700" text-anchor="middle">{{p.id}}</text>
+            <!-- 运行/手动模式角标 -->
+            <rect x="460" y="122" width="40" height="15" rx="3" fill="#0a1a27" stroke="#1c384e"/>
+            <text x="480" y="133" fill="#8ba3b5" font-size="9" text-anchor="middle">{{p.autoMode ? '自动' : '手动'}}</text>
+          </g>
+
+          <!-- 出水支管与止回阀 -->
+          <path class="pipe-base" d="M 502 95 L 680 95"/>
+          <path :class="['pipe-base', p.running ? 'pipe-flow' : 'pipe-flow stop']" d="M 502 95 L 680 95"/>
+          <circle cx="560" cy="95" r="7" fill="#0c1d2a" stroke="#25485f"/>
+        </g>
+
+        <!-- 汇流出水母管 -->
+        <path class="pipe-base" d="M 680 95 L 680 335 L 780 335 L 780 215 L 970 215"/>
+        <path :class="['pipe-base', runningCount > 0 ? 'pipe-flow' : 'pipe-flow stop']" d="M 680 95 L 680 335 L 780 335 L 780 215 L 970 215"/>
+
+        <!-- 流量计 FT-101 -->
+        <g transform="translate(840, 215)">
+          <rect x="-20" y="-18" width="40" height="36" rx="4" fill="#0f2638" stroke="#36c2ff"/>
+          <text x="0" y="4" fill="#36c2ff" font-size="10" font-weight="700" text-anchor="middle">FT</text>
+          <text x="0" y="32" fill="#fff" font-size="12" font-weight="700" text-anchor="middle">{{totalFlow}} m³/h</text>
+        </g>
+        <text x="890" y="195" fill="#36c2ff" font-size="12" font-weight="700">去生化好氧池 →</text>
+      </svg>
+    </section>
+
+    <!-- 右侧：当前选中设备概览与联锁 -->
+    <section class="panel">
+      <div class="panel-head">
+        <span>控制许可自检 (Permissives)</span>
+        <span style="font-size:11px;color:var(--success)">全绿允许启动</span>
+      </div>
+      <div class="panel-body">
+        <div style="display:grid;gap:8px;font-size:11px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px;background:#081622;border-radius:4px;border:1px solid var(--line)">
+            <span>井位高于 LL (1.20m)</span>
+            <span style="color:var(--success)">✓ 正常 ({{tags['SR.SUMP.LT101.PV'].value.toFixed(2)}}m)</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px;background:#081622;border-radius:4px;border:1px solid var(--line)">
+            <span>吸入电动蝶阀 V-in</span>
+            <span style="color:var(--success)">✓ 全开到位</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px;background:#081622;border-radius:4px;border:1px solid var(--line)">
+            <span>出水电动闸阀 V-out</span>
+            <span style="color:var(--success)">✓ 全开到位</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px;background:#081622;border-radius:4px;border:1px solid var(--line)">
+            <span>停机保护时间锁 T_MinStop</span>
+            <span style="color:var(--success)">✓ 倒计时 0s</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:6px;background:#081622;border-radius:4px;border:1px solid var(--line)">
+            <span>现场急停与过载保护</span>
+            <span style="color:var(--success)">✓ 闭合无动作</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 底部：操作审计追踪流水 Audit Trail -->
+  <footer class="audit-bar">
+    <div class="audit-head">
+      <span><b>操作审计追踪 (Audit Trail)</b></span>
+      <span>共 {{auditLogs.length}} 条记录 · CFR 21 Part 11 合规留痕</span>
+    </div>
+    <div style="overflow-y:auto">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>操作人员</th>
+            <th>操作对象</th>
+            <th>动作描述</th>
+            <th>原设定值</th>
+            <th>新下发值</th>
+            <th>SBO确认</th>
+            <th>执行结果</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(log, idx) in auditLogs" :key="idx">
+            <td class="num">{{log.time}}</td>
+            <td>{{log.user}}</td>
+            <td><b style="color:var(--accent)">{{log.target}}</b></td>
+            <td>{{log.action}}</td>
+            <td class="num">{{log.oldVal}}</td>
+            <td class="num" style="color:var(--accent)">{{log.newVal}}</td>
+            <td>{{log.sbo ? '两步确认通过' : '直接下发'}}</td>
+            <td><span class="status-tag success">{{log.result}}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </footer>
+
+  <!-- 变频泵操作 Faceplate 模态小面板 -->
+  <div class="faceplate-modal" v-if="activePump">
+    <div class="faceplate-head">
+      <div class="faceplate-title">
+        <span style="color:var(--accent)">[{{activePump.id}}]</span>
+        <span>污泥回流变频泵 操作小面板</span>
+      </div>
+      <button class="faceplate-close" @click="activePump = null">✕</button>
+    </div>
+    <div class="faceplate-body">
+      <!-- 状态与测量值 -->
+      <div class="faceplate-section">
+        <h5>设备实时状态</h5>
+        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:8px;text-align:center">
+          <div>
+            <span style="color:var(--text-muted);font-size:10px">运行状态</span>
+            <strong :style="{color: activePump.running ? 'var(--success)' : 'var(--offline)', display:'block', marginTop:'3px'}">
+              {{activePump.running ? '● 运行中' : '○ 停机'}}
+            </strong>
+          </div>
+          <div>
+            <span style="color:var(--text-muted);font-size:10px">实际频率</span>
+            <strong class="num" style="color:var(--accent);display:block;margin-top:3px">{{activePump.hz.toFixed(1)}} Hz</strong>
+          </div>
+          <div>
+            <span style="color:var(--text-muted);font-size:10px">电机电流</span>
+            <strong class="num" style="display:block;margin-top:3px">{{activePump.current.toFixed(1)}} A</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- 控制模式 -->
+      <div class="faceplate-section">
+        <h5>控制模式切换</h5>
+        <div class="ctrl-row">
+          <button class="ctrl-btn" :class="{active: activePump.autoMode}" @click="reqSwitchMode(activePump, true)">远程自动</button>
+          <button class="ctrl-btn" :class="{active: !activePump.autoMode}" @click="reqSwitchMode(activePump, false)">远程手动</button>
+        </div>
+      </div>
+
+      <!-- 调速设定 (仅手动有效或微调) -->
+      <div class="faceplate-section">
+        <h5>变频频率指令设定 (硬限幅 28.0 ~ 50.0 Hz)</h5>
+        <div class="slider-group">
+          <input type="range" min="28.0" max="50.0" step="0.5" v-model.number="tempHz" :disabled="activePump.autoMode">
+          <span class="slider-val num">{{tempHz.toFixed(1)}} Hz</span>
+          <button class="btn-sm" :disabled="activePump.autoMode" @click="reqApplyHz(activePump)">下发设定</button>
+        </div>
+        <small v-if="activePump.autoMode" style="color:var(--text-muted);display:block;margin-top:5px">提示：当前为自动模式，频率由 PID 闭环算法直接给定。</small>
+      </div>
+
+      <!-- SBO 启停控制 -->
+      <div class="faceplate-section">
+        <h5>手动动作控制 (SBO 两步确认防误动)</h5>
+        <div class="ctrl-row">
+          <button class="ctrl-btn start" :disabled="activePump.running" @click="reqStartPump(activePump)">启动设备</button>
+          <button class="ctrl-btn stop" :disabled="!activePump.running" @click="reqStopPump(activePump)">停止设备</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 液位 PID 调节回路 Faceplate -->
+  <div class="faceplate-modal" v-if="showPidFaceplate" style="left:240px">
+    <div class="faceplate-head">
+      <div class="faceplate-title">
+        <span style="color:var(--accent)">[LIC-101]</span>
+        <span>集泥井液位 PID 调节回路</span>
+      </div>
+      <button class="faceplate-close" @click="showPidFaceplate = false">✕</button>
+    </div>
+    <div class="faceplate-body">
+      <div class="faceplate-section">
+        <h5>回路当前变量</h5>
+        <div style="display:flex;justify-content:space-around;text-align:center">
+          <div><span>测量值 PV</span><strong class="num" style="display:block;color:var(--accent);font-size:18px">{{tags['SR.SUMP.LT101.PV'].value.toFixed(2)}} m</strong></div>
+          <div><span>当前设定 SP</span><strong class="num" style="display:block;color:var(--success);font-size:18px">{{tags['SR.SUMP.LT101.SP'].value.toFixed(2)}} m</strong></div>
+          <div><span>变频主输出 OP</span><strong class="num" style="display:block;color:var(--warning);font-size:18px">{{fcmd.toFixed(1)}} Hz</strong></div>
+        </div>
+      </div>
+
+      <div class="faceplate-section">
+        <h5>目标设定值设定 (SP 调节)</h5>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input type="number" min="2.0" max="4.0" step="0.05" v-model.number="tempSp" style="width:90px;background:#050d15;border:1px solid var(--line-light);color:#fff;padding:6px;border-radius:4px" class="num">
+          <span>米 (m)</span>
+          <button class="btn-primary" @click="reqApplySp">下发设定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SBO 二次确认模态对话框 -->
+  <div class="sbo-overlay" v-if="sboDialog.show">
+    <div class="sbo-box">
+      <div class="sbo-head">
+        <span>⚠ 操作二次确认 (SBO 防误动)</span>
+      </div>
+      <div class="sbo-body">
+        <p><b>操作指令确认：</b></p>
+        <p>{{sboDialog.message}}</p>
+        <div style="margin-top:10px;padding:8px;background:#07121b;border-radius:4px;font-size:11px;color:#ffb547">
+          安全防误提示：该指令将直接写入现场 PLC 并改变执行机构状态，请确认现场无人检修且工艺允许。
+        </div>
+      </div>
+      <div class="sbo-foot">
+        <button class="btn-sm" @click="sboDialog.show = false">取消操作</button>
+        <button :class="sboDialog.isDanger ? 'btn-danger' : 'btn-primary'" @click="confirmSbo">确认下发执行</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const safeInit = function(id){
+    try {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      return echarts.init(el);
+    } catch(e) {
+      return null;
+    }
+  };
+
+  // 变量点表模型 (Tag Point Database)
+  const initialTags = {
+    'SR.SUMP.LT101.PV': { name: '集泥井实际液位', value: 3.24, unit: 'm', writable: false },
+    'SR.SUMP.LT101.SP': { name: '液位控制设定值', value: 3.20, unit: 'm', writable: true },
+    'SR.HEADER.FT101.PV': { name: '回流总管流量', value: 685, unit: 'm³/h', writable: false }
+  };
+
+  const app = Vue.createApp({
+    data: function(){
+      return {
+        clock: '--:--:--',
+        tags: initialTags,
+        pumps: [
+          { id: 'P-01', running: true, autoMode: true, hz: 38.5, current: 18.2, fault: false },
+          { id: 'P-02', running: true, autoMode: true, hz: 38.5, current: 18.0, fault: false },
+          { id: 'P-03', running: false, autoMode: true, hz: 0.0, current: 0.0, fault: false },
+          { id: 'P-04', running: false, autoMode: true, hz: 0.0, current: 0.0, fault: false }
+        ],
+        activePump: null,
+        showPidFaceplate: false,
+        tempHz: 38.5,
+        tempSp: 3.20,
+        currentAlarm: {
+          level: '高危报警',
+          msg: '2# 污泥回流泵轴承温度轻微偏高 (43.8 ℃)，请保持监视。'
+        },
+        alarmAcknowledged: false,
+        sboDialog: {
+          show: false,
+          message: '',
+          isDanger: false,
+          actionFn: null
+        },
+        auditLogs: [
+          { time: '16:10:20', user: 'OP-104', target: 'P-01', action: '启动设备', oldVal: '停机', newVal: '运行', sbo: true, result: '执行成功' },
+          { time: '16:05:00', user: 'OP-104', target: 'LIC-101', action: '更改设定值 SP', oldVal: '3.10 m', newVal: '3.20 m', sbo: true, result: '执行成功' }
+        ]
+      };
+    },
+    computed: {
+      runningCount: function(){
+        return this.pumps.filter(function(p){ return p.running; }).length;
+      },
+      demandCount: function(){
+        return 2;
+      },
+      fcmd: function(){
+        return 38.5;
+      },
+      totalFlow: function(){
+        return this.runningCount * 342;
+      }
+    },
+    methods: {
+      tick: function(){
+        try {
+          const d = new Date();
+          this.clock = d.toLocaleTimeString('zh-CN', { hour12: false });
+        } catch(e) {}
+      },
+      logAudit: function(target, action, oldVal, newVal, sbo){
+        const now = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        this.auditLogs.unshift({
+          time: now,
+          user: 'OP-104',
+          target: target,
+          action: action,
+          oldVal: oldVal,
+          newVal: newVal,
+          sbo: !!sbo,
+          result: '执行成功'
+        });
+      },
+      openPumpFaceplate: function(pump){
+        this.activePump = pump;
+        this.tempHz = pump.hz > 0 ? pump.hz : 35.0;
+      },
+      openPidFaceplate: function(){
+        this.showPidFaceplate = true;
+        this.tempSp = this.tags['SR.SUMP.LT101.SP'].value;
+      },
+      reqSwitchMode: function(pump, isAuto){
+        const self = this;
+        const targetMode = isAuto ? '远程自动' : '远程手动';
+        this.sboDialog = {
+          show: true,
+          isDanger: !isAuto,
+          message: '确定将设备 [' + pump.id + '] 切换为 ' + targetMode + ' 模式吗？',
+          actionFn: function(){
+            const old = pump.autoMode ? '自动' : '手动';
+            pump.autoMode = isAuto;
+            self.logAudit(pump.id, '切换控制模式', old, isAuto ? '自动' : '手动', true);
+          }
+        };
+      },
+      reqStartPump: function(pump){
+        const self = this;
+        this.sboDialog = {
+          show: true,
+          isDanger: false,
+          message: '确定下发启动命令合闸 [' + pump.id + '] 吗？请确保管路通畅。',
+          actionFn: function(){
+            pump.running = true;
+            pump.hz = self.tempHz;
+            pump.current = 18.0;
+            self.logAudit(pump.id, '手动启动泵机', '停机', '运行 (' + pump.hz + 'Hz)', true);
+          }
+        };
+      },
+      reqStopPump: function(pump){
+        const self = this;
+        this.sboDialog = {
+          show: true,
+          isDanger: true,
+          message: '警告：停止 [' + pump.id + '] 将导致回流总能力下降，确认强制停机？',
+          actionFn: function(){
+            pump.running = false;
+            pump.hz = 0.0;
+            pump.current = 0.0;
+            self.logAudit(pump.id, '手动停止泵机', '运行', '停机', true);
+          }
+        };
+      },
+      reqApplyHz: function(pump){
+        const self = this;
+        const clampedHz = Math.max(28.0, Math.min(50.0, this.tempHz));
+        this.sboDialog = {
+          show: true,
+          isDanger: false,
+          message: '确定将 [' + pump.id + '] 给定频率修改为 ' + clampedHz.toFixed(1) + ' Hz 吗？',
+          actionFn: function(){
+            const oldHz = pump.hz;
+            pump.hz = clampedHz;
+            self.logAudit(pump.id, '修改给定频率', oldHz.toFixed(1) + ' Hz', clampedHz.toFixed(1) + ' Hz', true);
+          }
+        };
+      },
+      reqApplySp: function(){
+        const self = this;
+        const clampedSp = Math.max(2.0, Math.min(4.0, this.tempSp));
+        this.sboDialog = {
+          show: true,
+          isDanger: false,
+          message: '确定将集泥井目标液位 SP 修改为 ' + clampedSp.toFixed(2) + ' m 吗？',
+          actionFn: function(){
+            const oldSp = self.tags['SR.SUMP.LT101.SP'].value;
+            self.tags['SR.SUMP.LT101.SP'].value = clampedSp;
+            self.logAudit('LIC-101', '修改液位SP', oldSp.toFixed(2) + ' m', clampedSp.toFixed(2) + ' m', true);
+            self.showPidFaceplate = false;
+          }
+        };
+      },
+      confirmSbo: function(){
+        if (this.sboDialog.actionFn) {
+          try {
+            this.sboDialog.actionFn();
+          } catch(e) {
+            console.error(e);
+          }
+        }
+        this.sboDialog.show = false;
+      },
+      silenceAlarm: function(){
+        this.logAudit('ALARM-SYS', '警报消音', '蜂鸣鸣响', '已消音', false);
+      },
+      ackAlarm: function(){
+        this.alarmAcknowledged = true;
+        this.logAudit('ALARM-SYS', '操作员确认告警', '未确认', '已确认', false);
+      }
+    },
+    mounted: function(){
+      this.tick();
+      const self = this;
+      setInterval(function(){
+        try { self.tick(); } catch(e) {}
+      }, 1000);
+    }
+  });
+
+  app.mount('#app');
+
+  function fit(){
+    try {
+      const screen = document.getElementById('screen');
+      if (!screen) return;
+      const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      screen.style.transform = 'translate(-50%,-50%) scale(' + scale + ')';
+    } catch(e) {}
+  }
+  fit();
+  window.addEventListener('resize', fit);
+})();
+</script>
+</body>
+</html>

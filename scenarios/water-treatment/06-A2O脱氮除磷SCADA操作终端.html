@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>A²/O 生化脱氮除磷 SCADA 操作终端</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#03080e;color:#f2f7fa;font-family:"Microsoft YaHei","PingFang SC",Segoe UI,sans-serif}
+.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+button,input{font:inherit}
+[v-cloak]{display:none}
+:root{
+  --scada-bg:#060e16;
+  --panel-bg:#0a1722;
+  --panel-sub:#0e202f;
+  --line:#1c374b;
+  --line-light:#294f6b;
+  --accent:#36c2ff;
+  --success:#35d07f;
+  --warning:#ffb547;
+  --danger:#ff5d5d;
+  --offline:#708594;
+  --text-main:#f2f7fa;
+  --text-muted:#8ba3b5;
+}
+#screen{
+  width:1920px;
+  height:1080px;
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform-origin:center center;
+  display:grid;
+  grid-template-rows:54px 38px 1fr 180px;
+  overflow:hidden;
+  background:radial-gradient(circle at 50% 15%,rgba(54,194,255,.05),transparent 45%),var(--scada-bg);
+}
+
+/* 顶栏 */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 20px;
+  background:#050c14;
+  border-bottom:1px solid var(--line);
+}
+.logo-title{display:flex;align-items:center;gap:12px}
+.logo-icon{
+  width:32px;
+  height:32px;
+  border:1px solid var(--line-light);
+  border-radius:6px;
+  background:linear-gradient(135deg,#122a3d,#071420);
+  display:grid;
+  place-items:center;
+  color:var(--accent);
+}
+.logo-icon svg{width:18px;height:18px}
+.logo-text b{display:block;font-size:16px;letter-spacing:1px}
+.top-center-status{display:flex;align-items:center;gap:20px;font-size:12px;color:var(--text-muted)}
+.top-center-status b{color:var(--text-main)}
+.top-right-bar{display:flex;align-items:center;gap:16px}
+.auth-badge{
+  font-size:11px;
+  padding:3px 9px;
+  border-radius:4px;
+  background:rgba(53,208,127,.12);
+  color:var(--success);
+  border:1px solid rgba(53,208,127,.35);
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+.auth-badge i{width:6px;height:6px;border-radius:50%;background:var(--success)}
+
+/* ISA-18.2 常驻报警条 */
+.alarm-banner{
+  background:#140809;
+  border-bottom:1px solid rgba(255,93,93,.35);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 20px;
+  font-size:12px;
+}
+.banner-left{display:flex;align-items:center;gap:10px}
+.alarm-tag{
+  background:var(--danger);
+  color:#fff;
+  font-weight:700;
+  font-size:10px;
+  padding:2px 6px;
+  border-radius:3px;
+  animation:alarmBlink 1s infinite alternate;
+}
+.alarm-tag.ack{animation:none;background:#b33e3e}
+.banner-text{color:#ffb8b8}
+.banner-actions{display:flex;gap:8px}
+.btn-sm{
+  padding:3px 10px;
+  font-size:11px;
+  border:1px solid var(--line-light);
+  border-radius:4px;
+  background:#0a1c28;
+  color:var(--text-main);
+  cursor:pointer;
+  transition:all .15s;
+}
+.btn-sm:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm.silence{border-color:#ff9800;color:#ffb547}
+
+/* 工艺主画面区 */
+.main-stage{
+  position:relative;
+  display:grid;
+  grid-template-columns:300px 1fr 340px;
+  gap:12px;
+  padding:12px 18px;
+  min-height:0;
+}
+.panel{
+  background:var(--panel-bg);
+  border:1px solid var(--line);
+  border-radius:6px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.panel-head{
+  height:36px;
+  padding:0 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid var(--line);
+  background:rgba(8,20,30,.85);
+  font-size:13px;
+  font-weight:600;
+}
+.panel-body{padding:12px;flex:1;overflow:auto}
+
+/* SCADA 工艺模拟图 (中间) */
+.schematic-wrapper{position:relative;background:#050c13;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.schematic-svg{width:100%;height:100%;display:block}
+.device-interactive{cursor:pointer}
+.device-interactive:hover .tank-shell{stroke:var(--accent);stroke-width:2.5;filter:drop-shadow(0 0 8px rgba(54,194,255,.5))}
+.device-interactive:hover .pump-shell{stroke:var(--accent);stroke-width:2.5;filter:drop-shadow(0 0 8px rgba(54,194,255,.6))}
+
+.tank-shell{fill:#0c1e2c;stroke:#25485f;stroke-width:1.8;transition:all .2s}
+.tank-water{fill:#114863;opacity:.72}
+.pump-shell{fill:#112433;stroke:#274960;stroke-width:1.8;transition:all .2s}
+.pump-shell.running{fill:#113a30;stroke:var(--success)}
+.pump-shell.fault{fill:#381315;stroke:var(--danger)}
+
+/* 管路与水流 */
+.pipe-base{fill:none;stroke:#172e3d;stroke-width:7;stroke-linecap:round}
+.pipe-flow{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-dasharray:8 12;animation:flow 2s linear infinite}
+.pipe-flow.return-in{stroke:#35d07f;animation-duration:1.6s}
+.pipe-flow.return-ex{stroke:#61c9ff;animation-duration:2.4s}
+.pipe-flow.air{stroke:#ffb547;stroke-dasharray:6 10;animation-duration:1.2s}
+.pipe-flow.stop{animation:none;stroke:#223c4e;opacity:.3}
+.bubble-dot{fill:rgba(54,194,255,.6);animation:bubble 2.5s ease-in infinite}
+
+/* 底部操作与审计追踪日志 */
+.audit-bar{
+  background:#050b12;
+  border-top:1px solid var(--line);
+  display:grid;
+  grid-template-rows:30px 1fr;
+  padding:0 18px 8px;
+}
+.audit-head{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--text-muted);border-bottom:1px solid #102433}
+.audit-table{width:100%;border-collapse:collapse;font-size:11px;text-align:left}
+.audit-table th{color:var(--text-muted);padding:6px 8px;font-weight:500;border-bottom:1px solid #142c3d}
+.audit-table td{padding:5px 8px;border-bottom:1px solid #0d1e2b;color:var(--text-main)}
+.audit-table tr:hover{background:rgba(54,194,255,.04)}
+.status-tag{padding:1px 5px;border-radius:2px;font-size:10px}
+.status-tag.success{background:rgba(53,208,127,.15);color:var(--success)}
+
+/* 浮动操作小面板 Faceplate */
+.faceplate-modal{
+  position:absolute;
+  z-index:90;
+  width:430px;
+  background:#091926;
+  border:1px solid var(--line-light);
+  border-radius:8px;
+  box-shadow:0 16px 40px rgba(0,0,0,.75),0 0 0 1px rgba(54,194,255,.25);
+  top:80px;
+  left:540px;
+  overflow:hidden;
+}
+.faceplate-head{
+  height:40px;
+  padding:0 14px;
+  background:linear-gradient(90deg,#0f273b,#0b1e2e);
+  border-bottom:1px solid var(--line-light);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.faceplate-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}
+.faceplate-close{cursor:pointer;background:transparent;border:0;color:var(--text-muted);font-size:16px}
+.faceplate-close:hover{color:#fff}
+.faceplate-body{padding:14px;font-size:12px}
+.faceplate-section{margin-bottom:12px;border:1px solid var(--line);background:#071420;border-radius:6px;padding:10px}
+.faceplate-section h5{margin:0 0 8px;font-size:11px;color:var(--text-muted);letter-spacing:.5px}
+
+/* SBO 两步确认弹窗 */
+.sbo-overlay{
+  position:absolute;
+  inset:0;
+  background:rgba(2,7,12,.75);
+  backdrop-filter:blur(3px);
+  z-index:100;
+  display:grid;
+  place-items:center;
+}
+.sbo-box{
+  width:460px;
+  background:#0d1d2b;
+  border:1px solid #ffb547;
+  box-shadow:0 20px 50px rgba(0,0,0,.8);
+  border-radius:8px;
+  overflow:hidden;
+  animation:pop .2s ease-out;
+}
+.sbo-head{
+  height:42px;
+  padding:0 16px;
+  background:#261b0c;
+  border-bottom:1px solid rgba(255,181,71,.3);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#ffb547;
+  font-weight:700;
+  font-size:13px;
+}
+.sbo-body{padding:16px;font-size:13px;line-height:1.6}
+.sbo-foot{
+  padding:12px 16px;
+  background:#091622;
+  border-top:1px solid var(--line);
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+.btn-primary{
+  background:var(--accent);
+  color:#040c14;
+  border:0;
+  padding:6px 14px;
+  border-radius:4px;
+  font-weight:700;
+  cursor:pointer;
+}
+.btn-danger{
+  background:var(--danger);
+  color:#fff;
+  border:0;
+  padding:6px 14px;
+  border-radius:4px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+/* 控制按钮组 */
+.ctrl-row{display:flex;gap:8px;margin-bottom:8px}
+.ctrl-btn{
+  flex:1;
+  padding:8px 0;
+  border:1px solid var(--line-light);
+  border-radius:5px;
+  background:#0c1f2e;
+  color:var(--text-main);
+  cursor:pointer;
+  font-size:12px;
+  font-weight:600;
+}
+.ctrl-btn.active{background:rgba(54,194,255,.18);border-color:var(--accent);color:var(--accent)}
+.ctrl-btn.start{border-color:rgba(53,208,127,.4);color:var(--success)}
+.ctrl-btn.start:hover{background:rgba(53,208,127,.15)}
+.ctrl-btn.stop{border-color:rgba(255,93,93,.4);color:var(--danger)}
+.ctrl-btn.stop:hover{background:rgba(255,93,93,.15)}
+
+.slider-group{display:flex;align-items:center;gap:10px;margin-top:6px}
+.slider-group input[type=range]{flex:1;accent-color:var(--accent)}
+.slider-val{width:56px;text-align:right;font-size:14px;font-weight:700;color:var(--accent)}
+
+@keyframes flow{to{stroke-dashoffset:-40}}
+@keyframes bubble{0%{transform:translateY(15px);opacity:0}40%{opacity:.8}100%{transform:translateY(-40px);opacity:0}}
+@keyframes alarmBlink{from{opacity:1}to{opacity:.3}}
+@keyframes pop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+<div id="screen">
+  <!-- 顶栏 SCADA 态势 -->
+  <header class="topbar">
+    <div class="logo-title">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="12" r="3" fill="currentColor"/><path d="M14 8h5M14 12h5M14 16h5" stroke="currentColor" stroke-width="2"/></svg>
+      </div>
+      <div class="logo-text">
+        <b>A²/O 生化脱氮除磷 SCADA 操作终端</b>
+      </div>
+    </div>
+    <div class="top-center-status">
+      <span>控制权: <b>中控调度</b></span>
+      <span>PLC 通信: <b style="color:var(--success)">正常 (45ms)</b></span>
+      <span>生化水温: <b style="color:var(--accent)">24.6 ℃</b></span>
+      <span>进水流量: <b>532 m³/h</b></span>
+    </div>
+    <div class="top-right-bar">
+      <div class="auth-badge"><i></i>操作员已鉴权 (OP-104)</div>
+      <div style="font-size:11px;color:var(--text-muted)"><span>数据质量 GOOD</span><span style="margin:0 6px">|</span><span>更新时间 {{clock}}</span></div>
+    </div>
+  </header>
+
+  <!-- ISA-18.2 常驻报警条 -->
+  <div class="alarm-banner">
+    <div class="banner-left">
+      <span class="alarm-tag" :class="{ack: alarmAcknowledged}">
+        {{currentAlarm ? currentAlarm.level : '正常'}}
+      </span>
+      <span class="banner-text">
+        {{currentAlarm ? currentAlarm.msg : '生化系统各回路运行平稳，无未确认报警。'}}
+      </span>
+    </div>
+    <div class="banner-actions" v-if="currentAlarm">
+      <button class="btn-sm silence" @click="silenceAlarm">消音</button>
+      <button class="btn-sm" @click="ackAlarm">确认告警</button>
+    </div>
+  </div>
+
+  <!-- 工艺主画面 -->
+  <main class="main-stage">
+    <!-- 左侧：四大闭环控制回路监控 -->
+    <section class="panel">
+      <div class="panel-head">
+        <span>核心控制回路 (四大生化闭环)</span>
+        <span style="font-size:11px;color:var(--text-muted)">点击修改设定</span>
+      </div>
+      <div class="panel-body" style="display:grid;gap:8px">
+        <!-- DO 回路 -->
+        <div style="padding:8px 10px;border:1px solid var(--line);background:#071420;border-radius:6px;cursor:pointer" @click="openDoFaceplate">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)">
+            <span>好氧池 DO 调节 (LIC-201)</span>
+            <span style="color:var(--accent)">点击调谐</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:3px">
+            <strong class="num" style="font-size:20px;color:var(--accent)">{{tags['A2O.AEROBIC.DO.PV'].value.toFixed(2)}} mg/L</strong>
+            <span class="num" style="font-size:13px;color:var(--text-muted)">目标 SP: {{tags['A2O.AEROBIC.DO.SP'].value.toFixed(2)}}</span>
+          </div>
+        </div>
+
+        <!-- 内回流回路 -->
+        <div style="padding:8px 10px;border:1px solid var(--line);background:#071420;border-radius:6px;cursor:pointer" @click="openPumpFaceplate('internal')">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)">
+            <span>反硝化内回流比 (FIC-202)</span>
+            <span style="color:var(--success)">{{internalPump.running ? '运行' : '停机'}}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:3px">
+            <strong class="num" style="font-size:20px;color:var(--success)">{{tags['A2O.RECYCLE.INT.PV'].value}} %</strong>
+            <span class="num" style="font-size:13px;color:var(--text-muted)">目标 SP: {{tags['A2O.RECYCLE.INT.SP'].value}}%</span>
+          </div>
+        </div>
+
+        <!-- 外回流回路 -->
+        <div style="padding:8px 10px;border:1px solid var(--line);background:#071420;border-radius:6px;cursor:pointer" @click="openPumpFaceplate('external')">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)">
+            <span>污泥外回流比 (FIC-203)</span>
+            <span style="color:var(--accent)">{{externalPump.running ? '运行' : '停机'}}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:3px">
+            <strong class="num" style="font-size:20px;color:var(--accent)">{{tags['A2O.RECYCLE.EXT.PV'].value}} %</strong>
+            <span class="num" style="font-size:13px;color:var(--text-muted)">目标 SP: {{tags['A2O.RECYCLE.EXT.SP'].value}}%</span>
+          </div>
+        </div>
+
+        <!-- 碳源加药回路 -->
+        <div style="padding:8px 10px;border:1px solid var(--line);background:#071420;border-radius:6px;cursor:pointer" @click="openCarbonFaceplate">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)">
+            <span>碳源投加复合控制 (QIC-204)</span>
+            <span style="color:var(--warning)">前馈跟踪</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:3px">
+            <strong class="num" style="font-size:20px;color:var(--warning)">{{tags['A2O.CARBON.DOSE.PV'].value}} L/h</strong>
+            <span class="num" style="font-size:13px;color:var(--text-muted)">设定 SP: {{tags['A2O.CARBON.DOSE.SP'].value}} L/h</span>
+          </div>
+        </div>
+
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.5;margin-top:4px">
+          <p>💡 <b>SCADA 操作提示</b>：点击工艺池体、泵组或加药箱可展开专用 Faceplate；所有启停与设定修改均经 SBO 两步确认防护。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 中间：A2O 可微操数字工艺流程图 -->
+    <section class="schematic-wrapper">
+      <svg class="schematic-svg" viewBox="0 0 1020 480">
+        <!-- 进水总管 -->
+        <path class="pipe-base" d="M 20 210 L 80 210"/>
+        <path class="pipe-flow" d="M 20 210 L 80 210"/>
+        <text x="35" y="195" fill="#36c2ff" font-size="11" font-weight="700">进水 532 m³/h</text>
+
+        <!-- 1. 厌氧池 -->
+        <g class="device-interactive" transform="translate(80, 80)">
+          <rect class="tank-shell" x="0" y="0" width="180" height="260" rx="6"/>
+          <rect class="tank-water" x="6" y="70" width="168" height="184" rx="3"/>
+          <text x="90" y="32" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">厌氧池</text>
+          <!-- 测点胶囊 -->
+          <rect x="20" y="85" width="140" height="38" rx="4" fill="#081622" stroke="#1c3b52"/>
+          <text x="30" y="102" fill="#8ba3b5" font-size="10">ORP 氧化还原</text>
+          <text x="30" y="117" class="num" fill="#36c2ff" font-size="13" font-weight="700">-186 mV</text>
+
+          <rect x="20" y="132" width="140" height="38" rx="4" fill="#081622" stroke="#1c3b52"/>
+          <text x="30" y="149" fill="#8ba3b5" font-size="10">正磷酸盐 TP</text>
+          <text x="30" y="164" class="num" fill="#fff" font-size="13" font-weight="700">5.2 mg/L</text>
+        </g>
+
+        <!-- 厌氧 -> 缺氧管 -->
+        <path class="pipe-base" d="M 260 210 L 310 210"/>
+        <path class="pipe-flow" d="M 260 210 L 310 210"/>
+
+        <!-- 2. 缺氧池 (反硝化脱氮) -->
+        <g class="device-interactive" transform="translate(310, 80)">
+          <rect class="tank-shell" x="0" y="0" width="180" height="260" rx="6"/>
+          <rect class="tank-water" x="6" y="55" width="168" height="199" rx="3"/>
+          <text x="90" y="32" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">缺氧池</text>
+          <rect x="20" y="85" width="140" height="38" rx="4" fill="#081622" stroke="#1c3b52"/>
+          <text x="30" y="102" fill="#8ba3b5" font-size="10">溶解氧 DO</text>
+          <text x="30" y="117" class="num" fill="#35d07f" font-size="13" font-weight="700">0.32 mg/L</text>
+
+          <rect x="20" y="132" width="140" height="38" rx="4" fill="#081622" stroke="#1c3b52"/>
+          <text x="30" y="149" fill="#8ba3b5" font-size="10">硝态氮 NO3-N</text>
+          <text x="30" y="164" class="num" fill="#fff" font-size="13" font-weight="700">6.8 mg/L</text>
+        </g>
+
+        <!-- 缺氧 -> 好氧管 -->
+        <path class="pipe-base" d="M 490 210 L 540 210"/>
+        <path class="pipe-flow" d="M 490 210 L 540 210"/>
+
+        <!-- 3. 好氧池 (点击调控 DO) -->
+        <g class="device-interactive" transform="translate(540, 80)" @click="openDoFaceplate">
+          <rect class="tank-shell" x="0" y="0" width="190" height="260" rx="6"/>
+          <rect class="tank-water" x="6" y="45" width="178" height="209" rx="3"/>
+          <text x="95" y="32" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">好氧池</text>
+          <text x="95" y="48" fill="#36c2ff" font-size="9" text-anchor="middle">点击打开 DO 调节小面板</text>
+
+          <!-- DO 测点 -->
+          <rect x="20" y="85" width="150" height="42" rx="4" fill="#081622" stroke="#36c2ff" stroke-width="1.5"/>
+          <text x="30" y="102" fill="#36c2ff" font-size="10" font-weight="700">DO 实际值 (PV)</text>
+          <text x="30" y="120" class="num" fill="#36c2ff" font-size="16" font-weight="700">{{tags['A2O.AEROBIC.DO.PV'].value.toFixed(2)}} mg/L</text>
+
+          <rect x="20" y="135" width="150" height="38" rx="4" fill="#081622" stroke="#1c3b52"/>
+          <text x="30" y="152" fill="#8ba3b5" font-size="10">氨氮 NH4-N</text>
+          <text x="30" y="167" class="num" fill="#fff" font-size="13" font-weight="700">1.8 mg/L</text>
+
+          <!-- 动态气泡 -->
+          <circle class="bubble-dot" cx="40" cy="220" r="3"/>
+          <circle class="bubble-dot" cx="80" cy="230" r="2.5" style="animation-delay:.6s"/>
+          <circle class="bubble-dot" cx="120" cy="225" r="3" style="animation-delay:1.2s"/>
+          <circle class="bubble-dot" cx="150" cy="235" r="2" style="animation-delay:1.8s"/>
+        </g>
+
+        <!-- 好氧 -> 二沉池管 -->
+        <path class="pipe-base" d="M 730 210 L 780 210"/>
+        <path class="pipe-flow" d="M 730 210 L 780 210"/>
+
+        <!-- 4. 二沉池 -->
+        <g class="device-interactive" transform="translate(780, 80)">
+          <rect class="tank-shell" x="0" y="0" width="170" height="260" rx="6"/>
+          <path d="M 6 60 H 164 V 200 H 6 Z" fill="#0f2638" opacity=".6"/>
+          <path d="M 20 70 H 150 L 115 220 H 55 Z" fill="#183b54" opacity=".7"/>
+          <text x="85" y="32" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">二沉池</text>
+
+          <rect x="15" y="85" width="140" height="38" rx="4" fill="#081622" stroke="#1c3b52"/>
+          <text x="25" y="102" fill="#8ba3b5" font-size="10">污泥浓度 MLSS</text>
+          <text x="25" y="117" class="num" fill="#fff" font-size="13" font-weight="700">3.32 g/L</text>
+
+          <rect x="15" y="132" width="140" height="38" rx="4" fill="#081622" stroke="#1c3b52"/>
+          <text x="25" y="149" fill="#8ba3b5" font-size="10">泥位高度</text>
+          <text x="25" y="164" class="num" fill="#36c2ff" font-size="13" font-weight="700">1.18 m</text>
+        </g>
+
+        <!-- 出水管 -->
+        <path class="pipe-base" d="M 950 210 L 1000 210"/>
+        <path class="pipe-flow" d="M 950 210 L 1000 210"/>
+        <text x="965" y="195" fill="#35d07f" font-size="11" font-weight="700">出水达标</text>
+
+        <!-- 内部回流管线 (好氧末端 -> 缺氧前端) -->
+        <path class="pipe-base" d="M 640 80 L 640 45 L 400 45 L 400 80"/>
+        <path :class="['pipe-base', internalPump.running ? 'pipe-flow return-in' : 'pipe-flow stop']" d="M 640 80 L 640 45 L 400 45 L 400 80"/>
+        <!-- 内回流泵节点 -->
+        <g class="device-interactive" transform="translate(520, 45)" @click="openPumpFaceplate('internal')">
+          <circle class="pump-shell" :class="{running: internalPump.running}" cx="0" cy="0" r="15"/>
+          <text x="0" y="4" fill="#fff" font-size="9" font-weight="700" text-anchor="middle">1#内回</text>
+          <text x="0" y="-18" fill="#35d07f" font-size="10" font-weight="700" text-anchor="middle">内回流 {{tags['A2O.RECYCLE.INT.PV'].value}}%</text>
+        </g>
+
+        <!-- 外部回流管线 (二沉底部 -> 厌氧前端) -->
+        <path class="pipe-base" d="M 865 340 L 865 390 L 170 390 L 170 340"/>
+        <path :class="['pipe-base', externalPump.running ? 'pipe-flow return-ex' : 'pipe-flow stop']" d="M 865 340 L 865 390 L 170 390 L 170 340"/>
+        <!-- 外回流泵节点 -->
+        <g class="device-interactive" transform="translate(520, 390)" @click="openPumpFaceplate('external')">
+          <circle class="pump-shell" :class="{running: externalPump.running}" cx="0" cy="0" r="15"/>
+          <text x="0" y="4" fill="#fff" font-size="9" font-weight="700" text-anchor="middle">2#外回</text>
+          <text x="0" y="24" fill="#61c9ff" font-size="10" font-weight="700" text-anchor="middle">外回流 {{tags['A2O.RECYCLE.EXT.PV'].value}}%</text>
+        </g>
+
+        <!-- 鼓风曝气风管 (接入好氧池底部) -->
+        <path class="pipe-base" d="M 635 440 L 635 340"/>
+        <path class="pipe-flow air" d="M 635 440 L 635 340"/>
+        <g class="device-interactive" transform="translate(635, 435)" @click="openDoFaceplate">
+          <rect x="-35" y="-12" width="70" height="24" rx="3" fill="#0f2638" stroke="#ffb547"/>
+          <text x="0" y="4" fill="#ffb547" font-size="10" font-weight="700" text-anchor="middle">1#鼓风机 {{blowerHz}}Hz</text>
+        </g>
+
+        <!-- 碳源加药管 (投加至缺氧池前端) -->
+        <g class="device-interactive" transform="translate(300, 390)" @click="openCarbonFaceplate">
+          <rect x="-30" y="-15" width="60" height="30" rx="3" fill="#1b2a1a" stroke="#ffb547"/>
+          <text x="0" y="-2" fill="#ffb547" font-size="9" font-weight="700" text-anchor="middle">碳源计量泵</text>
+          <text x="0" y="10" fill="#fff" font-size="8" text-anchor="middle">{{tags['A2O.CARBON.DOSE.PV'].value}} L/h</text>
+          <path d="M 0 -15 L 0 -50 L 50 -50" stroke="#ffb547" stroke-width="2" stroke-dasharray="3 3" fill="none"/>
+        </g>
+      </svg>
+    </section>
+
+    <!-- 右侧：工艺联锁与控制参数 -->
+    <section class="panel">
+      <div class="panel-head">
+        <span>控制许可与指标达标</span>
+        <span style="font-size:11px;color:var(--success)">一级A标准</span>
+      </div>
+      <div class="panel-body">
+        <div style="display:grid;gap:8px;font-size:11px">
+          <div style="display:flex;justify-content:space-between;padding:6px;background:#081622;border-radius:4px;border:1px solid var(--line)">
+            <span>好氧池曝气主管压力</span>
+            <span class="num" style="color:var(--success)">58.2 kPa</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px;background:#081622;border-radius:4px;border:1px solid var(--line)">
+            <span>反硝化碳氮比 (C/N)</span>
+            <span class="num" style="color:var(--accent)">4.82 (适宜)</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px;background:#081622;border-radius:4px;border:1px solid var(--line)">
+            <span>出水总氮 TN</span>
+            <span class="num" style="color:var(--success)">12.4 mg/L (&le;15)</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px;background:#081622;border-radius:4px;border:1px solid var(--line)">
+            <span>出水总磷 TP</span>
+            <span class="num" style="color:var(--success)">0.38 mg/L (&le;0.5)</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px;background:#081622;border-radius:4px;border:1px solid var(--line)">
+            <span>吨水综合电耗</span>
+            <span class="num" style="color:var(--accent)">0.218 kWh/m³</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 底部：操作审计追踪流水 Audit Trail -->
+  <footer class="audit-bar">
+    <div class="audit-head">
+      <span><b>操作审计追踪 (Audit Trail)</b></span>
+      <span>共 {{auditLogs.length}} 条记录 · CFR 21 Part 11 合规留痕</span>
+    </div>
+    <div style="overflow-y:auto">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>操作人员</th>
+            <th>操作对象</th>
+            <th>动作描述</th>
+            <th>原设定值</th>
+            <th>新下发值</th>
+            <th>SBO确认</th>
+            <th>执行结果</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(log, idx) in auditLogs" :key="idx">
+            <td class="num">{{log.time}}</td>
+            <td>{{log.user}}</td>
+            <td><b style="color:var(--accent)">{{log.target}}</b></td>
+            <td>{{log.action}}</td>
+            <td class="num">{{log.oldVal}}</td>
+            <td class="num" style="color:var(--accent)">{{log.newVal}}</td>
+            <td>{{log.sbo ? '两步确认通过' : '直接下发'}}</td>
+            <td><span class="status-tag success">{{log.result}}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </footer>
+
+  <!-- 好氧池 DO 调节回路 Faceplate -->
+  <div class="faceplate-modal" v-if="activeFaceplate === 'do'" style="left:530px">
+    <div class="faceplate-head">
+      <div class="faceplate-title">
+        <span style="color:var(--accent)">[LIC-201]</span>
+        <span>好氧池 DO 闭环调节小面板</span>
+      </div>
+      <button class="faceplate-close" @click="activeFaceplate = null">✕</button>
+    </div>
+    <div class="faceplate-body">
+      <div class="faceplate-section">
+        <h5>回路变量与执行机构</h5>
+        <div style="display:flex;justify-content:space-around;text-align:center">
+          <div><span style="font-size:10px;color:var(--text-muted)">测量值 PV</span><strong class="num" style="display:block;color:var(--accent);font-size:18px">{{tags['A2O.AEROBIC.DO.PV'].value.toFixed(2)}} mg/L</strong></div>
+          <div><span style="font-size:10px;color:var(--text-muted)">当前设定 SP</span><strong class="num" style="display:block;color:var(--success);font-size:18px">{{tags['A2O.AEROBIC.DO.SP'].value.toFixed(2)}} mg/L</strong></div>
+          <div><span style="font-size:10px;color:var(--text-muted)">鼓风机频率</span><strong class="num" style="display:block;color:var(--warning);font-size:18px">{{blowerHz}} Hz</strong></div>
+        </div>
+      </div>
+
+      <div class="faceplate-section">
+        <h5>DO 目标值设定 (SP 调节，硬限幅 1.5 ~ 3.5 mg/L)</h5>
+        <div class="slider-group">
+          <input type="range" min="1.5" max="3.5" step="0.1" v-model.number="tempDoSp">
+          <span class="slider-val num">{{tempDoSp.toFixed(2)}}</span>
+          <button class="btn-sm" @click="reqApplyDoSp">下发设定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 内/外回流泵 Faceplate -->
+  <div class="faceplate-modal" v-if="activeFaceplate === 'internal' || activeFaceplate === 'external'">
+    <div class="faceplate-head">
+      <div class="faceplate-title">
+        <span style="color:var(--accent)">[{{currentPumpObj.id}}]</span>
+        <span>{{currentPumpObj.name}} 操作小面板</span>
+      </div>
+      <button class="faceplate-close" @click="activeFaceplate = null">✕</button>
+    </div>
+    <div class="faceplate-body">
+      <div class="faceplate-section">
+        <h5>设备实时状态</h5>
+        <div style="display:flex;justify-content:space-around;text-align:center">
+          <div><span style="font-size:10px;color:var(--text-muted)">运行状态</span><strong :style="{color: currentPumpObj.running ? 'var(--success)' : 'var(--offline)', display:'block'}">{{currentPumpObj.running ? '● 运行中' : '○ 停机'}}</strong></div>
+          <div><span style="font-size:10px;color:var(--text-muted)">当前频率</span><strong class="num" style="color:var(--accent);display:block">{{currentPumpObj.hz.toFixed(1)}} Hz</strong></div>
+          <div><span style="font-size:10px;color:var(--text-muted)">运行电流</span><strong class="num" style="display:block">{{currentPumpObj.current}} A</strong></div>
+        </div>
+      </div>
+
+      <div class="faceplate-section">
+        <h5>控制模式切换</h5>
+        <div class="ctrl-row">
+          <button class="ctrl-btn" :class="{active: currentPumpObj.autoMode}" @click="reqSwitchPumpMode(currentPumpObj, true)">远程自动</button>
+          <button class="ctrl-btn" :class="{active: !currentPumpObj.autoMode}" @click="reqSwitchPumpMode(currentPumpObj, false)">远程手动</button>
+        </div>
+      </div>
+
+      <div class="faceplate-section">
+        <h5>回流比目标设定 (SP 调节)</h5>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input type="number" :min="currentPumpObj.minSp" :max="currentPumpObj.maxSp" step="5" v-model.number="tempRecycleSp" style="width:90px;background:#050d15;border:1px solid var(--line-light);color:#fff;padding:6px;border-radius:4px" class="num">
+          <span>百分比 (%)</span>
+          <button class="btn-primary" @click="reqApplyRecycleSp">下发设定</button>
+        </div>
+      </div>
+
+      <div class="faceplate-section">
+        <h5>手动动作控制 (SBO 两步防误确认)</h5>
+        <div class="ctrl-row">
+          <button class="ctrl-btn start" :disabled="currentPumpObj.running" @click="reqStartPump(currentPumpObj)">启动设备</button>
+          <button class="ctrl-btn stop" :disabled="!currentPumpObj.running" @click="reqStopPump(currentPumpObj)">停止设备</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 碳源加药泵 Faceplate -->
+  <div class="faceplate-modal" v-if="activeFaceplate === 'carbon'" style="left:340px">
+    <div class="faceplate-head">
+      <div class="faceplate-title">
+        <span style="color:var(--accent)">[QIC-204]</span>
+        <span>碳源加药系统 操作小面板</span>
+      </div>
+      <button class="faceplate-close" @click="activeFaceplate = null">✕</button>
+    </div>
+    <div class="faceplate-body">
+      <div class="faceplate-section">
+        <h5>加药工况</h5>
+        <div style="display:flex;justify-content:space-around;text-align:center">
+          <div><span style="font-size:10px;color:var(--text-muted)">实际投加量</span><strong class="num" style="display:block;color:var(--warning);font-size:18px">{{tags['A2O.CARBON.DOSE.PV'].value}} L/h</strong></div>
+          <div><span style="font-size:10px;color:var(--text-muted)">设定目标 SP</span><strong class="num" style="display:block;color:var(--success);font-size:18px">{{tags['A2O.CARBON.DOSE.SP'].value}} L/h</strong></div>
+          <div><span style="font-size:10px;color:var(--text-muted)">冲程开度</span><strong class="num" style="display:block;color:var(--accent);font-size:18px">62 %</strong></div>
+        </div>
+      </div>
+
+      <div class="faceplate-section">
+        <h5>碳源投加量设定 (硬限幅 50 ~ 200 L/h)</h5>
+        <div style="display:flex;gap:10px;align-items:center">
+          <input type="number" min="50" max="200" step="5" v-model.number="tempCarbonSp" style="width:90px;background:#050d15;border:1px solid var(--line-light);color:#fff;padding:6px;border-radius:4px" class="num">
+          <span>升/小时 (L/h)</span>
+          <button class="btn-primary" @click="reqApplyCarbonSp">下发设定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SBO 二次确认模态窗 -->
+  <div class="sbo-overlay" v-if="sboDialog.show">
+    <div class="sbo-box">
+      <div class="sbo-head">
+        <span>⚠ 操作二次确认 (SBO 防误动)</span>
+      </div>
+      <div class="sbo-body">
+        <p><b>操作指令确认：</b></p>
+        <p>{{sboDialog.message}}</p>
+        <div style="margin-top:10px;padding:8px;background:#07121b;border-radius:4px;font-size:11px;color:#ffb547">
+          安全防误提示：该指令将直接改变生化系统执行机构工况，请确保工艺安全。
+        </div>
+      </div>
+      <div class="sbo-foot">
+        <button class="btn-sm" @click="sboDialog.show = false">取消操作</button>
+        <button :class="sboDialog.isDanger ? 'btn-danger' : 'btn-primary'" @click="confirmSbo">确认下发执行</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const safeInit = function(id){
+    try {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      return echarts.init(el);
+    } catch(e) {
+      return null;
+    }
+  };
+
+  const initialTags = {
+    'A2O.AEROBIC.DO.PV': { name: '好氧池DO实际值', value: 2.38, unit: 'mg/L', writable: false },
+    'A2O.AEROBIC.DO.SP': { name: '好氧池DO设定值', value: 2.20, unit: 'mg/L', writable: true },
+    'A2O.RECYCLE.INT.PV': { name: '内回流比实际值', value: 205, unit: '%', writable: false },
+    'A2O.RECYCLE.INT.SP': { name: '内回流比设定值', value: 200, unit: '%', writable: true },
+    'A2O.RECYCLE.EXT.PV': { name: '外回流比实际值', value: 79, unit: '%', writable: false },
+    'A2O.RECYCLE.EXT.SP': { name: '外回流比设定值', value: 80, unit: '%', writable: true },
+    'A2O.CARBON.DOSE.PV': { name: '碳源投加实际值', value: 118, unit: 'L/h', writable: false },
+    'A2O.CARBON.DOSE.SP': { name: '碳源投加设定值', value: 120, unit: 'L/h', writable: true }
+  };
+
+  const app = Vue.createApp({
+    data: function(){
+      return {
+        clock: '--:--:--',
+        tags: initialTags,
+        activeFaceplate: null, // 'do', 'internal', 'external', 'carbon'
+        blowerHz: 43.5,
+        internalPump: { id: 'P-INT', name: '1# 内回流泵', running: true, autoMode: true, hz: 39.0, current: 12.4, minSp: 150, maxSp: 250 },
+        externalPump: { id: 'P-EXT', name: '2# 外回流泵', running: true, autoMode: true, hz: 31.0, current: 8.7, minSp: 50, maxSp: 100 },
+        tempDoSp: 2.20,
+        tempRecycleSp: 200,
+        tempCarbonSp: 120,
+        currentAlarm: {
+          level: '高危报警',
+          msg: '好氧池 3# 测点 DO 偏低 (1.82 mg/L)，鼓风曝气回路已自动增频补偿。'
+        },
+        alarmAcknowledged: false,
+        sboDialog: {
+          show: false,
+          message: '',
+          isDanger: false,
+          actionFn: null
+        },
+        auditLogs: [
+          { time: '17:20:10', user: 'OP-104', target: 'LIC-201', action: '修改DO设定值 SP', oldVal: '2.00 mg/L', newVal: '2.20 mg/L', sbo: true, result: '执行成功' },
+          { time: '17:15:00', user: 'OP-104', target: 'P-INT', action: '切换控制模式', oldVal: '手动', newVal: '自动', sbo: true, result: '执行成功' }
+        ]
+      };
+    },
+    computed: {
+      currentPumpObj: function(){
+        return this.activeFaceplate === 'internal' ? this.internalPump : this.externalPump;
+      }
+    },
+    methods: {
+      tick: function(){
+        try {
+          const d = new Date();
+          this.clock = d.toLocaleTimeString('zh-CN', { hour12: false });
+        } catch(e) {}
+      },
+      logAudit: function(target, action, oldVal, newVal, sbo){
+        const now = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        this.auditLogs.unshift({
+          time: now,
+          user: 'OP-104',
+          target: target,
+          action: action,
+          oldVal: oldVal,
+          newVal: newVal,
+          sbo: !!sbo,
+          result: '执行成功'
+        });
+      },
+      openDoFaceplate: function(){
+        this.activeFaceplate = 'do';
+        this.tempDoSp = this.tags['A2O.AEROBIC.DO.SP'].value;
+      },
+      openPumpFaceplate: function(type){
+        this.activeFaceplate = type;
+        const tag = type === 'internal' ? 'A2O.RECYCLE.INT.SP' : 'A2O.RECYCLE.EXT.SP';
+        this.tempRecycleSp = this.tags[tag].value;
+      },
+      openCarbonFaceplate: function(){
+        this.activeFaceplate = 'carbon';
+        this.tempCarbonSp = this.tags['A2O.CARBON.DOSE.SP'].value;
+      },
+      reqApplyDoSp: function(){
+        const self = this;
+        const clamped = Math.max(1.5, Math.min(3.5, this.tempDoSp));
+        this.sboDialog = {
+          show: true,
+          isDanger: false,
+          message: '确定将好氧池 DO 目标值修改为 ' + clamped.toFixed(2) + ' mg/L 吗？鼓风机与调节阀将自动跟随。',
+          actionFn: function(){
+            const oldVal = self.tags['A2O.AEROBIC.DO.SP'].value;
+            self.tags['A2O.AEROBIC.DO.SP'].value = clamped;
+            self.blowerHz = Math.round((clamped / 2.2) * 43.5);
+            self.logAudit('LIC-201', '修改好氧池DO目标SP', oldVal.toFixed(2) + ' mg/L', clamped.toFixed(2) + ' mg/L', true);
+            self.activeFaceplate = null;
+          }
+        };
+      },
+      reqApplyRecycleSp: function(){
+        const self = this;
+        const isInt = this.activeFaceplate === 'internal';
+        const tag = isInt ? 'A2O.RECYCLE.INT.SP' : 'A2O.RECYCLE.EXT.SP';
+        const targetObj = isInt ? this.internalPump : this.externalPump;
+        const clamped = Math.max(targetObj.minSp, Math.min(targetObj.maxSp, this.tempRecycleSp));
+        this.sboDialog = {
+          show: true,
+          isDanger: false,
+          message: '确定将 ' + targetObj.name + ' 目标回流比修改为 ' + clamped + ' % 吗？',
+          actionFn: function(){
+            const oldVal = self.tags[tag].value;
+            self.tags[tag].value = clamped;
+            self.tags[isInt ? 'A2O.RECYCLE.INT.PV' : 'A2O.RECYCLE.EXT.PV'].value = clamped;
+            self.logAudit(targetObj.id, '修改回流比SP', oldVal + '%', clamped + '%', true);
+            self.activeFaceplate = null;
+          }
+        };
+      },
+      reqApplyCarbonSp: function(){
+        const self = this;
+        const clamped = Math.max(50, Math.min(200, this.tempCarbonSp));
+        this.sboDialog = {
+          show: true,
+          isDanger: false,
+          message: '确定将碳源投加量 SP 修改为 ' + clamped + ' L/h 吗？',
+          actionFn: function(){
+            const oldVal = self.tags['A2O.CARBON.DOSE.SP'].value;
+            self.tags['A2O.CARBON.DOSE.SP'].value = clamped;
+            self.tags['A2O.CARBON.DOSE.PV'].value = clamped;
+            self.logAudit('QIC-204', '修改碳源投加SP', oldVal + ' L/h', clamped + ' L/h', true);
+            self.activeFaceplate = null;
+          }
+        };
+      },
+      reqSwitchPumpMode: function(pump, isAuto){
+        const self = this;
+        this.sboDialog = {
+          show: true,
+          isDanger: !isAuto,
+          message: '确定将 [' + pump.name + '] 切换为 ' + (isAuto ? '远程自动' : '远程手动') + ' 模式吗？',
+          actionFn: function(){
+            const old = pump.autoMode ? '自动' : '手动';
+            pump.autoMode = isAuto;
+            self.logAudit(pump.id, '切换控制模式', old, isAuto ? '自动' : '手动', true);
+          }
+        };
+      },
+      reqStartPump: function(pump){
+        const self = this;
+        this.sboDialog = {
+          show: true,
+          isDanger: false,
+          message: '确定合闸启动 [' + pump.name + '] 吗？',
+          actionFn: function(){
+            pump.running = true;
+            self.logAudit(pump.id, '启动泵机', '停机', '运行', true);
+          }
+        };
+      },
+      reqStopPump: function(pump){
+        const self = this;
+        this.sboDialog = {
+          show: true,
+          isDanger: true,
+          message: '警告：停止 [' + pump.name + '] 将中断回流脱氮，确认强制停机？',
+          actionFn: function(){
+            pump.running = false;
+            self.logAudit(pump.id, '停止泵机', '运行', '停机', true);
+          }
+        };
+      },
+      confirmSbo: function(){
+        if (this.sboDialog.actionFn) {
+          try {
+            this.sboDialog.actionFn();
+          } catch(e) {
+            console.error(e);
+          }
+        }
+        this.sboDialog.show = false;
+      },
+      silenceAlarm: function(){
+        this.logAudit('ALARM-SYS', '警报消音', '蜂鸣鸣响', '已消音', false);
+      },
+      ackAlarm: function(){
+        this.alarmAcknowledged = true;
+        this.logAudit('ALARM-SYS', '操作员确认告警', '未确认', '已确认', false);
+      }
+    },
+    mounted: function(){
+      this.tick();
+      const self = this;
+      setInterval(function(){
+        try { self.tick(); } catch(e) {}
+      }, 1000);
+    }
+  });
+
+  app.mount('#app');
+
+  function fit(){
+    try {
+      const screen = document.getElementById('screen');
+      if (!screen) return;
+      const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      screen.style.transform = 'translate(-50%,-50%) scale(' + scale + ')';
+    } catch(e) {}
+  }
+  fit();
+  window.addEventListener('resize', fit);
+})();
+</script>
+</body>
+</html>

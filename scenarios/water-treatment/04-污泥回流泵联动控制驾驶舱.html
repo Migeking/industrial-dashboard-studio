@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>污泥回流泵液位与变频联动控制驾驶舱</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#02070b;color:#f2f7fa;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+button{font:inherit}
+[v-cloak]{display:none}
+:root{
+  --bg:#071019;
+  --surface-1:#0b1622;
+  --surface-2:#0f1d2a;
+  --surface-3:#132536;
+  --line:#20394a;
+  --line-strong:#31566d;
+  --accent:#36c2ff;
+  --accent-soft:rgba(54,194,255,.14);
+  --success:#35d07f;
+  --warning:#ffb547;
+  --danger:#ff5d5d;
+  --offline:#708594;
+  --text-1:#f2f7fa;
+  --text-2:#a8bac8;
+  --text-3:#708594;
+}
+#screen{
+  width:1920px;
+  height:1080px;
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform-origin:center center;
+  display:grid;
+  grid-template-rows:76px 1fr 42px;
+  overflow:hidden;
+  background:radial-gradient(circle at 50% 25%,rgba(54,194,255,.07),transparent 40%),repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0,rgba(255,255,255,.012) 1px,transparent 1px,transparent 4px),linear-gradient(145deg,#091522 0%,#071019 54%,#050c13 100%);
+}
+#screen:after{
+  content:"";
+  position:absolute;
+  inset:76px 0 42px;
+  pointer-events:none;
+  background-image:linear-gradient(rgba(54,194,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(54,194,255,.02) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.65),transparent 82%);
+}
+.topbar{
+  position:relative;
+  z-index:4;
+  display:grid;
+  grid-template-columns:460px 1fr 520px;
+  align-items:center;
+  padding:0 22px;
+  border-bottom:1px solid var(--line);
+  background:rgba(5,13,21,.92);
+  box-shadow:0 8px 34px rgba(0,0,0,.28);
+}
+.brand{display:flex;align-items:center;gap:13px}
+.brand-mark{
+  width:42px;
+  height:42px;
+  border:1px solid var(--line-strong);
+  display:grid;
+  place-items:center;
+  color:var(--accent);
+  border-radius:8px;
+  background:linear-gradient(145deg,#132638,#09131d);
+  box-shadow:inset 0 1px rgba(255,255,255,.05);
+}
+.brand-mark svg{width:24px;height:24px}
+.brand-copy strong{display:block;font-size:16px;letter-spacing:1.8px}
+.brand-copy span{font-size:11px;color:var(--text-3);letter-spacing:1.4px}
+.title{text-align:center}
+.title h1{margin:0;font-size:28px;letter-spacing:2.5px;font-weight:720}
+.title p{margin:4px 0 0;color:var(--accent);font-size:11px;letter-spacing:4.5px}
+.head-right{display:flex;justify-content:flex-end;align-items:center;gap:16px}
+.scenario-tabs{display:flex;padding:3px;border:1px solid var(--line);border-radius:7px;background:#08121c}
+.scenario-tabs button{
+  height:30px;
+  padding:0 11px;
+  border:0;
+  border-radius:5px;
+  background:transparent;
+  color:var(--text-3);
+  cursor:pointer;
+  font-size:12px;
+  transition:all .2s;
+}
+.scenario-tabs button.active{
+  background:var(--accent-soft);
+  color:var(--text-1);
+  box-shadow:inset 0 0 0 1px rgba(54,194,255,.35);
+  font-weight:600;
+}
+.clock{text-align:right;min-width:115px}
+.clock strong{display:block;font-size:19px;letter-spacing:1px}
+.clock span{font-size:11px;color:var(--text-3)}
+
+.main{
+  position:relative;
+  z-index:2;
+  min-height:0;
+  display:grid;
+  grid-template-columns:344px 1fr 344px;
+  gap:14px;
+  padding:14px 16px;
+}
+.column{min-height:0;display:grid;gap:14px}
+.left{grid-template-rows:276px 290px 1fr}
+.center{grid-template-rows:106px 490px 1fr}
+.right{grid-template-rows:240px 300px 1fr}
+
+.panel{
+  position:relative;
+  min-height:0;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:linear-gradient(145deg,rgba(15,29,42,.94),rgba(8,18,28,.95));
+  box-shadow:inset 0 1px rgba(255,255,255,.035),0 12px 34px rgba(0,0,0,.18);
+}
+.panel:before{content:"";position:absolute;left:0;top:0;width:3px;height:38px;background:var(--accent)}
+.panel-head{
+  height:42px;
+  padding:0 14px 0 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid rgba(49,86,109,.5);
+}
+.panel-title{font-size:16px;font-weight:680;letter-spacing:.5px}
+.panel-meta{font-size:11px;color:var(--text-3);padding:3px 7px;border:1px solid var(--line);border-radius:4px}
+.panel-body{padding:12px;height:calc(100% - 42px);overflow:hidden;position:relative}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{
+  position:relative;
+  padding:12px 15px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:linear-gradient(150deg,rgba(19,37,54,.92),rgba(9,20,30,.95));
+  overflow:hidden;
+}
+.kpi:after{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;background:var(--kpi,var(--accent))}
+.k-label{font-size:12px;color:var(--text-2)}
+.k-value{margin-top:4px;font-size:27px;font-weight:720;color:var(--kpi,var(--text-1));line-height:1.1}
+.k-value small{font-size:13px;margin-left:4px;color:var(--text-2);font-weight:500}
+.k-sub{margin-top:6px;font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 左侧：液位标尺与边界 */
+.level-hero{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 14px;
+  border:1px solid var(--line);
+  background:rgba(5,13,21,.4);
+  border-radius:6px;
+  margin-bottom:10px;
+}
+.level-hero-left span{font-size:11px;color:var(--text-3)}
+.level-hero-left strong{display:block;font-size:26px;color:var(--accent);margin-top:3px}
+.level-hero-right{text-align:right}
+.level-hero-right .trend{font-size:13px;color:var(--success);display:flex;align-items:center;gap:4px;justify-content:flex-end}
+.level-hero-right .trend.down{color:var(--warning)}
+.level-hero-right small{font-size:11px;color:var(--text-3)}
+
+.scale-visual{
+  position:relative;
+  height:130px;
+  border:1px solid var(--line);
+  background:#061017;
+  border-radius:6px;
+  padding:8px 12px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+.scale-track{
+  position:relative;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  padding:4px 0;
+}
+.scale-mark{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:10px;
+  color:var(--text-3);
+  position:relative;
+}
+.scale-mark i{display:inline-block;width:8px;height:1px;background:var(--line-strong)}
+.scale-mark.hh{color:var(--danger)}
+.scale-mark.hh i{background:var(--danger)}
+.scale-mark.sp{color:var(--accent);font-weight:600}
+.scale-mark.sp i{background:var(--accent);width:14px;height:2px}
+.scale-mark.ll{color:var(--danger)}
+.scale-mark.ll i{background:var(--danger)}
+.scale-indicator{
+  position:absolute;
+  left:0;
+  right:0;
+  height:2px;
+  background:var(--accent);
+  box-shadow:0 0 6px var(--accent);
+  transition:top .4s ease;
+  pointer-events:none;
+}
+.scale-indicator:after{
+  content:"当前 PV";
+  position:absolute;
+  right:16px;
+  top:-9px;
+  font-size:9px;
+  background:var(--accent);
+  color:#04090e;
+  font-weight:700;
+  padding:1px 4px;
+  border-radius:2px;
+}
+
+/* 决策矩阵 */
+.matrix-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.matrix-card{padding:8px 10px;border:1px solid var(--line);background:rgba(5,13,21,.36);border-radius:6px}
+.matrix-card label{display:block;font-size:11px;color:var(--text-3)}
+.matrix-card strong{display:block;margin-top:3px;font-size:16px}
+.rule-box{border:1px solid var(--line);background:#07131c;border-radius:6px;padding:10px}
+.rule-box h4{margin:0 0 8px;font-size:12px;color:var(--text-2);display:flex;justify-content:space-between}
+.rule-item{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(32,57,74,.5);font-size:11px}
+.rule-item:last-child{border:0}
+.rule-item span{color:var(--text-3)}
+.rule-item b{color:var(--text-1)}
+.rule-item.active b{color:var(--accent)}
+
+/* SVG 工艺流程图 */
+.process-body{height:448px;padding:6px 10px 8px;position:relative}
+.process-svg{width:100%;height:100%;display:block}
+.pipe-base{fill:none;stroke:#1a3344;stroke-width:8;stroke-linecap:round}
+.pipe-sub{fill:none;stroke:#1a3344;stroke-width:5;stroke-linecap:round}
+.pipe-active{fill:none;stroke:#36c2ff;stroke-width:3;stroke-linecap:round;stroke-dasharray:7 11;animation:pipeflow 2.2s linear infinite}
+.pipe-flow-fast{animation:pipeflow 1.3s linear infinite}
+.pipe-flow-stop{animation:none;stroke:#304a5c;opacity:.4}
+.tank-bg{fill:url(#tankGrad);stroke:#2a4a5f;stroke-width:2}
+.water-body{fill:url(#waterGrad);transition:y .6s ease,height .6s ease}
+.water-surface{fill:none;stroke:#61d0ff;stroke-width:2;stroke-dasharray:4 4}
+.pump-body{fill:#112737;stroke:#31566d;stroke-width:2}
+.pump-running{fill:#123933;stroke:#35d07f;stroke-width:2;filter:drop-shadow(0 0 5px rgba(53,208,127,.35))}
+.pump-stopped{fill:#18232c;stroke:#3b5364;stroke-width:1.5}
+.pump-fault{fill:#381a1a;stroke:#ff5d5d;stroke-width:2}
+.impeller{transform-origin:center;transform-box:fill-box;animation:spin 1.8s linear infinite}
+.impeller.fast{animation:spin 1.1s linear infinite}
+.impeller.stopped{animation:none}
+.vfd-cabinet{fill:#0b1822;stroke:#2c4b60;stroke-width:1.5;rx:4}
+.vfd-screen{fill:#030a0f;stroke:#1a3344}
+.valve-body{fill:#1b3243;stroke:#36c2ff;stroke-width:1.5}
+.valve-closed{fill:#222c34;stroke:#5c707e}
+.svg-tag{fill:#708594;font-size:10px}
+.svg-val{fill:#f2f7fa;font-size:13px;font-weight:700}
+.svg-status{font-size:10px;font-weight:600}
+
+/* 右侧面板 */
+.priority-list{display:grid;gap:6px}
+.priority-item{
+  display:grid;
+  grid-template-columns:22px 1fr auto;
+  align-items:center;
+  gap:8px;
+  padding:7px 9px;
+  border:1px solid var(--line);
+  border-radius:5px;
+  background:rgba(5,13,21,.35);
+  font-size:11px;
+}
+.p-badge{
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  font-size:10px;
+  font-weight:700;
+  background:#132637;
+  color:var(--text-3);
+}
+.priority-item.active .p-badge{background:var(--accent-soft);color:var(--accent)}
+.priority-item.active{border-color:rgba(54,194,255,.4);background:rgba(54,194,255,.05)}
+.priority-item.alert{border-color:rgba(255,93,93,.4);background:rgba(255,93,93,.06)}
+.priority-item.alert .p-badge{background:rgba(255,93,93,.2);color:var(--danger)}
+.p-name strong{display:block;font-size:11px;color:var(--text-1)}
+.p-name span{font-size:10px;color:var(--text-3)}
+.p-status{font-size:10px;padding:2px 5px;border-radius:3px;border:1px solid var(--line)}
+.p-status.ok{color:var(--success);border-color:rgba(53,208,127,.3)}
+.p-status.act{color:var(--accent);border-color:rgba(54,194,255,.3)}
+.p-status.warn{color:var(--warning);border-color:rgba(255,181,71,.3)}
+.p-status.err{color:var(--danger);border-color:rgba(255,93,93,.3)}
+
+/* 4台泵健康矩阵 */
+.pump-card-list{display:grid;gap:6px}
+.pump-card{
+  display:grid;
+  grid-template-columns:60px 1fr 65px 50px;
+  align-items:center;
+  gap:8px;
+  padding:7px 9px;
+  border:1px solid var(--line);
+  border-radius:5px;
+  background:rgba(5,13,21,.36);
+  font-size:11px;
+}
+.pump-id strong{display:block;font-size:12px;letter-spacing:.5px}
+.pump-id span{font-size:9px;color:var(--text-3)}
+.pump-param span{display:block;color:var(--text-3);font-size:10px}
+.pump-param b{font-size:11px;color:var(--text-1)}
+.pump-hz{text-align:right;color:var(--accent);font-size:14px;font-weight:700}
+.pump-state{justify-self:end;font-size:10px;padding:2px 5px;border-radius:3px;border:1px solid}
+.pump-state.run{color:var(--success);border-color:rgba(53,208,127,.35);background:rgba(53,208,127,.08)}
+.pump-state.standby{color:var(--text-3);border-color:rgba(112,133,148,.35);background:rgba(112,133,148,.08)}
+.pump-state.fault{color:var(--danger);border-color:rgba(255,93,93,.35);background:rgba(255,93,93,.08)}
+
+/* 事件日志 */
+.event-list{display:grid;gap:6px;height:100%;overflow-y:auto}
+.event-item{
+  display:grid;
+  grid-template-columns:8px 1fr auto;
+  gap:8px;
+  align-items:start;
+  padding:6px 8px;
+  border:1px solid var(--line);
+  border-radius:5px;
+  background:rgba(5,13,21,.3);
+  font-size:11px;
+}
+.event-dot{width:6px;height:6px;border-radius:50%;margin-top:4px;background:var(--dot,var(--success))}
+.event-desc strong{display:block;color:var(--text-1);font-size:11px}
+.event-desc span{display:block;color:var(--text-3);font-size:10px;margin-top:2px}
+.event-time{color:var(--text-3);font-size:10px}
+
+/* 图表容器 */
+.chart{width:100%;height:100%}
+
+/* 底部状态栏 */
+.statusbar{
+  position:relative;
+  z-index:4;
+  display:grid;
+  grid-template-columns:400px 1fr 520px;
+  align-items:center;
+  padding:0 18px;
+  border-top:1px solid var(--line);
+  background:#050d15;
+  font-size:12px;
+  color:var(--text-2);
+}
+.statusbar>div{display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 8px rgba(53,208,127,.6)}
+.status-center{justify-content:center;color:var(--text-3)}
+.status-right{justify-content:flex-end}
+.quality{color:var(--success)}
+.sep{color:#284356}
+
+@keyframes pipeflow{to{stroke-dashoffset:-36}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+<div id="screen">
+  <!-- 顶部状态栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="12" cy="12" r="2.5" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="brand-copy">
+        <strong>智慧水务 · 污泥回流控制系统</strong>
+        <span>四台并联变频联动控制</span>
+      </div>
+    </div>
+    <div class="title">
+      <h1>污泥回流泵液位与变频联动控制驾驶舱</h1>
+      <p>四台并联变频泵 · 液位 PID 与分级联动</p>
+    </div>
+    <div class="head-right">
+      <div class="scenario-tabs">
+        <button v-for="item in scenarios" :key="item.id" :class="{active:currentScenario===item.id}" @click="switchScenario(item.id)">
+          {{item.name}}
+        </button>
+      </div>
+      <div class="clock num">
+        <strong>{{clock}}</strong>
+        <span>{{date}}</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主内容区 -->
+  <main class="main">
+    <!-- 左侧列 -->
+    <section class="column left">
+      <!-- 面板 1：集泥井液位与控制边界 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">泵井液位与控制边界</div>
+          <span class="panel-meta">LT-101 连续变送</span>
+        </div>
+        <div class="panel-body">
+          <div class="level-hero">
+            <div class="level-hero-left">
+              <span>当前实际液位 (PV)</span>
+              <strong class="num">{{state.pv.toFixed(2)}} <small style="font-size:14px;color:var(--text-2)">m</small></strong>
+            </div>
+            <div class="level-hero-right">
+              <div class="trend num" :class="{down: state.dLevel < 0}">
+                <span>{{state.dLevel >= 0 ? '▲ 上升' : '▼ 下降'}}</span>
+                <b>{{Math.abs(state.dLevel).toFixed(3)}} m/min</b>
+              </div>
+              <small>偏差 Δe: {{(state.pv - state.sp >= 0 ? '+' : '') + (state.pv - state.sp).toFixed(2)}} m</small>
+            </div>
+          </div>
+
+          <div class="scale-visual">
+            <div class="scale-track">
+              <div class="scale-mark hh"><span>HH 超高保护</span><b>4.50 m</b><i></i></div>
+              <div class="scale-mark"><span>H4 增至4台</span><b>4.20 m</b><i></i></div>
+              <div class="scale-mark"><span>H3 增至3台</span><b>3.80 m</b><i></i></div>
+              <div class="scale-mark"><span>H2 增至2台</span><b>3.40 m</b><i></i></div>
+              <div class="scale-mark sp"><span>★ 设定值 SP</span><b>3.20 m</b><i></i></div>
+              <div class="scale-mark"><span>H1 增至1台</span><b>3.00 m</b><i></i></div>
+              <div class="scale-mark"><span>L4 减至3台</span><b>2.80 m</b><i></i></div>
+              <div class="scale-mark"><span>L3 减至2台</span><b>2.40 m</b><i></i></div>
+              <div class="scale-mark"><span>L2 减至1台</span><b>2.00 m</b><i></i></div>
+              <div class="scale-mark"><span>L1 全停泵</span><b>1.60 m</b><i></i></div>
+              <div class="scale-mark ll"><span>LL 防干转</span><b>1.20 m</b><i></i></div>
+            </div>
+            <div class="scale-indicator" :style="{top: getLevelTopPercent(state.pv) + '%'}"></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 面板 2：控制策略与台数决策 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">台数切换与算法决策</div>
+          <span class="panel-meta">{{state.modeText}}</span>
+        </div>
+        <div class="panel-body">
+          <div class="matrix-grid">
+            <div class="matrix-card">
+              <label>需求台数 Demand</label>
+              <strong class="num" style="color:var(--accent)">{{state.demandCount}} <small style="font-size:12px;color:var(--text-3)">台</small></strong>
+            </div>
+            <div class="matrix-card">
+              <label>实际运行 Running</label>
+              <strong class="num" style="color:var(--success)">{{state.runningCount}} / {{state.availableCount}} <small style="font-size:12px;color:var(--text-3)">台</small></strong>
+            </div>
+          </div>
+
+          <div class="rule-box">
+            <h4>
+              <span>台数切换判据状态</span>
+              <span class="num" style="color:var(--accent)">{{state.activeLogic}}</span>
+            </h4>
+            <div class="rule-item" :class="{active: state.fcmd >= 47.5}">
+              <span>增泵判据 (Fcmd ≥ 48Hz &amp; T_Add 30s)</span>
+              <b class="num">{{state.addTimerText}}</b>
+            </div>
+            <div class="rule-item" :class="{active: state.fcmd <= 32.5 && state.runningCount > 1}">
+              <span>减泵判据 (Fcmd ≤ 32Hz &amp; T_Remove 45s)</span>
+              <b class="num">{{state.removeTimerText}}</b>
+            </div>
+            <div class="rule-item">
+              <span>防频繁启停 (T_MinRun / T_MinStop)</span>
+              <b class="num">联锁锁定中 0 台</b>
+            </div>
+            <div class="rule-item">
+              <span>分级滞回带 (H_n - L_n)</span>
+              <b class="num">ΔH = 0.60 m 稳定</b>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 面板 3：泵站单耗与能效曲线 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">回流单耗与节能优化</div>
+          <span class="panel-meta">kWh/m³ 闭环</span>
+        </div>
+        <div class="panel-body">
+          <div id="energyChart" class="chart"></div>
+        </div>
+      </article>
+    </section>
+
+    <!-- 中间列 -->
+    <section class="column center">
+      <!-- 4 联 KPI -->
+      <div class="kpis">
+        <div class="kpi" style="--kpi:var(--accent)">
+          <div class="k-label">集泥池实际液位</div>
+          <div class="k-value num">{{state.pv.toFixed(2)}}<small>m</small></div>
+          <div class="k-sub">目标 SP 3.20 m · 偏差 {{Math.abs(state.pv - 3.20).toFixed(2)}} m</div>
+        </div>
+        <div class="kpi" style="--kpi:var(--accent)">
+          <div class="k-label">变频主令频率 Fcmd</div>
+          <div class="k-value num">{{state.fcmd.toFixed(1)}}<small>Hz</small></div>
+          <div class="k-sub">下限 28.0 Hz · 上限 50.0 Hz 连续调速</div>
+        </div>
+        <div class="kpi" style="--kpi:var(--success)">
+          <div class="k-label">运行台数 / 可用泵数</div>
+          <div class="k-value num">{{state.runningCount}}<small>/ {{state.availableCount}} 台</small></div>
+          <div class="k-sub">均时轮换算法投用 · 负荷均匀分配</div>
+        </div>
+        <div class="kpi" style="--kpi:var(--success)">
+          <div class="k-label">污泥回流总流量</div>
+          <div class="k-value num">{{state.totalFlow}}<small>m³/h</small></div>
+          <div class="k-sub">单泵额定能力 350 m³/h · 运行总效率 84.6%</div>
+        </div>
+      </div>
+
+      <!-- 数字孪生工艺 SVG 流程图 -->
+      <article class="panel process-panel">
+        <div class="panel-head">
+          <div class="panel-title">4 台并联变频泵工艺流程与电气连线数字孪生</div>
+          <span class="panel-meta">变频联动 · 介质流向与阀门开度协同</span>
+        </div>
+        <div class="panel-body process-body">
+          <svg class="process-svg" viewBox="0 0 1140 435" role="img" aria-label="污泥回流泵站工艺图">
+            <defs>
+              <linearGradient id="tankGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop stop-color="#152b3d"/>
+                <stop offset=".6" stop-color="#0a1926"/>
+                <stop offset="1" stop-color="#0f2231"/>
+              </linearGradient>
+              <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop stop-color="#14729c" stop-opacity=".75"/>
+                <stop offset="1" stop-color="#093d5c" stop-opacity=".92"/>
+              </linearGradient>
+            </defs>
+
+            <!-- 集泥井主体 (左侧) -->
+            <g transform="translate(25 40)">
+              <!-- 池壁外壳 -->
+              <rect class="tank-bg" x="0" y="0" width="180" height="350" rx="6"/>
+              <!-- 动态水位 -->
+              <rect class="water-body" x="6" :y="waterSvgY" width="168" :height="waterSvgHeight" rx="3"/>
+              <!-- 水面波纹线 -->
+              <line class="water-surface" x1="8" :y1="waterSvgY" x2="172" :y2="waterSvgY"/>
+              <!-- 池铭牌与仪表 -->
+              <text x="90" y="36" fill="#f2f7fa" font-size="15" font-weight="700" text-anchor="middle">二沉池集泥井</text>
+
+              <!-- LT 探头 -->
+              <line x1="140" y1="18" x2="140" :y2="waterSvgY + 20" stroke="#36c2ff" stroke-width="2"/>
+              <rect x="128" y="10" width="24" height="12" rx="2" fill="#1b364d" stroke="#36c2ff"/>
+              <text x="140" y="19" fill="#36c2ff" font-size="8" text-anchor="middle">LT</text>
+
+              <!-- 水位标尺线 -->
+              <line x1="8" y1="58" x2="22" y2="58" stroke="#ff5d5d" stroke-width="1.5"/>
+              <text x="26" y="61" fill="#ff5d5d" font-size="9">HH 4.5m</text>
+              <line x1="8" y1="135" x2="26" y2="135" stroke="#36c2ff" stroke-width="2"/>
+              <text x="30" y="138" fill="#36c2ff" font-size="10" font-weight="700">SP 3.2m</text>
+              <line x1="8" y1="285" x2="22" y2="285" stroke="#ff5d5d" stroke-width="1.5"/>
+              <text x="26" y="288" fill="#ff5d5d" font-size="9">LL 1.2m</text>
+
+              <!-- 井底泥位指示 -->
+              <rect x="6" y="322" width="168" height="22" fill="#2b1f16" opacity=".7"/>
+              <text x="90" y="337" fill="#a48c77" font-size="10" text-anchor="middle">沉积重力泥斗</text>
+            </g>
+
+            <!-- 吸水总管及引向 4 台泵的分支 (底色管线，完整连接至水泵进口) -->
+            <path class="pipe-base" d="M 205 310 L 260 310 L 260 85 L 412 85"/>
+            <path class="pipe-base" d="M 260 165 L 412 165"/>
+            <path class="pipe-base" d="M 260 245 L 412 245"/>
+            <path class="pipe-base" d="M 260 325 L 412 325"/>
+
+            <!-- 动态介质流向层 (各支管独立联动对应泵的运行状态) -->
+            <path :class="['pipe-base', state.runningCount > 0 ? 'pipe-active pipe-flow-fast' : 'pipe-flow-stop']" d="M 205 310 L 260 310 L 260 85"/>
+            <path :class="['pipe-base', pumps[0].running ? 'pipe-active' : 'pipe-flow-stop']" d="M 260 85 L 412 85"/>
+            <path :class="['pipe-base', pumps[1].running ? 'pipe-active' : 'pipe-flow-stop']" d="M 260 165 L 412 165"/>
+            <path :class="['pipe-base', pumps[2].running ? 'pipe-active' : 'pipe-flow-stop']" d="M 260 245 L 412 245"/>
+            <path :class="['pipe-base', pumps[3].running ? 'pipe-active' : 'pipe-flow-stop']" d="M 260 325 L 412 325"/>
+
+            <!-- 4 台并联泵总成渲染 (P-01 ~ P-04) -->
+            <g v-for="(p, idx) in pumps" :key="p.id" :transform="'translate(0, ' + (idx * 80) + ')'">
+              <!-- 吸入电动蝶阀 -->
+              <g transform="translate(300, 85)">
+                <polygon :class="p.running ? 'valve-body' : 'valve-closed'" points="-8,-7 8,7 -8,7 8,-7"/>
+                <circle cx="0" cy="0" r="2.5" fill="#f2f7fa"/>
+                <text x="0" y="-10" class="svg-tag" text-anchor="middle">{{'V-in' + (idx+1)}}</text>
+              </g>
+
+              <!-- 变频器电气柜 (顶部) -->
+              <g transform="translate(370, 48)">
+                <rect class="vfd-cabinet" x="0" y="0" width="85" height="30"/>
+                <rect class="vfd-screen" x="5" y="5" width="45" height="20" rx="2"/>
+                <text x="27" y="19" class="num svg-val" fill="#36c2ff" text-anchor="middle">{{p.running ? p.hz.toFixed(1) : '0.0'}}</text>
+                <text x="65" y="14" class="svg-tag">{{'VFD-0' + (idx+1)}}</text>
+                <circle :cx="75" :cy="22" r="3" :fill="p.running ? 'var(--success)' : (p.fault ? 'var(--danger)' : 'var(--offline)')"/>
+                <!-- 电气连线到电机 -->
+                <path d="M 42 30 L 42 37" stroke="#31566d" stroke-width="2" stroke-dasharray="2 2"/>
+              </g>
+
+              <!-- 离心泵本体 (蜗壳与叶轮) -->
+              <g transform="translate(412, 85)">
+                <circle :class="p.fault ? 'pump-fault' : (p.running ? 'pump-running' : 'pump-stopped')" cx="0" cy="0" r="20"/>
+                <!-- 叶轮 -->
+                <g :class="['impeller', p.running ? (p.hz > 44 ? 'fast' : '') : 'stopped']">
+                  <path d="M-12 0 A12 12 0 0 1 0 -12 M0 -12 A12 12 0 0 1 12 0 M12 0 A12 12 0 0 1 0 12 M0 12 A12 12 0 0 1 -12 0" stroke="currentColor" stroke-width="2" fill="none"/>
+                  <circle cx="0" cy="0" r="3" fill="#fff"/>
+                </g>
+                <text x="0" y="32" fill="#f2f7fa" font-size="11" font-weight="700" text-anchor="middle">{{p.id}}</text>
+              </g>
+
+              <!-- 出水止回阀与电动闸阀 -->
+              <path class="pipe-base" d="M 432 85 L 590 85"/>
+              <path :class="['pipe-base', p.running ? 'pipe-active' : 'pipe-flow-stop']" d="M 432 85 L 590 85"/>
+
+              <!-- 止回阀 -->
+              <g transform="translate(480, 85)">
+                <circle cx="0" cy="0" r="8" fill="#0f2231" stroke="#31566d"/>
+                <path d="M -4 5 L 4 0 L -4 -5 Z" fill="#36c2ff"/>
+              </g>
+              <!-- 出水电动闸阀 -->
+              <g transform="translate(535, 85)">
+                <polygon :class="p.running ? 'valve-body' : 'valve-closed'" points="-8,-7 8,7 -8,7 8,-7"/>
+                <circle cx="0" cy="0" r="2.5" fill="#f2f7fa"/>
+                <text x="0" y="-10" class="svg-tag" text-anchor="middle">{{'V-out' + (idx+1)}}</text>
+              </g>
+
+              <!-- 单泵工况标签 -->
+              <g transform="translate(615, 75)">
+                <rect x="0" y="0" width="130" height="22" rx="4" fill="rgba(8,18,28,.8)" stroke="#20394a"/>
+                <text x="8" y="15" fill="#a8bac8" font-size="10">{{p.flow}} m³/h</text>
+                <text x="75" y="15" fill="#708594" font-size="10">{{p.current}} A</text>
+              </g>
+            </g>
+
+            <!-- 汇流出水母管 (右侧) -->
+            <path class="pipe-base" d="M 760 85 L 760 325 L 860 325 L 860 205 L 1110 205"/>
+            <path :class="['pipe-base', state.runningCount > 0 ? 'pipe-active pipe-flow-fast' : 'pipe-flow-stop']" d="M 760 85 L 760 325 L 860 325 L 860 205 L 1110 205"/>
+
+            <!-- 各泵汇入接头点 -->
+            <circle cx="760" cy="85" r="4" fill="#36c2ff"/>
+            <circle cx="760" cy="165" r="4" fill="#36c2ff"/>
+            <circle cx="760" cy="245" r="4" fill="#36c2ff"/>
+            <circle cx="760" cy="325" r="4" fill="#36c2ff"/>
+
+            <!-- 出水管电磁流量计 FT-101 与压力 PT-101 -->
+            <g transform="translate(920, 205)">
+              <rect x="-18" y="-16" width="36" height="32" rx="4" fill="#132738" stroke="#36c2ff" stroke-width="1.8"/>
+              <text x="0" y="4" fill="#36c2ff" font-size="10" font-weight="700" text-anchor="middle">FT</text>
+              <text x="0" y="-22" class="svg-tag" text-anchor="middle">FT-101 流量计</text>
+              <text x="0" y="30" fill="#f2f7fa" font-size="11" font-weight="700" text-anchor="middle">{{state.totalFlow}} m³/h</text>
+            </g>
+
+            <!-- 压力计 PT-101 -->
+            <g transform="translate(1000, 205)">
+              <circle cx="0" cy="-14" r="9" fill="#132738" stroke="#35d07f" stroke-width="1.5"/>
+              <line x1="0" y1="0" x2="0" y2="-5" stroke="#35d07f" stroke-width="2"/>
+              <text x="0" y="-11" fill="#35d07f" font-size="8" text-anchor="middle">PT</text>
+              <text x="0" y="24" fill="#a8bac8" font-size="10" text-anchor="middle">0.32 MPa</text>
+            </g>
+
+            <!-- 介质流向说明 -->
+            <g transform="translate(1030, 185)">
+              <text x="0" y="0" fill="#36c2ff" font-size="12" font-weight="700">去好氧池/缺氧池 →</text>
+              <text x="0" y="38" fill="#708594" font-size="10">DN500 污泥回流总管</text>
+            </g>
+          </svg>
+        </div>
+      </article>
+
+      <!-- 联动控制趋势图 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">液位跟踪与泵台数/变频协同阶梯趋势</div>
+          <span class="panel-meta">双轴联动 · PV/SP/Fcmd 闭环过程</span>
+        </div>
+        <div class="panel-body">
+          <div id="trendChart" class="chart"></div>
+        </div>
+      </article>
+    </section>
+
+    <!-- 右侧列 -->
+    <section class="column right">
+      <!-- 面板 1：5级控制优先级与安全联锁 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">控制优先级与安全联锁</div>
+          <span class="panel-meta">5 级严密架构</span>
+        </div>
+        <div class="panel-body">
+          <div class="priority-list">
+            <div class="priority-item" :class="{alert: state.safetyLevel === 1}">
+              <span class="p-badge">1</span>
+              <div class="p-name">
+                <strong>硬安全 / 设备保护</strong>
+                <span>急停、过载、变频器硬件跳闸</span>
+              </div>
+              <span class="p-status" :class="state.safetyLevel === 1 ? 'err' : 'ok'">
+                {{state.safetyLevel === 1 ? '动作中' : '就绪'}}
+              </span>
+            </div>
+            <div class="priority-item" :class="{alert: state.safetyLevel === 2}">
+              <span class="p-badge">2</span>
+              <div class="p-name">
+                <strong>防干转 / 吸入保护</strong>
+                <span>LL ≤ 1.20m 切断停泵并禁止自启</span>
+              </div>
+              <span class="p-status" :class="state.safetyLevel === 2 ? 'err' : 'ok'">
+                {{state.safetyLevel === 2 ? '触发切断' : '正常'}}
+              </span>
+            </div>
+            <div class="priority-item" :class="{alert: state.safetyLevel === 3}">
+              <span class="p-badge">3</span>
+              <div class="p-name">
+                <strong>过程异常 / 超高排送</strong>
+                <span>HH ≥ 4.50m 请求全泵 50Hz 满开</span>
+              </div>
+              <span class="p-status" :class="state.safetyLevel === 3 ? 'warn' : 'ok'">
+                {{state.safetyLevel === 3 ? '应急外排' : '监视'}}
+              </span>
+            </div>
+            <div class="priority-item" :class="{active: state.safetyLevel === 4}">
+              <span class="p-badge">4</span>
+              <div class="p-name">
+                <strong>正常液位闭环控制</strong>
+                <span>方案二 PID 变频 / 方案一 分级备用</span>
+              </div>
+              <span class="p-status act">主控运行</span>
+            </div>
+            <div class="priority-item" :class="{active: state.safetyLevel === 5}">
+              <span class="p-badge">5</span>
+              <div class="p-name">
+                <strong>自动轮换与磨损均时</strong>
+                <span>最短运行时长优先起，最长优先停</span>
+              </div>
+              <span class="p-status ok">已使能</span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 面板 2：4 台泵状态与均时矩阵 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">4 台变频泵电气与运行矩阵</div>
+          <span class="panel-meta">工时均衡</span>
+        </div>
+        <div class="panel-body">
+          <div class="pump-card-list">
+            <div class="pump-card" v-for="p in pumps" :key="p.id">
+              <div class="pump-id">
+                <strong>{{p.id}}</strong>
+                <span>{{p.autoMode ? '自动/远程' : '就地手动'}}</span>
+              </div>
+              <div class="pump-param">
+                <span>运行 {{p.totalHours}}h · {{p.temp}}℃</span>
+                <b>{{p.flow}} m³/h · {{p.current}}A</b>
+              </div>
+              <div class="pump-hz num">{{p.running ? p.hz.toFixed(1) + 'Hz' : '停机'}}</div>
+              <span class="pump-state" :class="p.fault ? 'fault' : (p.running ? 'run' : 'standby')">
+                {{p.fault ? '故障' : (p.running ? '运行' : '备用')}}
+              </span>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 面板 3：控制流水与联锁动作日志 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">联动动作与联锁日志流水</div>
+          <span class="panel-meta">顺序事件 (SOE)</span>
+        </div>
+        <div class="panel-body">
+          <div class="event-list">
+            <div class="event-item" v-for="(ev, idx) in events" :key="idx">
+              <i class="event-dot" :style="{'--dot': ev.color}"></i>
+              <div class="event-desc">
+                <strong>{{ev.title}}</strong>
+                <span>{{ev.detail}}</span>
+              </div>
+              <span class="event-time num">{{ev.time}}</span>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <!-- 底部状态栏 -->
+  <footer class="statusbar">
+    <div>
+      <i class="live-dot"></i>
+      <b>系统在线 · 自动闭环中</b>
+      <span class="sep">|</span>
+      <span>四台独立变频通信良好 (OPC UA / Modbus-TCP)</span>
+    </div>
+    <div class="status-center">
+      控制基线：GB/T 工业过程控制规范 · 采样周期 1s · 1920×1080 工业自适应画布
+    </div>
+    <div class="status-right">
+      <span class="quality">数据质量 GOOD</span>
+      <span class="sep">|</span>
+      <span>更新时间 {{clock}}</span>
+      <span class="sep">|</span>
+      <span>网络时延 0.6s</span>
+    </div>
+  </footer>
+</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const $id = function(id){ return document.getElementById(id); };
+  const safeInit = function(id){
+    try {
+      const el = $id(id);
+      if (!el) return null;
+      return echarts.init(el);
+    } catch(e) {
+      console.error(e);
+      return null;
+    }
+  };
+
+  const scenarioConfigs = {
+    'pid-optimal': {
+      name: 'PID智能变频 (推荐主控)',
+      modeText: '方案二：液位PID调速 + 台数优化',
+      activeLogic: '变频连续调速',
+      safetyLevel: 4,
+      pv: 3.22,
+      sp: 3.20,
+      dLevel: 0.005,
+      fcmd: 38.5,
+      demandCount: 2,
+      runningCount: 2,
+      availableCount: 4,
+      totalFlow: 680,
+      addTimerText: '未达阈值 (38.5Hz)',
+      removeTimerText: '未达阈值',
+      pumps: [
+        { id:'P-01', running:true, fault:false, hz:38.5, flow:340, current:18.2, temp:42.5, totalHours:1240, autoMode:true },
+        { id:'P-02', running:true, fault:false, hz:38.5, flow:340, current:18.1, temp:43.0, totalHours:1180, autoMode:true },
+        { id:'P-03', running:false, fault:false, hz:0.0, flow:0, current:0.0, temp:28.4, totalHours:1350, autoMode:true },
+        { id:'P-04', running:false, fault:false, hz:0.0, flow:0, current:0.0, temp:27.9, totalHours:1420, autoMode:true }
+      ],
+      events: [
+        { time:'16:24:12', color:'#35d07f', title:'PID 闭环稳定', detail:'液位 3.22m 跟踪 SP 3.20m，两台泵 38.5Hz 平稳运行' },
+        { time:'16:20:00', color:'#36c2ff', title:'均时轮换保持', detail:'P-01/P-02 磨损差值小于设定窗口，持续均衡' },
+        { time:'16:15:30', color:'#35d07f', title:'工艺保护自检', detail:'吸入及出水阀门开到位联锁成立，允许连续自动' }
+      ]
+    },
+    'peak-demand': {
+      name: '进水洪峰 (自动增泵)',
+      modeText: '方案二：频率达上限触发增泵',
+      activeLogic: '增泵延时判定',
+      safetyLevel: 4,
+      pv: 3.86,
+      sp: 3.20,
+      dLevel: 0.045,
+      fcmd: 44.2,
+      demandCount: 3,
+      runningCount: 3,
+      availableCount: 4,
+      totalFlow: 995,
+      addTimerText: '已触发增泵投运',
+      removeTimerText: '未满足',
+      pumps: [
+        { id:'P-01', running:true, fault:false, hz:44.2, flow:335, current:22.4, temp:46.8, totalHours:1241, autoMode:true },
+        { id:'P-02', running:true, fault:false, hz:44.2, flow:330, current:22.1, temp:47.1, totalHours:1181, autoMode:true },
+        { id:'P-03', running:true, fault:false, hz:44.2, flow:330, current:22.0, temp:36.4, totalHours:1351, autoMode:true },
+        { id:'P-04', running:false, fault:false, hz:0.0, flow:0, current:0.0, temp:28.0, totalHours:1420, autoMode:true }
+      ],
+      events: [
+        { time:'16:28:45', color:'#36c2ff', title:'3# 泵已并网运行', detail:'增泵间隔 T_StartGap 15s 完成，频率平滑升至 44.2Hz' },
+        { time:'16:28:30', color:'#ffb547', title:'频率触及增泵阈值', detail:'双泵 48.0Hz 运行超过 T_Add 30s，计算需求台数提升为 3' },
+        { time:'16:25:10', color:'#36c2ff', title:'进水量显著上升', detail:'集泥井液位上升率达 +0.045 m/min' }
+      ]
+    },
+    'staged-backup': {
+      name: '分级启停 (方案一备用)',
+      modeText: '方案一：分级液位阶梯滞回',
+      activeLogic: 'H2/L2 阈值动作',
+      safetyLevel: 4,
+      pv: 3.48,
+      sp: 3.20,
+      dLevel: 0.012,
+      fcmd: 45.0,
+      demandCount: 2,
+      runningCount: 2,
+      availableCount: 4,
+      totalFlow: 740,
+      addTimerText: 'PV ≥ H2(3.40m) 稳定已确认',
+      removeTimerText: 'PV > L2(2.00m) 无减泵',
+      pumps: [
+        { id:'P-01', running:true, fault:false, hz:45.0, flow:370, current:23.0, temp:45.2, totalHours:1241, autoMode:true },
+        { id:'P-02', running:true, fault:false, hz:45.0, flow:370, current:22.8, temp:44.8, totalHours:1181, autoMode:true },
+        { id:'P-03', running:false, fault:false, hz:0.0, flow:0, current:0.0, temp:28.2, totalHours:1350, autoMode:true },
+        { id:'P-04', running:false, fault:false, hz:0.0, flow:0, current:0.0, temp:27.9, totalHours:1420, autoMode:true }
+      ],
+      events: [
+        { time:'16:31:00', color:'#ffb547', title:'切换为分级液位备用模式', detail:'操作员激活方案一，依照 H1~H4 / L1~L4 阈值启停' },
+        { time:'16:30:15', color:'#35d07f', title:'H2 增泵判断成立', detail:'PV 持续高于 3.40m 超过 T_LevelStable，启泵成功' },
+        { time:'16:22:00', color:'#36c2ff', title:'逐台启停时间保护', detail:'T_StartGap 锁定计时器清零' }
+      ]
+    },
+    'safety-interlock': {
+      name: '超限安全联锁演练',
+      modeText: '优先级 3：HH 紧急超高排送',
+      activeLogic: 'HH 全开保护动作',
+      safetyLevel: 3,
+      pv: 4.54,
+      sp: 3.20,
+      dLevel: 0.082,
+      fcmd: 50.0,
+      demandCount: 4,
+      runningCount: 4,
+      availableCount: 4,
+      totalFlow: 1420,
+      addTimerText: '越过常规限制强制满开',
+      removeTimerText: '禁止减泵',
+      pumps: [
+        { id:'P-01', running:true, fault:false, hz:50.0, flow:355, current:26.5, temp:49.2, totalHours:1242, autoMode:true },
+        { id:'P-02', running:true, fault:false, hz:50.0, flow:355, current:26.3, temp:49.5, totalHours:1182, autoMode:true },
+        { id:'P-03', running:true, fault:false, hz:50.0, flow:355, current:26.2, temp:43.1, totalHours:1352, autoMode:true },
+        { id:'P-04', running:true, fault:false, hz:50.0, flow:355, current:26.0, temp:42.8, totalHours:1421, autoMode:true }
+      ],
+      events: [
+        { time:'16:35:18', color:'#ff5d5d', title:'高高液位 HH 保护动作 (4.54m)', detail:'过程异常优先级 3 动作：请求 4 台泵全开 50Hz 紧急排送' },
+        { time:'16:35:10', color:'#ff5d5d', title:'液位越过 H4 持续上涨', detail:'防漫堤声光告警已推送至 SCADA 中控' },
+        { time:'16:30:00', color:'#35d07f', title:'LL 防干转回路正常就绪', detail:'独立浮球开关与软件计算双通道监视' }
+      ]
+    }
+  };
+
+  const app = Vue.createApp({
+    data: function(){
+      return {
+        clock: '--:--:--',
+        date: '----/--/--',
+        currentScenario: 'pid-optimal',
+        scenarios: [
+          { id: 'pid-optimal', name: 'PID智能变频稳态' },
+          { id: 'peak-demand', name: '洪峰增泵演练' },
+          { id: 'staged-backup', name: '分级液位备用' },
+          { id: 'safety-interlock', name: '超限联锁演练' }
+        ]
+      };
+    },
+    computed: {
+      state: function(){
+        return scenarioConfigs[this.currentScenario] || scenarioConfigs['pid-optimal'];
+      },
+      pumps: function(){
+        return this.state.pumps;
+      },
+      events: function(){
+        return this.state.events;
+      },
+      waterSvgHeight: function(){
+        const minH = 60, maxH = 300;
+        const ratio = (this.state.pv - 0.5) / 4.2;
+        const clamped = Math.max(0.1, Math.min(1.0, ratio));
+        return Math.round(minH + (maxH - minH) * clamped);
+      },
+      waterSvgY: function(){
+        return 340 - this.waterSvgHeight;
+      }
+    },
+    methods: {
+      tick: function(){
+        try {
+          const d = new Date();
+          this.clock = d.toLocaleTimeString('zh-CN', { hour12: false });
+          this.date = d.toLocaleDateString('zh-CN').replaceAll('/', ' · ');
+        } catch(e) {}
+      },
+      getLevelTopPercent: function(pv){
+        const minL = 1.0, maxL = 4.8;
+        const r = (pv - minL) / (maxL - minL);
+        const top = 92 - (r * 84);
+        return Math.max(5, Math.min(94, top));
+      },
+      switchScenario: function(id){
+        this.currentScenario = id;
+        try {
+          if (window.renderCharts) window.renderCharts(id);
+        } catch(e) {}
+      }
+    },
+    mounted: function(){
+      this.tick();
+      const self = this;
+      setInterval(function(){
+        try { self.tick(); } catch(e) {}
+      }, 1000);
+    }
+  });
+
+  app.mount('#app');
+
+  // ECharts 图表初始化
+  const text = '#a8bac8';
+  const muted = '#708594';
+  const grid = 'rgba(168,186,200,.08)';
+  const accent = '#36c2ff';
+  const success = '#35d07f';
+  const warning = '#ffb547';
+  const danger = '#ff5d5d';
+
+  const axis = {
+    axisLine: { lineStyle: { color: '#244455' } },
+    axisTick: { show: false },
+    axisLabel: { color: muted, fontSize: 11 }
+  };
+
+  const trendChart = safeInit('trendChart');
+  const energyChart = safeInit('energyChart');
+  const charts = [trendChart, energyChart].filter(Boolean);
+
+  const times = ['16:00', '16:05', '16:10', '16:15', '16:20', '16:25', '16:30', '16:35'];
+
+  function renderCharts(mode){
+    try {
+      let levelData = [3.18, 3.19, 3.20, 3.22, 3.21, 3.22, 3.23, 3.22];
+      let fcmdData = [37.8, 38.0, 38.2, 38.5, 38.4, 38.5, 38.6, 38.5];
+      let pumpCountData = [2, 2, 2, 2, 2, 2, 2, 2];
+
+      if (mode === 'peak-demand') {
+        levelData = [3.20, 3.25, 3.38, 3.52, 3.75, 3.88, 3.86, 3.82];
+        fcmdData = [38.5, 41.0, 45.0, 48.0, 48.0, 43.5, 44.2, 44.0];
+        pumpCountData = [2, 2, 2, 2, 2, 3, 3, 3];
+      } else if (mode === 'staged-backup') {
+        levelData = [3.10, 3.22, 3.35, 3.42, 3.48, 3.45, 3.42, 3.40];
+        fcmdData = [45.0, 45.0, 45.0, 45.0, 45.0, 45.0, 45.0, 45.0];
+        pumpCountData = [1, 1, 1, 2, 2, 2, 2, 2];
+      } else if (mode === 'safety-interlock') {
+        levelData = [3.40, 3.70, 4.05, 4.30, 4.45, 4.54, 4.52, 4.48];
+        fcmdData = [40.0, 45.0, 48.0, 50.0, 50.0, 50.0, 50.0, 50.0];
+        pumpCountData = [2, 2, 3, 3, 4, 4, 4, 4];
+      }
+
+      if (trendChart) {
+        trendChart.setOption({
+          animationDuration: 600,
+          grid: { left: 45, right: 45, top: 35, bottom: 25 },
+          tooltip: { trigger: 'axis' },
+          legend: { top: 4, right: 10, textStyle: { color: text, fontSize: 11 } },
+          xAxis: { type: 'category', data: times, ...axis },
+          yAxis: [
+            {
+              type: 'value',
+              name: '液位 (m)',
+              min: 1.0,
+              max: 5.0,
+              nameTextStyle: { color: muted },
+              splitLine: { lineStyle: { color: grid } },
+              ...axis
+            },
+            {
+              type: 'value',
+              name: '变频 (Hz) / 台数',
+              min: 0,
+              max: 55,
+              nameTextStyle: { color: muted },
+              splitLine: { show: false },
+              ...axis
+            }
+          ],
+          series: [
+            {
+              name: '实际液位 PV',
+              type: 'line',
+              smooth: true,
+              data: levelData,
+              lineStyle: { color: accent, width: 3 },
+              itemStyle: { color: accent },
+              markLine: {
+                symbol: 'none',
+                data: [
+                  { yAxis: 3.20, name: 'SP 目标', lineStyle: { color: '#35d07f', type: 'dashed' } },
+                  { yAxis: 4.50, name: 'HH 保护', lineStyle: { color: danger, type: 'dotted' } }
+                ]
+              }
+            },
+            {
+              name: '变频指令 Fcmd',
+              type: 'line',
+              yAxisIndex: 1,
+              smooth: true,
+              data: fcmdData,
+              lineStyle: { color: warning, width: 2 },
+              itemStyle: { color: warning }
+            },
+            {
+              name: '运行台数',
+              type: 'bar',
+              yAxisIndex: 1,
+              data: pumpCountData.map(function(c){ return c * 10; }),
+              barWidth: 14,
+              itemStyle: { color: 'rgba(53,208,127,.25)', borderRadius: [3, 3, 0, 0] }
+            }
+          ]
+        });
+      }
+
+      const flowSteps = [400, 500, 600, 700, 800, 1000, 1200, 1400];
+      const kwhSteps = mode === 'staged-backup'
+        ? [0.24, 0.23, 0.22, 0.21, 0.22, 0.23, 0.24, 0.25]
+        : [0.22, 0.20, 0.18, 0.182, 0.19, 0.20, 0.21, 0.23];
+
+      if (energyChart) {
+        energyChart.setOption({
+          animationDuration: 600,
+          grid: { left: 45, right: 20, top: 28, bottom: 25 },
+          tooltip: { trigger: 'axis' },
+          legend: { top: 2, right: 8, textStyle: { color: text, fontSize: 10 } },
+          xAxis: { type: 'category', data: flowSteps.map(function(f){ return f + 'm³'; }), ...axis },
+          yAxis: {
+            type: 'value',
+            name: 'kWh/m³',
+            min: 0.15,
+            max: 0.30,
+            nameTextStyle: { color: muted },
+            splitLine: { lineStyle: { color: grid } },
+            ...axis
+          },
+          series: [
+            {
+              name: '吨水综合能耗',
+              type: 'line',
+              smooth: true,
+              data: kwhSteps,
+              lineStyle: { color: success, width: 2.5 },
+              itemStyle: { color: success },
+              areaStyle: { color: 'rgba(53,208,127,.12)' }
+            }
+          ]
+        });
+      }
+    } catch(e) {
+      console.error(e);
+    }
+  }
+
+  window.renderCharts = renderCharts;
+  renderCharts('pid-optimal');
+
+  function fit(){
+    try {
+      const screen = $id('screen');
+      if (!screen) return;
+      const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      screen.style.transform = 'translate(-50%,-50%) scale(' + scale + ')';
+    } catch(e) {}
+  }
+
+  fit();
+  window.addEventListener('resize', function(){
+    try {
+      fit();
+      charts.forEach(function(c){
+        try { if (c) c.resize(); } catch(e) {}
+      });
+    } catch(e) {}
+  });
+})();
+</script>
+</body>
+</html>

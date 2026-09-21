@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>关键机组预测性维护驾驶舱</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<script src="../../vendor/three.min.js"></script>
+<script src="../../vendor/OrbitControls.js"></script>
+<script src="../../assets/models/ngt200/ngt200-model.js"></script>
+<style>
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#03080c;color:#f2f7fa;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif}body{display:flex;align-items:center;justify-content:center}.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}button{font:inherit}[v-cloak]{display:none}:root{--bg:#071019;--s1:#0b1622;--s2:#0f1d2a;--s3:#132536;--line:#20394a;--line2:#31566d;--accent:#36c2ff;--success:#35d07f;--warning:#ffb547;--danger:#ff5d5d;--offline:#708594;--t1:#f2f7fa;--t2:#a8bac8;--t3:#708594}
+#screen{width:1920px;height:1080px;position:absolute;left:50%;top:50%;transform-origin:center center;display:grid;grid-template-rows:76px 1fr 42px;overflow:hidden;background:radial-gradient(circle at 50% 32%,rgba(54,194,255,.065),transparent 35%),repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0,rgba(255,255,255,.012) 1px,transparent 1px,transparent 4px),linear-gradient(145deg,#0a1621,#071019 56%,#050b11)}
+.topbar{z-index:4;display:grid;grid-template-columns:470px 1fr 520px;align-items:center;padding:0 22px;border-bottom:1px solid var(--line);background:rgba(5,13,21,.92);box-shadow:0 8px 30px rgba(0,0,0,.22)}.brand{display:flex;align-items:center;gap:13px}.mark{width:42px;height:42px;border:1px solid var(--line2);border-radius:8px;display:grid;place-items:center;color:var(--accent);background:linear-gradient(145deg,#142738,#09131d)}.mark svg{width:27px;height:27px}.brand strong{display:block;font-size:16px;letter-spacing:2px}.brand span{font-size:11px;color:var(--t3);letter-spacing:1.5px}.title{text-align:center}.title h1{margin:0;font-size:30px;letter-spacing:3px}.title p{margin:5px 0 0;font-size:11px;color:var(--accent);letter-spacing:5px}.head-right{display:flex;justify-content:flex-end;align-items:center;gap:18px}.badge{padding:8px 12px;border:1px solid rgba(53,208,127,.28);border-radius:6px;background:rgba(53,208,127,.07);color:var(--success);font-size:12px}.clock{text-align:right;min-width:120px}.clock strong{display:block;font-size:20px}.clock span{font-size:11px;color:var(--t3)}
+.main{min-height:0;z-index:2;display:grid;grid-template-columns:338px 1fr 364px;gap:14px;padding:14px 16px}.column{min-height:0;display:grid;gap:14px}.left{grid-template-rows:552px 1fr}.center{grid-template-rows:112px 486px 1fr}.right{grid-template-rows:342px 286px 1fr}.panel{position:relative;min-height:0;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:linear-gradient(145deg,rgba(15,29,42,.95),rgba(8,18,28,.96));box-shadow:inset 0 1px rgba(255,255,255,.035),0 12px 34px rgba(0,0,0,.17)}.panel:before{content:"";position:absolute;left:0;top:0;width:3px;height:43px;background:var(--accent)}.panel-head{height:45px;padding:0 14px 0 17px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(49,86,109,.5)}.panel-title{font-size:17px;font-weight:680}.meta{font-size:11px;color:var(--t3);padding:4px 7px;border:1px solid var(--line);border-radius:4px}.panel-body{padding:13px}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.kpi{padding:13px 15px;border:1px solid var(--line);border-radius:8px;background:linear-gradient(150deg,rgba(19,37,54,.92),rgba(9,20,30,.95));position:relative}.kpi:after{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;background:var(--color,var(--accent))}.kpi label{display:block;color:var(--t2);font-size:13px}.kpi strong{display:block;margin-top:5px;font-size:29px;line-height:1;color:var(--color,var(--t1))}.kpi strong small{font-size:13px;color:var(--t2);font-weight:500}.kpi span{display:block;margin-top:8px;color:var(--t3);font-size:11px}
+.fleet-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}.fleet-summary div{padding:9px;border:1px solid var(--line);border-radius:5px;background:rgba(5,13,21,.4);text-align:center}.fleet-summary b{display:block;font-size:20px}.fleet-summary span{font-size:10px;color:var(--t3)}.device-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.device-tile{height:52px;padding:7px 6px;text-align:left;border:1px solid var(--line);border-radius:5px;background:#091520;color:var(--t2);cursor:pointer;position:relative}.device-tile:before{content:"";position:absolute;right:6px;top:6px;width:6px;height:6px;border-radius:50%;background:var(--state,var(--success))}.device-tile b{display:block;font-size:11px;color:var(--t1)}.device-tile span{display:block;margin-top:5px;font-size:10px;color:var(--t3)}.device-tile.warn{--state:var(--warning);border-color:rgba(255,181,71,.35)}.device-tile.selected{border-color:var(--accent);background:rgba(54,194,255,.1);box-shadow:inset 0 0 0 1px rgba(54,194,255,.16)}.legend{display:flex;gap:14px;margin-top:12px;font-size:11px;color:var(--t3)}.legend i{display:inline-block;width:7px;height:7px;margin-right:5px;border-radius:50%}.chart{width:100%;height:100%}.pie-wrap{height:350px;padding:0 4px 4px}.twin-body{height:440px;padding:10px 12px;display:grid;grid-template-columns:1.02fr .98fr;gap:12px}.machine-wrap,.fft-wrap{min-width:0;border:1px solid var(--line);border-radius:7px;background:rgba(5,13,21,.42);overflow:hidden}.subhead{height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--line);font-size:13px;color:var(--t2)}.subhead b{color:var(--t1)}.machine-svg{width:100%;height:386px}.machine-body{fill:url(#machineMetal);stroke:#31566d;stroke-width:2}.rotor{transform-origin:235px 198px;animation:rotate 2.4s linear infinite}.sensor{fill:#35d07f;filter:drop-shadow(0 0 5px rgba(53,208,127,.5))}.sensor.warn{fill:#ffb547;filter:drop-shadow(0 0 5px rgba(255,181,71,.5))}.leader{stroke:#31566d;stroke-width:1.5;stroke-dasharray:4 4}.svg-label{fill:#a8bac8;font-size:11px}.svg-value{fill:#f2f7fa;font-size:14px;font-weight:700}.fft-chart{height:386px}.rul-body{height:265px;padding:2px 8px 8px}.diagnosis{padding:14px}.diagnosis-hero{padding:14px;border:1px solid rgba(255,181,71,.32);border-radius:7px;background:linear-gradient(135deg,rgba(255,181,71,.1),transparent)}.diag-top{display:flex;justify-content:space-between;align-items:center}.diag-top b{font-size:16px}.risk{color:var(--warning);font-size:12px}.diagnosis-hero p{margin:10px 0 0;color:var(--t2);font-size:13px;line-height:1.65}.evidence{display:grid;gap:8px;margin-top:12px}.evidence div{display:grid;grid-template-columns:80px 1fr auto;align-items:center;gap:8px;padding:9px;border-bottom:1px solid rgba(32,57,74,.75);font-size:12px}.evidence span{color:var(--t3)}.evidence b{color:var(--t2)}.evidence em{font-style:normal;color:var(--warning)}.orders{padding:4px 13px}.order{padding:11px 0;border-bottom:1px solid var(--line)}.order-top{display:flex;justify-content:space-between}.order-top b{font-size:13px}.order-top span{font-size:11px;color:var(--warning)}.order p{margin:6px 0 0;color:var(--t3);font-size:11px;line-height:1.45}.inventory{padding:13px}.stock{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-bottom:12px}.stock label{font-size:12px}.stock span{font-size:11px;color:var(--success)}.stockbar{grid-column:1/-1;height:6px;border-radius:3px;background:#182b3a;overflow:hidden}.stockbar i{display:block;height:100%;border-radius:3px;background:var(--success)}
+.statusbar{z-index:4;display:grid;grid-template-columns:420px 1fr 520px;align-items:center;padding:0 18px;border-top:1px solid var(--line);background:#050d15;color:var(--t2);font-size:12px}.statusbar>div{display:flex;gap:9px;align-items:center;white-space:nowrap}.statusbar .center-status{justify-content:center;color:var(--t3)}.statusbar .right-status{justify-content:flex-end}.dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 10px rgba(53,208,127,.6)}.quality{color:var(--success)}.sep{color:#284356}@keyframes rotate{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.diagnosis{padding:11px 12px}.diagnosis-hero{padding:11px 12px}.diag-top b{font-size:15px}.diagnosis-hero p{margin-top:7px;font-size:12px;line-height:1.5}.evidence{gap:0;margin-top:7px}.evidence div{padding:7px 8px;font-size:11px}
+.pie-wrap{height:323px}
+.machine-3d{position:relative;width:100%;height:382px;overflow:hidden;background:radial-gradient(circle at 50% 46%,rgba(54,194,255,.1),transparent 52%)}.machine-3d canvas{display:block;width:100%;height:100%;touch-action:none}.model-tools{position:absolute;right:12px;top:10px;display:flex;gap:5px;z-index:3}.model-tools button{height:25px;padding:0 8px;border:1px solid var(--line2);border-radius:4px;background:rgba(5,13,21,.86);color:var(--t3);font-size:10px;cursor:pointer}.model-tools button.active{border-color:var(--accent);color:var(--accent);background:rgba(54,194,255,.12)}.sensor-tag{position:absolute;z-index:2;padding:5px 7px;border-left:2px solid var(--tag,var(--success));background:rgba(5,13,21,.82);box-shadow:0 5px 12px rgba(0,0,0,.2);pointer-events:none}.sensor-tag b{display:block;font-size:10px;color:var(--t2)}.sensor-tag span{display:block;margin-top:2px;font-size:11px;color:var(--t1)}.sensor-tag.de{left:12px;top:22px;--tag:var(--warning)}.sensor-tag.motor{right:12px;top:56px;--tag:var(--accent)}.sensor-tag.nde{right:12px;bottom:44px}.model-spec{position:absolute;left:12px;bottom:9px;z-index:2;padding:5px 8px;border:1px solid var(--line);border-radius:4px;background:rgba(5,13,21,.82);color:var(--t2);font-size:10px;pointer-events:none}.model-spec b{color:var(--t1);font-size:11px}.model-hint{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);color:var(--t3);font-size:9px;pointer-events:none}
+.twin-body{display:block}.machine-wrap{height:420px}.bottom-trends{display:grid;grid-template-columns:1.25fr .75fr;gap:14px;min-height:0}.bottom-trends .panel{min-height:0}.fft-body{height:219px;padding:2px 8px 8px}.fft-chart{width:100%;height:100%}.rul-body{height:219px}
+.frequency-strip{position:absolute;left:50%;top:9px;z-index:3;transform:translateX(-50%);display:flex;gap:5px;padding:4px;border:1px solid rgba(49,86,109,.74);border-radius:5px;background:rgba(5,13,21,.84);box-shadow:0 8px 20px rgba(0,0,0,.25);pointer-events:none}.frequency-strip span{min-width:86px;padding:3px 8px;border-right:1px solid var(--line);text-align:center}.frequency-strip span:last-child{border-right:0}.frequency-strip small{display:block;color:var(--t3);font-size:8px;letter-spacing:.5px}.frequency-strip b{display:block;margin-top:1px;color:var(--t1);font-size:11px}.frequency-strip .warn b{color:var(--warning)}.part-tag{position:absolute;z-index:2;max-width:175px;padding:6px 8px;border:1px solid rgba(49,86,109,.68);border-left:2px solid var(--tag,var(--accent));border-radius:3px;background:rgba(5,13,21,.86);box-shadow:0 6px 15px rgba(0,0,0,.22);pointer-events:none}.part-tag:after{content:"";position:absolute;top:50%;width:72px;border-top:1px dashed var(--tag,var(--accent));opacity:.75}.part-tag b{display:block;font-size:10px;color:var(--t1)}.part-tag span{display:block;margin-top:3px;color:var(--t3);font-size:9px}.part-tag.volute{left:12px;top:47%;--tag:#9ed5ea}.part-tag.volute:after{left:100%}.part-tag.impeller{right:12px;top:49%;--tag:#e7eef1}.part-tag.impeller:after{right:100%}.model-tools button.detail{border-color:rgba(215,174,86,.55);color:#d7ae56}.model-tools button.detail.active{border-color:var(--warning);color:var(--warning);background:rgba(255,181,71,.12)}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+<div id="screen">
+  <header class="topbar">
+    <div class="brand"><div class="mark"><svg viewBox="0 0 32 32" fill="none"><path d="M16 4v5M16 23v5M4 16h5M23 16h5M7.5 7.5l3.5 3.5M21 21l3.5 3.5M24.5 7.5L21 11M11 21l-3.5 3.5" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="16" r="7" stroke="currentColor" stroke-width="2"/></svg></div><div><strong>智慧运维 · 关键机组</strong><span>ASSET RELIABILITY CENTER</span></div></div>
+    <div class="title"><h1>关键机组预测性维护驾驶舱</h1><p>CONDITION · DIAGNOSIS · ACTION</p></div>
+    <div class="head-right"><span class="badge">● 50 台设备在线 · 1 项维护关注</span><div class="clock num"><strong>{{clock}}</strong><span>{{date}}</span></div></div>
+  </header>
+
+  <main class="main">
+    <section class="column left">
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">关键机组健康矩阵</div><span class="meta">按风险排序</span></div>
+        <div class="panel-body">
+          <div class="fleet-summary"><div><b class="num" style="color:var(--success)">43</b><span>健康</span></div><div><b class="num" style="color:var(--warning)">6</b><span>关注</span></div><div><b class="num" style="color:var(--offline)">1</b><span>离线检修</span></div></div>
+          <div class="device-grid"><button v-for="d in devices" :key="d.id" class="device-tile" :class="[{warn:d.warn,selected:selectedId===d.id}]" @click="selectDevice(d.id)"><b>{{d.id}}</b><span>健康 {{d.health}}</span></button></div>
+          <div class="legend"><span><i style="background:var(--success)"></i>健康 ≥90</span><span><i style="background:var(--warning)"></i>关注 70–89</span><span><i style="background:var(--offline)"></i>检修/离线</span></div>
+        </div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">故障模式贡献度</div><span class="meta">FMEA</span></div>
+        <div class="pie-wrap"><div id="fmeaChart" class="chart"></div></div>
+      </article>
+    </section>
+
+    <section class="column center">
+      <div class="kpis">
+        <div class="kpi" style="--color:#36c2ff"><label>在线测点</label><strong class="num">1,280<small>点</small></strong><span>采样率 10kHz / 1s 混合</span></div>
+        <div class="kpi" style="--color:#ffb547"><label>高风险设备</label><strong class="num">2<small>台</small></strong><span>均已生成维护任务</span></div>
+        <div class="kpi" style="--color:#35d07f"><label>平均剩余寿命</label><strong class="num">142<small>天</small></strong><span>模型置信度 94.2%</span></div>
+        <div class="kpi" style="--color:#35d07f"><label>本月避免损失</label><strong class="num">38.5<small>万元</small></strong><span>预测检修命中 2 次</span></div>
+      </div>
+
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">{{selected.name}} · 三维结构与测点</div><span class="meta">实时采样</span></div>
+        <div class="twin-body">
+          <div class="machine-wrap"><div class="subhead"><b>NGT200 三维剖切模型</b><span>健康分 {{selected.health}}</span></div>
+            <div id="ngtModel" class="machine-3d" role="img" aria-label="SeAH NGT200 空气悬浮鼓风机三维模型">
+              <div class="model-tools"><button id="modeCutaway" class="active">剖切</button><button id="modeImpeller" class="detail">叶轮细节</button><button id="modeExterior">整机</button></div>
+              <div class="frequency-strip"><span><small>电源工频</small><b class="num">50 Hz</b></span><span class="warn"><small>次同步监测峰</small><b class="num">142 Hz</b></span><span><small>二次谐波</small><b class="num">284 Hz</b></span></div>
+              <div class="sensor-tag de"><b>进气端空气箔片轴承 DE</b><span class="num">顶箔 / 波箔 · 3.8 mm/s</span></div>
+              <div class="sensor-tag motor"><b>高速电机绕组</b><span class="num">72.4 ℃ · 正常</span></div>
+              <div class="sensor-tag nde"><b>后端空气箔片轴承 NDE</b><span class="num">气膜稳定 · 1.2 mm/s</span></div>
+              <div class="part-tag volute"><b>铝合金蜗壳与进口罩体</b><span>喇叭口 · 扩压流道 · 出口过渡</span></div>
+              <div class="part-tag impeller"><b>后弯式铝合金叶轮</b><span>前后罩盘 · 曲面叶道 · 轮毂</span></div>
+              <div class="model-spec"><b>NGT200 · 123 kW</b><br>83.3 Nm³/min · 75 kPa(g)</div>
+              <div class="model-hint">拖动旋转 · 滚轮缩放</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <div class="bottom-trends">
+        <article class="panel">
+          <div class="panel-head"><div class="panel-title">健康度与剩余寿命预测</div><span class="meta">维护窗口：21 天内</span></div>
+          <div class="rul-body"><div id="rulChart" class="chart"></div></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><div class="panel-title">进气端转子振动 FFT</div><span class="meta" style="color:var(--warning)">次同步</span></div>
+          <div class="fft-body"><div id="fftChart" class="fft-chart"></div></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="column right">
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">诊断结论与证据</div><span class="meta">在线模型</span></div>
+        <div class="diagnosis"><div class="diagnosis-hero"><div class="diag-top"><b>进气端气膜稳定性下降</b><span class="risk num">中风险 78</span></div><p>空气箔片轴承次同步振动分量持续增强，可能与进气阻力、叶轮积尘或启停磨损相关。温度与轴向振动未同步上升，暂不需要立即停机。</p></div><div class="evidence"><div><span>频谱证据</span><b>142 / 284 Hz</b><em>增强</em></div><div><span>径向振动</span><b>3.8 mm/s</b><em>+24%</em></div><div><span>绕组温度</span><b>72.4 ℃</b><em>稳定</em></div><div><span>模型置信度</span><b>94.6%</b><em>高</em></div></div></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">预测性工单闭环</div><span class="meta">3 项</span></div>
+        <div class="orders"><div class="order"><div class="order-top"><b>WO-260919-017 · NGT200</b><span>待执行</span></div><p>21 天内检查进气滤芯压差、叶轮积尘及空气箔片轴承启停磨损。</p></div><div class="order"><div class="order-top"><b>WO-260918-011 · 2#回流泵</b><span style="color:var(--accent)">处理中</span></div><p>联轴器对中复核，备件与检修人员已确认。</p></div><div class="order"><div class="order-top"><b>WO-260916-006 · 高压板框</b><span style="color:var(--success)">已闭环</span></div><p>液压油温异常已处理，复测健康度恢复至 93。</p></div></div>
+      </article>
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">备件保障</div><span class="meta">安全库存</span></div>
+        <div class="inventory"><div class="stock"><label>NGT200 进气滤芯</label><span>6 套</span><div class="stockbar"><i style="width:72%"></i></div></div><div class="stock"><label>空气箔片轴承组件</label><span>2 套</span><div class="stockbar"><i style="width:42%;background:var(--warning)"></i></div></div><div class="stock"><label>冷却风扇滤网</label><span>18 件</span><div class="stockbar"><i style="width:86%"></i></div></div><div class="stock"><label>振动传感器</label><span>12 件</span><div class="stockbar"><i style="width:64%"></i></div></div></div>
+      </article>
+    </section>
+  </main>
+  <footer class="statusbar"><div><i class="dot"></i><b>状态监测在线</b><span class="sep">|</span><span>设备 50 台 · 测点 1,280</span></div><div class="center-status">数据来源：振动采集器 / PLC / CMMS · 高频采样 10kHz</div><div class="right-status"><span class="quality">数据质量 GOOD</span><span class="sep">|</span><span>更新时间 {{clock}}</span><span class="sep">|</span><span>端到端时延 1.1s</span></div></footer>
+</div>
+</div>
+<script>
+(function(){
+  'use strict';
+  const $id=(id)=>document.getElementById(id);
+  const safeInit=(id)=>{try{const el=$id(id);if(!el)return null;return echarts.init(el);}catch(e){console.error(e);return null;}};
+  const seedDevices=['BLW-01','BLW-02','BLW-03','PMP-01','PMP-02','PMP-03','PMP-04','PMP-05','SCR-01','SCR-02','SCR-03','SCR-04','FLT-01','FLT-02','FLT-03','FLT-04','FLT-05','FLT-06','MIX-01','MIX-02','MIX-03','DRV-01','DRV-02','DRV-03','DRV-04'];
+  const devices=seedDevices.map((id,i)=>({id,name:id.startsWith('BLW-')?`${Number(id.slice(-2))}#空气悬浮鼓风机 NGT200`:id,health:i===0?88:(i===4?84:92+(i%7)),warn:i===0||i===4}));
+  const app=Vue.createApp({data(){return{clock:'--:--:--',date:'----/--/--',selectedId:'BLW-01',devices};},computed:{selected(){return this.devices.find(d=>d.id===this.selectedId)||this.devices[0];}},methods:{tick(){try{const d=new Date();this.clock=d.toLocaleTimeString('zh-CN',{hour12:false});this.date=d.toLocaleDateString('zh-CN').replaceAll('/',' · ');}catch(e){}},selectDevice(id){this.selectedId=id;try{if(window.refreshAssetCharts)window.refreshAssetCharts(id);}catch(e){}}},mounted(){this.tick();setInterval(()=>{try{this.tick();}catch(e){}},1000);}});app.mount('#app');
+  try{
+    const modelHost=$id('ngtModel');
+    const cutaway=$id('modeCutaway');
+    const impeller=$id('modeImpeller');
+    const exterior=$id('modeExterior');
+    const ngt=modelHost&&window.NGT200Model?window.NGT200Model.mount(modelHost,{mode:'cutaway',scale:1.24}):null;
+    const setModelMode=(mode)=>{if(!ngt)return;const detail=mode==='impeller';ngt.setMode(mode==='exterior'?'exterior':'cutaway');ngt.setView(detail?'impeller':'overview');if(cutaway)cutaway.classList.toggle('active',mode==='cutaway');if(impeller)impeller.classList.toggle('active',detail);if(exterior)exterior.classList.toggle('active',mode==='exterior');};
+    if(cutaway)cutaway.addEventListener('click',()=>setModelMode('cutaway'));
+    if(impeller)impeller.addEventListener('click',()=>setModelMode('impeller'));
+    if(exterior)exterior.addEventListener('click',()=>setModelMode('exterior'));
+  }catch(e){console.error(e);}
+  const text='#a8bac8',muted='#708594',grid='rgba(168,186,200,.09)',accent='#36c2ff',success='#35d07f',warning='#ffb547',danger='#ff5d5d';
+  const axis={axisLine:{lineStyle:{color:'#284355'}},axisTick:{show:false},axisLabel:{color:muted,fontSize:12}};
+  const fmea=safeInit('fmeaChart'),fft=safeInit('fftChart'),rul=safeInit('rulChart');const charts=[fmea,fft,rul].filter(Boolean);
+  function renderFmea(){try{if(fmea)fmea.setOption({tooltip:{trigger:'item'},title:{text:'40%',subtext:'气膜稳定性',left:'center',top:'34%',textStyle:{color:warning,fontSize:25,fontFamily:'Bahnschrift'},subtextStyle:{color:text,fontSize:11}},legend:{bottom:10,left:'center',itemWidth:12,itemHeight:8,textStyle:{color:text,fontSize:10}},series:[{type:'pie',radius:['43%','64%'],center:['50%','42%'],label:{show:false},data:[{name:'气膜稳定性',value:40,itemStyle:{color:warning}},{name:'叶轮气动',value:25,itemStyle:{color:accent}},{name:'进气阻塞',value:20,itemStyle:{color:'#6ba6c9'}},{name:'电气绝缘',value:15,itemStyle:{color:danger}}]}]});}catch(e){console.error(e);}}
+  function renderAsset(id){try{const delta=id==='BLW-01'?0:-.18;if(fft){const data=[];for(let i=0;i<=50;i++){const hz=i*10;let v=.35+((i*17)%9)*.025+delta;if(hz===60)v=1.7+delta;if(hz===140)v=3.8+delta;if(hz===280)v=1.55+delta;if(hz===420)v=.95+delta;data.push([hz,Math.max(.12,v)]);}fft.setOption({grid:{left:48,right:20,top:30,bottom:35},tooltip:{trigger:'axis'},xAxis:{type:'value',name:'Hz',min:0,max:500,nameTextStyle:{color:muted},splitLine:{show:false},...axis},yAxis:{type:'value',name:'mm/s',min:0,max:5,nameTextStyle:{color:muted},splitLine:{lineStyle:{color:grid}},...axis},series:[{type:'line',data,symbol:'none',lineStyle:{color:accent,width:2},areaStyle:{color:'rgba(54,194,255,.11)'},markLine:{symbol:['none','none'],label:{color:warning,formatter:'次同步 142Hz'},lineStyle:{color:warning,type:'dashed'},data:[{xAxis:142}]} }]});}if(rul)rul.setOption({grid:{left:52,right:34,top:34,bottom:36},tooltip:{trigger:'axis'},xAxis:{type:'category',data:['0d','30d','60d','90d','120d','142d','160d','180d'],...axis},yAxis:{type:'value',name:'健康度 %',min:35,max:100,nameTextStyle:{color:muted},splitLine:{lineStyle:{color:grid}},...axis},series:[{name:'实测健康度',type:'line',data:[99,98,96,93,90,88,null,null],symbolSize:6,lineStyle:{color:success,width:3},itemStyle:{color:success}},{name:'预测退化',type:'line',data:[null,null,null,null,90,88,76,48],symbolSize:6,lineStyle:{color:warning,width:2,type:'dashed'},itemStyle:{color:warning},markLine:{symbol:['none','none'],label:{color:warning},data:[{yAxis:75,name:'建议维护'},{yAxis:50,name:'风险阈值',lineStyle:{color:danger}}]}}]});}catch(e){console.error(e);}}
+  window.refreshAssetCharts=renderAsset;renderFmea();renderAsset('BLW-01');
+  function fit(){try{const el=$id('screen');if(!el)return;const scale=Math.min(innerWidth/1920,innerHeight/1080);el.style.transform=`translate(-50%,-50%) scale(${scale})`;}catch(e){}}
+  fit();addEventListener('resize',()=>{try{fit();charts.forEach(c=>{try{c.resize();}catch(e){}});}catch(e){}});
+})();
+</script>
+</body>
+</html>

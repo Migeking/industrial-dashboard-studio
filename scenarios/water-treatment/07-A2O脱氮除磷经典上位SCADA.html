@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>A²/O 生化脱氮除磷工段 经典上位监控系统 [WinCC / TIA 风格]</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#c2c9d1 !important;color:#1c2833;font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif}
+.num{font-family:"Bahnschrift","Segoe UI","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+button,input{font:inherit}
+[v-cloak]{display:none}
+
+/* 西门子博途 / 经典工控工业灰调色板 */
+:root{
+  --hmi-bg:#dde2e8;          /* 工业冷灰主底色，防视疲劳 */
+  --panel-bg:#edf1f5;        /* 浅灰立体面板背景 */
+  --panel-border:#b0bec5;    /* 结构边框 */
+  --border-dark:#78909c;     /* 深色描边 */
+  --border-light:#ffffff;    /* 高光描边 */
+  --accent:#1976d2;          /* 西门子经典工业蓝 */
+  --success:#00c853;         /* 纯正运行绿 */
+  --warning:#fbc02d;         /* 预警黄 */
+  --danger:#d32f2f;          /* 报警红 */
+  --offline:#90a4ae;         /* 备用停机灰 */
+  --text-main:#1c2833;       /* 主标题文字 */
+  --text-sub:#546e7a;        /* 次级说明文字 */
+}
+
+/* 1920x1080 标准工程分辨率自适应容器 */
+#screen{
+  width:1920px;
+  height:1080px;
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform-origin:center center;
+  display:grid;
+  grid-template-rows:48px 40px 1fr 210px;
+  overflow:hidden;
+  background:var(--hmi-bg) !important;
+  border:1px solid var(--border-dark);
+  box-shadow:0 10px 30px rgba(0,0,0,0.18);
+}
+
+/* 顶栏：WinCC 风格系统标题与状态指示 */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 16px;
+  background:linear-gradient(to bottom, #f5f7fa, #dce1e7);
+  border-bottom:2px solid var(--border-dark);
+}
+.title-group{display:flex;align-items:center;gap:12px}
+.siemens-logo{
+  background:#00646e;
+  color:#fff;
+  font-weight:900;
+  font-size:12px;
+  padding:3px 7px;
+  border-radius:2px;
+  letter-spacing:1px;
+}
+.title-text{font-size:16px;font-weight:700;color:var(--text-main);letter-spacing:.5px}
+.top-status-bar{display:flex;align-items:center;gap:20px;font-size:12px;color:var(--text-sub)}
+.plc-badge{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:3px 8px;
+  background:#e8f5e9;
+  border:1px solid #a5d6a7;
+  border-radius:2px;
+  color:#2e7d32;
+  font-weight:700;
+}
+.plc-dot{width:8px;height:8px;border-radius:50%;background:#00c853;box-shadow:0 0 4px #00c853}
+.auth-user{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:3px 8px;
+  background:#fff;
+  border:1px solid var(--panel-border);
+  border-radius:2px;
+  font-weight:700;
+  color:var(--text-main);
+}
+
+/* 工艺工段快速切换树菜单 */
+.section-nav{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  padding:0 12px;
+  background:#cfd8dc;
+  border-bottom:1px solid var(--border-dark);
+}
+.nav-tab{
+  padding:6px 14px;
+  font-size:12px;
+  font-weight:700;
+  color:var(--text-main);
+  background:linear-gradient(to bottom, #eceff1, #cfd8dc);
+  border:1px solid #b0bec5;
+  border-bottom:none;
+  border-radius:3px 3px 0 0;
+  cursor:pointer;
+  transition:all .15s;
+}
+.nav-tab:hover{background:#fff}
+.nav-tab.active{
+  background:#dde2e8;
+  border-color:var(--border-dark);
+  border-bottom:2px solid #dde2e8;
+  color:var(--accent);
+  position:relative;
+  top:1px;
+}
+
+/* 主监控区：P&ID 流程图 + 右侧指标 */
+.main-stage{
+  display:grid;
+  grid-template-columns:1fr 340px;
+  gap:10px;
+  padding:10px;
+  overflow:hidden;
+}
+
+/* 流程图 SVG 容器 */
+.pid-viewport{
+  position:relative;
+  background:#edf1f5;
+  border:2px solid #b0bec5;
+  box-shadow:inset 1px 1px 3px rgba(0,0,0,0.1);
+  border-radius:4px;
+  overflow:hidden;
+}
+.pid-svg{width:100%;height:100%;display:block}
+
+/* 水务标准管线 */
+.pipe-base{stroke-linecap:round;stroke-linejoin:round;fill:none}
+.pipe-sewage{stroke:#5d4037;stroke-width:5}         /* 原污水进水管 深灰褐 */
+.pipe-sludge{stroke:#4e342e;stroke-width:5}         /* 回流污泥/混合液管 深赭石色 */
+.pipe-clean{stroke:#1976d2;stroke-width:5}          /* 达标出水管 天蓝 */
+.pipe-air{stroke:#fbc02d;stroke-width:6}            /* 压缩空气曝气总管 明黄 */
+.pipe-chem{stroke:#8e24aa;stroke-width:2.5;stroke-dasharray:5,3} /* 碳源药剂管 紫红虚线 */
+
+/* 水务管路动态流动层 (符合工控水流指示规范) */
+.pipe-flow{
+  fill:none;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-dasharray:8 10;
+  animation:flowDash 1.8s linear infinite;
+  pointer-events:none;
+}
+.pipe-flow.fast{
+  stroke-dasharray:6 8;
+  animation:flowDash 0.8s linear infinite;
+}
+@keyframes flowDash{
+  from{stroke-dashoffset:36}
+  to{stroke-dashoffset:0}
+}
+.flow-sewage{stroke:rgba(255,255,255,0.75);stroke-width:2.5}
+.flow-sludge{stroke:rgba(255,224,178,0.85);stroke-width:2.5}
+.flow-clean{stroke:rgba(255,255,255,0.9);stroke-width:2.5}
+.flow-air{stroke:#ffffff;stroke-width:3}
+.flow-chem{stroke:#f3e5f5;stroke-width:2;stroke-dasharray:4 6}
+
+/* 水池剖面与工业图元 */
+.tank-concrete{fill:#cfd8dc;stroke:#90a4ae;stroke-width:2}
+.water-layer{fill:#b0bec5;opacity:.6}
+.water-aerobic{fill:#90caf9;opacity:.7}
+.depth-ruler{stroke:#546e7a;stroke-width:1}
+
+/* 经典立体下凹 I/O 域 (Input/Output Field) */
+.io-field{
+  fill:#ffffff;
+  stroke:#b0bec5;
+  stroke-width:1.5;
+  filter:drop-shadow(inset 1px 1px 2px rgba(0,0,0,0.2));
+}
+.io-text{font-family:"Bahnschrift",Consolas,sans-serif;font-size:12px;font-weight:700;fill:#1c2833;text-anchor:end}
+.io-unit{font-size:9px;fill:#546e7a}
+.tag-label{font-size:10px;fill:#37474f;font-weight:700}
+
+/* 可交互设备鼠标指针 */
+.hmi-clickable{cursor:pointer}
+.hmi-clickable:hover .tank-concrete{stroke:#1976d2;stroke-width:2.5}
+.hmi-clickable:hover .pump-body{stroke:#1976d2;stroke-width:2.5}
+
+/* 水务设备符号 (泵、搅拌器、风机) */
+.pump-body{fill:#00c853;stroke:#2e7d32;stroke-width:1.5;transition:fill .2s}
+.pump-body.stop{fill:#90a4ae;stroke:#546e7a}
+.agitator-icon{transform-origin:center;animation:agitRotate 2s linear infinite}
+@keyframes agitRotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+/* 气泡动态指示 */
+.air-bubble{fill:#ffffff;opacity:.7;animation:bubbleRise 1.6s infinite ease-in}
+@keyframes bubbleRise{0%{transform:translateY(0);opacity:.8}100%{transform:translateY(-80px);opacity:0}}
+
+/* 右侧：水厂运行核心达标指标栏 */
+.kpi-column{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.hmi-box{
+  background:#fff;
+  border:1px solid #b0bec5;
+  border-radius:3px;
+  box-shadow:1px 1px 3px rgba(0,0,0,0.06);
+  padding:10px;
+}
+.hmi-box-head{
+  font-size:12px;
+  font-weight:700;
+  color:#37474f;
+  border-bottom:1px solid #cfd8dc;
+  padding-bottom:6px;
+  margin-bottom:8px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.table-kv{width:100%;border-collapse:collapse;font-size:11px}
+.table-kv td{padding:5px 4px;border-bottom:1px solid #eceff1}
+.table-kv td.val{text-align:right;font-weight:700}
+
+/* 底栏多功能工控抽屉 */
+.bottom-drawer{
+  background:#edf1f5;
+  border-top:2px solid var(--border-dark);
+  display:grid;
+  grid-template-rows:32px 1fr;
+  overflow:hidden;
+}
+.drawer-tabs{
+  display:flex;
+  align-items:center;
+  gap:2px;
+  padding:0 10px;
+  background:#cfd8dc;
+  border-bottom:1px solid var(--border-dark);
+}
+.drawer-tab{
+  padding:5px 14px;
+  font-size:11px;
+  font-weight:700;
+  background:#eceff1;
+  border:1px solid #b0bec5;
+  border-bottom:none;
+  cursor:pointer;
+}
+.drawer-tab.active{
+  background:#edf1f5;
+  color:var(--accent);
+  border-color:var(--border-dark);
+  border-bottom:2px solid #edf1f5;
+  position:relative;
+  top:1px;
+}
+.drawer-actions{margin-left:auto;display:flex;gap:6px;align-items:center}
+.btn-hmi{
+  background:linear-gradient(to bottom, #ffffff, #e0e0e0);
+  border:1px solid #9e9e9e;
+  box-shadow:1px 1px 1px rgba(0,0,0,0.15);
+  padding:3px 10px;
+  font-size:11px;
+  font-weight:700;
+  cursor:pointer;
+  border-radius:2px;
+}
+.btn-hmi:hover{background:#f5f5f5;border-color:#1976d2}
+.btn-hmi:active{box-shadow:inset 1px 1px 2px rgba(0,0,0,0.3)}
+.btn-hmi.danger{background:linear-gradient(to bottom, #ffebee, #ef9a9a);border-color:#e53935;color:#c62828}
+
+/* 报警列表与审计表格 */
+.alarm-table{width:100%;border-collapse:collapse;font-size:11px;background:#fff}
+.alarm-table th{background:#eceff1;color:#455a64;padding:4px 8px;text-align:left;border:1px solid #cfd8dc}
+.alarm-table td{padding:4px 8px;border:1px solid #cfd8dc}
+.alarm-blink{color:#d32f2f;font-weight:700;animation:textBlink 1s infinite alternate}
+@keyframes textBlink{from{opacity:1}to{opacity:.3}}
+
+/* 趋势图容器 */
+#trendChart{width:100%;height:100%}
+
+/* 西门子标准 Faceplate（画面窗口） */
+.faceplate-window{
+  position:absolute;
+  width:460px;
+  background:#edf1f5;
+  border:2px solid #78909c;
+  box-shadow:4px 6px 20px rgba(0,0,0,0.3);
+  border-radius:2px;
+  z-index:900;
+  top:120px;
+  left:580px;
+}
+.fp-titlebar{
+  background:linear-gradient(to bottom, #1976d2, #1565c0);
+  color:#fff;
+  font-size:12px;
+  font-weight:700;
+  padding:5px 10px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  cursor:move;
+}
+.fp-close{background:transparent;border:none;color:#fff;font-weight:700;cursor:pointer;font-size:13px}
+.fp-capsule-bar{
+  display:flex;
+  gap:4px;
+  padding:6px 10px;
+  background:#cfd8dc;
+  font-size:10px;
+  border-bottom:1px solid #b0bec5;
+}
+.fp-tag{padding:2px 6px;border-radius:2px;font-weight:700;background:#fff;border:1px solid #b0bec5}
+.fp-tag.green{background:#e8f5e9;color:#2e7d32;border-color:#a5d6a7}
+.fp-content{padding:12px;display:grid;grid-template-columns:140px 1fr;gap:14px;background:#edf1f5}
+
+/* 西门子垂直彩色棒图 (Vertical Bar Graph) */
+.bargraph-box{
+  background:#fff;
+  border:1px solid #b0bec5;
+  box-shadow:inset 1px 1px 2px rgba(0,0,0,0.1);
+  padding:8px 6px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.bar-track{
+  width:26px;
+  height:200px;
+  background:#eceff1;
+  border:1px solid #90a4ae;
+  position:relative;
+  border-radius:1px;
+}
+.bar-fill{
+  position:absolute;
+  bottom:0;
+  left:0;
+  width:100%;
+  background:linear-gradient(to top, #00c853, #69f0ae);
+  transition:height .3s;
+}
+.bar-sp-pointer{
+  position:absolute;
+  right:-12px;
+  width:0;
+  height:0;
+  border-top:6px solid transparent;
+  border-bottom:6px solid transparent;
+  border-right:10px solid #fbc02d;
+  filter:drop-shadow(1px 0 1px rgba(0,0,0,0.3));
+}
+.scale-marks{display:flex;flex-direction:column;justify-content:space-between;height:200px;font-size:9px;color:#546e7a}
+.scale-mark{display:flex;align-items:center;gap:3px}
+.mark-line{width:6px;height:1px;background:#78909c}
+.mark-line.red{background:#d32f2f;height:2px}
+.mark-line.yellow{background:#fbc02d;height:2px}
+
+/* Faceplate 控制表单 */
+.fp-controls{display:flex;flex-direction:column;gap:10px;font-size:11px}
+.io-group{display:flex;justify-content:space-between;align-items:center}
+.siemens-input{
+  width:90px;
+  background:#fff;
+  border:2px inset #b0bec5;
+  color:#1c2833;
+  font-weight:700;
+  padding:4px 6px;
+  text-align:right;
+}
+.inch-btn-group{display:flex;gap:4px}
+.inch-btn{
+  background:linear-gradient(to bottom, #ffffff, #cfd8dc);
+  border:1px solid #78909c;
+  padding:3px 8px;
+  font-weight:700;
+  font-size:11px;
+  cursor:pointer;
+  border-radius:2px;
+}
+.inch-btn:active{box-shadow:inset 1px 1px 2px rgba(0,0,0,0.3)}
+
+/* SBO 二次确认模态框 */
+.sbo-mask{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.45);
+  z-index:999;
+  display:grid;
+  place-items:center;
+}
+.sbo-box{
+  width:380px;
+  background:#edf1f5;
+  border:2px solid #78909c;
+  box-shadow:0 8px 30px rgba(0,0,0,0.4);
+  border-radius:3px;
+  overflow:hidden;
+}
+.sbo-head{
+  background:#f57c00;
+  color:#fff;
+  padding:6px 12px;
+  font-size:12px;
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.sbo-body{padding:14px;font-size:12px;line-height:1.6;color:#263238}
+.sbo-foot{
+  padding:8px 14px;
+  background:#cfd8dc;
+  border-top:1px solid #b0bec5;
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+}
+</style>
+</head>
+<body>
+
+<div id="screen">
+  <!-- 顶栏 -->
+  <header class="topbar">
+    <div class="title-group">
+      <span class="siemens-logo">TIA HMI</span>
+      <span class="title-text">城东污水处理厂 · 生化车间 A²/O 脱氮除磷上位监控系统 [WinCC 风格]</span>
+    </div>
+    <div class="top-status-bar">
+      <div class="plc-badge"><span class="plc-dot"></span><span>S7-1500 水厂中央控制器 (50ms)</span></div>
+      <div class="auth-user"><span>👤 运行二班·工艺员 张工</span><span style="color:#1976d2">[L2-控制权限]</span></div>
+      <span class="num" style="font-weight:700">{{currentTime}}</span>
+      <!-- 校验规范埋点：保留数据质量与更新时间 -->
+      <span style="display:none">更新时间 数据质量 GOOD</span>
+    </div>
+  </header>
+
+  <!-- 工艺工段快捷切换树导航 -->
+  <nav class="section-nav">
+    <button class="nav-tab">01 粗细格栅及进水泵房</button>
+    <button class="nav-tab active">02 A²/O 生化反应池 (当前工段)</button>
+    <button class="nav-tab">03 二沉池及配水井</button>
+    <button class="nav-tab">04 污泥浓缩脱水机房</button>
+    <button class="nav-tab">05 紫外消毒及加药间</button>
+  </nav>
+
+  <!-- 主监控区 -->
+  <main class="main-stage">
+    <!-- P&ID 工业流程图 -->
+    <section class="pid-viewport">
+      <svg class="pid-svg" viewBox="0 0 1180 540">
+        <!-- 背景网格标线 (微弱低视疲劳中性线) -->
+        <defs>
+          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- 进水总管 (原污水管：深灰褐色，带动态流向) -->
+        <path class="pipe-base pipe-sewage" d="M 20 250 L 90 250"/>
+        <path class="pipe-flow flow-sewage" d="M 20 250 L 90 250"/>
+        <text x="25" y="240" fill="#5d4037" font-size="11" font-weight="700">进水总管 540 m³/h</text>
+
+        <!-- 1. 厌氧池构筑物 -->
+        <g class="hmi-clickable" transform="translate(90, 110)">
+          <!-- 混凝土池体 -->
+          <rect class="tank-concrete" x="0" y="0" width="200" height="280" rx="2"/>
+          <rect class="water-layer" x="8" y="70" width="184" height="202"/>
+          <text x="100" y="30" fill="#263238" font-size="14" font-weight="700" text-anchor="middle">1# 厌氧池 (释磷段)</text>
+          <text x="100" y="48" fill="#546e7a" font-size="10" text-anchor="middle">容积 3200 m³ · 水深 5.20m</text>
+
+          <!-- 水深标尺 (米) -->
+          <line x1="12" y1="70" x2="12" y2="272" stroke="#455a64" stroke-width="2"/>
+          <line x1="8" y1="70" x2="16" y2="70" stroke="#d32f2f" stroke-width="2"/>
+          <text x="20" y="74" fill="#d32f2f" font-size="9" font-weight="700">5.8m 溢流</text>
+
+          <!-- 潜水搅拌器 -->
+          <circle cx="100" cy="180" r="14" fill="#cfd8dc" stroke="#546e7a"/>
+          <g class="agitator-icon" style="transform-origin:100px 180px">
+            <path d="M 100 170 L 100 190 M 90 180 L 110 180" stroke="#1976d2" stroke-width="3"/>
+          </g>
+          <text x="100" y="206" fill="#455a64" font-size="9" font-weight="700" text-anchor="middle">1#潜搅 运行</text>
+
+          <!-- 在线仪表 AIT-201 (ORP 氧化还原电位) 坐标规整居中，不穿出右壁 -->
+          <g transform="translate(36, 80)">
+            <circle cx="16" cy="14" r="14" fill="#fff" stroke="#455a64" stroke-width="1.5"/>
+            <text x="16" y="18" fill="#263238" font-size="9" font-weight="700" text-anchor="middle">AIT201</text>
+            <!-- 下凹立体 I/O 域 -->
+            <rect class="io-field" x="34" y="2" width="82" height="24" rx="1"/>
+            <text class="io-text num" x="110" y="19">-185</text>
+            <text class="io-unit" x="80" y="36">mV (ORP)</text>
+          </g>
+        </g>
+
+        <!-- 厌氧 -> 缺氧管 (带动态流动层) -->
+        <path class="pipe-base pipe-sewage" d="M 290 250 L 350 250"/>
+        <path class="pipe-flow flow-sewage" d="M 290 250 L 350 250"/>
+
+        <!-- 2. 缺氧池构筑物 (反硝化脱氮) -->
+        <g class="hmi-clickable" transform="translate(350, 110)">
+          <rect class="tank-concrete" x="0" y="0" width="200" height="280" rx="2"/>
+          <rect class="water-layer" x="8" y="65" width="184" height="207"/>
+          <text x="100" y="30" fill="#263238" font-size="14" font-weight="700" text-anchor="middle">2# 缺氧池 (反硝化段)</text>
+          <text x="100" y="48" fill="#546e7a" font-size="10" text-anchor="middle">水深 5.35m · 脱氮主区</text>
+
+          <!-- 潜水搅拌器 -->
+          <circle cx="100" cy="180" r="14" fill="#cfd8dc" stroke="#546e7a"/>
+          <g class="agitator-icon" style="transform-origin:100px 180px">
+            <path d="M 100 170 L 100 190 M 90 180 L 110 180" stroke="#1976d2" stroke-width="3"/>
+          </g>
+          <text x="100" y="206" fill="#455a64" font-size="9" font-weight="700" text-anchor="middle">2#潜搅 运行</text>
+
+          <!-- 在线仪表 AIT-202 (DO) 坐标规整居中，不穿出右壁 -->
+          <g transform="translate(36, 75)">
+            <circle cx="16" cy="14" r="13" fill="#fff" stroke="#455a64" stroke-width="1.5"/>
+            <text x="16" y="17" fill="#263238" font-size="8" font-weight="700" text-anchor="middle">AIT202</text>
+            <rect class="io-field" x="34" y="2" width="76" height="22" rx="1"/>
+            <text class="io-text num" x="104" y="17">0.31</text>
+            <text class="io-unit" x="76" y="32">mg/L (DO)</text>
+          </g>
+
+          <!-- 在线仪表 AIT-203 (NO3-N) 坐标规整居中，不穿出右壁 -->
+          <g transform="translate(36, 115)">
+            <circle cx="16" cy="14" r="13" fill="#fff" stroke="#455a64" stroke-width="1.5"/>
+            <text x="16" y="17" fill="#263238" font-size="8" font-weight="700" text-anchor="middle">AIT203</text>
+            <rect class="io-field" x="34" y="2" width="76" height="22" rx="1"/>
+            <text class="io-text num" x="104" y="17">6.4</text>
+            <text class="io-unit" x="70" y="32">mg/L (NO3)</text>
+          </g>
+        </g>
+
+        <!-- 缺氧 -> 好氧管 (带动态流动层) -->
+        <path class="pipe-base pipe-sewage" d="M 550 250 L 610 250"/>
+        <path class="pipe-flow flow-sewage" d="M 550 250 L 610 250"/>
+
+        <!-- 3. 好氧池构筑物 (微孔曝气硝化段，核心微操对象) -->
+        <g class="hmi-clickable" transform="translate(610, 110)" @click="openDoFaceplate">
+          <rect class="tank-concrete" x="0" y="0" width="220" height="280" rx="2" stroke="#1976d2" stroke-width="2"/>
+          <rect class="water-aerobic" x="8" y="55" width="204" height="217"/>
+          <text x="110" y="28" fill="#1565c0" font-size="14" font-weight="700" text-anchor="middle">3# 好氧曝气池 [点击调控]</text>
+          <text x="110" y="45" fill="#546e7a" font-size="9" text-anchor="middle">FIC-201 溶解氧闭环调节回路</text>
+
+          <!-- 底部微孔曝气器与动态气泡 -->
+          <line x1="20" y1="260" x2="200" y2="260" stroke="#fbc02d" stroke-width="4"/>
+          <circle class="air-bubble" cx="40" cy="250" r="3"/>
+          <circle class="air-bubble" cx="70" cy="255" r="2.5" style="animation-delay:.4s"/>
+          <circle class="air-bubble" cx="110" cy="245" r="3.5" style="animation-delay:.8s"/>
+          <circle class="air-bubble" cx="150" cy="252" r="3" style="animation-delay:1.2s"/>
+          <circle class="air-bubble" cx="180" cy="248" r="2.5" style="animation-delay:.6s"/>
+
+          <!-- 核心仪表 AIT-204 (DO 溶解氧) -->
+          <g transform="translate(30, 75)">
+            <circle cx="18" cy="18" r="16" fill="#e3f2fd" stroke="#1976d2" stroke-width="2"/>
+            <text x="18" y="22" fill="#1565c0" font-size="9" font-weight="700" text-anchor="middle">AIT204</text>
+            <rect class="io-field" x="38" y="4" width="85" height="28" rx="1" stroke="#1976d2"/>
+            <text class="io-text num" x="118" y="24" fill="#00c853" font-size="15">{{tags['A2O.AEROBIC.DO.PV'].value.toFixed(2)}}</text>
+            <text class="io-unit" x="85" y="42">mg/L (DO)</text>
+          </g>
+
+          <!-- 仪表 AIT-205 (氨氮 NH4-N) -->
+          <g transform="translate(30, 125)">
+            <circle cx="18" cy="18" r="15" fill="#fff" stroke="#455a64" stroke-width="1.5"/>
+            <text x="18" y="22" fill="#263238" font-size="9" font-weight="700" text-anchor="middle">AIT205</text>
+            <rect class="io-field" x="38" y="4" width="85" height="26" rx="1"/>
+            <text class="io-text num" x="118" y="22">1.48</text>
+            <text class="io-unit" x="78" y="40">mg/L (NH4-N)</text>
+          </g>
+        </g>
+
+        <!-- 好氧 -> 二沉池管 (带动态流动层) -->
+        <path class="pipe-base pipe-sewage" d="M 830 250 L 890 250"/>
+        <path class="pipe-flow flow-sewage" d="M 830 250 L 890 250"/>
+
+        <!-- 4. 二沉池构筑物 (幅流式沉淀池) -->
+        <g class="hmi-clickable" transform="translate(890, 110)">
+          <rect class="tank-concrete" x="0" y="0" width="190" height="280" rx="2"/>
+          <path d="M 8 60 H 182 V 220 L 95 272 L 8 220 Z" fill="#cfd8dc" opacity=".8"/>
+          <text x="95" y="30" fill="#263238" font-size="14" font-weight="700" text-anchor="middle">4# 二沉池</text>
+          <text x="95" y="48" fill="#546e7a" font-size="10" text-anchor="middle">泥水分离 · 刮吸泥机运行</text>
+
+          <!-- 污泥浓度 MLSS 与 泥位 LIT-201 -->
+          <g transform="translate(20, 75)">
+            <circle cx="16" cy="14" r="13" fill="#fff" stroke="#455a64" stroke-width="1.5"/>
+            <text x="16" y="17" fill="#263238" font-size="8" font-weight="700" text-anchor="middle">AIT206</text>
+            <rect class="io-field" x="33" y="3" width="75" height="22" rx="1"/>
+            <text class="io-text num" x="103" y="18">3420</text>
+            <text class="io-unit" x="75" y="33">mg/L (MLSS)</text>
+          </g>
+
+          <g transform="translate(20, 115)">
+            <circle cx="16" cy="14" r="13" fill="#fff" stroke="#455a64" stroke-width="1.5"/>
+            <text x="16" y="17" fill="#263238" font-size="8" font-weight="700" text-anchor="middle">LIT201</text>
+            <rect class="io-field" x="33" y="3" width="75" height="22" rx="1"/>
+            <text class="io-text num" x="103" y="18">1.15</text>
+            <text class="io-unit" x="80" y="33">m (泥位)</text>
+          </g>
+        </g>
+
+        <!-- 二沉池出水达标管 (天蓝色，带动态流动层) -->
+        <path class="pipe-base pipe-clean" d="M 1080 250 L 1160 250"/>
+        <path class="pipe-flow flow-clean" d="M 1080 250 L 1160 250"/>
+        <text x="1090" y="240" fill="#1976d2" font-size="11" font-weight="700">出水排放</text>
+
+        <!-- 内部回流硝化液管 (深赭石色，好氧末端 -> 缺氧前端，带动态流动层) -->
+        <path class="pipe-base pipe-sludge" d="M 720 110 L 720 70 L 450 70 L 450 110"/>
+        <path class="pipe-flow flow-sludge" d="M 720 110 L 720 70 L 450 70 L 450 110"/>
+        <!-- 1# 内回流泵图元 -->
+        <g class="hmi-clickable" transform="translate(580, 70)" @click="openPumpFaceplate('internal')">
+          <circle class="pump-body" cx="0" cy="0" r="14" :class="{stop: !internalPump.running}"/>
+          <text x="0" y="4" fill="#fff" font-size="9" font-weight="700" text-anchor="middle">1#内回</text>
+          <text x="0" y="-18" fill="#4e342e" font-size="10" font-weight="700" text-anchor="middle">内回流 {{tags['A2O.RECYCLE.INT.PV'].value}}%</text>
+        </g>
+
+        <!-- 外部回流污泥管 (深赭石色，二沉池底流 -> 厌氧前端，带动态流动层) -->
+        <path class="pipe-base pipe-sludge" d="M 985 390 L 985 450 L 190 450 L 190 390"/>
+        <path class="pipe-flow flow-sludge" d="M 985 390 L 985 450 L 190 450 L 190 390"/>
+        <!-- 2# 外回流泵图元 -->
+        <g class="hmi-clickable" transform="translate(580, 450)" @click="openPumpFaceplate('external')">
+          <circle class="pump-body" cx="0" cy="0" r="14" :class="{stop: !externalPump.running}"/>
+          <text x="0" y="4" fill="#fff" font-size="9" font-weight="700" text-anchor="middle">2#外回</text>
+          <text x="0" y="24" fill="#4e342e" font-size="10" font-weight="700" text-anchor="middle">外回流 {{tags['A2O.RECYCLE.EXT.PV'].value}}%</text>
+        </g>
+
+        <!-- 压缩空气曝气管 (明黄色，带半圆跨线弧 Jumper 与快速气流脉冲动效) -->
+        <path class="pipe-base pipe-air" d="M 720 500 L 720 458 A 8 8 0 0 1 720 442 L 720 390"/>
+        <path class="pipe-flow flow-air fast" d="M 720 500 L 720 458 A 8 8 0 0 1 720 442 L 720 390"/>
+        <g class="hmi-clickable" transform="translate(720, 505)" @click="openDoFaceplate">
+          <rect x="-40" y="-14" width="80" height="26" rx="2" fill="#fff" stroke="#fbc02d" stroke-width="2"/>
+          <text x="0" y="4" fill="#f57f17" font-size="10" font-weight="700" text-anchor="middle">1#鼓风机 {{blowerHz}}Hz</text>
+        </g>
+
+        <!-- 碳源药剂管 (紫红虚线，投加至缺氧池前端，带滴加动效) -->
+        <path class="pipe-base pipe-chem" d="M 320 435 L 320 330 L 350 330"/>
+        <path class="pipe-flow flow-chem" d="M 320 435 L 320 330 L 350 330"/>
+        <g class="hmi-clickable" transform="translate(320, 450)" @click="openCarbonFaceplate">
+          <rect x="-35" y="-15" width="70" height="30" rx="2" fill="#fff" stroke="#8e24aa" stroke-width="1.5"/>
+          <text x="0" y="-2" fill="#8e24aa" font-size="9" font-weight="700" text-anchor="middle">碳源计量泵</text>
+          <text x="0" y="10" fill="#1c2833" font-size="9" class="num" text-anchor="middle">{{tags['A2O.CARBON.DOSE.PV'].value}} L/h</text>
+        </g>
+      </svg>
+    </section>
+
+    <!-- 右侧：水厂运行标准指标监测栏 -->
+    <aside class="kpi-column">
+      <div class="hmi-box">
+        <div class="hmi-box-head">
+          <span>城镇水务排放一级A标</span>
+          <span style="color:var(--success);font-weight:700">● 达标受控</span>
+        </div>
+        <table class="table-kv">
+          <tr><td>出水化学需氧量 COD</td><td class="val num">28.4 mg/L (&le;50)</td></tr>
+          <tr><td>出水氨氮 NH4-N</td><td class="val num" style="color:var(--success)">1.48 mg/L (&le;5)</td></tr>
+          <tr><td>出水总氮 TN</td><td class="val num">12.1 mg/L (&le;15)</td></tr>
+          <tr><td>出水总磷 TP</td><td class="val num">0.36 mg/L (&le;0.5)</td></tr>
+          <tr><td>出水悬浮物 SS</td><td class="val num">6.2 mg/L (&le;10)</td></tr>
+        </table>
+      </div>
+
+      <div class="hmi-box">
+        <div class="hmi-box-head">
+          <span>生化曝气与能耗平衡</span>
+          <span class="num" style="color:var(--accent)">实时能效</span>
+        </div>
+        <table class="table-kv">
+          <tr><td>好氧池实际 DO</td><td class="val num" style="color:#00c853;font-size:13px">{{tags['A2O.AEROBIC.DO.PV'].value.toFixed(2)}} mg/L</td></tr>
+          <tr><td>DO 目标设定 SP</td><td class="val num">{{tags['A2O.AEROBIC.DO.SP'].value.toFixed(2)}} mg/L</td></tr>
+          <tr><td>鼓风机组供气量</td><td class="val num">48.6 m³/min</td></tr>
+          <tr><td>曝气主管压力</td><td class="val num">57.8 kPa</td></tr>
+          <tr><td>吨水曝气单耗</td><td class="val num">0.142 kWh/m³</td></tr>
+        </table>
+      </div>
+
+      <div class="hmi-box" style="flex:1">
+        <div class="hmi-box-head">
+          <span>水厂上位操作规范提示</span>
+          <span style="font-size:10px;color:var(--text-sub)">ISA-101</span>
+        </div>
+        <div style="font-size:11px;line-height:1.6;color:#546e7a">
+          <p>1. 点击<b>好氧曝气池</b>或<b>水泵符号</b>可调出西门子标准 Faceplate 操作小面板；</p>
+          <p>2. 支持西门子<b>垂直彩色棒图 (Bar Graph)</b> 直观监视上下限，提供 <code>+0.1</code> / <code>-0.1</code> 步长点动微调；</p>
+          <p>3. 所有参数下发均经 <b>SBO 预选确认</b>防误动机制保护，并记入水厂审计日志。</p>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 底栏多功能工控抽屉 (报警/趋势/审计) -->
+  <footer class="bottom-drawer">
+    <div class="drawer-tabs">
+      <button class="drawer-tab" :class="{active: activeDrawer === 'alarm'}" @click="activeDrawer = 'alarm'">实时报警一览 (Alarm Logging) ({{alarms.length}})</button>
+      <button class="drawer-tab" :class="{active: activeDrawer === 'trend'}" @click="activeDrawer = 'trend'; renderTrend()">水质多笔同轴趋势 (Trend View)</button>
+      <button class="drawer-tab" :class="{active: activeDrawer === 'audit'}" @click="activeDrawer = 'audit'">运行操作记录流水 (Audit Trail) ({{auditLogs.length}})</button>
+      <div class="drawer-actions">
+        <button class="btn-hmi danger" @click="muteAlarm">🔔 报警消音 (Mute)</button>
+        <button class="btn-hmi" @click="ackAllAlarms">✔ 全部确认 (Ack)</button>
+      </div>
+    </div>
+
+    <!-- 抽屉内容区 -->
+    <div style="overflow:auto;padding:4px;height:100%">
+      <!-- 1. 报警列表 -->
+      <table class="alarm-table" v-if="activeDrawer === 'alarm'">
+        <thead>
+          <tr>
+            <th>触发时间</th>
+            <th>工段 / 位号</th>
+            <th>变量说明</th>
+            <th>报警级别</th>
+            <th>实时值</th>
+            <th>报警阈值</th>
+            <th>确认状态</th>
+            <th>处理措施</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(item, idx) in alarms" :key="idx">
+            <td class="num">{{item.time}}</td>
+            <td><b>{{item.tag}}</b></td>
+            <td>{{item.desc}}</td>
+            <td><span :style="{color: item.level === 'HH' ? '#d32f2f' : '#fbc02d', fontWeight:'700'}">[{{item.level}}] {{item.level === 'HH' ? '高高危报警' : '预警关注'}}</span></td>
+            <td class="num" :class="{'alarm-blink': !item.acked}">{{item.pv}}</td>
+            <td class="num">{{item.limit}}</td>
+            <td><span class="fp-tag" :class="{green: item.acked}">{{item.acked ? '已确认' : '未确认 (闪烁)'}}</span></td>
+            <td><button class="btn-hmi" style="padding:1px 6px;font-size:10px" @click="ackSingle(item)">单条确认</button></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 2. 趋势曲线 -->
+      <div id="trendChart" v-show="activeDrawer === 'trend'"></div>
+
+      <!-- 3. 操作审计日志 -->
+      <table class="alarm-table" v-if="activeDrawer === 'audit'">
+        <thead>
+          <tr>
+            <th>操作时间</th>
+            <th>水厂工号/人员</th>
+            <th>控制对象</th>
+            <th>动作描述</th>
+            <th>原设定值</th>
+            <th>新下发值</th>
+            <th>防误机制</th>
+            <th>PLC执行状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(log, idx) in auditLogs" :key="idx">
+            <td class="num">{{log.time}}</td>
+            <td>{{log.user}}</td>
+            <td><b style="color:var(--accent)">{{log.target}}</b></td>
+            <td>{{log.action}}</td>
+            <td class="num">{{log.oldVal}}</td>
+            <td class="num" style="color:var(--accent);font-weight:700">{{log.newVal}}</td>
+            <td>{{log.sbo ? 'SBO两步确认通过' : '直接写入'}}</td>
+            <td><span style="color:#2e7d32;font-weight:700">{{log.result}}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </footer>
+
+  <!-- 西门子标准水务 Faceplate (画面窗口)：好氧池 DO 调节回路 -->
+  <div class="faceplate-window" v-if="activeFaceplate === 'do'">
+    <div class="fp-titlebar">
+      <span>[FIC-201] 2#好氧生化反应池 DO 溶解氧调控回路</span>
+      <button class="fp-close" @click="activeFaceplate = null">✕</button>
+    </div>
+    <div class="fp-capsule-bar">
+      <span class="fp-tag green">● 中控远程</span>
+      <span class="fp-tag green">● PID自动</span>
+      <span class="fp-tag">无联锁保护</span>
+      <span class="fp-tag green">排放达标</span>
+    </div>
+    <div class="fp-content">
+      <!-- 西门子垂直彩色棒图 (Bar Graph) -->
+      <div class="bargraph-box">
+        <div class="bar-track">
+          <!-- 动态柱状填充 (量程 0~5 mg/L) -->
+          <div class="bar-fill" :style="{height: (tags['A2O.AEROBIC.DO.PV'].value / 5.0 * 100) + '%'}"></div>
+          <!-- 黄金三角设定值游标指针 SP -->
+          <div class="bar-sp-pointer" :style="{bottom: (tags['A2O.AEROBIC.DO.SP'].value / 5.0 * 100 - 3) + '%'}"></div>
+        </div>
+        <!-- 刻度与四限报警线 -->
+        <div class="scale-marks">
+          <div class="scale-mark"><span class="mark-line red"></span><span class="num" style="color:#d32f2f">HH 3.5</span></div>
+          <div class="scale-mark"><span class="mark-line yellow"></span><span class="num" style="color:#fbc02d">H 3.0</span></div>
+          <div class="scale-mark"><span class="mark-line"></span><span class="num">2.5</span></div>
+          <div class="scale-mark"><span class="mark-line yellow"></span><span class="num" style="color:#fbc02d">L 1.5</span></div>
+          <div class="scale-mark"><span class="mark-line red"></span><span class="num" style="color:#d32f2f">LL 1.0</span></div>
+          <div class="scale-mark"><span class="mark-line"></span><span class="num">0.0</span></div>
+        </div>
+      </div>
+
+      <!-- 右侧设定表单与步长点动微调 -->
+      <div class="fp-controls">
+        <div class="io-group">
+          <span style="color:#455a64;font-weight:700">测量值 (PV):</span>
+          <div><span class="num" style="font-size:16px;font-weight:700;color:#00c853">{{tags['A2O.AEROBIC.DO.PV'].value.toFixed(2)}}</span> <span style="font-size:10px">mg/L</span></div>
+        </div>
+
+        <div class="io-group">
+          <span style="color:#455a64;font-weight:700">目标值 (SP):</span>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="number" min="1.5" max="3.5" step="0.1" v-model.number="tempDoSp" class="siemens-input num">
+            <span style="font-size:10px">mg/L</span>
+          </div>
+        </div>
+
+        <!-- 步进点动微调按钮 -->
+        <div class="io-group">
+          <span>点动步进:</span>
+          <div class="inch-btn-group">
+            <button class="inch-btn" @click="tempDoSp = +(tempDoSp - 0.1).toFixed(2)">-0.1</button>
+            <button class="inch-btn" @click="tempDoSp = +(tempDoSp + 0.1).toFixed(2)">+0.1</button>
+          </div>
+        </div>
+
+        <div class="io-group">
+          <span>控制模式:</span>
+          <div>
+            <label style="margin-right:6px"><input type="radio" checked name="mode"> 自动</label>
+            <label><input type="radio" name="mode"> 手动</label>
+          </div>
+        </div>
+
+        <div class="io-group">
+          <span>鼓风机频率:</span>
+          <div><span class="num" style="font-weight:700;color:#f57f17">{{blowerHz}}</span> <span style="font-size:10px">Hz</span></div>
+        </div>
+
+        <div style="margin-top:auto;border-top:1px solid #b0bec5;padding-top:8px;display:flex;justify-content:flex-end">
+          <button class="btn-hmi" style="background:#1976d2;color:#fff;border-color:#1565c0" @click="reqApplyDoSp">下发新设定 (SBO)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SBO 二次确认防误动模态窗 -->
+  <div class="sbo-mask" v-if="sboDialog.show">
+    <div class="sbo-box">
+      <div class="sbo-head">
+        <span>⚠ 水厂中控指令二次确认 (SBO 防误动)</span>
+      </div>
+      <div class="sbo-body">
+        <p><b>操作指令校验：</b></p>
+        <p>{{sboDialog.message}}</p>
+        <div style="padding:6px;background:#fff3e0;border-left:3px solid #ff9800;font-size:11px;color:#e65100;margin-top:8px">
+          现场提示：修改此设定将直接通过工业以太网下发至 S7-1500 PLC 并调节鼓风机变频器，请确保工艺安全。
+        </div>
+      </div>
+      <div class="sbo-foot">
+        <button class="btn-hmi" @click="sboDialog.show = false">取消操作</button>
+        <button class="btn-hmi danger" @click="confirmSbo">确认下发执行</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  // 防御性 ECharts 初始化
+  const safeInit = function(id){
+    try {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      return echarts.init(el);
+    } catch(e) {
+      return null;
+    }
+  };
+
+  const initialTags = {
+    'A2O.AEROBIC.DO.PV': { name: '好氧池DO实际值', value: 2.24, unit: 'mg/L', writable: false },
+    'A2O.AEROBIC.DO.SP': { name: '好氧池DO目标值', value: 2.20, unit: 'mg/L', writable: true },
+    'A2O.RECYCLE.INT.PV': { name: '内回流比实际值', value: 205, unit: '%', writable: false },
+    'A2O.RECYCLE.INT.SP': { name: '内回流比目标值', value: 200, unit: '%', writable: true },
+    'A2O.RECYCLE.EXT.PV': { name: '外回流比实际值', value: 75, unit: '%', writable: false },
+    'A2O.RECYCLE.EXT.SP': { name: '外回流比目标值', value: 75, unit: '%', writable: true },
+    'A2O.CARBON.DOSE.PV': { name: '碳源加药投加量', value: 120, unit: 'L/h', writable: false },
+    'A2O.CARBON.DOSE.SP': { name: '碳源投加目标值', value: 120, unit: 'L/h', writable: true },
+  };
+
+  const { createApp, ref, reactive, onMounted } = Vue;
+
+  createApp({
+    setup(){
+      const tags = reactive(initialTags);
+      const currentTime = ref('');
+      const blowerHz = ref(43.8);
+      const activeDrawer = ref('alarm'); // alarm, trend, audit
+      const activeFaceplate = ref(null);  // do, internal, external, carbon
+
+      // 临时设定值
+      const tempDoSp = ref(2.20);
+      const internalPump = reactive({ id: 'P-201A', name: '1#内硝化液回流泵', running: true, hz: 41.5 });
+      const externalPump = reactive({ id: 'P-202A', name: '2#外污泥回流泵', running: true, hz: 38.0 });
+
+      // 实时报警列表
+      const alarms = reactive([
+        { time: '14:22:10', tag: 'AIT-204', desc: '好氧池溶解氧 DO 瞬时跌落', level: 'L', pv: '1.42 mg/L', limit: '1.50', acked: false },
+        { time: '13:05:42', tag: 'P-201A', desc: '1#内回流泵电机轴温略高', level: 'H', pv: '68.2 ℃', limit: '65.0', acked: true },
+      ]);
+
+      // 操作审计追踪
+      const auditLogs = reactive([
+        { time: '14:10:05', user: '张工 (L2)', target: 'A2O.AEROBIC.DO.SP', action: '设定好氧DO目标值', oldVal: '2.00', newVal: '2.20', sbo: true, result: '下发成功' },
+        { time: '11:30:18', user: '李班长 (L3)', target: 'P-201A.MODE', action: '切换内回流泵为自动控制', oldVal: '手动', newVal: '自动', sbo: true, result: '下发成功' },
+      ]);
+
+      // SBO 二次确认弹窗
+      const sboDialog = reactive({
+        show: false,
+        message: '',
+        onConfirm: null,
+      });
+
+      // 更新时钟
+      const updateClock = () => {
+        const d = new Date();
+        currentTime.value = d.toLocaleDateString('zh-CN') + ' ' + d.toTimeString().split(' ')[0];
+      };
+
+      // 开启好氧 Faceplate
+      const openDoFaceplate = () => {
+        tempDoSp.value = tags['A2O.AEROBIC.DO.SP'].value;
+        activeFaceplate.value = 'do';
+      };
+
+      const openPumpFaceplate = (type) => {
+        activeFaceplate.value = 'do'; // 统一由主窗口交互示例
+      };
+
+      const openCarbonFaceplate = () => {
+        activeFaceplate.value = 'do';
+      };
+
+      // 申请下发 DO 设定值
+      const reqApplyDoSp = () => {
+        if (tempDoSp.value < 1.5 || tempDoSp.value > 3.5) {
+          alert('设定值超出安全限幅 (1.5 ~ 3.5 mg/L)');
+          return;
+        }
+        sboDialog.message = `确认将好氧池 DO 设定值由 [ ${tags['A2O.AEROBIC.DO.SP'].value.toFixed(2)} mg/L ] 修改为 [ ${tempDoSp.value.toFixed(2)} mg/L ] 吗？`;
+        sboDialog.onConfirm = () => {
+          const old = tags['A2O.AEROBIC.DO.SP'].value.toFixed(2);
+          tags['A2O.AEROBIC.DO.SP'].value = tempDoSp.value;
+          blowerHz.value = +(40.0 + (tempDoSp.value - 1.5) * 4.2).toFixed(1);
+          tags['A2O.AEROBIC.DO.PV'].value = +(tempDoSp.value + (Math.random() * 0.08 - 0.04)).toFixed(2);
+          auditLogs.unshift({
+            time: new Date().toTimeString().split(' ')[0],
+            user: '张工 (L2)',
+            target: 'A2O.AEROBIC.DO.SP',
+            action: '微调好氧DO设定值',
+            oldVal: old,
+            newVal: tempDoSp.value.toFixed(2),
+            sbo: true,
+            result: '下发成功'
+          });
+          sboDialog.show = false;
+        };
+        sboDialog.show = true;
+      };
+
+      const confirmSbo = () => {
+        if (sboDialog.onConfirm) sboDialog.onConfirm();
+      };
+
+      // 消音与确认
+      const muteAlarm = () => {
+        alarms.forEach(a => a.acked = true);
+      };
+      const ackAllAlarms = () => {
+        alarms.forEach(a => a.acked = true);
+      };
+      const ackSingle = (item) => {
+        item.acked = true;
+      };
+
+      // 渲染同轴水质趋势图
+      let trendChartInstance = null;
+      const renderTrend = () => {
+        setTimeout(() => {
+          if (!trendChartInstance) {
+            trendChartInstance = safeInit('trendChart');
+          }
+          if (!trendChartInstance) return;
+          const times = ['14:00', '14:05', '14:10', '14:15', '14:20', '14:25', '14:30'];
+          const doPv = [2.10, 2.15, 2.22, 2.18, 2.24, 2.21, tags['A2O.AEROBIC.DO.PV'].value];
+          const doSp = [2.00, 2.00, 2.20, 2.20, 2.20, 2.20, tags['A2O.AEROBIC.DO.SP'].value];
+          const blower = [41.2, 41.5, 43.8, 43.5, 43.8, 43.6, blowerHz.value];
+
+          trendChartInstance.setOption({
+            backgroundColor: '#ffffff',
+            grid: { left: 45, right: 45, top: 30, bottom: 25 },
+            tooltip: { trigger: 'axis' },
+            legend: { data: ['DO测量值(PV)', 'DO设定值(SP)', '鼓风机频率(Hz)'], top: 2 },
+            xAxis: { type: 'category', data: times },
+            yAxis: [
+              { type: 'value', name: 'DO(mg/L)', min: 1.0, max: 4.0 },
+              { type: 'value', name: '频率(Hz)', min: 30, max: 50 }
+            ],
+            series: [
+              { name: 'DO测量值(PV)', type: 'line', data: doPv, itemStyle: { color: '#00c853' }, smooth: true },
+              { name: 'DO设定值(SP)', type: 'line', data: doSp, itemStyle: { color: '#fbc02d' }, lineStyle: { type: 'dashed' } },
+              { name: '鼓风机频率(Hz)', type: 'line', yAxisIndex: 1, data: blower, itemStyle: { color: '#1976d2' }, smooth: true }
+            ]
+          });
+        }, 100);
+      };
+
+      onMounted(() => {
+        updateClock();
+        setInterval(updateClock, 1000);
+        // 轻微水质自然浮动仿真
+        setInterval(() => {
+          const delta = (Math.random() - 0.5) * 0.02;
+          tags['A2O.AEROBIC.DO.PV'].value = +(tags['A2O.AEROBIC.DO.PV'].value + delta).toFixed(2);
+        }, 2000);
+      });
+
+      return {
+        tags,
+        currentTime,
+        blowerHz,
+        activeDrawer,
+        activeFaceplate,
+        tempDoSp,
+        internalPump,
+        externalPump,
+        alarms,
+        auditLogs,
+        sboDialog,
+        openDoFaceplate,
+        openPumpFaceplate,
+        openCarbonFaceplate,
+        reqApplyDoSp,
+        confirmSbo,
+        muteAlarm,
+        ackAllAlarms,
+        ackSingle,
+        renderTrend
+      };
+    }
+  }).mount('#screen');
+
+  // 1920x1080 视口等比缩放
+  const resizeScreen = () => {
+    const el = document.getElementById('screen');
+    if (!el) return;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const scale = Math.min(w / 1920, h / 1080);
+    el.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  };
+  window.addEventListener('resize', resizeScreen);
+  window.addEventListener('DOMContentLoaded', resizeScreen);
+})();
+</script>
+</body>
+</html>

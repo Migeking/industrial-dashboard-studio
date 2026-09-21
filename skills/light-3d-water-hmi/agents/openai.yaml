@@ -1,0 +1,4 @@
+interface:
+  display_name: "浅色 3D 水务 HMI"
+  short_description: "创建浅灰蓝白模水工数字孪生监控界面和交互场景"
+  default_prompt: "使用 $light-3d-water-hmi 创建浅色 3D 水务监控场景。"

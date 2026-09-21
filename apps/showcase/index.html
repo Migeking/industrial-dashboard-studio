@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>工业大屏 · 互动体验包</title>
+<style>
+:root{--bg:#071016;--panel:#0d1d25;--panel2:#112831;--line:#244451;--text:#e8f3f4;--muted:#91aeb0;--mint:#62e6bd;--blue:#61c9ff;--amber:#f4b85c;--danger:#ff7373}
+*{box-sizing:border-box}
+html,body{margin:0;min-width:100%;min-height:100%;background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingFang SC",sans-serif;overflow:hidden}
+button{font:inherit;color:inherit}
+.rotate{display:none}
+.app{height:100svh;min-height:640px;padding:18px 22px;display:grid;grid-template-rows:auto 1fr;gap:16px;background:radial-gradient(80% 120% at 85% 0%,rgba(98,230,189,.09),transparent 65%),linear-gradient(135deg,#071016,#0a171d 55%,#091219);position:relative;overflow:hidden}
+.app:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.27;background-image:linear-gradient(rgba(98,230,189,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(98,230,189,.06) 1px,transparent 1px);background-size:32px 32px;mask-image:linear-gradient(to bottom,black,transparent 78%)}
+.top{position:relative;z-index:1;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;border-bottom:1px solid var(--line);padding:4px 0 14px}
+.eyebrow{font-size:11px;letter-spacing:.28em;color:var(--mint);text-transform:uppercase}.title{margin:4px 0 0;font-size:clamp(24px,2.6vw,38px);letter-spacing:.11em;font-weight:700}.sub{margin-top:6px;color:var(--muted);font-size:12px;letter-spacing:.08em}
+.top-meta{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:11px}.live{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid rgba(98,230,189,.35);background:rgba(98,230,189,.08);color:var(--mint);border-radius:999px}.live i{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 9px var(--mint)}
+.workbench{position:relative;z-index:1;display:grid;grid-template-columns:280px minmax(0,1fr);gap:14px;min-height:0}
+.rail{display:flex;flex-direction:column;gap:10px;min-height:0;overflow-y:auto;padding-right:6px;scrollbar-color:var(--blue) var(--panel);scrollbar-width:thin}.rail::-webkit-scrollbar{width:7px}.rail::-webkit-scrollbar-track{background:rgba(17,40,49,.55);border-radius:6px}.rail::-webkit-scrollbar-thumb{background:#3a7188;border-radius:6px}.rail::-webkit-scrollbar-thumb:hover{background:var(--blue)}.rail-head{font-size:12px;letter-spacing:.18em;color:var(--muted);padding:4px 2px}.card{position:relative;flex:0 0 auto;border:1px solid var(--line);border-radius:9px;background:linear-gradient(145deg,rgba(17,40,49,.9),rgba(10,24,31,.92));padding:14px;cursor:pointer;text-align:left;transition:border-color .2s,transform .2s,box-shadow .2s}.card:hover{transform:translateY(-2px);border-color:var(--blue)}.card.active{border-color:var(--mint);box-shadow:0 0 0 1px rgba(98,230,189,.18),0 12px 28px rgba(0,0,0,.25)}.card.active:after{content:"正在体验";position:absolute;right:10px;top:10px;color:var(--mint);font-size:10px;letter-spacing:.08em}.index{font-family:"Bahnschrift","Segoe UI",sans-serif;color:var(--amber);font-size:12px}.card h2{font-size:16px;margin:8px 0 5px;letter-spacing:.06em}.card p{font-size:11px;line-height:1.55;color:var(--muted);margin:0}.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}.tags span{font-size:10px;color:var(--blue);border:1px solid rgba(97,201,255,.28);padding:3px 6px;border-radius:3px}.tip{flex:0 0 auto;margin-top:0;border:1px dashed rgba(244,184,92,.45);border-radius:8px;padding:12px;color:var(--muted);font-size:11px;line-height:1.6;background:rgba(244,184,92,.05)}.tip b{color:var(--amber)}
+.stage{min-width:0;min-height:0;border:1px solid var(--line);border-radius:10px;background:#050c11;box-shadow:0 16px 45px rgba(0,0,0,.34);overflow:hidden;display:grid;grid-template-rows:auto 1fr}.stage-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;border-bottom:1px solid var(--line);background:rgba(9,22,28,.9);font-size:11px;color:var(--muted)}.stage-bar strong{color:var(--text);font-size:12px;letter-spacing:.08em}.stage-actions{display:flex;gap:7px}.stage-actions button{border:1px solid var(--line);background:transparent;border-radius:4px;padding:5px 8px;color:var(--muted);cursor:pointer}.stage-actions button:hover{border-color:var(--blue);color:var(--blue)}.viewport{min-height:0;position:relative;background:#03070a}.viewport iframe{width:100%;height:100%;border:0;display:block;background:#050d15}.empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:13px;letter-spacing:.1em;pointer-events:none}.empty[hidden]{display:none!important}
+@media (orientation:portrait){.app{display:none}.rotate{display:grid;place-items:center;height:100svh;padding:24px;text-align:center;background:radial-gradient(circle at 50% 30%,rgba(98,230,189,.12),transparent 42%),#071016}.rotate-box{max-width:320px;border:1px solid var(--line);border-radius:12px;padding:28px 22px;background:rgba(13,29,37,.92);box-shadow:0 16px 45px rgba(0,0,0,.28)}.phone{font-size:46px;margin-bottom:12px;display:block;transform:rotate(90deg)}.rotate h1{font-size:20px;margin:0 0 9px}.rotate p{color:var(--muted);font-size:13px;line-height:1.7;margin:0}}
+@media (orientation:landscape) and (max-height:720px){.app{padding:12px 16px;gap:10px}.workbench{grid-template-columns:240px 1fr}.card{padding:10px}.card h2{font-size:14px}.card p{font-size:10px}.tip{padding:9px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="rotate"><div class="rotate-box"><span class="phone">↻</span><h1>请把手机横过来</h1><p>这是一套工业监控大屏体验包<br>横屏后才能看清流程、指标和交互。</p></div></div>
+<main class="app">
+  <header class="top"><div><div class="eyebrow">INDUSTRIAL VISUAL LAB · INTERACTIVE KIT</div><div class="title">工业大屏 · 互动体验包</div><div class="sub">把复杂现场，做成一眼能读懂的控制台。</div></div><div class="top-meta"><span class="live"><i></i>可交互预览</span><span>横屏体验 · 1920 × 1080</span></div></header>
+  <section class="workbench">
+    <aside class="rail"><div class="rail-head">选择一套作品开始体验</div>
+      <button class="card active" data-src="../../scenarios/water-treatment/01-A2O脱氮除磷精准调控驾驶舱.html" data-title="A²/O 脱氮除磷精准调控驾驶舱"><span class="index">01 / WATER</span><h2>A²/O 脱氮除磷</h2><p>看进水负荷、曝气策略与出水质量如何联动。</p><div class="tags"><span>智慧水务</span><span>工艺联控</span></div></button>
+      <button class="card" data-src="../../scenarios/predictive-maintenance/02-关键机组预测性维护驾驶舱.html" data-title="关键机组预测性维护驾驶舱"><span class="index">02 / ASSET</span><h2>关键机组预测性维护</h2><p>从设备健康度到维修窗口，提前发现异常。</p><div class="tags"><span>设备运维</span><span>预测维护</span></div></button>
+      <button class="card" data-src="../../scenarios/reactor-safety/03-反应釜热失控安全联锁舱.html" data-title="R-201 反应釜热失控安全联锁舱"><span class="index">03 / SAFETY</span><h2>R-201 安全联锁舱</h2><p>用因果链把温度、压力与 SIS 动作连起来。</p><div class="tags"><span>聚合反应</span><span>SIS 联锁</span></div></button>
+      <button class="card" data-src="../../scenarios/water-treatment/04-污泥回流泵联动控制驾驶舱.html" data-title="污泥回流泵液位与变频联动控制驾驶舱"><span class="index">04 / PUMP</span><h2>污泥回流泵联动控制</h2><p>四台并联变频泵 PID 调速与分级液位启停。</p><div class="tags"><span>变频联动</span><span>台数优化</span></div></button>
+      <button class="card" data-src="../../scenarios/water-treatment/05-污泥回流泵站SCADA操作终端.html" data-title="污泥回流泵站 SCADA 综合监控与操作终端"><span class="index">05 / SCADA</span><h2>污泥回流 SCADA 终端</h2><p>四台变频泵微操小面板与 SBO 两步确认。</p><div class="tags"><span>SCADA闭环</span><span>防误操作</span></div></button>
+      <button class="card" data-src="../../scenarios/water-treatment/06-A2O脱氮除磷SCADA操作终端.html" data-title="A²/O 脱氮除磷 SCADA 操作终端"><span class="index">06 / SCADA</span><h2>A²/O 脱氮 SCADA</h2><p>好氧曝气、回流泵与碳源投加闭环微操。</p><div class="tags"><span>好氧DO控制</span><span>操作审计</span></div></button>
+      <button class="card" data-src="../../scenarios/water-treatment/07-A2O脱氮除磷经典上位SCADA.html" data-title="A²/O 生化脱氮除磷工段 经典上位监控系统 [WinCC 风格]"><span class="index">07 / HMI</span><h2>A²/O 经典上位 SCADA</h2><p>西门子博途工业灰、P&ID 标准图元与垂直棒图。</p><div class="tags"><span>西门子风格</span><span>ISA-101</span></div></button>
+      <button class="card" data-src="../../scenarios/water-treatment/08-预处理进水井3D交互HMI.html" data-title="预处理进水井 3D 交互 HMI"><span class="index">08 / 3D HMI</span><h2>预处理进水井 3D HMI</h2><p>三维池体、动态水流与电动闸阀安全控制。</p><div class="tags"><span>3D工艺模型</span><span>阀门联控</span></div></button>
+      <button class="card" data-src="../../scenarios/water-treatment/09-预处理进水井浅色3D数字孪生HMI.html" data-title="城市污水净化中心 预处理进水井浅色 3D 数字孪生 HMI"><span class="index">09 / LIGHT TWIN</span><h2>进水井浅色数字孪生</h2><p>还原浅灰蓝白模水务 HMI 与六联状态区。</p><div class="tags"><span>浅色白模</span><span>数字孪生</span></div></button>
+      <button class="card" data-src="../../scenarios/water-treatment/10-地下调蓄池水力冲洗数字孪生HMI.html" data-title="地下智能调蓄工程 初雨调蓄与水力清淤数字孪生 HMI"><span class="index">10 / DETENTION</span><h2>地下调蓄水力冲洗</h2><p>地下双仓调蓄沉箱、水力门式冲洗与深坑排空联动。</p><div class="tags"><span>门式自冲洗</span><span>地下调蓄</span></div></button>
+      <div class="tip"><b>怎么玩：</b>点左侧作品切换大屏；进入后可继续点击工况、设备和演练按钮，体验数据状态变化。</div>
+    </aside>
+    <section class="stage" id="stage"><div class="stage-bar"><strong id="stageTitle">A²/O 脱氮除磷精准调控驾驶舱</strong><div class="stage-actions"><button id="enterFullscreen">全屏体验</button><button id="openNew">新窗口打开</button></div></div><div class="viewport"><iframe id="screen" title="工业大屏互动预览" src="../../scenarios/water-treatment/01-A2O脱氮除磷精准调控驾驶舱.html"></iframe><div class="empty" id="empty" hidden>正在加载互动大屏…</div></div></section>
+  </section>
+</main>
+<script src="../../packages/runtime/dashboard-runtime.js"></script>
+<script>
+(() => {
+  const cards = [...document.querySelectorAll('.card')];
+  const frame = document.getElementById('screen');
+  const title = document.getElementById('stageTitle');
+  const empty = document.getElementById('empty');
+  const openNew = document.getElementById('openNew');
+  const enterFullscreen = document.getElementById('enterFullscreen');
+  const select = card => {
+    if (!card || !frame) return;
+    cards.forEach(item => item.classList.toggle('active', item === card));
+    const src = card.dataset.src;
+    if (!src) return;
+    if (empty) empty.hidden = false;
+    frame.src = src;
+    if (title) title.textContent = card.dataset.title || '工业大屏互动预览';
+  };
+  cards.forEach(card => card.addEventListener('click', () => select(card)));
+  if (frame) frame.addEventListener('load', () => { if (empty) empty.hidden = true; });
+  if (openNew) openNew.addEventListener('click', () => { if (frame && frame.src) window.open(frame.src, '_blank', 'noopener'); });
+  if (window.DashboardRuntime) DashboardRuntime.bindFullscreen(enterFullscreen, document.getElementById('stage'));
+})();
+</script>
+</body>
+</html>

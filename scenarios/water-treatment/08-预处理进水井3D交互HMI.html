@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>预处理进水井 3D 交互 HMI</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<script src="../../vendor/three.min.js"></script>
+<script src="../../vendor/OrbitControls.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#02070b;color:#f2f7fa;font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+button,input{font:inherit}
+button{color:inherit}
+[v-cloak]{display:none}
+.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+:root{
+  --bg:#071019;--s1:#0b1622;--s2:#0f1d2a;--s3:#132536;--line:#20394a;--line2:#31566d;
+  --accent:#36c2ff;--accent-soft:rgba(54,194,255,.13);--success:#35d07f;--warning:#ffb547;
+  --danger:#ff5d5d;--offline:#708594;--t1:#f2f7fa;--t2:#a8bac8;--t3:#708594;
+  --hmi-gray:#DDE2E8;--radius:8px
+}
+#screen{width:1920px;height:1080px;position:absolute;left:50%;top:50%;transform-origin:center center;display:grid;grid-template-rows:72px 38px 1fr 238px 40px;overflow:hidden;background:radial-gradient(circle at 50% 39%,rgba(54,194,255,.055),transparent 33%),linear-gradient(145deg,#091621,#071019 58%,#050c12)}
+.topbar{display:grid;grid-template-columns:520px 1fr 520px;align-items:center;padding:0 20px;border-bottom:1px solid var(--line);background:rgba(5,13,21,.96);z-index:10}
+.brand{display:flex;align-items:center;gap:12px}.brand-mark{width:40px;height:40px;border:1px solid var(--line2);border-radius:6px;display:grid;place-items:center;background:#0d202d;color:var(--accent);font-weight:900;font-size:17px}.brand strong{display:block;font-size:17px;letter-spacing:1px}.brand span{display:block;margin-top:4px;color:var(--t3);font-size:11px}
+.page-title{text-align:center}.page-title h1{margin:0;font-size:28px;letter-spacing:3px}.page-title p{margin:5px 0 0;color:var(--accent);font-size:11px;letter-spacing:4px}
+.top-right{display:flex;justify-content:flex-end;align-items:center;gap:12px}.mode-flag,.user-flag{height:32px;padding:0 10px;display:flex;align-items:center;border:1px solid var(--line);border-radius:5px;background:#0a1721;color:var(--t2);font-size:11px}.mode-flag{border-color:rgba(255,181,71,.36);color:var(--warning)}.clock{text-align:right;min-width:112px}.clock b{display:block;font-size:18px}.clock span{font-size:10px;color:var(--t3)}
+.alarm-banner{display:grid;grid-template-columns:154px 1fr auto;align-items:center;border-bottom:1px solid var(--line);background:#09141e;font-size:12px;z-index:9}.alarm-label{height:100%;display:flex;align-items:center;padding:0 18px;background:rgba(53,208,127,.12);color:var(--success);font-weight:700;letter-spacing:1px}.alarm-banner.warning .alarm-label{background:rgba(255,181,71,.14);color:var(--warning)}.alarm-banner.danger .alarm-label{background:rgba(255,93,93,.16);color:var(--danger)}.alarm-copy{padding:0 14px;color:var(--t2)}.alarm-actions{display:flex;gap:6px;padding-right:14px}.small-btn{height:26px;padding:0 10px;border:1px solid var(--line2);border-radius:4px;background:#0f202c;color:var(--t2);font-size:11px;cursor:pointer}.small-btn:hover{border-color:var(--accent);color:var(--accent)}.small-btn:active{transform:translateY(1px)}
+.main{min-height:0;display:grid;grid-template-columns:304px 1fr 334px;gap:12px;padding:12px 16px}.rail{min-height:0;display:grid;gap:12px}.left-rail{grid-template-rows:190px 1fr 164px}.right-rail{grid-template-rows:230px 1fr 170px}.panel{min-height:0;overflow:hidden;border:1px solid var(--line);border-radius:var(--radius);background:linear-gradient(145deg,rgba(15,29,42,.96),rgba(7,17,26,.97));box-shadow:inset 0 1px rgba(255,255,255,.03),0 12px 28px rgba(0,0,0,.13)}
+.panel-head{height:42px;padding:0 12px 0 15px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line);position:relative}.panel-head:before{content:"";position:absolute;left:0;top:0;width:3px;height:42px;background:var(--accent)}.panel-title{font-size:15px;font-weight:700}.panel-meta{font-size:10px;color:var(--t3)}
+.process-kpis{height:calc(100% - 42px);display:grid;grid-template-columns:1fr 1fr;padding:10px 13px;gap:8px 16px}.metric{padding-bottom:7px;border-bottom:1px solid rgba(32,57,74,.7)}.metric:nth-last-child(-n+2){border-bottom:0}.metric span{display:block;color:var(--t3);font-size:10px}.metric b{display:inline-block;margin-top:4px;color:var(--t1);font-size:21px}.metric small{margin-left:4px;color:var(--t2);font-size:10px}.metric .good{color:var(--success)}.metric .warn{color:var(--warning)}
+.equipment-list{height:calc(100% - 42px);padding:7px 9px;overflow:hidden}.equipment-row{width:100%;height:60px;margin-bottom:6px;padding:7px 9px;display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:8px;border:1px solid var(--line);border-radius:6px;background:#091721;text-align:left;cursor:pointer}.equipment-row:hover,.equipment-row.active{border-color:var(--accent);background:rgba(54,194,255,.09)}.equipment-symbol{width:36px;height:36px;border:2px solid var(--offline);border-radius:50%;display:grid;place-items:center;color:var(--t2);font-size:10px;font-weight:800}.equipment-row.open .equipment-symbol{border-color:var(--success);color:var(--success)}.equipment-row.offline .equipment-symbol{border-style:dashed;color:var(--offline)}.equipment-copy b{display:block;font-size:12px}.equipment-copy span{display:block;margin-top:4px;color:var(--t3);font-size:10px}.equipment-value{text-align:right}.equipment-value b{display:block;font-size:17px;color:var(--accent)}.equipment-value span{font-size:9px;color:var(--t3)}
+.scenario-grid{height:calc(100% - 42px);display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:10px}.scenario-btn{border:1px solid var(--line);border-radius:5px;background:#0a1822;color:var(--t2);font-size:11px;cursor:pointer}.scenario-btn:hover,.scenario-btn.active{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}.scenario-btn.fault.active{border-color:var(--danger);color:var(--danger);background:rgba(255,93,93,.1)}
+.twin-panel{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:var(--radius);background:radial-gradient(circle at 52% 41%,rgba(54,194,255,.1),transparent 36%),linear-gradient(180deg,#0b1924,#071019)}.twin-panel:before{content:"";position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(54,194,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(54,194,255,.035) 1px,transparent 1px);background-size:32px 32px;mask-image:linear-gradient(to bottom,black,transparent 86%)}
+.twin-head{position:absolute;left:14px;right:14px;top:12px;z-index:4;height:38px;display:flex;align-items:center;justify-content:space-between}.twin-head strong{font-size:16px}.twin-head span{display:block;margin-top:3px;color:var(--t3);font-size:10px}.view-tools{display:flex;gap:5px}.view-tools button{height:28px;padding:0 10px;border:1px solid var(--line2);border-radius:4px;background:rgba(5,13,21,.84);color:var(--t2);font-size:10px;cursor:pointer}.view-tools button:hover{border-color:var(--accent);color:var(--accent)}
+#plant3d{position:absolute;inset:0;z-index:2}#plant3d canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}#plant3d canvas:active{cursor:grabbing}
+.model-legend{position:absolute;left:14px;top:58px;z-index:4;display:flex;gap:12px;padding:6px 9px;border:1px solid var(--line);border-radius:4px;background:rgba(5,13,21,.8);color:var(--t3);font-size:9px;pointer-events:none}.model-legend i{display:inline-block;width:15px;height:3px;margin-right:5px;vertical-align:middle}.model-legend .water{background:var(--accent)}.model-legend .run{background:var(--success)}.model-legend .stop{background:var(--offline)}
+.device-tag{position:absolute;z-index:4;min-width:112px;padding:6px 8px;border:1px solid var(--line2);border-left:2px solid var(--tag,var(--success));border-radius:4px;background:rgba(5,13,21,.88);color:var(--t2);font-size:9px;cursor:pointer}.device-tag b{display:block;color:var(--t1);font-size:10px}.device-tag span{display:block;margin-top:3px;color:var(--tag,var(--success))}.device-tag.a{left:12%;top:37%}.device-tag.b{left:26%;top:64%}.device-tag.out{right:13%;top:37%}.device-tag.selected{border-color:var(--accent);box-shadow:inset 0 0 0 1px rgba(54,194,255,.22)}
+.flow-route{position:absolute;left:15px;right:15px;bottom:14px;z-index:4;height:52px;display:grid;grid-template-columns:repeat(7,auto);align-items:center;justify-content:center;gap:10px;padding:0 14px;border:1px solid var(--line);border-radius:6px;background:rgba(5,13,21,.86);font-size:10px;color:var(--t2);pointer-events:none}.route-node{padding:5px 8px;border:1px solid var(--line2);border-radius:4px;background:#0b1a25}.route-arrow{color:var(--accent);font-size:15px}
+.status-grid{height:calc(100% - 42px);display:grid;grid-template-columns:1fr 1fr;padding:10px 12px;gap:9px 14px}.status-cell span{display:block;color:var(--t3);font-size:10px}.status-cell b{display:block;margin-top:5px;font-size:18px}.status-cell small{font-size:9px;color:var(--t2)}
+.selected-card{height:calc(100% - 42px);padding:11px 12px}.selected-title{display:flex;justify-content:space-between;align-items:flex-start}.selected-title b{font-size:15px}.state-chip{padding:4px 7px;border:1px solid rgba(53,208,127,.35);border-radius:4px;background:rgba(53,208,127,.08);color:var(--success);font-size:10px}.state-chip.closed{border-color:var(--line2);background:rgba(112,133,148,.08);color:var(--offline)}.state-chip.bad{border-color:rgba(255,93,93,.4);background:rgba(255,93,93,.08);color:var(--danger)}.selected-main{margin-top:12px;display:grid;grid-template-columns:95px 1fr;gap:12px}.valve-glyph{height:82px;position:relative;display:grid;place-items:center;border:1px solid var(--line);border-radius:6px;background:#07131c}.valve-glyph:before,.valve-glyph:after{content:"";position:absolute;width:34px;height:34px;border:2px solid var(--success);transform:rotate(45deg)}.valve-glyph:before{left:17px}.valve-glyph:after{right:17px}.valve-glyph.closed:before,.valve-glyph.closed:after{border-color:var(--offline)}.valve-glyph b{z-index:2;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#07131c;color:var(--accent);font-size:10px}.selected-data{display:grid;grid-template-columns:1fr 1fr;gap:7px}.selected-data div{padding:6px;border-bottom:1px solid var(--line)}.selected-data span{display:block;color:var(--t3);font-size:9px}.selected-data b{display:block;margin-top:3px;font-size:13px}.open-faceplate{width:100%;height:32px;margin-top:10px;border:1px solid var(--accent);border-radius:4px;background:rgba(54,194,255,.12);color:var(--accent);font-weight:700;font-size:11px;cursor:pointer}.open-faceplate:hover{background:rgba(54,194,255,.2)}
+.alarm-list{height:calc(100% - 42px);padding:8px 10px;overflow:hidden}.alarm-item{padding:8px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:58px 1fr auto;gap:8px;align-items:start;font-size:10px}.alarm-time{color:var(--t3)}.alarm-message b{display:block;color:var(--warning)}.alarm-message span{display:block;margin-top:3px;color:var(--t2)}.alarm-state{color:var(--danger)}.alarm-empty{height:100%;display:grid;place-items:center;color:var(--success);font-size:11px}
+.system-box{height:calc(100% - 42px);padding:10px 12px;display:grid;gap:8px}.system-row{display:grid;grid-template-columns:86px 1fr auto;gap:8px;align-items:center;font-size:10px}.system-row span{color:var(--t3)}.system-row b{font-size:11px}.quality-good{color:var(--success)}.quality-bad{color:var(--danger)}.health-line{height:4px;background:#172c3b;border-radius:2px;overflow:hidden}.health-line i{display:block;height:100%;background:var(--success)}
+.bottom{margin:0 16px 10px;display:grid;grid-template-rows:34px 1fr;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#08131d}.bottom-tabs{display:flex;align-items:center;border-bottom:1px solid var(--line);background:#0b1924}.bottom-tabs button{height:100%;padding:0 18px;border:0;border-right:1px solid var(--line);background:transparent;color:var(--t3);font-size:11px;cursor:pointer}.bottom-tabs button.active{color:var(--accent);background:var(--accent-soft)}.bottom-caption{margin-left:auto;padding-right:12px;color:var(--t3);font-size:10px}.bottom-body{min-height:0;position:relative}.trend-chart{width:100%;height:192px}.audit-wrap{height:100%;overflow:auto;padding:6px}.audit-table{width:100%;border-collapse:collapse;font-size:10px}.audit-table th{height:25px;padding:0 7px;background:#10222f;color:var(--t3);text-align:left;border-bottom:1px solid var(--line)}.audit-table td{padding:6px 7px;border-bottom:1px solid rgba(32,57,74,.68);color:var(--t2)}.audit-table td.ok{color:var(--success)}.audit-table td.fail{color:var(--danger)}
+.statusbar{display:grid;grid-template-columns:500px 1fr 550px;align-items:center;padding:0 18px;border-top:1px solid var(--line);background:#050d15;color:var(--t2);font-size:11px}.statusbar>div{display:flex;align-items:center;gap:9px}.statusbar .center-status{justify-content:center;color:var(--t3)}.statusbar .right-status{justify-content:flex-end}.dot{width:8px;height:8px;border-radius:50%;background:var(--success)}.dot.bad{background:var(--danger)}.sep{color:#294355}
+.faceplate{position:absolute;z-index:100;left:1120px;top:152px;width:450px;border:1px solid var(--line2);border-radius:6px;background:#0b1721;box-shadow:0 18px 48px rgba(0,0,0,.48);overflow:hidden}.faceplate-head{height:42px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;background:#10283a;border-bottom:1px solid var(--line2)}.faceplate-head strong{font-size:13px}.faceplate-close{width:28px;height:28px;border:1px solid var(--line2);border-radius:3px;background:#091620;color:var(--t2);cursor:pointer}.faceplate-state{display:flex;gap:6px;padding:8px 11px;border-bottom:1px solid var(--line)}.fp-tag{padding:4px 6px;border:1px solid var(--line2);border-radius:3px;color:var(--t2);font-size:9px}.fp-tag.good{border-color:rgba(53,208,127,.35);color:var(--success)}.fp-tag.warn{border-color:rgba(255,181,71,.35);color:var(--warning)}.faceplate-body{display:grid;grid-template-columns:122px 1fr;gap:14px;padding:13px}.bargraph{height:230px;display:flex;gap:10px;padding:10px;border:1px solid var(--line);border-radius:5px;background:#07131c}.bar-track{width:34px;height:208px;position:relative;border:2px inset #B0BEC5;background:#DDE2E8;overflow:hidden}.bar-fill{position:absolute;left:0;right:0;bottom:0;background:var(--success);transition:height .35s}.bar-sp{position:absolute;right:-8px;width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-right:8px solid var(--warning);transform:translateY(6px)}.bar-scale{height:208px;display:flex;flex-direction:column;justify-content:space-between;color:var(--t3);font-size:9px}.fp-control{display:flex;flex-direction:column;gap:9px}.fp-line{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--t2)}.fp-line b{font-size:14px;color:var(--t1)}.io-field{width:92px;padding:4px 6px;border:2px inset #B0BEC5;background:#DDE2E8;color:#1c2833;text-align:right;font-weight:700}.target-slider{width:100%;accent-color:var(--accent)}.command-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.command-btn{height:34px;border:1px solid var(--line2);border-radius:4px;background:#10212d;color:var(--t2);font-size:11px;cursor:pointer}.command-btn.open{border-color:rgba(53,208,127,.55);color:var(--success)}.command-btn.close{border-color:rgba(255,181,71,.55);color:var(--warning)}.command-btn:disabled{opacity:.38;cursor:not-allowed}.permissive{padding:7px 8px;border:1px solid var(--line);border-radius:4px;background:#07131c;font-size:9px;line-height:1.8;color:var(--t2)}.permissive b{color:var(--success)}.fp-note{color:var(--t3);font-size:9px;line-height:1.5}
+.sbo-mask{position:absolute;inset:0;z-index:300;display:grid;place-items:center;background:rgba(2,7,11,.68)}.sbo-box{width:430px;border:1px solid var(--warning);border-radius:6px;background:#0b1721;box-shadow:0 22px 60px rgba(0,0,0,.55);overflow:hidden}.sbo-head{padding:11px 14px;background:rgba(255,181,71,.16);border-bottom:1px solid rgba(255,181,71,.3);color:var(--warning);font-weight:700;font-size:13px}.sbo-body{padding:15px;color:var(--t2);font-size:12px;line-height:1.75}.sbo-command{margin-top:10px;padding:10px;border:1px solid var(--line);border-left:3px solid var(--warning);background:#07131c}.sbo-foot{display:flex;justify-content:flex-end;gap:8px;padding:10px 14px;border-top:1px solid var(--line)}.sbo-foot button{height:32px;padding:0 14px;border:1px solid var(--line2);border-radius:4px;background:#10212d;cursor:pointer}.sbo-foot .confirm{border-color:var(--warning);background:rgba(255,181,71,.13);color:var(--warning)}
+.toast{position:absolute;z-index:240;left:50%;top:124px;transform:translateX(-50%);padding:9px 14px;border:1px solid var(--line2);border-radius:5px;background:#10222f;color:var(--t2);font-size:11px;box-shadow:0 10px 28px rgba(0,0,0,.34)}.toast.ok{border-color:rgba(53,208,127,.5);color:var(--success)}.toast.fail{border-color:rgba(255,93,93,.5);color:var(--danger)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+<div id="screen">
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark">WT</div><div><strong>城市污水净化中心</strong><span>预处理系统 / 进水井工段 / 后接生化系统</span></div></div>
+    <div class="page-title"><h1>预处理进水井 3D 交互 HMI</h1><p>FLOW CONTROL AND EQUIPMENT STATUS</p></div>
+    <div class="top-right"><div class="mode-flag">演示模式 / 非现场写入</div><div class="user-flag">运行二班 / L2 控制权限</div><div class="clock num"><b>{{clock}}</b><span>{{date}}</span></div></div>
+  </header>
+
+  <section class="alarm-banner" :class="alarmTone">
+    <div class="alarm-label">{{highestAlarm ? highestAlarm.levelLabel : '系统状态正常'}}</div>
+    <div class="alarm-copy">{{highestAlarm ? highestAlarm.message : '无未确认报警，预处理进水工段运行平稳'}}</div>
+    <div class="alarm-actions"><button class="small-btn" @click="silenceAlarm">报警消音</button><button class="small-btn" @click="ackAll">全部确认</button></div>
+  </section>
+
+  <main class="main">
+    <aside class="rail left-rail">
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">进水工况</div><span class="panel-meta">实时计算</span></div>
+        <div class="process-kpis">
+          <div class="metric"><span>瞬时进水流量</span><b class="num">{{displayFlow}}</b><small>m³/h</small></div>
+          <div class="metric"><span>进水井液位</span><b class="num" :class="level > 4.5 ? 'warn' : ''">{{level.toFixed(2)}}</b><small>m</small></div>
+          <div class="metric"><span>粗格栅前后液差</span><b class="num">{{headLoss.toFixed(2)}}</b><small>m</small></div>
+          <div class="metric"><span>通信状态</span><b :class="commOk ? 'good' : 'warn'">{{commOk ? '正常' : '中断'}}</b><small>{{latency}} ms</small></div>
+          <div class="metric"><span>COD 进水</span><b class="num">286</b><small>mg/L</small></div>
+          <div class="metric"><span>pH</span><b class="num">7.14</b><small>稳定</small></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">电动闸阀与设备</div><span class="panel-meta">点击打开 Faceplate</span></div>
+        <div class="equipment-list">
+          <button v-for="valve in valves" :key="valve.tag" class="equipment-row" :class="[{active:selectedTag===valve.tag,open:valve.position>0,offline:!commOk}]" @click="selectValve(valve.tag)">
+            <span class="equipment-symbol">{{valve.short}}</span>
+            <span class="equipment-copy"><b>{{valve.name}}</b><span>{{valve.tag}} / {{valve.mode}}</span></span>
+            <span class="equipment-value"><b class="num">{{Math.round(valve.position)}}%</b><span>{{valveStateLabel(valve)}}</span></span>
+          </button>
+          <button class="equipment-row open" @click="toastMessage('1#回转式粗格栅运行正常', 'ok')"><span class="equipment-symbol">RG</span><span class="equipment-copy"><b>1#回转式粗格栅</b><span>RG-101 / 远程自动</span></span><span class="equipment-value"><b class="num">18.6</b><span>A / 运行</span></span></button>
+          <button class="equipment-row open" @click="toastMessage('2#回转式粗格栅运行正常', 'ok')"><span class="equipment-symbol">RG</span><span class="equipment-copy"><b>2#回转式粗格栅</b><span>RG-102 / 远程自动</span></span><span class="equipment-value"><b class="num">17.9</b><span>A / 运行</span></span></button>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">工况演练</div><span class="panel-meta">确定性脚本</span></div>
+        <div class="scenario-grid">
+          <button class="scenario-btn" :class="{active:scenario==='stable'}" @click="applyScenario('stable')">稳态运行</button>
+          <button class="scenario-btn" :class="{active:scenario==='high'}" @click="applyScenario('high')">高负荷进水</button>
+          <button class="scenario-btn fault" :class="{active:scenario==='fault'}" @click="applyScenario('fault')">通信故障</button>
+          <button class="scenario-btn" :class="{active:scenario==='recovery'}" @click="applyScenario('recovery')">恢复工况</button>
+        </div>
+      </article>
+    </aside>
+
+    <section class="twin-panel" aria-label="预处理进水井三维工艺模型">
+      <div class="twin-head"><div><strong>进水井与双通道粗格栅三维工艺模型</strong><span>拖动旋转，滚轮缩放，点击阀门选择设备</span></div><div class="view-tools"><button id="viewIso">轴测视图</button><button id="viewTop">俯视图</button><button id="viewReset">复位视图</button></div></div>
+      <div class="model-legend"><span><i class="water"></i>进水流向</span><span><i class="run"></i>开启/运行</span><span><i class="stop"></i>关闭/离线</span></div>
+      <div id="plant3d"></div>
+      <button class="device-tag a" :class="{selected:selectedTag==='V-101A'}" :style="{'--tag': valveByTag('V-101A').position > 0 ? 'var(--success)' : 'var(--offline)'}" @click="selectValve('V-101A')"><b>V-101A 北通道闸阀</b><span class="num">{{Math.round(valveByTag('V-101A').position)}}% / {{valveStateLabel(valveByTag('V-101A'))}}</span></button>
+      <button class="device-tag b" :class="{selected:selectedTag==='V-101B'}" :style="{'--tag': valveByTag('V-101B').position > 0 ? 'var(--success)' : 'var(--offline)'}" @click="selectValve('V-101B')"><b>V-101B 南通道闸阀</b><span class="num">{{Math.round(valveByTag('V-101B').position)}}% / {{valveStateLabel(valveByTag('V-101B'))}}</span></button>
+      <button class="device-tag out" :class="{selected:selectedTag==='V-102'}" :style="{'--tag': valveByTag('V-102').position > 0 ? 'var(--success)' : 'var(--offline)'}" @click="selectValve('V-102')"><b>V-102 提升井出水阀</b><span class="num">{{Math.round(valveByTag('V-102').position)}}% / {{valveStateLabel(valveByTag('V-102'))}}</span></button>
+      <div class="flow-route"><span class="route-node">厂外来水</span><span class="route-arrow">›</span><span class="route-node">进水井</span><span class="route-arrow">›</span><span class="route-node">双通道粗格栅</span><span class="route-arrow">›</span><span class="route-node">提升泵井</span></div>
+    </section>
+
+    <aside class="rail right-rail">
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">选中设备</div><span class="panel-meta">控制权: 中控远程</span></div>
+        <div class="selected-card">
+          <div class="selected-title"><div><b>{{selectedValve.name}}</b><div class="num" style="margin-top:4px;color:var(--t3);font-size:10px">{{selectedValve.tag}}</div></div><span class="state-chip" :class="{closed:selectedValve.position===0,bad:!commOk}">{{commOk ? valveStateLabel(selectedValve) : '通信不可用'}}</span></div>
+          <div class="selected-main"><div class="valve-glyph" :class="{closed:selectedValve.position===0}"><b class="num">{{Math.round(selectedValve.position)}}</b></div><div class="selected-data"><div><span>实际阀位</span><b class="num">{{selectedValve.position.toFixed(1)}} %</b></div><div><span>目标阀位</span><b class="num">{{selectedValve.target.toFixed(1)}} %</b></div><div><span>运行时间</span><b class="num">{{selectedValve.hours}} h</b></div><div><span>联锁状态</span><b :style="{color:commOk?'var(--success)':'var(--danger)'}">{{commOk ? '允许' : '禁止'}}</b></div></div></div>
+          <button class="open-faceplate" @click="openFaceplate">打开阀门操作小面板</button>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">工艺关键指标</div><span class="panel-meta">预处理系统</span></div>
+        <div class="status-grid">
+          <div class="status-cell"><span>北通道流量</span><b class="num">{{branchFlow('V-101A')}}</b><small> m³/h</small></div>
+          <div class="status-cell"><span>南通道流量</span><b class="num">{{branchFlow('V-101B')}}</b><small> m³/h</small></div>
+          <div class="status-cell"><span>栅渣压差</span><b class="num">12.6</b><small> kPa</small></div>
+          <div class="status-cell"><span>泵井有效液位</span><b class="num">{{level.toFixed(2)}}</b><small> m</small></div>
+          <div class="status-cell"><span>粗格栅运行</span><b style="color:var(--success)">2 / 2</b><small> 台</small></div>
+          <div class="status-cell"><span>日累计进水</span><b class="num">286.4</b><small> kt</small></div>
+          <div class="status-cell"><span>远程阀门</span><b class="num">{{openValveCount}} / 3</b><small> 已开启</small></div>
+          <div class="status-cell"><span>能耗强度</span><b class="num">0.084</b><small> kWh/m³</small></div>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><div class="panel-title">当前报警</div><span class="panel-meta">ISA-18.2</span></div>
+        <div class="alarm-list" v-if="alarms.length"><div class="alarm-item" v-for="alarm in alarms" :key="alarm.id"><span class="alarm-time num">{{alarm.time}}</span><span class="alarm-message"><b>{{alarm.levelLabel}} / {{alarm.tag}}</b><span>{{alarm.message}}</span></span><span class="alarm-state">{{alarm.acked ? '已确认' : '未确认'}}</span></div></div>
+        <div class="alarm-empty" v-else>当前无活动报警</div>
+      </article>
+    </aside>
+  </main>
+
+  <section class="bottom">
+    <div class="bottom-tabs"><button :class="{active:bottomTab==='trend'}" @click="showTrend">进水流量与液位趋势</button><button :class="{active:bottomTab==='audit'}" @click="bottomTab='audit'">操作审计 Audit Trail</button><div class="bottom-caption">写入与状态回读分离 / 看门狗 1500 ms</div></div>
+    <div class="bottom-body"><div id="trendChart" class="trend-chart" v-show="bottomTab==='trend'"></div><div class="audit-wrap" v-if="bottomTab==='audit'"><table class="audit-table"><thead><tr><th>时间</th><th>操作员</th><th>对象</th><th>操作</th><th>原值</th><th>目标值</th><th>SBO 确认</th><th>PLC 回读结果</th><th>命令 UID</th></tr></thead><tbody><tr v-for="log in auditLogs" :key="log.uid"><td class="num">{{log.time}}</td><td>{{log.user}}</td><td>{{log.tag}}</td><td>{{log.action}}</td><td class="num">{{log.oldValue}}</td><td class="num">{{log.newValue}}</td><td>{{log.sbo}}</td><td :class="log.ok ? 'ok' : 'fail'">{{log.result}}</td><td class="num">{{log.uid}}</td></tr></tbody></table></div></div>
+  </section>
+
+  <footer class="statusbar"><div><i class="dot" :class="{bad:!commOk}"></i><b>{{commOk ? 'S7-1500 通信在线' : 'PLC 通信中断'}}</b><span class="sep">|</span><span>控制权: 中控远程</span><span class="sep">|</span><span>演示数据</span></div><div class="center-status">OPC UA / 采样周期 500 ms / 指令回读校验启用</div><div class="right-status"><span :class="commOk ? 'quality-good' : 'quality-bad'">数据质量 {{quality}}</span><span class="sep">|</span><span>更新时间 {{clock}}</span><span class="sep">|</span><span>时延 {{latency}} ms</span></div></footer>
+
+  <div class="faceplate" v-if="faceplateOpen">
+    <div class="faceplate-head"><strong>[{{selectedValve.tag}}] {{selectedValve.name}} Faceplate</strong><button class="faceplate-close" aria-label="关闭操作小面板" @click="faceplateOpen=false">×</button></div>
+    <div class="faceplate-state"><span class="fp-tag good">中控远程</span><span class="fp-tag good">{{selectedValve.mode}}</span><span class="fp-tag" :class="commOk ? 'good' : 'warn'">{{commOk ? '通信正常' : '写入锁定'}}</span><span class="fp-tag">演示回读</span></div>
+    <div class="faceplate-body">
+      <div class="bargraph"><div class="bar-track"><div class="bar-fill" :style="{height:selectedValve.position+'%'}"></div><div class="bar-sp" :style="{bottom:'calc('+tempTarget+'% - 6px)'}"></div></div><div class="bar-scale"><span>100 全开</span><span>75</span><span>50</span><span>25</span><span>0 全关</span></div></div>
+      <div class="fp-control">
+        <div class="fp-line"><span>实际阀位 PV</span><b class="num">{{selectedValve.position.toFixed(1)}} %</b></div>
+        <div class="fp-line"><span>目标阀位 SP</span><input class="io-field num" type="number" min="0" max="100" step="1" v-model.number="tempTarget"></div>
+        <input class="target-slider" type="range" min="0" max="100" step="1" v-model.number="tempTarget" :disabled="!commOk || pendingCommand">
+        <div class="command-grid"><button class="command-btn open" :disabled="!commOk || pendingCommand" @click="armValve(100,'全开')">全开阀门</button><button class="command-btn close" :disabled="!commOk || pendingCommand" @click="armValve(0,'全关')">全关阀门</button><button class="command-btn" :disabled="!commOk || pendingCommand" @click="armValve(tempTarget,'调节')">应用目标阀位</button><button class="command-btn" :disabled="!pendingCommand" @click="cancelPending">停止/保持</button></div>
+        <div class="permissive"><b>✓</b> 中控控制权已取得<br><b>✓</b> 上下游液位在允许范围<br><b>✓</b> 电动执行机构无故障<br><b :style="{color:commOk?'var(--success)':'var(--danger)'}">{{commOk ? '✓' : '×'}}</b> PLC 通信与回读可用</div>
+        <div class="fp-note">所有开关和调节命令均采用 SBO 两步防误确认。界面只在收到模拟 PLC 状态回读后更新阀位。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sbo-mask" v-if="sbo.show">
+    <div class="sbo-box"><div class="sbo-head">操作二次确认 / SBO 防误动</div><div class="sbo-body">请核对目标设备与工艺影响。本页面为演示模式，不连接现场设备。<div class="sbo-command"><b>{{sbo.tag}} / {{sbo.name}}</b><br>当前阀位: <span class="num">{{sbo.oldValue}}%</span><br>目标阀位: <span class="num">{{sbo.target}}%</span><br>动作: {{sbo.action}}</div></div><div class="sbo-foot"><button @click="sbo.show=false">取消</button><button class="confirm" @click="confirmCommand">确认下发</button></div></div>
+  </div>
+
+  <div class="toast" :class="toast.type" v-if="toast.show">{{toast.text}}</div>
+</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const WATCHDOG_MS=1500;
+  const $id=function(id){return document.getElementById(id);};
+  const safeInit=function(id){try{const el=$id(id);if(!el)return null;return echarts.init(el);}catch(e){console.error(e);return null;}};
+  const nowTime=function(){return new Date().toLocaleTimeString('zh-CN',{hour12:false});};
+  const uid=function(){return 'CMD-'+Date.now().toString(36).slice(-6).toUpperCase();};
+  let trendChart=null;
+  let plantTwin=null;
+
+  const vm=Vue.createApp({
+    data:function(){return{
+      clock:'--:--:--',date:'----/--/--',scenario:'stable',commOk:true,quality:'GOOD',latency:68,
+      baseFlow:18560,flow:18560,level:4.12,headLoss:0.18,selectedTag:'V-101A',faceplateOpen:false,tempTarget:85,pendingCommand:false,bottomTab:'trend',tickIndex:0,
+      valves:[
+        {tag:'V-101A',short:'VA',name:'北通道进水电动闸阀',position:85,target:85,mode:'远程自动',hours:1720,writable:true},
+        {tag:'V-101B',short:'VB',name:'南通道进水电动闸阀',position:78,target:78,mode:'远程自动',hours:1688,writable:true},
+        {tag:'V-102',short:'VO',name:'提升井出水电动闸阀',position:92,target:92,mode:'远程自动',hours:2086,writable:true}
+      ],
+      alarms:[],
+      auditLogs:[
+        {time:'14:27:18',user:'张工 / L2',tag:'V-101A',action:'调节阀位',oldValue:'80.0%',newValue:'85.0%',sbo:'两步确认通过',result:'回读成功',ok:true,uid:'CMD-8H2K4A'},
+        {time:'13:42:05',user:'李班长 / L3',tag:'V-102',action:'切换远程自动',oldValue:'手动',newValue:'自动',sbo:'两步确认通过',result:'回读成功',ok:true,uid:'CMD-7Q1M9C'}
+      ],
+      trendTimes:['14:00','14:05','14:10','14:15','14:20','14:25','14:30'],
+      trendFlows:[17820,18110,17960,18340,18420,18510,18560],trendLevels:[3.96,4.01,4.04,4.08,4.09,4.11,4.12],
+      sbo:{show:false,tag:'',name:'',oldValue:0,target:0,action:''},toast:{show:false,text:'',type:''},toastTimer:null,commandTimer:null
+    };},
+    computed:{
+      selectedValve:function(){return this.valves.find(function(v){return v.tag===this.selectedTag;}.bind(this))||this.valves[0];},
+      displayFlow:function(){return Math.round(this.flow).toLocaleString('zh-CN');},
+      openValveCount:function(){return this.valves.filter(function(v){return v.position>5;}).length;},
+      highestAlarm:function(){return this.alarms.find(function(a){return !a.acked;})||this.alarms[0]||null;},
+      alarmTone:function(){if(!this.highestAlarm)return '';return this.highestAlarm.priority===3?'danger':'warning';}
+    },
+    methods:{
+      tick:function(){try{const d=new Date();this.clock=d.toLocaleTimeString('zh-CN',{hour12:false});this.date=d.toLocaleDateString('zh-CN').replaceAll('/',' / ');this.tickIndex+=1;if(this.commOk){const wave=Math.sin(this.tickIndex*.35);this.flow=Math.max(0,this.computeFlow()+wave*75);this.level=Math.max(0,Math.min(5.2,this.level+Math.sin(this.tickIndex*.22)*.002));}if(this.tickIndex%5===0)this.pushTrend();}catch(e){console.error(e);}},
+      computeFlow:function(){const a=this.valveByTag('V-101A').position/100;const b=this.valveByTag('V-101B').position/100;const out=this.valveByTag('V-102').position/100;return this.baseFlow*Math.min(out,(a+b)/1.62);},
+      branchFlow:function(tag){const valve=this.valveByTag(tag);const total=this.flow;const sum=this.valveByTag('V-101A').position+this.valveByTag('V-101B').position;return Math.round(sum>0?total*valve.position/sum:0).toLocaleString('zh-CN');},
+      valveByTag:function(tag){return this.valves.find(function(v){return v.tag===tag;})||this.valves[0];},
+      valveStateLabel:function(valve){if(!this.commOk)return '状态未知';if(this.pendingCommand&&valve.tag===this.selectedTag)return '等待回读';if(valve.position<=1)return '全关';if(valve.position>=99)return '全开';return '调节位';},
+      selectValve:function(tag){this.selectedTag=tag;this.tempTarget=Math.round(this.valveByTag(tag).position);},
+      openFaceplate:function(){this.tempTarget=Math.round(this.selectedValve.position);this.faceplateOpen=true;},
+      armValve:function(target,action){if(!this.commOk){this.toastMessage('通信中断，写入操作已锁定','fail');return;}const clamped=Math.max(0,Math.min(100,Number(target)||0));this.sbo={show:true,tag:this.selectedValve.tag,name:this.selectedValve.name,oldValue:this.selectedValve.position.toFixed(1),target:Math.round(clamped),action:action};},
+      confirmCommand:function(){const self=this;const command={tag:this.sbo.tag,target:this.sbo.target,oldValue:this.sbo.oldValue,action:this.sbo.action,uid:uid()};this.sbo.show=false;this.pendingCommand=true;this.toastMessage('命令已发送，等待 PLC 状态回读','');this.commandTimer=setTimeout(function(){try{if(!self.commOk){self.pendingCommand=false;self.auditLogs.unshift({time:nowTime(),user:'张工 / L2',tag:command.tag,action:command.action,oldValue:command.oldValue+'%',newValue:command.target.toFixed(1)+'%',sbo:'两步确认通过',result:'看门狗超时 / 未改变',ok:false,uid:command.uid});self.toastMessage('指令下发超时，现场状态未改变','fail');return;}const valve=self.valveByTag(command.tag);valve.target=command.target;valve.position=command.target;self.pendingCommand=false;self.auditLogs.unshift({time:nowTime(),user:'张工 / L2',tag:command.tag,action:command.action,oldValue:command.oldValue+'%',newValue:command.target.toFixed(1)+'%',sbo:'两步确认通过',result:'回读成功',ok:true,uid:command.uid});self.flow=self.computeFlow();self.pushTrend();self.toastMessage('PLC 回读一致，阀位已更新','ok');if(plantTwin)plantTwin.pulseSelection(command.tag);}catch(e){console.error(e);}},850);},
+      cancelPending:function(){if(this.commandTimer)clearTimeout(this.commandTimer);this.pendingCommand=false;this.toastMessage('命令等待已取消，保持当前阀位','');},
+      toastMessage:function(text,type){const self=this;if(this.toastTimer)clearTimeout(this.toastTimer);this.toast={show:true,text:text,type:type||''};this.toastTimer=setTimeout(function(){self.toast.show=false;},2400);},
+      applyScenario:function(mode){this.scenario=mode;this.alarms.splice(0);if(mode==='stable'){this.commOk=true;this.quality='GOOD';this.latency=68;this.baseFlow=18560;this.level=4.12;this.headLoss=.18;this.setPositions([85,78,92]);this.toastMessage('稳态工况已载入','ok');}else if(mode==='high'){this.commOk=true;this.quality='GOOD';this.latency=74;this.baseFlow=22400;this.level=4.62;this.headLoss=.31;this.setPositions([100,95,100]);this.alarms.push({id:'ALM-HL',time:nowTime(),tag:'LIT-101',levelLabel:'高液位预警',message:'进水井液位接近 H 限 4.70 m',priority:2,acked:false,silenced:false});this.toastMessage('高负荷工况已载入','');}else if(mode==='fault'){this.commOk=false;this.quality='BAD';this.latency=1500;this.alarms.push({id:'ALM-COMM',time:nowTime(),tag:'PLC-01',levelLabel:'高危报警',message:'S7-1500 通信看门狗超时，远程写入锁定',priority:3,acked:false,silenced:false});this.toastMessage('通信故障演练：控制命令已锁定','fail');}else{this.commOk=true;this.quality='GOOD';this.latency=82;this.baseFlow=17680;this.level=4.05;this.headLoss=.16;this.setPositions([82,76,90]);this.toastMessage('通信恢复，点位质量 GOOD','ok');}this.flow=this.computeFlow();this.pushTrend();},
+      setPositions:function(values){this.valves.forEach(function(v,i){v.position=values[i];v.target=values[i];});},
+      silenceAlarm:function(){this.alarms.forEach(function(a){a.silenced=true;});this.toastMessage('报警声音已消音，视觉报警保持','');},
+      ackAll:function(){this.alarms.forEach(function(a){a.acked=true;});this.auditLogs.unshift({time:nowTime(),user:'张工 / L2',tag:'ALARM',action:'确认当前报警',oldValue:'未确认',newValue:'已确认',sbo:'报警确认',result:'记录成功',ok:true,uid:uid()});this.toastMessage('当前报警已确认','ok');},
+      showTrend:function(){this.bottomTab='trend';this.$nextTick(function(){if(trendChart){trendChart.resize();this.renderTrend();}}.bind(this));},
+      pushTrend:function(){const d=new Date();this.trendTimes.push(d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false}));this.trendFlows.push(Math.round(this.flow));this.trendLevels.push(Number(this.level.toFixed(2)));if(this.trendTimes.length>12){this.trendTimes.shift();this.trendFlows.shift();this.trendLevels.shift();}this.renderTrend();},
+      renderTrend:function(){try{if(!trendChart)return;trendChart.setOption({animation:false,grid:{left:58,right:58,top:28,bottom:30},tooltip:{trigger:'axis',backgroundColor:'#0b1721',borderColor:'#31566d',textStyle:{color:'#f2f7fa'}},legend:{top:5,data:['进水流量','进水井液位'],textStyle:{color:'#a8bac8',fontSize:10}},xAxis:{type:'category',data:this.trendTimes,axisLine:{lineStyle:{color:'#31566d'}},axisTick:{show:false},axisLabel:{color:'#708594',fontSize:10}},yAxis:[{type:'value',name:'m³/h',min:0,max:26000,nameTextStyle:{color:'#708594'},splitLine:{lineStyle:{color:'rgba(168,186,200,.08)'}},axisLabel:{color:'#708594',fontSize:10}},{type:'value',name:'m',min:3.4,max:5.2,nameTextStyle:{color:'#708594'},splitLine:{show:false},axisLabel:{color:'#708594',fontSize:10}}],series:[{name:'进水流量',type:'line',data:this.trendFlows,symbol:'none',lineStyle:{color:'#36c2ff',width:2},areaStyle:{color:'rgba(54,194,255,.12)'},markLine:{symbol:['none','none'],label:{color:'#ffb547',formatter:'设计上限'},lineStyle:{color:'#ffb547',type:'dashed'},data:[{yAxis:24000}]}},{name:'进水井液位',type:'line',yAxisIndex:1,data:this.trendLevels,symbol:'circle',symbolSize:4,lineStyle:{color:'#35d07f',width:2},itemStyle:{color:'#35d07f'}}]});}catch(e){console.error(e);}}
+    },
+    mounted:function(){const self=this;this.tick();setInterval(function(){self.tick();},1000);this.$nextTick(function(){trendChart=safeInit('trendChart');self.renderTrend();plantTwin=createPlantTwin(self);});}
+  }).mount('#app');
+
+  function createPlantTwin(state){
+    const host=$id('plant3d');
+    if(!host||!window.THREE)return null;
+    const scene=new THREE.Scene();
+    scene.fog=new THREE.Fog(0x071019,20,44);
+    const camera=new THREE.PerspectiveCamera(34,host.clientWidth/host.clientHeight,.1,100);
+    camera.position.set(16,15,18);
+    const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    renderer.setSize(host.clientWidth,host.clientHeight);
+    renderer.outputEncoding=THREE.sRGBEncoding;
+    renderer.shadowMap.enabled=true;
+    renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    host.appendChild(renderer.domElement);
+    const controls=new THREE.OrbitControls(camera,renderer.domElement);
+    controls.enableDamping=true;controls.dampingFactor=.07;controls.minDistance=13;controls.maxDistance=38;controls.maxPolarAngle=Math.PI*.48;controls.target.set(0,0,0);
+    scene.add(new THREE.HemisphereLight(0x9ddcff,0x071019,1.55));
+    const key=new THREE.DirectionalLight(0xffffff,1.45);key.position.set(-8,18,12);key.castShadow=true;scene.add(key);
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(34,24),new THREE.MeshStandardMaterial({color:0x0b1721,roughness:.92,metalness:.04}));floor.rotation.x=-Math.PI/2;floor.position.y=-1.05;floor.receiveShadow=true;scene.add(floor);
+    const grid=new THREE.GridHelper(34,34,0x27495e,0x173243);grid.position.y=-1.0;grid.material.opacity=.35;grid.material.transparent=true;scene.add(grid);
+    const concrete=new THREE.MeshStandardMaterial({color:0x607582,roughness:.72,metalness:.08});
+    const concreteTop=new THREE.MeshStandardMaterial({color:0x83949e,roughness:.68,metalness:.06});
+    const water=new THREE.MeshPhysicalMaterial({color:0x238cc5,transparent:true,opacity:.58,roughness:.22,metalness:.05,clearcoat:.5});
+    const steel=new THREE.MeshStandardMaterial({color:0x7c96a6,roughness:.34,metalness:.62});
+    const darkSteel=new THREE.MeshStandardMaterial({color:0x233b49,roughness:.42,metalness:.55});
+    const pipeMat=new THREE.MeshStandardMaterial({color:0x31566d,roughness:.38,metalness:.55});
+    const flowMat=new THREE.MeshBasicMaterial({color:0x36c2ff});
+    const gateMat=new THREE.MeshStandardMaterial({color:0x35d07f,roughness:.36,metalness:.42});
+    const offlineMat=new THREE.MeshStandardMaterial({color:0x708594,roughness:.7,metalness:.2});
+    function box(w,h,d,mat,x,y,z){const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);return mesh;}
+    function basin(x,z,w,d,level){const g=new THREE.Group();const t=.28;const h=2.5;function part(pw,ph,pd,px,py,pz,mat){const m=new THREE.Mesh(new THREE.BoxGeometry(pw,ph,pd),mat);m.position.set(px,py,pz);m.castShadow=true;m.receiveShadow=true;g.add(m);}part(w,t,d,0,-.88,0,concrete);part(t,h,d,-w/2,0,0,concreteTop);part(t,h,d,w/2,0,0,concreteTop);part(w-t*2,h,t,0,0,-d/2,concreteTop);part(w-t*2,h,t,0,0,d/2,concreteTop);const ws=new THREE.Mesh(new THREE.PlaneGeometry(w-.6,d-.6),water);ws.rotation.x=-Math.PI/2;ws.position.y=-.72+level*1.6;g.add(ws);g.position.set(x,0,z);scene.add(g);return ws;}
+    const waterSurfaces=[basin(-6.1,0,4.2,5.3,.6),basin(-.4,-1.65,6.6,2.25,.5),basin(-.4,1.65,6.6,2.25,.54),basin(5.8,0,4.4,5.3,.63)];
+    box(2.2,.28,6.3,concreteTop,-3.8,1.02,0);
+    for(let lane=-1;lane<=1;lane+=2){for(let i=-2;i<=2;i++){const bar=box(.1,2.1,.08,steel,-1.4+i*.55,.15,lane*1.66);bar.rotation.z=-.25;}const shaft=box(3.3,.16,.16,darkSteel,-.4,.86,lane*1.66);shaft.userData.spin=true;}
+    const pumpGroup=new THREE.Group();for(let z=-1.35;z<=1.35;z+=.9){const body=new THREE.Mesh(new THREE.CylinderGeometry(.27,.36,.62,18),steel);body.rotation.z=Math.PI/2;body.position.set(5.8,.05,z);body.castShadow=true;pumpGroup.add(body);const nose=new THREE.Mesh(new THREE.ConeGeometry(.22,.36,18),darkSteel);nose.rotation.z=-Math.PI/2;nose.position.set(5.36,.05,z);pumpGroup.add(nose);}scene.add(pumpGroup);
+    const valveGroups={};
+    function valve(tag,x,z,rotation){const g=new THREE.Group();const body=new THREE.Mesh(new THREE.CylinderGeometry(.46,.46,.48,20),gateMat);body.rotation.z=Math.PI/2;body.userData.tag=tag;g.add(body);const stem=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,.9,12),steel);stem.position.y=.65;g.add(stem);const wheel=new THREE.Mesh(new THREE.TorusGeometry(.34,.055,10,24),gateMat);wheel.rotation.x=Math.PI/2;wheel.position.y=1.08;wheel.userData.tag=tag;g.add(wheel);g.position.set(x,.05,z);g.rotation.y=rotation||0;g.userData.tag=tag;scene.add(g);valveGroups[tag]={group:g,body:body,wheel:wheel,visual:state.valveByTag(tag).position};return g;}
+    valve('V-101A',-4.3,-1.65,0);valve('V-101B',-4.3,1.65,0);valve('V-102',8.0,0,0);
+    const flowSystems=[];
+    function pipe(points,tag){const curve=new THREE.CatmullRomCurve3(points.map(function(p){return new THREE.Vector3(p[0],p[1],p[2]);}),false,'catmullrom',.1);const tube=new THREE.Mesh(new THREE.TubeGeometry(curve,80,.18,10,false),pipeMat);tube.castShadow=true;scene.add(tube);const particles=[];for(let i=0;i<8;i++){const ball=new THREE.Mesh(new THREE.SphereGeometry(.11,10,10),flowMat);scene.add(ball);particles.push(ball);}flowSystems.push({curve:curve,tag:tag,particles:particles,offset:Math.random()});}
+    pipe([[-10,.04,-1.65],[-6.1,.04,-1.65],[-4.3,.04,-1.65],[-.4,.04,-1.65],[2.9,.04,-1.65],[5.8,.04,-.8]],'V-101A');
+    pipe([[-10,.04,1.65],[-6.1,.04,1.65],[-4.3,.04,1.65],[-.4,.04,1.65],[2.9,.04,1.65],[5.8,.04,.8]],'V-101B');
+    pipe([[5.8,.04,0],[8,.04,0],[10.4,.04,0]],'V-102');
+    box(.5,3.1,.5,concreteTop,-8.5,.4,-2.65);box(.5,3.1,.5,concreteTop,-8.5,.4,2.65);box(.5,3.1,.5,concreteTop,9.2,.4,-2.65);box(.5,3.1,.5,concreteTop,9.2,.4,2.65);
+    const clickable=[];Object.keys(valveGroups).forEach(function(tag){clickable.push(valveGroups[tag].body,valveGroups[tag].wheel);});
+    const raycaster=new THREE.Raycaster();const pointer=new THREE.Vector2();let moved=false;renderer.domElement.addEventListener('pointerdown',function(){moved=false;});renderer.domElement.addEventListener('pointermove',function(){moved=true;});renderer.domElement.addEventListener('pointerup',function(ev){if(moved)return;const rect=renderer.domElement.getBoundingClientRect();pointer.x=((ev.clientX-rect.left)/rect.width)*2-1;pointer.y=-((ev.clientY-rect.top)/rect.height)*2+1;raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(clickable,true)[0];if(hit&&hit.object.userData.tag){state.selectValve(hit.object.userData.tag);state.openFaceplate();}});
+    function setView(type){if(type==='top'){camera.position.set(0,25,.01);controls.target.set(0,0,0);}else{camera.position.set(16,15,18);controls.target.set(0,0,0);}controls.update();}
+    $id('viewIso').addEventListener('click',function(){setView('iso');});$id('viewTop').addEventListener('click',function(){setView('top');});$id('viewReset').addEventListener('click',function(){setView('iso');controls.reset();});
+    let last=performance.now();let pulseTag='';let pulseUntil=0;
+    function animate(now){requestAnimationFrame(animate);const dt=Math.min(.05,(now-last)/1000);last=now;controls.update();waterSurfaces.forEach(function(s,i){s.position.y+=Math.sin(now*.001+i)*.00015;});Object.keys(valveGroups).forEach(function(tag){const node=valveGroups[tag];const data=state.valveByTag(tag);node.visual+=(data.position-node.visual)*Math.min(1,dt*4.5);node.group.position.y=.05+node.visual/100*.5;node.wheel.rotation.z+=(Math.abs(data.position-node.visual)>.1?dt*8:0);const mat=state.commOk?(data.position>1?gateMat:offlineMat):offlineMat;node.body.material=mat;node.wheel.material=mat;const selected=state.selectedTag===tag;node.group.scale.setScalar(selected?1.1:1);if(pulseTag===tag&&now<pulseUntil)node.group.scale.setScalar(1.1+Math.sin(now*.02)*.06);});flowSystems.forEach(function(flow){const opening=state.commOk?state.valveByTag(flow.tag).position:0;flow.offset=(flow.offset+dt*(.08+opening/100*.18))%1;flow.particles.forEach(function(ball,i){const t=(flow.offset+i/flow.particles.length)%1;ball.position.copy(flow.curve.getPointAt(t));ball.visible=opening>1;ball.scale.setScalar(.55+opening/100*.65);});});renderer.render(scene,camera);}
+    function resize(){try{const w=host.clientWidth,h=host.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);}catch(e){console.error(e);}}
+    window.addEventListener('resize',resize);animate(performance.now());
+    return{pulseSelection:function(tag){pulseTag=tag;pulseUntil=performance.now()+1200;},resize:resize};
+  }
+
+  function fit(){try{const el=$id('screen');if(!el)return;const scale=Math.min(window.innerWidth/1920,window.innerHeight/1080);el.style.transform='translate(-50%, -50%) scale('+scale+')';}catch(e){console.error(e);}}
+  fit();window.addEventListener('resize',function(){try{fit();if(trendChart)trendChart.resize();if(plantTwin)plantTwin.resize();}catch(e){console.error(e);}});
+})();
+</script>
+</body>
+</html>

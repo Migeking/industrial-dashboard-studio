@@ -1,0 +1,5 @@
+interface:
+  display_name: "工业精密大屏"
+  short_description: "创建可交付的工业精密监控大屏、标准场景模板与复用资产"
+  brand_color: "#36C2FF"
+  default_prompt: "使用 $industrial-dashboard 创建一张可离线交付的工业监控大屏。"

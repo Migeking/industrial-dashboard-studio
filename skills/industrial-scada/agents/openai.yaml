@@ -1,0 +1,5 @@
+interface:
+  display_name: "工业 SCADA 终端"
+  short_description: "构建面向工业过程控制与设备微操的 Web SCADA/HMI，支持 SBO 两步确认与 Faceplate"
+  brand_color: "#35D07F"
+  default_prompt: "使用 $industrial-scada 创建一套具备两步确认与 Faceplate 操作小面板的工业 SCADA 界面。"
