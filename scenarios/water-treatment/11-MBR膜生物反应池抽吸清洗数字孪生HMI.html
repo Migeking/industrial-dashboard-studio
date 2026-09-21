@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>高品质再生水厂 MBR膜生物反应池与抽吸清洗数字孪生 HMI</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<script src="../../vendor/three.min.js"></script>
+<script src="../../vendor/OrbitControls.js"></script>
+<script src="../../packages/runtime/dashboard-runtime.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#b7c6d6;color:#344b5f;font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+button,input,select{font:inherit}
+button{color:inherit}
+[v-cloak]{display:none}
+.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+:root{
+  --page:#dfe8f3;
+  --surface:#f8fbff;
+  --surface-strong:#ffffff;
+  --line:#c8d5e3;
+  --line-soft:#dbe4ee;
+  --text:#344b5f;
+  --muted:#718597;
+  --blue:#247ac4;
+  --blue-soft:#dcecf9;
+  --green:#21ad79;
+  --amber:#f0a54a;
+  --danger:#e15555;
+  --purple:#9b76c8;
+}
+#screen{
+  width:1920px;
+  height:1080px;
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform-origin:center center;
+  display:grid;
+  grid-template-rows:72px 54px 680px 274px;
+  overflow:hidden;
+  background:linear-gradient(145deg,#eaf0f7,#d9e4ef 58%,#d3dfeb);
+  box-shadow:0 18px 60px rgba(54,75,96,.25);
+}
+.topbar{
+  display:grid;
+  grid-template-columns:400px 1fr 460px;
+  align-items:center;
+  padding:0 16px;
+  border-bottom:1px solid var(--line);
+  background:rgba(248,251,255,.94);
+}
+.brand strong{display:block;font-size:22px;letter-spacing:1px;color:#29465a}
+.brand span{display:block;margin-top:3px;color:var(--muted);font-size:11px}
+.primary-nav{height:100%;display:flex;align-items:stretch;justify-content:center}
+.primary-nav button{
+  min-width:108px;
+  padding:0 10px;
+  border:0;
+  border-bottom:3px solid transparent;
+  background:transparent;
+  color:#3e5364;
+  font-size:14px;
+  cursor:pointer;
+  transition:all .18s ease;
+}
+.primary-nav button:hover,.primary-nav button.active{color:var(--blue);background:#eef5fb;border-bottom-color:var(--blue)}
+.system-meta{display:flex;align-items:center;justify-content:flex-end;gap:12px;color:#41586b;font-size:12px}
+.meta-item{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.quality-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;background:#e9f6ef;color:#18855e;font-size:11px;font-weight:700}
+.quality-badge i{width:6px;height:6px;border-radius:50%;background:#21ad79}
+.phase-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:#e8f2fb;border:1px solid #bcd7ec;color:#1a6aa8;font-size:11px;font-weight:700}
+.phase-pill i{width:8px;height:8px;border-radius:50%;background:var(--blue)}
+.phase-pill.relax{background:#fff7e8;border-color:#ecd3a3;color:#a5761f}
+.phase-pill.relax i{background:var(--amber)}
+.phase-pill.backwash{background:#e9f6ef;border-color:#9ed8bf;color:#147a56}
+.phase-pill.backwash i{background:var(--green)}
+.phase-pill.cip{background:#f1eafa;border-color:#c9b3e3;color:#6c4aa0}
+.phase-pill.cip i{background:var(--purple)}
+.subnav{
+  display:grid;
+  grid-template-columns:repeat(6,1fr) 1.25fr;
+  gap:0;
+  padding:0 12px;
+  border-bottom:1px solid var(--line);
+  background:#f4f8fc;
+}
+.subnav button{
+  border:0;
+  border-right:1px solid #e0e8f0;
+  background:transparent;
+  color:#536a7c;
+  font-size:14px;
+  cursor:pointer;
+}
+.subnav button:hover{background:#e8f1f8;color:var(--blue)}
+.subnav button.active{
+  margin:6px 0;
+  border-radius:5px;
+  border-right:0;
+  background:var(--blue);
+  color:#fff;
+  font-weight:700;
+}
+.demo-badge{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#8a6c32;
+  font-size:11px;
+  background:#fff7e8;
+  border-left:1px solid #ead8b5;
+}
+.main-area{
+  min-height:0;
+  display:grid;
+  grid-template-columns:1fr 468px;
+  gap:10px;
+  padding:10px 12px 8px;
+}
+.scene-shell{
+  position:relative;
+  min-width:0;
+  overflow:hidden;
+  border:1px solid #c3d1df;
+  border-radius:8px;
+  background:linear-gradient(145deg,#dce6f2,#cfdcea);
+  box-shadow:inset 0 1px rgba(255,255,255,.9);
+}
+.scene-shell:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(to bottom,rgba(255,255,255,.16),transparent 26%);
+}
+#twin3d{position:absolute;inset:0}
+#twin3d canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+#twin3d canvas:active{cursor:grabbing}
+.overview-card{
+  position:absolute;
+  z-index:5;
+  left:12px;
+  top:12px;
+  width:290px;
+  height:168px;
+  padding:11px;
+  border:1px solid rgba(194,208,222,.9);
+  border-radius:8px;
+  background:rgba(248,251,255,.92);
+  box-shadow:0 10px 24px rgba(88,109,130,.14);
+  backdrop-filter:blur(6px);
+}
+.overview-title{display:flex;align-items:center;gap:8px;color:#4c6579;font-size:12px}
+.back-arrow{font-size:18px;color:#60798d}
+.mini-map{position:relative;height:114px;margin-top:6px;overflow:hidden;perspective:320px}
+.mini-ground{
+  position:absolute;
+  left:22px;
+  top:22px;
+  width:230px;
+  height:76px;
+  transform:rotateX(56deg) rotateZ(-14deg);
+  background:linear-gradient(135deg,#dfeaf3,#f8fbff);
+  border:1px solid #bfcddd;
+  box-shadow:10px 12px 18px rgba(79,103,124,.12);
+}
+.mini-block{position:absolute;background:#edf4fa;border:1px solid #b8c8d7;box-shadow:3px 4px 6px rgba(85,105,124,.1)}
+.mini-basin{left:40px;top:38px;width:160px;height:56px;border:1.5px solid #a3b9cc;background:rgba(215,230,242,.7)}
+.mini-cassette{left:60px;top:46px;width:26px;height:40px;background:#fff;border:1px solid #9db4c6}
+.mini-cassette.c2{left:92px}
+.mini-cassette.c3{left:124px}
+.mini-cassette.c4{left:156px}
+.mini-pump{left:206px;top:44px;width:22px;height:46px;background:#2a75b7}
+.mini-pipe{position:absolute;left:222px;top:28px;width:4px;height:66px;background:#247ac4}
+.mini-cip{position:absolute;left:30px;top:30px;width:20px;height:22px;background:#9b76c8;border-radius:2px}
+.metrics-float{
+  position:absolute;
+  z-index:5;
+  left:12px;
+  bottom:14px;
+  width:560px;
+  height:154px;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:0;
+  padding:12px 14px;
+  border:1px solid rgba(194,208,222,.92);
+  border-radius:8px;
+  background:rgba(248,251,255,.93);
+  box-shadow:0 10px 24px rgba(88,109,130,.15);
+  backdrop-filter:blur(7px);
+}
+.metric{padding:4px 10px;border-right:1px solid var(--line-soft)}
+.metric:nth-child(3n){border-right:0}
+.metric:nth-child(-n+3){border-bottom:1px solid var(--line-soft)}
+.metric span{display:block;color:#718597;font-size:11px}
+.metric b{display:inline-block;margin-top:6px;color:#334f63;font-size:22px}
+.metric small{margin-left:4px;color:#5f7588;font-size:10px}
+.metric .good{color:var(--green)}
+.metric .warn{color:var(--amber)}
+.metric .bad{color:var(--danger)}
+.metric .purple{color:#7a57ad}
+.scene-tools{position:absolute;z-index:5;left:316px;top:12px;display:flex;gap:6px;flex-wrap:wrap;max-width:640px}
+.scene-tools button{
+  height:30px;
+  padding:0 11px;
+  border:1px solid #bfd0df;
+  border-radius:5px;
+  background:rgba(248,251,255,.88);
+  color:#60778a;
+  font-size:11px;
+  cursor:pointer;
+  transition:all .15s;
+}
+.scene-tools button:hover{border-color:var(--blue);color:var(--blue);background:#fff}
+.scene-tools button.on{border-color:var(--blue);color:var(--blue);background:#e8f2fb;font-weight:700}
+.flow-key{
+  position:absolute;
+  z-index:5;
+  right:14px;
+  bottom:14px;
+  display:flex;
+  gap:12px;
+  padding:6px 11px;
+  border:1px solid rgba(194,208,222,.82);
+  border-radius:5px;
+  background:rgba(248,251,255,.85);
+  font-size:10px;
+  color:#718597;
+}
+.flow-key i{display:inline-block;width:15px;height:4px;margin-right:5px;border-radius:2px;vertical-align:middle}
+.flow-key .water{background:#2378bd}
+.flow-key .air{background:#38b8e0}
+.flow-key .cip{background:#9b76c8}
+.flow-key .back{background:#21ad79}
+.control-panel{min-height:0;display:grid;grid-template-rows:1fr 306px;gap:10px}
+.control-card,.video-card{
+  min-height:0;
+  border:1px solid #c3d1df;
+  border-radius:8px;
+  background:rgba(248,251,255,.96);
+  box-shadow:0 8px 20px rgba(93,113,134,.1);
+  overflow:hidden;
+}
+.control-head{height:52px;padding:10px 14px 0}
+.control-head strong{display:block;font-size:14px}
+.control-head span{display:block;margin-top:4px;color:var(--blue);font-size:12px;font-weight:700}
+.control-tabs{height:44px;display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line-soft)}
+.control-tabs button{
+  position:relative;
+  border:0;
+  background:transparent;
+  color:#718597;
+  font-size:11px;
+  cursor:pointer;
+}
+.control-tabs button.active{color:var(--blue);font-weight:700}
+.control-tabs button.active:after{content:"";position:absolute;left:30%;right:30%;bottom:-1px;height:3px;background:var(--blue)}
+.control-body{height:calc(100% - 96px);padding:12px 14px;overflow:hidden}
+.state-line{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:6px 0 9px;
+  border-bottom:1px solid var(--line-soft);
+  font-size:11px;
+}
+.state-left{display:flex;gap:16px}
+.state-left span{color:#708597}
+.state-left b{margin-left:4px;color:#40586b}
+.state-normal{color:var(--green);font-weight:700}
+.state-warn{color:var(--amber);font-weight:700}
+.state-cip{color:#7a57ad;font-weight:700}
+.tiny-state{display:inline-block;width:8px;height:8px;margin-right:5px;border-radius:2px;background:var(--green)}
+.phase-track{margin-top:10px;padding:10px;border:1px solid var(--line-soft);background:#f5f9fc}
+.phase-steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.phase-step{padding:7px 8px;border:1px solid var(--line-soft);background:#fff;text-align:center;border-radius:4px;color:#8295a6;font-size:10px}
+.phase-step b{display:block;margin-top:3px;font-size:13px;color:#3e5668}
+.phase-step.on{border-color:var(--blue);background:#eaf4fc;color:var(--blue)}
+.phase-step.on b{color:var(--blue)}
+.phase-step.on.cip{border-color:#b79dde;background:#f1eafa;color:#6c4aa0}
+.phase-step.on.cip b{color:#6c4aa0}
+.phase-bar{height:6px;margin-top:8px;border-radius:3px;background:#e2ebf2;overflow:hidden}
+.phase-bar i{display:block;height:100%;background:var(--blue);border-radius:3px;transition:width .5s linear}
+.phase-meta{display:flex;justify-content:space-between;margin-top:6px;color:#718597;font-size:10px}
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.quick-cell{height:58px;padding:8px;border:1px solid var(--line-soft);background:#f5f9fc}
+.quick-cell span{display:block;color:#8295a6;font-size:9px}
+.quick-cell b{display:inline-block;margin-top:6px;color:#3f586b;font-size:18px}
+.quick-cell small{margin-left:2px;color:#718597;font-size:8px}
+.process-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.process-cell{height:56px;padding:8px 10px;border:1px solid var(--line-soft);background:#f7fafc}
+.process-cell span{display:block;color:#8295a6;font-size:9px}
+.process-cell b{display:block;margin-top:5px;color:#3e5668;font-size:15px}
+.last-action{margin-top:8px;padding:8px 10px;border:1px solid var(--line-soft);background:#f4f8fc;color:#708597;font-size:10px}
+.last-action b{color:var(--blue);font-size:15px}
+.control-form{display:grid;gap:10px}
+.control-device{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1px solid var(--line-soft);background:#f5f9fc}
+.control-device b{font-size:13px}
+.control-device span{color:var(--green);font-size:11px}
+.control-device span.cip{color:#7a57ad}
+.slider-row{display:grid;grid-template-columns:84px 1fr 64px;gap:8px;align-items:center;font-size:11px}
+.slider-row input{width:100%;accent-color:var(--blue)}
+.value-box{padding:5px;border:2px inset #c2cfda;background:#fff;text-align:right;font-weight:700}
+.control-buttons{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.control-buttons button{height:38px;border:1px solid #b8c8d8;border-radius:4px;background:#f5f9fc;cursor:pointer;font-size:11px}
+.control-buttons button.open{border-color:#7bc9ad;color:#168a62}
+.control-buttons button.close{border-color:#e2bb80;color:#b77825}
+.control-buttons button.apply{border-color:var(--blue);background:var(--blue);color:#fff}
+.control-buttons button.action-flush{border-color:#53a9d9;background:#eef7fd;color:#1a7cb0;font-weight:700}
+.control-buttons button.action-cip{border-color:#b79dde;background:#f1eafa;color:#6c4aa0;font-weight:700}
+.control-note{padding:9px;border-left:3px solid var(--blue);background:#eef5fa;color:#6c8091;font-size:10px;line-height:1.55}
+.control-note.purple{border-left-color:var(--purple);background:#f4effa}
+.event-list{display:grid;gap:7px;max-height:210px;overflow-y:auto}
+.event-row{display:grid;grid-template-columns:56px 68px 1fr;gap:6px;padding:7px 0;border-bottom:1px solid var(--line-soft);font-size:10px}
+.event-row time{color:#8295a6}
+.event-row b{color:var(--blue)}
+.event-row span{color:#576e80}
+.video-head{height:46px;padding:12px 14px;border-bottom:1px solid var(--line-soft);font-size:12px;font-weight:700}
+.video-head span{color:var(--blue)}
+.video-window{
+  height:238px;
+  margin:10px 14px;
+  border:1px solid #c9d6e2;
+  border-radius:4px;
+  background:linear-gradient(135deg,#fbfdff,#f1f6fb);
+  display:grid;
+  place-items:center;
+  color:#8799a9;
+}
+.video-placeholder{text-align:center}
+.video-icon{width:56px;height:38px;margin:0 auto 9px;border:2px solid #c7d5e1;border-radius:4px;position:relative}
+.video-icon:before{content:"";position:absolute;left:21px;top:10px;border-left:14px solid #abc0d1;border-top:8px solid transparent;border-bottom:8px solid transparent}
+.video-placeholder b{display:block;color:#6d8395;font-size:11px}
+.video-placeholder span{display:block;margin-top:4px;font-size:9px}
+.cip-tanks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.cip-tank{padding:8px;border:1px solid var(--line-soft);background:#faf7fe;font-size:10px;color:#6c5a86}
+.cip-tank b{display:block;font-size:13px;color:#5b4386}
+.cip-bar{height:5px;margin-top:6px;background:#e6ddf2;border-radius:3px;overflow:hidden}
+.cip-bar i{display:block;height:100%;background:var(--purple)}
+.bottom-grid{
+  min-height:0;
+  display:grid;
+  grid-template-columns:1.15fr 1.15fr 1fr 1.05fr 1.05fr 1.1fr;
+  gap:8px;
+  padding:0 12px 10px;
+}
+.bottom-card{
+  min-width:0;
+  overflow:hidden;
+  border:1px solid #c3d1df;
+  border-radius:8px;
+  background:rgba(248,251,255,.96);
+  box-shadow:0 6px 16px rgba(93,113,134,.08);
+}
+.bottom-head{
+  height:42px;
+  padding:0 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid var(--line-soft);
+  font-size:12px;
+  font-weight:700;
+}
+.bottom-head span{color:var(--blue);font-size:9px;font-weight:500}
+.head-icon{
+  display:inline-block;
+  width:18px;
+  height:18px;
+  margin-right:6px;
+  border:2px solid #607a8e;
+  border-radius:50%;
+  vertical-align:middle;
+  position:relative;
+}
+.head-icon.chart{border-radius:2px;border-top:0;border-right:0}
+.head-icon.chart:after{content:"";position:absolute;left:3px;top:7px;width:10px;height:6px;border-left:2px solid #607a8e;border-bottom:2px solid #607a8e;transform:skewY(-28deg)}
+.mini-chart{width:100%;height:216px}
+.status-list{padding:8px 12px}
+.status-row{height:36px;display:grid;grid-template-columns:1fr auto;align-items:center;border-bottom:1px solid var(--line-soft);font-size:10px;color:#5c7284}
+.status-row:last-child{border-bottom:0}
+.status-row b{color:var(--green);font-size:10px}
+.status-row b.warn{color:var(--amber)}
+.status-row b.cip{color:#7a57ad}
+.status-row em{display:inline-block;width:7px;height:7px;margin-right:5px;border-radius:50%;background:var(--green);vertical-align:middle}
+.status-row em.warn{background:var(--amber)}
+.status-row em.cip{background:var(--purple)}
+.equipment-list{padding:8px 10px;max-height:182px;overflow-y:auto}
+.equipment-line{
+  width:100%;
+  height:42px;
+  margin-bottom:5px;
+  display:grid;
+  grid-template-columns:1fr 64px;
+  align-items:center;
+  padding:0 8px;
+  border:1px solid transparent;
+  border-bottom-color:var(--line-soft);
+  background:transparent;
+  text-align:left;
+  cursor:pointer;
+  transition:all .15s;
+}
+.equipment-line:hover,.equipment-line.active{border-color:#a8cae6;background:#eef6fc}
+.equipment-line span{font-size:10px}
+.equipment-line b{font-size:15px;color:#476176;text-align:right}
+.equipment-line small{display:block;margin-top:2px;color:var(--muted)}
+.equipment-legend{display:flex;justify-content:center;gap:12px;margin-top:4px;color:#718597;font-size:9px}
+.legend-dot{display:inline-block;width:7px;height:7px;margin-right:4px;border-radius:2px}
+.legend-dot.run{background:var(--green)}
+.legend-dot.ready{background:var(--blue)}
+.legend-dot.cip{background:var(--purple)}
+.health-body{display:grid;grid-template-columns:116px 1fr;gap:10px;padding:14px 12px}
+.health-ring{
+  width:108px;
+  height:108px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:conic-gradient(#247ac4 0 91%,#e6eef5 91% 100%);
+  position:relative;
+}
+.health-ring:after{content:"";position:absolute;inset:15px;border-radius:50%;background:#f8fbff}
+.health-ring div{position:relative;z-index:2;text-align:center}
+.health-ring span{display:block;color:#6e8395;font-size:9px}
+.health-ring b{display:block;color:#36556d;font-size:22px}
+.health-info{padding-top:2px}
+.health-info div{height:26px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line-soft);font-size:9px;color:#718597}
+.health-info b{font-size:10px;color:#4a6375}
+.health-info .good{color:var(--green)}
+.confirm-mask{
+  position:absolute;
+  z-index:50;
+  inset:0;
+  display:grid;
+  place-items:center;
+  background:rgba(97,118,137,.25);
+  backdrop-filter:blur(2px);
+}
+.confirm-box{
+  width:420px;
+  border:1px solid #b9cad9;
+  border-radius:7px;
+  background:#f8fbff;
+  box-shadow:0 18px 50px rgba(74,94,114,.24);
+  overflow:hidden;
+}
+.confirm-title{padding:13px 15px;border-bottom:1px solid var(--line-soft);color:#3f586b;font-weight:700}
+.confirm-body{padding:16px;color:#60778a;font-size:12px;line-height:1.7}
+.confirm-command{margin-top:10px;padding:10px;border-left:3px solid var(--blue);background:#edf5fb}
+.confirm-actions{display:flex;justify-content:flex-end;gap:8px;padding:11px 14px;border-top:1px solid var(--line-soft)}
+.confirm-actions button{height:34px;padding:0 15px;border:1px solid #bdcddd;border-radius:4px;background:#fff;cursor:pointer}
+.confirm-actions .primary{border-color:var(--blue);background:var(--blue);color:#fff}
+.toast{
+  position:absolute;
+  z-index:60;
+  left:50%;
+  top:140px;
+  transform:translateX(-50%);
+  padding:9px 16px;
+  border:1px solid #a9c5db;
+  border-radius:5px;
+  background:#f8fbff;
+  color:#456177;
+  box-shadow:0 9px 24px rgba(78,99,119,.2);
+  font-size:11px;
+}
+.toast.good{border-color:#77c8aa;color:#16865f}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+<div id="screen">
+  <header class="topbar">
+    <div class="brand"><strong>高品质再生水厂</strong><span>MBR膜生物反应池与抽吸清洗数字孪生 HMI / 准Ⅳ类出水</span></div>
+    <nav class="primary-nav">
+      <button>全厂驾驶舱</button>
+      <button>生化系统</button>
+      <button class="active">MBR膜池</button>
+      <button>产水回用</button>
+      <button>加药除磷</button>
+      <button>AI决策中心</button>
+    </nav>
+    <div class="system-meta">
+      <span class="phase-pill" :class="phasePillClass"><i></i>{{phaseLabel}} · {{phaseCountdown}}</span>
+      <span class="meta-item quality-badge"><i></i>数据质量 GOOD</span>
+      <span class="meta-item num">◷ {{date}} {{clock}}</span>
+    </div>
+  </header>
+
+  <nav class="subnav">
+    <button>膜池总览</button>
+    <button class="active">膜组产水运行</button>
+    <button>抽吸产水泵房</button>
+    <button>空气擦洗</button>
+    <button>CIP化学清洗</button>
+    <button>离线维护</button>
+    <div class="demo-badge">演示模式 / 数据质量 GOOD / 更新时间 {{clock}}</div>
+  </nav>
+
+  <main class="main-area">
+    <section class="scene-shell" aria-label="MBR膜生物反应池三维数字孪生场景">
+      <div id="twin3d"></div>
+      <div class="overview-card">
+        <div class="overview-title"><span class="back-arrow">‹</span><span>返回总览 Full View</span></div>
+        <div class="mini-map">
+          <div class="mini-ground"></div>
+          <div class="mini-block mini-basin"></div>
+          <div class="mini-block mini-cassette"></div>
+          <div class="mini-block mini-cassette c2"></div>
+          <div class="mini-block mini-cassette c3"></div>
+          <div class="mini-block mini-cassette c4"></div>
+          <div class="mini-block mini-pump"></div>
+          <div class="mini-pipe"></div>
+          <div class="mini-cip"></div>
+        </div>
+      </div>
+      <div class="scene-tools">
+        <button id="viewHome">默认视角</button>
+        <button id="viewTop">俯视总览</button>
+        <button id="viewMembrane">聚焦膜组</button>
+        <button id="viewCIP">聚焦CIP</button>
+        <button id="accelToggle" :class="{on:demoAccel}">演示加速 ×12</button>
+      </div>
+      <div class="metrics-float">
+        <div class="metric"><span>通讯状态 / 更新时间</span><b class="good num">正常</b></div>
+        <div class="metric"><span>时序阶段</span><b class="num" style="font-size:19px">{{phaseLabel}}</b></div>
+        <div class="metric"><span>跨膜压差 TMP</span><b class="num">{{tmp.toFixed(1)}}</b><small>kPa</small></div>
+        <div class="metric"><span>膜通量 Flux</span><b class="num">{{flux.toFixed(1)}}</b><small>LMH</small></div>
+        <div class="metric"><span>产水浊度</span><b class="num" :class="turbidity>0.3?'warn':'good'">{{turbidity.toFixed(2)}}</b><small>NTU</small></div>
+        <div class="metric"><span>产水流量</span><b class="num">{{prodFlow.toFixed(0)}}</b><small>m³/h</small></div>
+      </div>
+      <div class="flow-key">
+        <span><i class="water"></i>产水抽吸</span>
+        <span><i class="air"></i>空气擦洗</span>
+        <span><i class="cip"></i>CIP药洗</span>
+        <span><i class="back"></i>定时反洗</span>
+      </div>
+    </section>
+
+    <aside class="control-panel">
+      <section class="control-card">
+        <div class="control-head"><strong>设备控制面板</strong><span>{{selectedItem.tag}} / {{selectedItem.name}}</span></div>
+        <div class="control-tabs">
+          <button v-for="tab in controlTabs" :key="tab.id" :class="{active:activeTab===tab.id}" @click="activeTab=tab.id">{{tab.label}}</button>
+        </div>
+        <div class="control-body" v-if="activeTab==='status'">
+          <div class="state-line">
+            <div class="state-left"><span>状态 <b>{{deviceState}}</b></span><span>模式 <b>远程自动</b></span></div>
+            <div :class="phase==='cip'||cipTag?'state-cip':'state-normal'"><i class="tiny-state" :style="phase==='cip'||cipTag?'background:#9b76c8':''"></i>{{interlockText}}</div>
+          </div>
+          <div class="phase-track">
+            <div class="phase-steps">
+              <div class="phase-step" :class="{on:phase==='produce'}">产水抽吸<b>8 min</b></div>
+              <div class="phase-step" :class="{on:phase==='relax'}">松弛静置<b>1 min</b></div>
+              <div class="phase-step" :class="{on:phase==='backwash'||phase==='cip',cip:phase==='cip'}">{{phase==='cip'?'药洗维护':'定时反洗'}}<b>{{phase==='cip'?'CIP':'45 s'}}</b></div>
+            </div>
+            <div class="phase-bar"><i :style="{width:phaseProgress+'%'}"></i></div>
+            <div class="phase-meta"><span>剩余 {{phaseCountdown}}（{{demoAccel?'演示加速×12':'实时节拍'}}）</span><span>{{autoCycle?'自动循环运行':'循环已暂停'}}</span></div>
+          </div>
+          <div class="quick-grid">
+            <div class="quick-cell"><span>跨膜压差TMP</span><b class="num">{{tmp.toFixed(1)}}</b><small>kPa</small></div>
+            <div class="quick-cell"><span>膜通量</span><b class="num">{{fluxDisplay.toFixed(1)}}</b><small>LMH</small></div>
+            <div class="quick-cell"><span>产水浊度</span><b class="num">{{turbidity.toFixed(2)}}</b><small>NTU</small></div>
+            <div class="quick-cell"><span>累计产水</span><b class="num">{{cumProd.toFixed(1)}}</b><small>万m³</small></div>
+          </div>
+          <div class="process-grid">
+            <div class="process-cell"><span>空气擦洗风量</span><b class="num">{{blowerFlow.toFixed(1)}} <small>Nm³/min</small></b></div>
+            <div class="process-cell"><span>CIP药箱液位</span><b class="num">{{cipLevel.toFixed(0)}} <small>%</small></b></div>
+          </div>
+        </div>
+        <div class="control-body" v-else-if="activeTab==='control'">
+          <div class="control-form">
+            <div class="control-device"><b>{{selectedItem.tag}} / {{selectedItem.name}}</b><span :class="{cip:selectedItem.type==='cip'||phase==='cip'}">{{deviceState}}</span></div>
+            <div v-if="selectedItem.type==='membrane'">
+              <div class="control-buttons">
+                <button class="open" @click="requestAction(0,'进入下一阶段')">进入下一阶段</button>
+                <button class="close" @click="requestAction(0,autoCycle?'暂停循环':'恢复循环')">{{autoCycle?'暂停循环':'恢复循环'}}</button>
+                <button class="apply" @click="requestAction(0,'触发一次反洗')">触发一次反洗</button>
+              </div>
+              <div class="control-buttons" style="margin-top:7px">
+                <button class="action-cip" style="grid-column:span 2" @click="requestAction(0,'进入药洗维护模式')">进入药洗维护模式</button>
+                <button class="apply" @click="requestAction(0,'退出维护恢复产水')">退出维护</button>
+              </div>
+              <div class="control-note purple">点击三维膜箱即选中对应列。药洗维护模式下该列停止产水，架空淡紫色CIP管网向膜箱投加药剂，三维以紫色药液粒子展示。</div>
+            </div>
+            <div v-else-if="selectedItem.type==='pump'">
+              <div class="slider-row">
+                <span>变频设定</span>
+                <input type="range" min="0" max="50" step="0.5" v-model.number="tempValue">
+                <div class="value-box num">{{tempValue.toFixed(1)}}Hz</div>
+              </div>
+              <div class="control-buttons">
+                <button class="open" @click="requestAction(38.5,'定频启动')">启动运行</button>
+                <button class="close" @click="requestAction(0,'停机备用')">停机备用</button>
+                <button class="apply" @click="requestAction(tempValue,'调频')">调频应用</button>
+              </div>
+              <div class="control-note">自吸式变频离心泵与膜抽吸时序联动：松弛段自动降速，反洗段短时反转。三维产水总管流速粒子同步变化。</div>
+            </div>
+            <div v-else>
+              <div class="control-buttons">
+                <button class="action-cip" @click="requestAction(0,'次氯酸钠清洗')">次氯酸钠清洗</button>
+                <button class="action-cip" @click="requestAction(0,'柠檬酸清洗')">柠檬酸清洗</button>
+                <button class="action-flush" @click="requestAction(0,'清水漂洗')">清水漂洗</button>
+              </div>
+              <div class="cip-tanks">
+                <div class="cip-tank"><span>NaClO 药箱</span><b class="num">{{cipNaClO.toFixed(0)}} %</b><div class="cip-bar"><i :style="{width:cipNaClO+'%'}"></i></div></div>
+                <div class="cip-tank"><span>柠檬酸药箱</span><b class="num">{{cipAcid.toFixed(0)}} %</b><div class="cip-bar"><i :style="{width:cipAcid+'%'}"></i></div></div>
+              </div>
+              <div class="control-note purple">在线/离线CIP联动需两步确认。加药期间对应膜列三维显示淡紫色药液流动，TMP在清洗后回落。</div>
+            </div>
+          </div>
+        </div>
+        <div class="control-body" v-else-if="activeTab==='trend'">
+          <div id="deviceTrend" style="width:100%;height:250px"></div>
+        </div>
+        <div class="control-body" v-else>
+          <div class="event-list">
+            <div class="event-row" v-for="event in events" :key="event.time+event.text">
+              <time class="num">{{event.time}}</time>
+              <b>{{event.tag}}</b>
+              <span>{{event.text}}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="video-card">
+        <div class="video-head">膜池上层融合监控 · <span>产水廊道俯视机位</span></div>
+        <div class="video-window">
+          <div class="video-placeholder">
+            <div class="video-icon"></div>
+            <b>A列膜池固定视频源</b>
+            <span>演示环境已载入数字孪生流（无外部视频）</span>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <section class="bottom-grid">
+    <article class="bottom-card">
+      <div class="bottom-head"><div><i class="head-icon chart"></i>跨膜压差TMP(kPa)</div><span>目标 ≤ 30</span></div>
+      <div id="tmpChart" class="mini-chart"></div>
+    </article>
+    <article class="bottom-card">
+      <div class="bottom-head"><div><i class="head-icon chart"></i>膜通量Flux(LMH)</div><span>设计 20~25</span></div>
+      <div id="fluxChart" class="mini-chart"></div>
+    </article>
+    <article class="bottom-card">
+      <div class="bottom-head"><div><i class="head-icon"></i>产水水质仪表</div><span>准Ⅳ类</span></div>
+      <div class="status-list">
+        <div class="status-row"><span>产水浊度计 TUR-01</span><b><em></em>{{turbidity.toFixed(2)}} NTU</b></div>
+        <div class="status-row"><span>TMP变送器 P-01/02</span><b><em></em>{{tmp.toFixed(1)}} kPa</b></div>
+        <div class="status-row"><span>产水流量计 F-01</span><b><em></em>{{prodFlow.toFixed(0)}} m³/h</b></div>
+        <div class="status-row"><span>膜池液位计 L-01</span><b><em></em>{{level.toFixed(2)}} m</b></div>
+        <div class="status-row"><span>擦洗风量 F-AIR</span><b><em></em>{{blowerFlow.toFixed(1)}} Nm³/min</b></div>
+      </div>
+    </article>
+    <article class="bottom-card">
+      <div class="bottom-head"><div><i class="head-icon"></i>安全联锁状态</div><span>MBR</span></div>
+      <div class="status-list">
+        <div class="status-row"><span>高TMP预警 (≥28kPa)</span><b :class="tmp>=28?'warn':''"><em :class="tmp>=28?'warn':''"></em>{{tmp>=28?'预警':'正常'}}</b></div>
+        <div class="status-row"><span>膜池高液位保护</span><b><em></em>就绪</b></div>
+        <div class="status-row"><span>擦洗鼓风机联锁</span><b><em></em>投运</b></div>
+        <div class="status-row"><span>反洗/抽吸互锁</span><b><em></em>正常</b></div>
+        <div class="status-row"><span>CIP药洗隔离联锁</span><b :class="phase==='cip'?'cip':''"><em :class="phase==='cip'?'cip':''"></em>{{phase==='cip'?'隔离中':'就绪'}}</b></div>
+      </div>
+    </article>
+    <article class="bottom-card">
+      <div class="bottom-head"><div><i class="head-icon"></i>膜组与泵组状态</div><span>{{selectedItem.tag}}</span></div>
+      <div class="equipment-list">
+        <button class="equipment-line" v-for="item in equipment" :key="item.tag" :class="{active:selectedTag===item.tag}" @click="selectItem(item.tag)">
+          <span>{{item.name}}<small>{{item.tag}}</small></span>
+          <b class="num">{{equipmentValue(item)}}<small>{{item.unit}}</small></b>
+        </button>
+        <div class="equipment-legend">
+          <span><i class="legend-dot run"></i>运行 {{runningCount}}</span>
+          <span><i class="legend-dot ready"></i>产水</span>
+          <span><i class="legend-dot cip"></i>药洗</span>
+        </div>
+      </div>
+    </article>
+    <article class="bottom-card">
+      <div class="bottom-head"><div><i class="head-icon"></i>产水泵组健康</div><span>PUMP-01</span></div>
+      <div class="health-body">
+        <div class="health-ring">
+          <div><span>健康指数</span><b class="num">91</b></div>
+        </div>
+        <div class="health-info">
+          <div><span>机械振动</span><b class="good">1.02 mm/s</b></div>
+          <div><span>电机温度</span><b class="good">52.4 ℃</b></div>
+          <div><span>变频器状态</span><b class="good">38.5 Hz 正常</b></div>
+          <div><span>气蚀预警</span><b class="good">无气蚀</b></div>
+          <div><span>诊断结论</span><b class="good">机组健康</b></div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <div class="confirm-mask" v-if="confirmDialog.show">
+    <div class="confirm-box">
+      <div class="confirm-title">确认控制命令 (两步防误确认)</div>
+      <div class="confirm-body">
+        本界面处于演示模式，控制动作仅在本地数字孪生环境闭环运行。
+        <div class="confirm-command">
+          <b>{{selectedItem.tag}} / {{selectedItem.name}}</b><br>
+          当前值: {{selectedItem.value.toFixed(1)}}{{selectedItem.unit}} ➔ 目标值: {{confirmDialog.target}}{{selectedItem.unit}}<br>
+          动作指令: {{confirmDialog.action}}
+        </div>
+      </div>
+      <div class="confirm-actions">
+        <button @click="confirmDialog.show=false">取消</button>
+        <button class="primary" @click="executeAction">确认下发</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" :class="toast.type" v-if="toast.show">{{toast.text}}</div>
+</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const $id=function(id){return document.getElementById(id);};
+  function safeInit(id){
+    try{
+      const el=$id(id);
+      if(!el)return null;
+      return echarts.init(el);
+    }catch(e){
+      console.error(e);
+      return null;
+    }
+  }
+
+  function resizeScale(){
+    const screen=$id('screen');
+    if(!screen)return;
+    const w=window.innerWidth,h=window.innerHeight;
+    const scale=Math.min(w/1920,h/1080);
+    screen.style.transform='translate(-50%, -50%) scale('+scale+')';
+  }
+  window.addEventListener('resize',resizeScale);
+
+  let tmpChart=null,fluxChart=null,deviceTrend=null,twin=null;
+  const PHASE_DUR={produce:480,relax:60,backwash:45};
+  const PHASE_LABEL={produce:'产水抽吸',relax:'松弛静置',backwash:'定时反洗',cip:'药洗维护'};
+
+  function fmtClock(s){
+    s=Math.max(0,Math.round(s));
+    const m=Math.floor(s/60);
+    const r=s%60;
+    return (m<10?'0':'')+m+':'+(r<10?'0':'')+r;
+  }
+
+  const vm=Vue.createApp({
+    data:function(){
+      return{
+        clock:'--:--:--',
+        date:'----/--/--',
+        activeTab:'status',
+        selectedTag:'MBR-A',
+        tempValue:38.5,
+        controlTabs:[
+          {id:'status',label:'状态'},
+          {id:'control',label:'控制'},
+          {id:'trend',label:'趋势'},
+          {id:'events',label:'事件'}
+        ],
+        equipment:[
+          {tag:'MBR-A',name:'A列膜池膜组',type:'membrane',value:18.2,unit:'kPa'},
+          {tag:'MBR-B',name:'B列膜池膜组',type:'membrane',value:17.6,unit:'kPa'},
+          {tag:'PUMP-01',name:'产水自吸变频泵',type:'pump',value:38.5,unit:'Hz'},
+          {tag:'CIP-01',name:'CIP化学清洗装置',type:'cip',value:72,unit:'%'}
+        ],
+        phase:'produce',
+        phaseRemain:PHASE_DUR.produce,
+        phaseTotal:PHASE_DUR.produce,
+        autoCycle:true,
+        demoAccel:true,
+        tmp:18.2,
+        flux:22.4,
+        turbidity:0.05,
+        prodFlow:620,
+        level:3.42,
+        blowerFlow:8.6,
+        cipLevel:72,
+        cipNaClO:78,
+        cipAcid:64,
+        cumProd:12.46,
+        pumpFreq:38.5,
+        cipTag:'',
+        tmpHist:[16.8,17.1,17.4,17.2,17.8,18.0,18.2],
+        fluxHist:[22.8,22.6,22.5,22.4,22.6,22.3,22.4],
+        timeLabels:['14:40','14:45','14:50','14:55','15:00','15:05','15:10'],
+        lastAction:{time:'15:10',text:'自动产水循环运行'},
+        events:[
+          {time:'15:10',tag:'SEQ',text:'膜抽吸进入产水 8min（演示加速中）'},
+          {time:'15:02',tag:'MBR-B',text:'松弛 1min 结束，已恢复产水抽吸'},
+          {time:'14:55',tag:'PUMP-01',text:'产水泵变频维持 38.5Hz'},
+          {time:'14:30',tag:'CIP-01',text:'NaClO 药箱液位 78%，柠檬酸 64%'}
+        ],
+        confirmDialog:{show:false,target:0,action:''},
+        toast:{show:false,text:'',type:''},
+        toastTimer:null,
+        tickCount:0
+      };
+    },
+    computed:{
+      selectedItem:function(){
+        const found=this.equipment.find(function(v){return v.tag===this.selectedTag;}.bind(this));
+        return found||this.equipment[0];
+      },
+      deviceState:function(){
+        if(this.phase==='cip'&&(this.selectedTag==='MBR-A'||this.selectedTag==='MBR-B')){
+          if(this.cipTag===this.selectedTag||this.cipTag==='')return '药洗维护模式';
+        }
+        if(this.selectedItem.type==='membrane'){
+          if(this.phase==='produce')return '产水抽吸中';
+          if(this.phase==='relax')return '松弛静置中';
+          if(this.phase==='backwash')return '定时反洗中';
+          return '药洗隔离中';
+        }
+        if(this.selectedItem.type==='pump'){
+          return this.pumpFreq>1?'变频运转 ('+this.pumpFreq.toFixed(1)+'Hz)':'停机备用';
+        }
+        return 'CIP 待命 (液位 '+Math.round(this.cipLevel)+'%)';
+      },
+      interlockText:function(){
+        if(this.phase==='cip')return 'CIP隔离联锁';
+        if(this.tmp>=28)return '高TMP预警';
+        return '联锁正常';
+      },
+      phaseLabel:function(){return PHASE_LABEL[this.phase]||'产水抽吸';},
+      phasePillClass:function(){
+        if(this.phase==='relax')return 'relax';
+        if(this.phase==='backwash')return 'backwash';
+        if(this.phase==='cip')return 'cip';
+        return '';
+      },
+      phaseCountdown:function(){
+        if(this.phase==='cip')return '手动保持';
+        return fmtClock(this.phaseRemain);
+      },
+      phaseProgress:function(){
+        if(this.phase==='cip')return 100;
+        if(!this.phaseTotal)return 0;
+        return Math.min(100,Math.max(0,100*(1-this.phaseRemain/this.phaseTotal)));
+      },
+      fluxDisplay:function(){
+        if(this.phase==='relax')return 0;
+        if(this.phase==='backwash')return -12.5;
+        if(this.phase==='cip')return 0;
+        return this.flux;
+      },
+      runningCount:function(){
+        let n=0;
+        if(this.phase==='produce')n+=2;
+        else if(this.phase==='backwash')n+=2;
+        if(this.pumpFreq>1)n+=1;
+        return n;
+      }
+    },
+    watch:{
+      activeTab:function(val){
+        if(val==='trend'){
+          this.$nextTick(function(){
+            if(!deviceTrend)deviceTrend=safeInit('deviceTrend');
+            this.renderDeviceTrend();
+          }.bind(this));
+        }
+      }
+    },
+    methods:{
+      tick:function(){
+        const d=new Date();
+        this.clock=d.toLocaleTimeString('zh-CN',{hour12:false});
+        this.date=d.toLocaleDateString('zh-CN').replaceAll('/','/');
+      },
+      tickProcess:function(){
+        this.tickCount+=1;
+        const step=this.demoAccel?12:1;
+        if(this.phase!=='cip'&&this.autoCycle){
+          this.phaseRemain-=step;
+          if(this.phaseRemain<=0)this.advancePhase(true);
+        }
+        if(this.phase==='produce'){
+          this.tmp=Math.min(29.5,this.tmp+0.012*step);
+          this.flux=22.2+Math.sin(this.tickCount*0.08)*0.5;
+          this.turbidity=Math.max(0.02,0.05+Math.sin(this.tickCount*0.05)*0.012);
+          this.prodFlow=600+this.pumpFreq*1.1+Math.sin(this.tickCount*0.1)*8;
+          this.blowerFlow=8.6+Math.sin(this.tickCount*0.06)*0.3;
+          this.cumProd+=0.00012*step;
+        }else if(this.phase==='relax'){
+          this.tmp=Math.max(12,this.tmp-0.03*step);
+          this.flux=0;
+          this.turbidity=0.06;
+          this.prodFlow=Math.max(0,this.prodFlow-40*step*0.1);
+          this.blowerFlow=9.4;
+        }else if(this.phase==='backwash'){
+          this.tmp=Math.max(11.5,this.tmp-0.22*step);
+          this.flux=-12.5;
+          this.turbidity=0.11;
+          this.prodFlow=-180;
+          this.blowerFlow=10.2;
+        }else{
+          this.tmp=Math.max(11.8,this.tmp-0.05*step);
+          this.flux=0;
+          this.turbidity=0.03;
+          this.prodFlow=0;
+          this.cipLevel=Math.max(20,this.cipLevel-0.02*step);
+        }
+        this.level=3.42+Math.sin(this.tickCount*0.03)*0.04;
+        const a=this.equipment[0];if(a)a.value=this.tmp;
+        const b=this.equipment[1];if(b)b.value=Math.max(10,this.tmp-0.7);
+        const p=this.equipment[2];if(p)p.value=this.pumpFreq;
+        const c=this.equipment[3];if(c)c.value=this.cipLevel;
+        if(this.tickCount%2===0){
+          const t=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false});
+          this.timeLabels.push(t);this.timeLabels.shift();
+          this.tmpHist.push(Number(this.tmp.toFixed(1)));this.tmpHist.shift();
+          this.fluxHist.push(Number(this.fluxDisplay.toFixed(1)));this.fluxHist.shift();
+          try{
+            if(tmpChart)tmpChart.setOption(makeMiniOption(this.timeLabels.slice(),this.tmpHist.slice(),'跨膜压差','#247ac4',0,35,'kPa'));
+            if(fluxChart)fluxChart.setOption(makeMiniOption(this.timeLabels.slice(),this.fluxHist.slice(),'膜通量','#21ad79',-15,30,'LMH'));
+            if(this.activeTab==='trend')this.renderDeviceTrend();
+          }catch(e){console.error(e);}
+        }
+        if(twin)twin.sync(this.phase,this.cipTag);
+      },
+      equipmentValue:function(item){
+        if(item.tag==='MBR-A')return this.tmp.toFixed(1);
+        if(item.tag==='MBR-B')return (this.tmp-0.7).toFixed(1);
+        if(item.tag==='PUMP-01')return this.pumpFreq.toFixed(1);
+        return this.cipLevel.toFixed(0);
+      },
+      selectItem:function(tag){
+        this.selectedTag=tag;
+        const item=this.selectedItem;
+        this.tempValue=item.type==='pump'?this.pumpFreq:Math.round(item.value);
+        this.activeTab='status';
+        if(twin)twin.highlight(tag);
+      },
+      requestAction:function(target,action){
+        let t=0;
+        if(typeof target==='number')t=Math.max(0,Math.min(100,Math.round(Number(target)||0)));
+        if(this.selectedItem.type==='pump'&&(action==='调频'||action==='定频启动'||action==='停机备用')){
+          t=action==='停机备用'?0:(action==='定频启动'?38.5:Number(this.tempValue)||0);
+        }
+        this.confirmDialog={show:true,target:t,action:action};
+      },
+      executeAction:function(){
+        const item=this.selectedItem;
+        const action=this.confirmDialog.action;
+        const t=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false});
+        if(action==='进入下一阶段'){this.advancePhase(false);}
+        else if(action==='暂停循环'||action==='恢复循环'){this.autoCycle=!this.autoCycle;this.pushEvent(item.tag,this.autoCycle?'已恢复自动时序循环':'已暂停自动时序循环',t);}
+        else if(action==='触发一次反洗'){this.setPhase('backwash',true);this.pushEvent('SEQ','手动触发一次定时反洗 45s',t);}
+        else if(action==='进入药洗维护模式'){this.enterCIP(item.tag==='CIP-01'?'MBR-A':item.tag,t);}
+        else if(action==='退出维护恢复产水'){this.exitCIP(t);}
+        else if(action==='次氯酸钠清洗'||action==='柠檬酸清洗'||action==='清水漂洗'){
+          if(this.phase!=='cip'){this.enterCIP('MBR-A',t);}
+          if(action==='次氯酸钠清洗')this.cipNaClO=Math.max(10,this.cipNaClO-4);
+          if(action==='柠檬酸清洗')this.cipAcid=Math.max(10,this.cipAcid-4);
+          this.cipLevel=Math.max(20,this.cipLevel-2);
+          this.tmp=Math.max(11.5,this.tmp-1.6);
+          this.pushEvent('CIP-01',action+'已投加，TMP 回落至 '+this.tmp.toFixed(1)+'kPa',t);
+          this.toastMessage(action+'指令已下发，淡紫色药液正在清洗膜箱','good');
+        }
+        else if(item.type==='pump'){
+          const oldF=this.pumpFreq;
+          this.pumpFreq=this.confirmDialog.action==='停机备用'?0:(this.confirmDialog.action==='定频启动'?38.5:Number(this.tempValue)||0);
+          this.tempValue=this.pumpFreq;
+          this.pushEvent(item.tag,item.name+' 由 '+oldF.toFixed(1)+'Hz 调整为 '+this.pumpFreq.toFixed(1)+'Hz',t);
+          this.toastMessage('产水泵变频指令已下发，三维总管流速已同步','good');
+        }
+        else{
+          this.pushEvent(item.tag,action+' 已确认',t);
+          this.toastMessage('控制指令已下发，三维模型已同步','good');
+        }
+        this.confirmDialog.show=false;
+        this.activeTab='status';
+        this.lastAction={time:t,text:action};
+        if(twin)twin.pulse(item.tag);
+      },
+      setPhase:function(p,manual){
+        this.phase=p;
+        this.phaseTotal=PHASE_DUR[p]||PHASE_DUR.produce;
+        this.phaseRemain=this.phaseTotal;
+        if(twin)twin.sync(this.phase,this.cipTag);
+        if(this.activeTab==='trend')this.renderDeviceTrend();
+      },
+      advancePhase:function(auto){
+        if(this.phase==='produce'){this.setPhase('relax');this.pushEvent('SEQ',(auto?'自动时序：':'手动切换：')+'产水结束，进入松弛 1min',this.nowHM());}
+        else if(this.phase==='relax'){this.setPhase('backwash');this.pushEvent('SEQ',(auto?'自动时序：':'手动切换：')+'松弛结束，进入定时反洗 45s',this.nowHM());}
+        else if(this.phase==='backwash'){this.setPhase('produce');this.pushEvent('SEQ',(auto?'自动时序：':'手动切换：')+'反洗结束，恢复产水 8min',this.nowHM());}
+      },
+      enterCIP:function(tag,t){
+        const target=(tag==='MBR-A'||tag==='MBR-B')?tag:'MBR-A';
+        this.cipTag=target;
+        this.phase='cip';
+        this.phaseTotal=0;this.phaseRemain=0;
+        this.selectedTag=target;
+        this.pushEvent(target,'已切换至药洗维护模式，CIP 淡紫色管网开始投加',t||this.nowHM());
+        this.toastMessage(target+' 进入药洗维护模式，产水已隔离','good');
+        if(twin)twin.sync(this.phase,this.cipTag);
+      },
+      exitCIP:function(t){
+        const tag=this.cipTag||'MBR-A';
+        this.cipTag='';
+        this.tmp=Math.max(11.5,this.tmp-1.2);
+        this.setPhase('produce');
+        this.pushEvent(tag,'药洗完成，TMP 已恢复，退出维护恢复产水',t||this.nowHM());
+        this.toastMessage('已退出维护，恢复产水 8min 循环','good');
+      },
+      pushEvent:function(tag,text,time){
+        const tt=time||this.nowHM();
+        this.events.unshift({time:tt,tag:tag,text:text});
+        if(this.events.length>24)this.events.pop();
+      },
+      nowHM:function(){return new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false});},
+      toastMessage:function(text,type){
+        const self=this;
+        if(this.toastTimer)clearTimeout(this.toastTimer);
+        this.toast={show:true,text:text,type:type||''};
+        this.toastTimer=setTimeout(function(){self.toast.show=false;},2200);
+      },
+      renderDeviceTrend:function(){
+        if(!deviceTrend)return;
+        const item=this.selectedItem;
+        if(item.type==='pump'){
+          deviceTrend.setOption(makeMiniOption(this.timeLabels.slice(),this.timeLabels.map(function(){return 38.5;}),'产水泵频率','#247ac4',0,50,'Hz'));
+        }else if(item.type==='cip'){
+          deviceTrend.setOption(makeMiniOption(this.timeLabels.slice(),this.timeLabels.map(function(_,i){return 72-i*0.4;}),'CIP药箱液位','#9b76c8',0,100,'%'));
+        }else{
+          deviceTrend.setOption(makeMiniOption(this.timeLabels.slice(),this.tmpHist.slice(),item.name+' TMP','#247ac4',0,35,'kPa'));
+        }
+      }
+    },
+    mounted:function(){
+      const self=this;
+      resizeScale();
+      this.tick();
+      setInterval(function(){try{self.tick();}catch(e){console.error(e);}},1000);
+      setInterval(function(){try{self.tickProcess();}catch(e){console.error(e);}},1000);
+      const accelBtn=$id('accelToggle');
+      if(accelBtn)accelBtn.addEventListener('click',function(){
+        self.demoAccel=!self.demoAccel;
+        accelBtn.classList.toggle('on',self.demoAccel);
+        self.toastMessage(self.demoAccel?'已开启演示加速 ×12':'已切换为实时节拍','good');
+      });
+      this.$nextTick(function(){
+        tmpChart=safeInit('tmpChart');
+        fluxChart=safeInit('fluxChart');
+        renderBottomCharts(self);
+        twin=createMBRTwin(self);
+        if(twin)twin.sync(self.phase,self.cipTag);
+      });
+    }
+  }).mount('#app');
+
+  function makeMiniOption(times,data,name,color,min,max,unit){
+    return{
+      animation:false,
+      grid:{left:42,right:12,top:22,bottom:28},
+      tooltip:{trigger:'axis'},
+      xAxis:{type:'category',data:times,boundaryGap:false,axisLine:{lineStyle:{color:'#c9d6e2'}},axisTick:{show:false},axisLabel:{color:'#8194a5',fontSize:8}},
+      yAxis:{type:'value',min:min,max:max,axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8194a5',fontSize:8},splitLine:{lineStyle:{color:'#e1e9f1'}}},
+      series:[{name:name,type:'line',data:data,symbol:'circle',symbolSize:3,lineStyle:{color:color,width:2},itemStyle:{color:color},areaStyle:{color:color,opacity:.14}}],
+      textStyle:{fontFamily:'Microsoft YaHei'},
+      unit:unit
+    };
+  }
+
+  function renderBottomCharts(state){
+    try{
+      if(tmpChart)tmpChart.setOption(makeMiniOption(state.timeLabels.slice(),state.tmpHist.slice(),'跨膜压差','#247ac4',0,35,'kPa'));
+      if(fluxChart)fluxChart.setOption(makeMiniOption(state.timeLabels.slice(),state.fluxHist.slice(),'膜通量','#21ad79',-15,30,'LMH'));
+    }catch(e){
+      console.error(e);
+    }
+  }
+
+  function createMBRTwin(state){
+    const host=$id('twin3d');
+    if(!host||!window.THREE)return null;
+
+    const scene=new THREE.Scene();
+    scene.background=new THREE.Color(0xd9e4ef);
+    scene.fog=new THREE.Fog(0xd9e4ef,34,92);
+
+    const camera=new THREE.PerspectiveCamera(34,host.clientWidth/host.clientHeight,0.1,160);
+    camera.position.set(21,17,26);
+
+    const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    renderer.setSize(host.clientWidth,host.clientHeight);
+    try{
+      if(THREE.ACESFilmicToneMapping!==undefined){
+        renderer.toneMapping=THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure=1.06;
+      }
+    }catch(e){console.error(e);}
+    try{
+      if(THREE.sRGBEncoding!==undefined)renderer.outputEncoding=THREE.sRGBEncoding;
+    }catch(e){console.error(e);}
+    renderer.shadowMap.enabled=true;
+    renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    host.appendChild(renderer.domElement);
+
+    const controls=new THREE.OrbitControls(camera,renderer.domElement);
+    controls.enableDamping=true;
+    controls.dampingFactor=0.07;
+    controls.minDistance=14;
+    controls.maxDistance=60;
+    controls.maxPolarAngle=Math.PI*0.48;
+    controls.target.set(0,0.6,0);
+
+    scene.add(new THREE.HemisphereLight(0xf8fcff,0x758c9f,1.12));
+    const sun=new THREE.DirectionalLight(0xffffff,0.92);
+    sun.position.set(-14,24,18);
+    sun.castShadow=true;
+    sun.shadow.mapSize.set(2048,2048);
+    scene.add(sun);
+    const fill=new THREE.DirectionalLight(0xa5c9e2,0.34);
+    fill.position.set(14,10,-12);
+    scene.add(fill);
+
+    const floorMat=new THREE.MeshStandardMaterial({color:0xbacbd8,roughness:0.95,metalness:0});
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(70,52),floorMat);
+    floor.rotation.x=-Math.PI/2;
+    floor.position.y=-1.4;
+    floor.receiveShadow=true;
+    scene.add(floor);
+
+    const grid=new THREE.GridHelper(70,44,0x8fa9bc,0xa9bdcb);
+    grid.position.y=-1.35;
+    grid.material.opacity=0.46;
+    grid.material.transparent=true;
+    scene.add(grid);
+
+    const concrete=new THREE.MeshStandardMaterial({color:0xc7d4dd,roughness:0.75,metalness:0.02});
+    const concreteTop=new THREE.MeshStandardMaterial({color:0xdde7ee,roughness:0.68,metalness:0.02});
+    const glassWall=new THREE.MeshPhysicalMaterial({color:0xabc2d0,transparent:true,opacity:0.4,roughness:0.32,metalness:0,clearcoat:0.25,side:THREE.DoubleSide});
+    const waterMat=new THREE.MeshPhysicalMaterial({color:0x4d8cae,transparent:true,opacity:0.7,roughness:0.22,metalness:0,clearcoat:0.35});
+    const steel=new THREE.MeshStandardMaterial({color:0xd1dde5,roughness:0.38,metalness:0.55});
+    const frameWhite=new THREE.MeshStandardMaterial({color:0xf2f6f9,roughness:0.5,metalness:0.08});
+    const fiberWhite=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.62,metalness:0.02});
+    const blue=new THREE.MeshStandardMaterial({color:0x1b72bd,roughness:0.32,metalness:0.45});
+    const green=new THREE.MeshStandardMaterial({color:0x21ad79,roughness:0.32,metalness:0.42});
+    const purple=new THREE.MeshStandardMaterial({color:0x9b76c8,roughness:0.36,metalness:0.35});
+    const pipeBlue=new THREE.MeshStandardMaterial({color:0x226fae,roughness:0.34,metalness:0.42});
+    const pipeSteel=new THREE.MeshStandardMaterial({color:0xc9d6df,roughness:0.3,metalness:0.6});
+    const edgeMat=new THREE.LineBasicMaterial({color:0x8ca4b4,transparent:true,opacity:0.55});
+
+    function addBox(parent,w,h,d,mat,x,y,z){
+      const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+      mesh.position.set(x,y,z);
+      mesh.castShadow=true;
+      mesh.receiveShadow=true;
+      (parent||scene).add(mesh);
+      if(mat===concrete||mat===concreteTop){
+        const edges=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),edgeMat);
+        mesh.add(edges);
+      }
+      return mesh;
+    }
+
+    const clickables=[];
+    const basinGroup=new THREE.Group();
+    scene.add(basinGroup);
+
+    const basinW=24,basinH=3.8,basinD=13;
+    const poolW=5.55,poolGap=0.35;
+    const poolX=[-8.48,-2.83,2.83,8.48];
+    const poolTag=['MBR-A','MBR-A','MBR-B','MBR-B'];
+
+    addBox(basinGroup,basinW+1.2,0.4,basinD+1.2,concrete,0,-0.6,0);
+    addBox(basinGroup,basinW+1.2,basinH,0.3,concrete,0,basinH/2-0.6,-basinD/2);
+    addBox(basinGroup,0.3,basinH,basinD,concrete,-basinW/2,basinH/2-0.6,0);
+    addBox(basinGroup,0.3,basinH,basinD,concrete,basinW/2,basinH/2-0.6,0);
+    addBox(basinGroup,basinW+1.2,basinH,0.22,glassWall,0,basinH/2-0.6,basinD/2);
+    for(let i=0;i<3;i++){
+      const dx=(poolX[i]+poolX[i+1])/2;
+      addBox(basinGroup,poolGap,basinH,basinD,concrete,dx,basinH/2-0.6,0);
+    }
+    for(let i=0;i<4;i++){
+      addBox(basinGroup,poolW,0.18,1.5,concreteTop,poolX[i],basinH-0.45,basinD/2-0.75);
+    }
+    addBox(basinGroup,basinW+1.2,0.18,1.6,concreteTop,0,basinH-0.45,-basinD/2+0.8);
+    for(let i=0;i<3;i++){
+      const dx=(poolX[i]+poolX[i+1])/2;
+      addBox(basinGroup,0.9,0.14,basinD,steel,dx,basinH-0.32,0);
+    }
+
+    function addRailing(x1,z1,x2,z2){
+      const len=Math.hypot(x2-x1,z2-z1);
+      const angle=Math.atan2(x2-x1,z2-z1);
+      const g=new THREE.Group();
+      g.position.set(x1,basinH-0.3,z1);
+      g.rotation.y=angle;
+      const count=Math.max(2,Math.floor(len/0.9));
+      for(let i=0;i<=count;i++){
+        const post=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.65,8),blue);
+        post.position.set(0,0.32,i*(len/count));
+        g.add(post);
+      }
+      const railTop=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,len,8),blue);
+      railTop.rotation.x=Math.PI/2;
+      railTop.position.set(0,0.62,len/2);
+      g.add(railTop);
+      scene.add(g);
+    }
+    addRailing(-11.6,basinD/2-0.1,11.6,basinD/2-0.1);
+    addRailing(-11.6,-basinD/2+0.1,11.6,-basinD/2+0.1);
+
+    const waterSurfaces=[];
+    function createWater(x){
+      const g=new THREE.PlaneGeometry(poolW-0.4,basinD-0.8,20,14);
+      g.rotateX(-Math.PI/2);
+      const mesh=new THREE.Mesh(g,waterMat);
+      mesh.position.set(x,1.35,0);
+      scene.add(mesh);
+      waterSurfaces.push({mesh:mesh,baseY:1.35,pos:Float32Array.from(g.attributes.position.array)});
+      return mesh;
+    }
+    poolX.forEach(function(x){createWater(x);});
+
+    const cassetteGroups={ 'MBR-A':[],'MBR-B':[] };
+    function createCassette(poolIndex,cx,cz){
+      const tag=poolTag[poolIndex];
+      const g=new THREE.Group();
+      g.position.set(cx,0.9,cz);
+      const fw=3.6,fh=2.1,fd=1.5;
+      const topBeam=addBox(g,fw+0.2,0.12,fd+0.15,blue,0,fh/2+0.1,0);
+      topBeam.userData.tag=tag;
+      addBox(g,fw,0.1,fd,frameWhite,0,-fh/2,0);
+      const postGeo=new THREE.BoxGeometry(0.09,fh,0.09);
+      [[-fw/2,-fd/2],[fw/2,-fd/2],[-fw/2,fd/2],[fw/2,fd/2]].forEach(function(p){
+        const post=new THREE.Mesh(postGeo,frameWhite);
+        post.position.set(p[0],0,p[1]);
+        post.castShadow=true;
+        post.userData.tag=tag;
+        g.add(post);
+        clickables.push(post);
+      });
+      for(let i=0;i<10;i++){
+        const fx=-fw/2+0.25+i*(fw-0.5)/9;
+        const fiber=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,1.7,6),fiberWhite);
+        fiber.position.set(fx,0,0);
+        fiber.userData.tag=tag;
+        g.add(fiber);
+        clickables.push(fiber);
+      }
+      for(let k=-1;k<=1;k++){
+        const rib=addBox(g,fw,0.06,0.06,frameWhite,0,0.45*k,fd/2);
+        rib.userData.tag=tag;
+        clickables.push(rib);
+      }
+      const suction=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,fw,10),pipeSteel);
+      suction.rotation.z=Math.PI/2;
+      suction.position.set(0,fh/2+0.28,0);
+      suction.userData.tag=tag;
+      g.add(suction);
+      clickables.push(suction,topBeam);
+      scene.add(g);
+      cassetteGroups[tag].push(g);
+      return g;
+    }
+    poolX.forEach(function(px,pi){
+      createCassette(pi,px,-3.6);
+      createCassette(pi,px,0);
+      createCassette(pi,px,3.6);
+    });
+
+    const bubbleMat=new THREE.MeshBasicMaterial({color:0xd8f3ff,transparent:true,opacity:0.85});
+    const bubbles=[];
+    poolX.forEach(function(px,pi){
+      for(let i=0;i<22;i++){
+        const s=new THREE.Mesh(new THREE.SphereGeometry(0.055+Math.random()*0.05,6,6),bubbleMat);
+        s.position.set(px+(Math.random()-0.5)*(poolW-1.2),-0.2+Math.random()*1.4,(Math.random()-0.5)*(basinD-2));
+        s.userData={pool:pi,speed:1.4+Math.random()*1.2,baseX:s.position.x};
+        scene.add(s);
+        bubbles.push(s);
+      }
+      const airMain=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,poolW-0.6,10),pipeBlue);
+      airMain.rotation.z=Math.PI/2;
+      airMain.position.set(px,-0.35,0);
+      scene.add(airMain);
+      [-3.6,0,3.6].forEach(function(cz){
+        const riser=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.1,8),pipeBlue);
+        riser.position.set(px,-0.1,cz);
+        scene.add(riser);
+      });
+    });
+
+    const prodCurve=new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-8.48,3.35,0),
+      new THREE.Vector3(0,3.35,0),
+      new THREE.Vector3(8.48,3.35,0),
+      new THREE.Vector3(12.6,3.35,0),
+      new THREE.Vector3(13.6,2.2,0),
+      new THREE.Vector3(13.6,0.9,-1.6)
+    ],false,'catmullrom',0.08);
+    poolX.forEach(function(px){
+      const header=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.11,basinD-1.4,12),pipeSteel);
+      header.position.set(px,3.35,0);
+      scene.add(header);
+      const cross=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.11,3.4,10),pipeSteel);
+      cross.rotation.x=Math.PI/2;
+      cross.position.set(px,3.35,0);
+      scene.add(cross);
+    });
+    const transverse=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,20.5,12),pipeSteel);
+    transverse.rotation.z=Math.PI/2;
+    transverse.position.set(0,3.35,-5.6);
+    scene.add(transverse);
+
+    const prodBalls=[];
+    for(let i=0;i<14;i++){
+      const ball=new THREE.Mesh(new THREE.SphereGeometry(0.11,8,8),new THREE.MeshBasicMaterial({color:0x9fdcff}));
+      scene.add(ball);
+      prodBalls.push(ball);
+    }
+    const backBalls=[];
+    for(let i=0;i<8;i++){
+      const ball=new THREE.Mesh(new THREE.SphereGeometry(0.11,8,8),new THREE.MeshBasicMaterial({color:0x8fe6c4}));
+      ball.visible=false;
+      scene.add(ball);
+      backBalls.push(ball);
+    }
+
+    const pumps={};
+    function createPump(tag,x,z,running){
+      const g=new THREE.Group();
+      g.position.set(x,-0.5,z);
+      addBox(g,1.3,0.25,1.3,steel,0,0,0);
+      const casing=new THREE.Mesh(new THREE.CylinderGeometry(0.44,0.5,0.6,16),blue);
+      casing.position.set(0,0.42,0);
+      casing.userData.tag=tag;
+      g.add(casing);
+      const motor=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.9,16),blue);
+      motor.position.set(0,1.05,0);
+      motor.userData.tag=tag;
+      g.add(motor);
+      const spinner=new THREE.Mesh(new THREE.TorusGeometry(0.2,0.045,8,16),steel);
+      spinner.rotation.x=Math.PI/2;
+      spinner.position.set(0,0.42,0);
+      g.add(spinner);
+      const riser=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,2.4,10),pipeSteel);
+      riser.position.set(0.5,1.5,0);
+      g.add(riser);
+      const valveBox=addBox(g,0.34,0.26,0.34,green,0.5,2.2,0);
+      valveBox.userData.tag=tag;
+      scene.add(g);
+      clickables.push(casing,motor,valveBox);
+      pumps[tag+'_'+z]={group:g,spinner:spinner,running:running};
+    }
+    createPump('PUMP-01',13.6,-1.6,true);
+    createPump('PUMP-01',13.6,1.8,false);
+
+    const cipGroup=new THREE.Group();
+    cipGroup.position.set(0,0,-9.6);
+    scene.add(cipGroup);
+    function createCIPTank(x,label){
+      const g=new THREE.Group();
+      g.position.set(x,0,0);
+      const body=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.05,2.2,20),frameWhite);
+      body.position.set(0,0.4,0);
+      body.castShadow=true;
+      body.userData.tag='CIP-01';
+      g.add(body);
+      const band=new THREE.Mesh(new THREE.CylinderGeometry(1.06,1.06,0.32,20),purple);
+      band.position.set(0,1.15,0);
+      band.userData.tag='CIP-01';
+      g.add(band);
+      const lid=new THREE.Mesh(new THREE.CylinderGeometry(1.05,0.85,0.35,20),steel);
+      lid.position.set(0,1.65,0);
+      g.add(lid);
+      const liquid=new THREE.Mesh(new THREE.CylinderGeometry(0.92,0.92,1.5,16),new THREE.MeshStandardMaterial({color:0xb79dde,roughness:0.4,transparent:true,opacity:0.85}));
+      liquid.position.set(0,0.15,0);
+      g.add(liquid);
+      cipGroup.add(g);
+      clickables.push(body,band);
+      const canvas=document.createElement('canvas');
+      canvas.width=256;canvas.height=64;
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle='#5b4386';ctx.font='bold 30px Microsoft YaHei';ctx.textAlign='center';
+      ctx.fillText(label,128,42);
+      const tex=new THREE.CanvasTexture(canvas);
+      const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false,depthWrite:false}));
+      spr.position.set(x,2.4,-9.6);
+      spr.scale.set(2.4,0.6,1);
+      scene.add(spr);
+      return {group:g,liquid:liquid};
+    }
+    const tankNaClO=createCIPTank(-2.2,'NaClO');
+    const tankAcid=createCIPTank(2.2,'柠檬酸');
+    const cipCurve=new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-2.2,2.2,-9.6),
+      new THREE.Vector3(-2.2,4.4,-6.5),
+      new THREE.Vector3(0,4.4,0),
+      new THREE.Vector3(2.83,4.2,0),
+      new THREE.Vector3(8.48,4.2,0)
+    ],false,'catmullrom',0.1);
+    const cipPipe=new THREE.Mesh(new THREE.TubeGeometry(cipCurve,48,0.11,10,false),purple);
+    scene.add(cipPipe);
+    const cipDropA=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,1.6,8),purple);
+    cipDropA.position.set(-5.6,3.4,0);
+    scene.add(cipDropA);
+    const cipDropB=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,1.6,8),purple);
+    cipDropB.position.set(5.6,3.4,0);
+    scene.add(cipDropB);
+    const cipBalls=[];
+    for(let i=0;i<12;i++){
+      const ball=new THREE.Mesh(new THREE.SphereGeometry(0.1,8,8),new THREE.MeshBasicMaterial({color:0xc9aef0}));
+      ball.visible=false;
+      scene.add(ball);
+      cipBalls.push(ball);
+    }
+
+    function create3DLabel(text,x,y,z){
+      const canvas=document.createElement('canvas');
+      canvas.width=512;
+      canvas.height=96;
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle='rgba(26,79,122,0.95)';
+      ctx.fillRect(0,0,512,26);
+      ctx.fillStyle='rgba(255,255,255,0.98)';
+      ctx.fillRect(0,26,512,70);
+      ctx.strokeStyle='#2679b3';
+      ctx.lineWidth=4;
+      ctx.strokeRect(2,2,508,92);
+      ctx.fillStyle='#ffffff';
+      ctx.font='bold 15px Microsoft YaHei';
+      ctx.fillText('MBR / ULTRAFILTRATION',18,19);
+      ctx.fillStyle='#0f3957';
+      ctx.font='bold 34px Microsoft YaHei';
+      ctx.fillText(text,24,72);
+      const texture=new THREE.CanvasTexture(canvas);
+      const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthTest:false,depthWrite:false}));
+      sprite.position.set(x,y,z);
+      sprite.scale.set(4.4,0.82,1);
+      scene.add(sprite);
+    }
+    create3DLabel('A1/A2 膜池矩阵 · 不锈钢走道',-5.6,5.2,1.2);
+    create3DLabel('B1/B2 膜池矩阵 · 帘式膜箱',5.6,5.2,1.2);
+    create3DLabel('产水总管 · 自吸变频泵房',13.4,4.4,0.4);
+    create3DLabel('CIP 次氯酸盐 / 柠檬酸药洗',0,4.6,-9.4);
+    create3DLabel('连续空气擦洗 · 穿孔曝气',-11.2,3.4,-4.2);
+
+    const ray=new THREE.Raycaster();
+    const pointer=new THREE.Vector2();
+    let moved=false;
+    renderer.domElement.addEventListener('pointerdown',function(){moved=false;});
+    renderer.domElement.addEventListener('pointermove',function(){moved=true;});
+    renderer.domElement.addEventListener('pointerup',function(ev){
+      if(moved)return;
+      const rect=renderer.domElement.getBoundingClientRect();
+      pointer.x=((ev.clientX-rect.left)/rect.width)*2-1;
+      pointer.y=-((ev.clientY-rect.top)/rect.height)*2+1;
+      ray.setFromCamera(pointer,camera);
+      const hit=ray.intersectObjects(clickables,false)[0];
+      if(hit&&hit.object.userData.tag){
+        state.selectItem(hit.object.userData.tag);
+        state.activeTab='control';
+      }
+    });
+
+    function setCamera(pos,target){
+      camera.position.set(pos[0],pos[1],pos[2]);
+      controls.target.set(target[0],target[1],target[2]);
+      controls.update();
+    }
+    $id('viewHome').addEventListener('click',function(){setCamera([21,17,26],[0,0.6,0]);});
+    $id('viewTop').addEventListener('click',function(){setCamera([0,34,0.1],[0,0,0]);});
+    $id('viewMembrane').addEventListener('click',function(){setCamera([-6,9,9],[-5.6,1.2,0]);});
+    $id('viewCIP').addEventListener('click',function(){setCamera([2,10,2],[0,2.2,-8.5]);});
+
+    let pulseTag='',pulseEnd=0,flowOffset=0,cipOffset=0,last=performance.now();
+    let curPhase='produce',curCip='';
+
+    function animate(now){
+      requestAnimationFrame(animate);
+      const dt=Math.min(0.05,(now-last)/1000);
+      last=now;
+      controls.update();
+
+      waterSurfaces.forEach(function(item){
+        const attr=item.mesh.geometry.attributes.position;
+        for(let i=0;i<attr.count;i++){
+          const bx=item.pos[i*3];
+          const bz=item.pos[i*3+2];
+          attr.setY(i,0.03*Math.sin(bx*2+now*0.002)*Math.cos(bz*2+now*0.0018));
+        }
+        attr.needsUpdate=true;
+      });
+
+      const airOn=curPhase!=='cip'||true;
+      bubbles.forEach(function(b){
+        if(!airOn){b.visible=false;return;}
+        b.visible=true;
+        b.position.y+=dt*b.userData.speed*(curPhase==='backwash'?1.6:1.0);
+        b.position.x=b.userData.baseX+Math.sin(now*0.003+b.position.y*3)*0.12;
+        if(b.position.y>2.6){
+          b.position.y=-0.3;
+        }
+      });
+
+      Object.keys(cassetteGroups).forEach(function(tag){
+        const isCip=(curCip===tag);
+        const isSel=(state.selectedTag===tag);
+        cassetteGroups[tag].forEach(function(g,idx){
+          g.position.y=0.9+Math.sin(now*0.004+idx*1.2)*0.035;
+          g.position.x+=0;
+          let s=1.0;
+          if(isSel)s=1.05;
+          if(isCip)s=1.05+Math.sin(now*0.02)*0.015;
+          if(pulseTag===tag&&now<pulseEnd)s+=Math.sin(now*0.025)*0.05;
+          g.scale.setScalar(s);
+        });
+      });
+
+      const pumpRun=state.pumpFreq>1;
+      Object.keys(pumps).forEach(function(k){
+        if(pumps[k].running&&pumpRun)pumps[k].spinner.rotation.z+=dt*9;
+      });
+
+      if(curPhase==='produce'&&pumpRun){
+        flowOffset=(flowOffset+dt*0.22)%1;
+        prodBalls.forEach(function(ball,i){
+          ball.visible=true;
+          ball.material.color.setHex(0x9fdcff);
+          ball.position.copy(prodCurve.getPointAt((flowOffset+i/prodBalls.length)%1));
+        });
+        backBalls.forEach(function(b){b.visible=false;});
+      }else if(curPhase==='backwash'){
+        flowOffset=(flowOffset+dt*0.18)%1;
+        prodBalls.forEach(function(b){b.visible=false;});
+        backBalls.forEach(function(ball,i){
+          ball.visible=true;
+          const t=1-((flowOffset+i/backBalls.length)%1);
+          ball.position.copy(prodCurve.getPointAt(t));
+        });
+      }else{
+        prodBalls.forEach(function(b){b.visible=false;});
+        backBalls.forEach(function(b){b.visible=false;});
+      }
+
+      if(curPhase==='cip'&&curCip){
+        cipOffset=(cipOffset+dt*0.3)%1;
+        cipBalls.forEach(function(ball,i){
+          ball.visible=true;
+          ball.position.copy(cipCurve.getPointAt((cipOffset+i/cipBalls.length)%1));
+        });
+      }else{
+        cipBalls.forEach(function(b){b.visible=false;});
+      }
+
+      try{
+        const lvl=Math.max(0.2,Math.min(1,state.cipLevel/100));
+        tankNaClO.liquid.scale.set(1,lvl,1);
+        tankAcid.liquid.scale.set(1,lvl,1);
+      }catch(e){console.error(e);}
+
+      renderer.render(scene,camera);
+    }
+
+    function onResize(){
+      const w=host.clientWidth,h=host.clientHeight;
+      if(!w||!h)return;
+      camera.aspect=w/h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w,h);
+    }
+    window.addEventListener('resize',onResize);
+
+    animate(performance.now());
+
+    return{
+      highlight:function(tag){
+        pulseTag=tag;
+        pulseEnd=performance.now()+600;
+      },
+      pulse:function(tag){
+        pulseTag=tag;
+        pulseEnd=performance.now()+1400;
+      },
+      sync:function(phase,cip){
+        curPhase=phase;
+        curCip=cip||'';
+      },
+      resize:onResize
+    };
+  }
+})();
+</script>
+</body>
+</html>
