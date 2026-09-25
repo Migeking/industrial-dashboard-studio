@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PAM三槽式全自动加药熟化微单元</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#03080e;color:#f2f7fa;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+#app{width:100%;height:100%;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+button{font:inherit;outline:none}
+[v-cloak]{display:none}
+
+:root{
+  --bg:#040911;
+  --surface-1:#07131e;
+  --surface-2:#0b1d2e;
+  --surface-3:#10283e;
+  --line:#1a374c;
+  --line-light:#2b5472;
+  --accent:#36c2ff;
+  --accent-soft:rgba(54,194,255,.14);
+  --success:#35d07f;
+  --success-soft:rgba(53,208,127,.12);
+  --warning:#ffb547;
+  --warning-soft:rgba(255,181,71,.12);
+  --danger:#ff5d5d;
+  --danger-soft:rgba(255,93,93,.12);
+  --text-1:#f2f7fa;
+  --text-2:#a8bac8;
+  --text-3:#6c8496;
+}
+
+#screen{
+  width:1920px;
+  height:1080px;
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform-origin:center center;
+  display:grid;
+  grid-template-rows:74px 1fr 40px;
+  overflow:hidden;
+  background:radial-gradient(circle at 45% 25%,rgba(54,194,255,.05),transparent 40%),
+             linear-gradient(135deg,#061019 0%,#040a10 50%,#02060b 100%);
+}
+#screen:after{
+  content:"";
+  position:absolute;
+  inset:74px 0 40px;
+  pointer-events:none;
+  background-image:linear-gradient(rgba(54,194,255,.018) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(54,194,255,.018) 1px,transparent 1px);
+  background-size:40px 40px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.6),transparent 85%);
+}
+
+/* 顶部导航与微工艺态势 */
+.topbar{
+  position:relative;
+  z-index:10;
+  display:grid;
+  grid-template-columns:460px 1fr 440px;
+  align-items:center;
+  padding:0 24px;
+  border-bottom:1px solid var(--line);
+  background:rgba(5,13,21,.92);
+  box-shadow:0 8px 32px rgba(0,0,0,.35);
+  white-space:nowrap;
+}
+.brand{display:flex;align-items:center;gap:14px;white-space:nowrap}
+.brand-icon{
+  width:42px;
+  height:42px;
+  border:1px solid var(--line-light);
+  border-radius:8px;
+  display:grid;
+  place-items:center;
+  color:var(--accent);
+  background:linear-gradient(145deg,#0f2436,#07121b);
+  flex-shrink:0;
+}
+.brand-icon svg{width:24px;height:24px}
+.brand-text{white-space:nowrap}
+.brand-text strong{display:block;font-size:16px;font-weight:700;letter-spacing:1px;white-space:nowrap}
+.brand-text span{display:block;font-size:11px;color:var(--text-3);letter-spacing:1.5px;margin-top:2px;white-space:nowrap}
+
+.macro-kpis{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:12px;
+  white-space:nowrap;
+}
+.macro-item{
+  display:flex;
+  align-items:baseline;
+  gap:6px;
+  padding:5px 10px;
+  border-radius:6px;
+  background:rgba(13,29,44,.45);
+  border:1px solid rgba(28,56,77,.6);
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.macro-label{font-size:11px;color:var(--text-2);white-space:nowrap}
+.macro-val{font-size:20px;font-weight:700;color:var(--accent);white-space:nowrap}
+.macro-unit{font-size:11px;color:var(--text-3);margin-left:1px;white-space:nowrap}
+
+.top-right{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:14px;
+  white-space:nowrap;
+}
+.scenario-tabs{
+  display:flex;
+  padding:3px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:#07121c;
+  white-space:nowrap;
+}
+.scenario-tabs button{
+  height:28px;
+  padding:0 12px;
+  border:0;
+  border-radius:4px;
+  background:transparent;
+  color:var(--text-3);
+  cursor:pointer;
+  font-size:12px;
+  white-space:nowrap;
+  transition:all .2s;
+}
+.scenario-tabs button.active{
+  background:var(--accent-soft);
+  color:var(--text-1);
+  box-shadow:inset 0 0 0 1px rgba(54,194,255,.4);
+  font-weight:600;
+}
+.clock-box{text-align:right;min-width:120px;white-space:nowrap}
+.clock-box strong{display:block;font-size:18px;letter-spacing:1px;color:var(--text-1);white-space:nowrap}
+.clock-box span{display:block;font-size:11px;color:var(--text-3);margin-top:1px;white-space:nowrap}
+.btn-screen{
+  border:1px solid var(--line);
+  background:rgba(54,194,255,.08);
+  color:var(--accent);
+  border-radius:5px;
+  padding:6px 10px;
+  cursor:pointer;
+  font-size:12px;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.btn-screen:hover{border-color:var(--accent)}
+
+/* 主体布局 */
+.main-stage{
+  position:relative;
+  z-index:2;
+  min-height:0;
+  display:grid;
+  grid-template-columns:370px 1fr 380px;
+  gap:14px;
+  padding:14px 18px;
+}
+.column{min-height:0;display:grid;gap:14px}
+.col-left{grid-template-rows:280px 310px 1fr}
+.col-center{grid-template-rows:620px 1fr}
+.col-right{grid-template-rows:290px 290px 1fr}
+
+/* 通用面板 */
+.panel{
+  position:relative;
+  min-height:0;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:linear-gradient(155deg,rgba(11,24,36,.92),rgba(6,14,22,.94));
+  box-shadow:inset 0 1px rgba(255,255,255,.03),0 8px 24px rgba(0,0,0,.25);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.panel:before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  width:3px;
+  height:36px;
+  background:var(--accent);
+}
+.panel-head{
+  height:42px;
+  padding:0 14px 0 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid rgba(28,56,77,.55);
+  flex-shrink:0;
+  white-space:nowrap;
+}
+.panel-title{
+  font-size:15px;
+  font-weight:700;
+  letter-spacing:.5px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+}
+.panel-title:before{
+  content:"";
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--accent);
+  flex-shrink:0;
+}
+.panel-badge{
+  font-size:11px;
+  color:var(--text-3);
+  padding:3px 7px;
+  border:1px solid var(--line);
+  border-radius:4px;
+  background:rgba(5,13,21,.5);
+  white-space:nowrap;
+}
+.panel-body{
+  flex:1;
+  min-height:0;
+  padding:12px;
+  position:relative;
+}
+.chart-box{width:100%;height:100%}
+
+/* 左侧物料与搅拌电机 */
+.hopper-box{
+  display:grid;
+  grid-template-columns:100px 1fr;
+  gap:12px;
+  align-items:center;
+  height:100%;
+}
+.hopper-visual{
+  position:relative;
+  width:100px;
+  height:180px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:rgba(6,16,26,.6);
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  overflow:hidden;
+  padding:4px;
+}
+.hopper-level{
+  width:100%;
+  background:linear-gradient(to top,#ffb547,#ffe699);
+  border-radius:4px;
+  transition:height .4s ease;
+}
+.hopper-vibe-tag{
+  position:absolute;
+  top:8px;
+  left:0;
+  right:0;
+  text-align:center;
+  font-size:10px;
+  color:var(--warning);
+  font-weight:700;
+  animation:vibeAnim .2s infinite alternate;
+}
+@keyframes vibeAnim{
+  from{transform:translateX(-1px)}
+  to{transform:translateX(1px)}
+}
+.hopper-stats{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.stat-row{
+  padding:7px 10px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:rgba(6,15,24,.5);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  white-space:nowrap;
+}
+.stat-row span{font-size:11px;color:var(--text-3);white-space:nowrap}
+.stat-row strong{font-size:14px;color:var(--text-1);white-space:nowrap}
+
+.mixer-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  height:100%;
+}
+.mixer-card{
+  padding:8px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:rgba(8,18,28,.65);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:space-between;
+  text-align:center;
+  white-space:nowrap;
+}
+.mc-icon{
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  border:2px dashed var(--accent);
+  display:grid;
+  place-items:center;
+  margin:4px 0;
+  animation:spinSlow 3s linear infinite;
+}
+.mc-icon.fast{animation-duration:1s}
+.mc-icon.stop{animation:none;border-color:var(--text-3);color:var(--text-3)}
+@keyframes spinSlow{to{transform:rotate(360deg)}}
+.mc-name{font-size:11px;font-weight:700;color:var(--text-2);white-space:nowrap}
+.mc-val{font-size:13px;font-weight:700;color:var(--accent);margin:2px 0;white-space:nowrap}
+.mc-tag{font-size:10px;padding:2px 6px;border-radius:3px;background:var(--success-soft);color:var(--success);white-space:nowrap}
+
+/* SVG 槽体主视觉 */
+.poly-svg{width:100%;height:100%;display:block}
+.tank-border{fill:url(#tankGrad);stroke:#244c68;stroke-width:2;rx:8}
+.tank-water-poly{fill:url(#waterGrad);opacity:.75}
+/* 工业螺旋桨推进器视觉与动效 */
+.propeller-disc{
+  transform: scaleY(0.42);
+  transform-origin: 0px 0px;
+}
+.propeller-rotor{
+  transform-origin: 0px 0px;
+  animation: propSpin 1.6s linear infinite;
+}
+.propeller-rotor.fast{
+  animation-duration: 0.72s;
+}
+.propeller-rotor.slow{
+  animation-duration: 3.2s;
+}
+.propeller-rotor.stop{
+  animation-play-state: paused;
+}
+@keyframes propSpin{
+  from{transform: rotate(0deg)}
+  to{transform: rotate(360deg)}
+}
+.propeller-swirl-ring{
+  animation: swirlPulse 2s ease-in-out infinite alternate;
+}
+@keyframes swirlPulse{
+  0%{opacity: 0.25; stroke-dashoffset: 0}
+  100%{opacity: 0.65; stroke-dashoffset: 14}
+}
+.thrust-stream line{
+  stroke-linecap: round;
+  animation: thrustMove 0.85s linear infinite;
+}
+.thrust-stream.fast line{
+  animation-duration: 0.5s;
+}
+.thrust-stream.slow line{
+  animation-duration: 1.4s;
+}
+@keyframes thrustMove{
+  from{stroke-dashoffset: 0}
+  to{stroke-dashoffset: -14}
+}
+.powder-drop{
+  stroke:#ffe699;
+  stroke-dasharray:3 4;
+  animation:powderFall .8s linear infinite;
+}
+@keyframes powderFall{to{stroke-dashoffset:-14}}
+.flow-line{
+  fill:none;
+  stroke:var(--accent);
+  stroke-width:2.5;
+  stroke-linecap:round;
+  stroke-dasharray:6 8;
+  animation:flowPipe 1.5s linear infinite;
+}
+@keyframes flowPipe{to{stroke-dashoffset:-28}}
+
+/* 下方微操小面板 */
+.dosing-ctrl-bar{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:12px;
+  height:100%;
+  align-items:center;
+}
+.ctrl-tile{
+  padding:10px 14px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:rgba(8,20,32,.6);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  white-space:nowrap;
+}
+.ct-label span{display:block;font-size:10px;color:var(--text-3);white-space:nowrap}
+.ct-label strong{display:block;font-size:13px;color:var(--text-1);margin-top:2px;white-space:nowrap}
+.ct-btn-group{display:flex;gap:6px}
+.ct-btn-group button{
+  padding:4px 8px;
+  font-size:11px;
+  border:1px solid var(--line);
+  background:rgba(54,194,255,.08);
+  color:var(--accent);
+  border-radius:4px;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.ct-btn-group button:hover{border-color:var(--accent);background:rgba(54,194,255,.2)}
+
+/* 右侧审计流水 */
+.batch-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  height:100%;
+  overflow-y:auto;
+}
+.batch-item{
+  display:grid;
+  grid-template-columns:6px 1fr auto;
+  gap:8px;
+  align-items:start;
+  padding:6px 8px;
+  border:1px solid var(--line);
+  border-radius:5px;
+  background:rgba(6,15,24,.4);
+  white-space:nowrap;
+}
+.batch-item i{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  margin-top:5px;
+  background:var(--dot,var(--success));
+}
+.batch-copy{
+  min-width:0;
+  overflow:hidden;
+}
+.batch-copy b{display:block;font-size:11px;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.batch-copy span{display:block;font-size:10px;color:var(--text-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.batch-time{font-size:10px;color:var(--text-3);white-space:nowrap;flex-shrink:0}
+
+/* 底部状态栏 */
+.statusbar{
+  position:relative;
+  z-index:10;
+  display:grid;
+  grid-template-columns:420px 1fr 480px;
+  align-items:center;
+  padding:0 24px;
+  border-top:1px solid var(--line);
+  background:#03080e;
+  font-size:11px;
+  color:var(--text-2);
+  white-space:nowrap;
+}
+.statusbar>div{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  white-space:nowrap;
+  overflow:hidden;
+}
+.live-beacon{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--success);
+  box-shadow:0 0 8px var(--success);
+}
+.status-center{justify-content:center;color:var(--text-3);white-space:nowrap}
+.status-right{justify-content:flex-end;white-space:nowrap}
+.quality-tag{color:var(--success);font-weight:600;white-space:nowrap}
+.bar-sep{color:#1e3d54}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+<div id="screen" :class="'scenario-'+scenario">
+
+  <!-- 顶部态势栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 11V4a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v7M5 18h14v2a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-2zM3 11h18v7H3z"/>
+          <circle cx="12" cy="14" r="2"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <strong>智慧加药 · PAM三槽式全自动熟化微单元</strong>
+        <span>POLYMER AUTO-PREPARATION UNIT HMI</span>
+      </div>
+    </div>
+
+    <!-- 宏观 KPI 指标带 -->
+    <div class="macro-kpis">
+      <div class="macro-item">
+        <span class="macro-label">配药设定浓度</span>
+        <strong class="macro-val num">{{current.targetConc}}</strong>
+        <span class="macro-unit">%</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">溶药进水流量</span>
+        <strong class="macro-val num">{{current.waterFlow}}</strong>
+        <span class="macro-unit">L/h</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">干粉投加速率</span>
+        <strong class="macro-val num">{{current.powderRate}}</strong>
+        <span class="macro-unit">kg/h</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">熟化剩余倒数</span>
+        <strong class="macro-val num" style="color:#ffb547">{{current.cureTime}}</strong>
+        <span class="macro-unit">min</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">储液槽总液位</span>
+        <strong class="macro-val num" style="color:#35d07f">{{current.tankLevel}}</strong>
+        <span class="macro-unit">m</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">计量泵投加</span>
+        <strong class="macro-val num" style="color:#35d07f">1# 主投</strong>
+        <span class="macro-unit">(2#备用)</span>
+      </div>
+    </div>
+
+    <!-- 顶部右侧：场景工况切换与时钟 -->
+    <div class="top-right">
+      <div class="scenario-tabs">
+        <button v-for="sc in scenarios" :key="sc.id" :class="{active:scenario===sc.id}" @click="switchScenario(sc.id)">
+          {{sc.name}}
+        </button>
+      </div>
+      <div class="clock-box num">
+        <strong>{{clock}}</strong>
+        <span>{{date}}</span>
+      </div>
+      <button class="btn-screen" @click="toggleFullscreen" title="切换全屏">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        全屏
+      </button>
+    </div>
+  </header>
+
+  <!-- 主体工作区 -->
+  <main class="main-stage">
+    
+    <!-- 左侧栏：物料进料与搅拌电机监控 -->
+    <section class="column col-left">
+      <!-- 面板 1：干粉料斗与喂料机 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">干粉料斗与螺旋喂料</div>
+          <span class="panel-badge">料位监控</span>
+        </div>
+        <div class="panel-body">
+          <div class="hopper-box">
+            <div class="hopper-visual">
+              <span class="hopper-vibe-tag" v-if="scenario!=='alarm'">● 振动防拱</span>
+              <div class="hopper-level" :style="{height: current.hopperPct + '%'}"></div>
+            </div>
+            <div class="hopper-stats">
+              <div class="stat-row">
+                <span>料斗余量</span>
+                <strong class="num">{{current.hopperWeight}} kg</strong>
+              </div>
+              <div class="stat-row">
+                <span>螺旋变频</span>
+                <strong class="num" style="color:#36c2ff">{{current.feederHz}} Hz</strong>
+              </div>
+              <div class="stat-row">
+                <span>喂料电机</span>
+                <strong style="color:#35d07f">正常运行</strong>
+              </div>
+              <div class="stat-row">
+                <span>旋流浸润水压</span>
+                <strong class="num">0.24 MPa</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 面板 2：进水量与干粉配比 PID 曲线 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">水粉质量配比 PID 闭环</div>
+          <span class="panel-badge">目标 0.20%</span>
+        </div>
+        <div class="panel-body">
+          <div id="ratioChart" class="chart-box"></div>
+        </div>
+      </article>
+
+      <!-- 面板 3：三槽搅拌机转速与电流 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">三槽搅拌电机工况矩阵</div>
+          <span class="panel-badge">防断链保护</span>
+        </div>
+        <div class="panel-body">
+          <div class="mixer-grid">
+            <div class="mixer-card">
+              <span class="mc-name">1# 预溶槽</span>
+              <div :class="['mc-icon', scenario==='alarm'?'stop':'fast']">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="12" r="3.2"/>
+                  <path d="M12 9C12 4.5 15.5 2 17.5 3.2C19 4.2 17.5 7.8 14 10.5Z"/>
+                  <path d="M9.4 13.5C5.5 15.8 2.8 14.2 2.5 12C2.3 9.8 5.8 9.2 9 11.2Z"/>
+                  <path d="M14.6 13.5C14.6 18 11.8 20.2 9.8 19.5C7.8 18.8 9.2 15.5 13 12.5Z"/>
+                </svg>
+              </div>
+              <div class="mc-val num">{{scenario==='alarm'?'0':'980'}} <small style="font-size:9px">rpm</small></div>
+              <span class="mc-tag" :style="{color:scenario==='alarm'?'#ff5d5d':'#35d07f'}">{{scenario==='alarm'?'停机':'强剪切'}}</span>
+            </div>
+            <div class="mixer-card">
+              <span class="mc-name">2# 熟化槽</span>
+              <div :class="['mc-icon', scenario==='alarm'?'stop':'']">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="12" r="3.2"/>
+                  <path d="M12 9C12 4.5 15.5 2 17.5 3.2C19 4.2 17.5 7.8 14 10.5Z"/>
+                  <path d="M9.4 13.5C5.5 15.8 2.8 14.2 2.5 12C2.3 9.8 5.8 9.2 9 11.2Z"/>
+                  <path d="M14.6 13.5C14.6 18 11.8 20.2 9.8 19.5C7.8 18.8 9.2 15.5 13 12.5Z"/>
+                </svg>
+              </div>
+              <div class="mc-val num">{{scenario==='alarm'?'0':'180'}} <small style="font-size:9px">rpm</small></div>
+              <span class="mc-tag" :style="{color:scenario==='alarm'?'#ff5d5d':'#35d07f'}">{{scenario==='alarm'?'停机':'推进式'}}</span>
+            </div>
+            <div class="mixer-card">
+              <span class="mc-name">3# 储药槽</span>
+              <div :class="['mc-icon', scenario==='alarm'?'stop':'slow']">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="12" r="3.2"/>
+                  <path d="M12 9C12 4.5 15.5 2 17.5 3.2C19 4.2 17.5 7.8 14 10.5Z"/>
+                  <path d="M9.4 13.5C5.5 15.8 2.8 14.2 2.5 12C2.3 9.8 5.8 9.2 9 11.2Z"/>
+                  <path d="M14.6 13.5C14.6 18 11.8 20.2 9.8 19.5C7.8 18.8 9.2 15.5 13 12.5Z"/>
+                </svg>
+              </div>
+              <div class="mc-val num">{{scenario==='alarm'?'0':'120'}} <small style="font-size:9px">rpm</small></div>
+              <span class="mc-tag" :style="{color:scenario==='alarm'?'#ff5d5d':'#35d07f'}">{{scenario==='alarm'?'停机':'防沉淀'}}</span>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- 中间栏：三槽一体机械剖面 SVG 与加药泵微操 -->
+    <section class="column col-center">
+      <!-- 上部：SVG 机械剖面流程图 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">三槽一体式加药装置与精密投加管路流程</div>
+          <span class="panel-badge">微工艺剖面实时联动</span>
+        </div>
+        <div class="panel-body" style="padding:0">
+          <svg class="poly-svg" viewBox="0 0 1100 560">
+            <defs>
+              <linearGradient id="tankGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#0f2638"/>
+                <stop offset="100%" stop-color="#081522"/>
+              </linearGradient>
+              <linearGradient id="waterGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#36c2ff" stop-opacity="0.45"/>
+                <stop offset="100%" stop-color="#144b6c" stop-opacity="0.85"/>
+              </linearGradient>
+              <linearGradient id="hopperGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#3a5a75"/>
+                <stop offset="50%" stop-color="#557f9f"/>
+                <stop offset="100%" stop-color="#2a455c"/>
+              </linearGradient>
+
+              <!-- 螺旋桨流线金属渐变 (青蓝) -->
+              <linearGradient id="propBladeCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#c8f5ff"/>
+                <stop offset="25%" stop-color="#36c2ff"/>
+                <stop offset="65%" stop-color="#14729f"/>
+                <stop offset="100%" stop-color="#083850"/>
+              </linearGradient>
+              <!-- 螺旋桨流线金属渐变 (翠绿) -->
+              <linearGradient id="propBladeGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#dffff0"/>
+                <stop offset="25%" stop-color="#35d07f"/>
+                <stop offset="65%" stop-color="#137e46"/>
+                <stop offset="100%" stop-color="#093d22"/>
+              </linearGradient>
+              <!-- 螺旋桨圆锥导流罩与高光金属轮毂 -->
+              <radialGradient id="propHubCone" cx="35%" cy="30%" r="70%">
+                <stop offset="0%" stop-color="#ffffff"/>
+                <stop offset="28%" stop-color="#d4e8f5"/>
+                <stop offset="68%" stop-color="#41637c"/>
+                <stop offset="100%" stop-color="#122534"/>
+              </radialGradient>
+
+              <!-- 工业三叶流线型推进螺旋桨 (青蓝高速剪切款) -->
+              <g id="propeller3LeafCyan">
+                <!-- 叶片 1 (0°) -->
+                <g transform="rotate(0)">
+                  <path d="M -3,-6 C -14,-15 -22,-28 -8,-40 C 2,-44 14,-41 16,-34 C 18,-24 12,-12 4,-6 Z" fill="url(#propBladeCyan)" stroke="#36c2ff" stroke-width="0.8"/>
+                  <path d="M -2,-6 C -9,-14 -12,-26 -3,-36 C -1,-26 -1,-14 1,-6 Z" fill="rgba(0,0,0,0.28)"/>
+                  <path d="M 0,-6 Q 3,-20 6,-36" stroke="rgba(255,255,255,0.85)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+                </g>
+                <!-- 叶片 2 (120°) -->
+                <g transform="rotate(120)">
+                  <path d="M -3,-6 C -14,-15 -22,-28 -8,-40 C 2,-44 14,-41 16,-34 C 18,-24 12,-12 4,-6 Z" fill="url(#propBladeCyan)" stroke="#36c2ff" stroke-width="0.8"/>
+                  <path d="M -2,-6 C -9,-14 -12,-26 -3,-36 C -1,-26 -1,-14 1,-6 Z" fill="rgba(0,0,0,0.28)"/>
+                  <path d="M 0,-6 Q 3,-20 6,-36" stroke="rgba(255,255,255,0.85)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+                </g>
+                <!-- 叶片 3 (240°) -->
+                <g transform="rotate(240)">
+                  <path d="M -3,-6 C -14,-15 -22,-28 -8,-40 C 2,-44 14,-41 16,-34 C 18,-24 12,-12 4,-6 Z" fill="url(#propBladeCyan)" stroke="#36c2ff" stroke-width="0.8"/>
+                  <path d="M -2,-6 C -9,-14 -12,-26 -3,-36 C -1,-26 -1,-14 1,-6 Z" fill="rgba(0,0,0,0.28)"/>
+                  <path d="M 0,-6 Q 3,-20 6,-36" stroke="rgba(255,255,255,0.85)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+                </g>
+                <!-- 中心轮毂与固定法兰盘 -->
+                <circle cx="0" cy="0" r="10" fill="#0d2436" stroke="#36c2ff" stroke-width="1.2"/>
+                <circle cx="0" cy="-8" r="1" fill="#ffffff" opacity="0.6"/>
+                <circle cx="6.9" cy="4" r="1" fill="#ffffff" opacity="0.6"/>
+                <circle cx="-6.9" cy="4" r="1" fill="#ffffff" opacity="0.6"/>
+                <!-- 子弹头流线导流罩 -->
+                <circle cx="0" cy="0" r="6.5" fill="url(#propHubCone)"/>
+                <circle cx="-1.8" cy="-1.8" r="2.2" fill="#ffffff" opacity="0.9"/>
+              </g>
+
+              <!-- 工业三叶流线型推进螺旋桨 (翠绿柔性推进款) -->
+              <g id="propeller3LeafGreen">
+                <g transform="rotate(0)">
+                  <path d="M -3,-6 C -14,-15 -22,-28 -8,-40 C 2,-44 14,-41 16,-34 C 18,-24 12,-12 4,-6 Z" fill="url(#propBladeGreen)" stroke="#35d07f" stroke-width="0.8"/>
+                  <path d="M -2,-6 C -9,-14 -12,-26 -3,-36 C -1,-26 -1,-14 1,-6 Z" fill="rgba(0,0,0,0.28)"/>
+                  <path d="M 0,-6 Q 3,-20 6,-36" stroke="rgba(255,255,255,0.85)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+                </g>
+                <g transform="rotate(120)">
+                  <path d="M -3,-6 C -14,-15 -22,-28 -8,-40 C 2,-44 14,-41 16,-34 C 18,-24 12,-12 4,-6 Z" fill="url(#propBladeGreen)" stroke="#35d07f" stroke-width="0.8"/>
+                  <path d="M -2,-6 C -9,-14 -12,-26 -3,-36 C -1,-26 -1,-14 1,-6 Z" fill="rgba(0,0,0,0.28)"/>
+                  <path d="M 0,-6 Q 3,-20 6,-36" stroke="rgba(255,255,255,0.85)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+                </g>
+                <g transform="rotate(240)">
+                  <path d="M -3,-6 C -14,-15 -22,-28 -8,-40 C 2,-44 14,-41 16,-34 C 18,-24 12,-12 4,-6 Z" fill="url(#propBladeGreen)" stroke="#35d07f" stroke-width="0.8"/>
+                  <path d="M -2,-6 C -9,-14 -12,-26 -3,-36 C -1,-26 -1,-14 1,-6 Z" fill="rgba(0,0,0,0.28)"/>
+                  <path d="M 0,-6 Q 3,-20 6,-36" stroke="rgba(255,255,255,0.85)" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+                </g>
+                <circle cx="0" cy="0" r="10" fill="#09281a" stroke="#35d07f" stroke-width="1.2"/>
+                <circle cx="0" cy="-8" r="1" fill="#ffffff" opacity="0.6"/>
+                <circle cx="6.9" cy="4" r="1" fill="#ffffff" opacity="0.6"/>
+                <circle cx="-6.9" cy="4" r="1" fill="#ffffff" opacity="0.6"/>
+                <circle cx="0" cy="0" r="6.5" fill="url(#propHubCone)"/>
+                <circle cx="-1.8" cy="-1.8" r="2.2" fill="#ffffff" opacity="0.9"/>
+              </g>
+            </defs>
+
+            <!-- 顶部进水管路 -->
+            <path class="flow-line" d="M20 65 H175 V120" v-if="scenario!=='alarm'"/>
+            <path d="M20 65 H175 V120" stroke="#1c384d" stroke-width="4" fill="none"/>
+            <rect x="45" y="52" width="60" height="26" rx="4" fill="#081827" stroke="#2b5472"/>
+            <text x="75" y="69" fill="#36c2ff" font-size="11" text-anchor="middle" font-weight="700">进水电动阀</text>
+
+            <!-- 干粉料斗结构 (中心对齐 1# 槽中心 185) -->
+            <polygon points="130,15 240,15 215,95 155,95" fill="url(#hopperGrad)" stroke="#1a374c" stroke-width="1.5"/>
+            <text x="185" y="55" fill="#f2f7fa" font-size="11" font-weight="700" text-anchor="middle">干粉料斗 150L</text>
+            <!-- 螺旋喂料机套筒 -->
+            <rect x="135" y="95" width="100" height="24" fill="#1b3c56" stroke="#2b5472" rx="3"/>
+            <text x="185" y="111" fill="#ffb547" font-size="10" text-anchor="middle">变频无轴螺旋</text>
+            <!-- 水粉浸润漏斗 -->
+            <polygon points="165,120 205,120 195,150 175,150" fill="#2d526e" stroke="#1c384d"/>
+            <!-- 撒粉微颗粒动效 -->
+            <line class="powder-drop" x1="185" y1="120" x2="185" y2="155" stroke-width="2" v-if="scenario!=='alarm'"/>
+
+            <!-- 三个槽体主容器 (每个宽 250, 高 220, 预留右侧宽敞通道) -->
+            <!-- 1# 预溶槽 (x: 60 ~ 310, 中心 185) -->
+            <rect class="tank-border" x="60" y="170" width="250" height="220"/>
+            <rect class="tank-water-poly" x="64" y="220" width="242" height="166" rx="4"/>
+            <text x="185" y="195" fill="#f2f7fa" font-size="14" font-weight="700" text-anchor="middle">1# 预溶配药槽 (1.2m³)</text>
+            <text x="185" y="212" fill="#a8bac8" font-size="10" text-anchor="middle">高剪切水粉预浸润 · 浓度 0.20%</text>
+
+            <!-- 1# 搅拌轴与工业流线型螺旋桨推进器 -->
+            <line x1="185" y1="170" x2="185" y2="330" stroke="#a8bac8" stroke-width="3"/>
+            <g transform="translate(185, 315)">
+              <g class="thrust-stream fast" v-if="scenario!=='alarm'">
+                <line x1="-22" y1="6" x2="-26" y2="38" stroke="#36c2ff" stroke-width="1.6" stroke-dasharray="3 4" opacity="0.7"/>
+                <line x1="0" y1="8" x2="0" y2="44" stroke="#36c2ff" stroke-width="2.2" stroke-dasharray="4 5" opacity="0.9"/>
+                <line x1="22" y1="6" x2="26" y2="38" stroke="#36c2ff" stroke-width="1.6" stroke-dasharray="3 4" opacity="0.7"/>
+              </g>
+              <rect x="-6" y="-12" width="12" height="8" rx="2" fill="#2b506e" stroke="#1c374d"/>
+              <g class="propeller-disc">
+                <ellipse cx="0" cy="0" rx="46" ry="46" fill="none" stroke="#36c2ff" stroke-width="1.2" stroke-dasharray="6 8" class="propeller-swirl-ring"/>
+                <g :class="['propeller-rotor', scenario==='alarm'?'stop':'fast']">
+                  <use href="#propeller3LeafCyan"/>
+                </g>
+              </g>
+              <ellipse cx="0" cy="0" rx="5" ry="2.5" fill="#e0f0fa" stroke="#36c2ff" stroke-width="0.8"/>
+            </g>
+
+            <!-- 1#至2# 溢流挡板口 -->
+            <rect x="298" y="240" width="24" height="15" fill="#36c2ff" opacity=".6"/>
+            <path class="flow-line" d="M290 248 H340" v-if="scenario!=='alarm'"/>
+
+            <!-- 2# 熟化槽 (x: 330 ~ 580, 中心 455) -->
+            <rect class="tank-border" x="330" y="170" width="250" height="220"/>
+            <rect class="tank-water-poly" x="334" y="230" width="242" height="156" rx="4"/>
+            <text x="455" y="195" fill="#f2f7fa" font-size="14" font-weight="700" text-anchor="middle">2# 恒温熟化槽 (1.2m³)</text>
+            <text x="455" y="212" fill="#ffb547" font-size="10" text-anchor="middle">低速推进长链伸展 · 倒数 {{current.cureTime}}min</text>
+
+            <!-- 2# 搅拌轴与双层螺旋桨推进器 -->
+            <line x1="455" y1="170" x2="455" y2="345" stroke="#a8bac8" stroke-width="3"/>
+            <!-- 2# 上层流线螺旋桨 -->
+            <g transform="translate(455, 275)">
+              <g class="thrust-stream" v-if="scenario!=='alarm'">
+                <line x1="-20" y1="6" x2="-24" y2="32" stroke="#35d07f" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.6"/>
+                <line x1="0" y1="8" x2="0" y2="36" stroke="#35d07f" stroke-width="2" stroke-dasharray="4 5" opacity="0.8"/>
+                <line x1="20" y1="6" x2="24" y2="32" stroke="#35d07f" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.6"/>
+              </g>
+              <rect x="-6" y="-10" width="12" height="7" rx="2" fill="#24543b" stroke="#143d28"/>
+              <g class="propeller-disc">
+                <ellipse cx="0" cy="0" rx="46" ry="46" fill="none" stroke="#35d07f" stroke-width="1" stroke-dasharray="6 8" class="propeller-swirl-ring"/>
+                <g :class="['propeller-rotor', scenario==='alarm'?'stop':'']">
+                  <use href="#propeller3LeafGreen"/>
+                </g>
+              </g>
+              <ellipse cx="0" cy="0" rx="5" ry="2.5" fill="#e0faf0" stroke="#35d07f" stroke-width="0.8"/>
+            </g>
+            <!-- 2# 下层流线螺旋桨 (交错布置) -->
+            <g transform="translate(455, 335)">
+              <g class="thrust-stream" v-if="scenario!=='alarm'">
+                <line x1="-20" y1="6" x2="-24" y2="34" stroke="#35d07f" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.6"/>
+                <line x1="0" y1="8" x2="0" y2="38" stroke="#35d07f" stroke-width="2" stroke-dasharray="4 5" opacity="0.8"/>
+                <line x1="20" y1="6" x2="24" y2="34" stroke="#35d07f" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.6"/>
+              </g>
+              <rect x="-6" y="-10" width="12" height="7" rx="2" fill="#24543b" stroke="#143d28"/>
+              <g class="propeller-disc">
+                <ellipse cx="0" cy="0" rx="46" ry="46" fill="none" stroke="#35d07f" stroke-width="1" stroke-dasharray="6 8" class="propeller-swirl-ring"/>
+                <g :class="['propeller-rotor', scenario==='alarm'?'stop':'']" style="animation-delay:-0.8s">
+                  <use href="#propeller3LeafGreen"/>
+                </g>
+              </g>
+              <ellipse cx="0" cy="0" rx="5" ry="2.5" fill="#e0faf0" stroke="#35d07f" stroke-width="0.8"/>
+            </g>
+
+            <!-- 2#至3# 溢流挡板口 -->
+            <rect x="568" y="250" width="24" height="15" fill="#36c2ff" opacity=".6"/>
+            <path class="flow-line" d="M560 258 H610" v-if="scenario!=='alarm'"/>
+
+            <!-- 3# 储药与投加槽 (x: 600 ~ 850, 中心 725) -->
+            <rect class="tank-border" x="600" y="170" width="250" height="220"/>
+            <rect class="tank-water-poly" x="604" y="235" width="242" height="151" rx="4"/>
+            <text x="725" y="195" fill="#f2f7fa" font-size="14" font-weight="700" text-anchor="middle">3# 熟化储药槽 (1.2m³)</text>
+            <text x="725" y="212" fill="#35d07f" font-size="10" text-anchor="middle">成熟药液待投加 · 液位 {{current.tankLevel}}m</text>
+
+            <!-- 3# 搅拌轴与防沉淀流线螺旋桨 -->
+            <line x1="725" y1="170" x2="725" y2="340" stroke="#a8bac8" stroke-width="3"/>
+            <g transform="translate(725, 325)">
+              <g class="thrust-stream slow" v-if="scenario!=='alarm'">
+                <line x1="-18" y1="6" x2="-22" y2="28" stroke="#36c2ff" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.5"/>
+                <line x1="0" y1="8" x2="0" y2="32" stroke="#36c2ff" stroke-width="1.8" stroke-dasharray="4 5" opacity="0.7"/>
+                <line x1="18" y1="6" x2="22" y2="28" stroke="#36c2ff" stroke-width="1.4" stroke-dasharray="3 4" opacity="0.5"/>
+              </g>
+              <rect x="-6" y="-10" width="12" height="7" rx="2" fill="#2b506e" stroke="#1c374d"/>
+              <g class="propeller-disc">
+                <ellipse cx="0" cy="0" rx="44" ry="44" fill="none" stroke="#36c2ff" stroke-width="1" stroke-dasharray="5 7" class="propeller-swirl-ring"/>
+                <g :class="['propeller-rotor', scenario==='alarm'?'stop':'slow']">
+                  <use href="#propeller3LeafCyan"/>
+                </g>
+              </g>
+              <ellipse cx="0" cy="0" rx="5" ry="2.5" fill="#e0f0fa" stroke="#36c2ff" stroke-width="0.8"/>
+            </g>
+
+            <!-- 超声波液位探头 -->
+            <rect x="790" y="175" width="20" height="25" fill="#ffb547" rx="2"/>
+            <line x1="800" y1="200" x2="800" y2="235" stroke="#ffb547" stroke-dasharray="2 3"/>
+
+            <!-- 底部出药管道与精密投加泵组 (安全收拢在 600 ~ 1075 区域) -->
+            <path d="M725 390 V435 H800 V480" stroke="#1a374c" stroke-width="4" fill="none"/>
+            <path class="flow-line" d="M725 390 V435 H800 V480" v-if="scenario!=='alarm'"/>
+            
+            <!-- Y型过滤器 -->
+            <polygon points="745,425 765,435 745,445" fill="#1b3c56" stroke="#2b5472"/>
+            <text x="755" y="420" fill="#a8bac8" font-size="9" text-anchor="middle">Y型过滤</text>
+
+            <!-- 1# 计量泵 (主运) -->
+            <rect x="640" y="460" width="76" height="50" rx="5" fill="#0c2336" stroke="#35d07f" stroke-width="1.5"/>
+            <text x="678" y="482" fill="#35d07f" font-size="11" font-weight="700" text-anchor="middle">1# 投加泵</text>
+            <text x="678" y="498" fill="#a8bac8" font-size="9" text-anchor="middle">变频柱塞 65%</text>
+
+            <!-- 2# 计量泵 (备用) -->
+            <rect x="740" y="460" width="76" height="50" rx="5" fill="#081420" stroke="#1c384d" stroke-width="1.5"/>
+            <text x="778" y="482" fill="#6c8496" font-size="11" font-weight="700" text-anchor="middle">2# 备用泵</text>
+            <text x="778" y="498" fill="#6c8496" font-size="9" text-anchor="middle">热备就绪</text>
+
+            <!-- 出药总管汇流 -->
+            <path d="M716 485 H930" stroke="#1a374c" stroke-width="4" fill="none"/>
+            <path class="flow-line" d="M716 485 H930" v-if="scenario!=='alarm'"/>
+            
+            <!-- 脉动阻尼器与背压阀 -->
+            <circle cx="845" cy="485" r="14" fill="#0f2d44" stroke="#36c2ff" stroke-width="1.5"/>
+            <text x="845" y="489" fill="#36c2ff" font-size="9" text-anchor="middle">稳压</text>
+
+            <rect x="880" y="475" width="22" height="20" fill="#ffb547" rx="2"/>
+            <text x="891" y="489" fill="#050d15" font-size="9" font-weight="700" text-anchor="middle">BP</text>
+
+            <!-- 投加终点微徽章 (安全包裹，右端至 1075px，绝不溢出) -->
+            <g transform="translate(930, 472)">
+              <rect x="0" y="0" width="145" height="26" rx="5" fill="rgba(53,208,127,0.12)" stroke="rgba(53,208,127,0.4)" stroke-width="1.2"/>
+              <circle cx="14" cy="13" r="3.5" fill="#35d07f"/>
+              <text x="80" y="17" fill="#35d07f" font-size="11" font-weight="700" text-anchor="middle">投加至生化反应池 ➔</text>
+            </g>
+          </svg>
+        </div>
+      </article>
+
+      <!-- 下部：精密投加微操与参数下发 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">计量泵冲程与配液微操闭环</div>
+          <span class="panel-badge">安全联锁投运</span>
+        </div>
+        <div class="panel-body">
+          <div class="dosing-ctrl-bar">
+            <div class="ctrl-tile">
+              <div class="ct-label">
+                <span>计量泵运行冲程</span>
+                <strong class="num" style="color:#35d07f">{{current.strokePct}} %</strong>
+              </div>
+              <div class="ct-btn-group">
+                <button @click="adjustStroke(-5)">-5%</button>
+                <button @click="adjustStroke(5)">+5%</button>
+              </div>
+            </div>
+
+            <div class="ctrl-tile">
+              <div class="ct-label">
+                <span>配药浓度基准设定</span>
+                <strong class="num" style="color:#36c2ff">{{current.targetConc}} %</strong>
+              </div>
+              <div class="ct-btn-group">
+                <button @click="adjustConc(-0.02)">-0.02%</button>
+                <button @click="adjustConc(0.02)">+0.02%</button>
+              </div>
+            </div>
+
+            <div class="ctrl-tile">
+              <div class="ct-label">
+                <span>管路排空反冲洗</span>
+                <strong>就绪无堵塞</strong>
+              </div>
+              <div class="ct-btn-group">
+                <button @click="triggerClean">管路反冲</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- 右侧栏：投加动态、黏度特性与批次流水 -->
+    <section class="column col-right">
+      <!-- 面板 1：药液投加流量与管路背压双轴趋势 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">出药流量与管路背压</div>
+          <span class="panel-badge">双轴实时</span>
+        </div>
+        <div class="panel-body">
+          <div id="flowPressChart" class="chart-box"></div>
+        </div>
+      </article>
+
+      <!-- 面板 2：药剂熟化黏度演进曲线 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">PAM 分子链伸展与黏度特性</div>
+          <span class="panel-badge">充分熟化曲线</span>
+        </div>
+        <div class="panel-body">
+          <div id="viscosityChart" class="chart-box"></div>
+        </div>
+      </article>
+
+      <!-- 面板 3：配药批次审计与事件流水 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">配药批次与安全联锁流水</div>
+          <span class="panel-badge">全生命周期</span>
+        </div>
+        <div class="panel-body">
+          <div class="batch-list">
+            <div class="batch-item" v-for="item in auditList" :key="item.id" :style="{'--dot': item.level==='warn'?'#ffb547':(item.level==='danger'?'#ff5d5d':'#35d07f')}">
+              <i></i>
+              <div class="batch-copy">
+                <b>{{item.title}}</b>
+                <span>{{item.desc}}</span>
+              </div>
+              <div class="batch-time num">{{item.time}}</div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+  </main>
+
+  <!-- 底部状态栏 -->
+  <footer class="statusbar">
+    <div>
+      <i class="live-beacon"></i>
+      <b>加药微单元运行正常</b>
+      <span class="bar-sep">|</span>
+      <span>PLC 循环周期：200ms</span>
+      <span class="bar-sep">|</span>
+      <span>防搭桥与缺料联锁保护中</span>
+    </div>
+    <div class="status-center">
+      数据质量：<span class="quality-tag">GOOD (100%)</span> · 采样周期：1.0s · 投加闭环精度 ±0.01%
+    </div>
+    <div class="status-right">
+      <span>更新时间：{{clock}}</span>
+      <span class="bar-sep">|</span>
+      <span>基准画布：1920×1080</span>
+    </div>
+  </footer>
+
+</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const $id = (id) => document.getElementById(id);
+  const safeInit = (id) => {
+    try {
+      const el = $id(id);
+      if (!el) return null;
+      return echarts.init(el);
+    } catch(e) {
+      console.error(e);
+      return null;
+    }
+  };
+
+  const scenariosData = {
+    normal: {
+      name: '自动连续配药',
+      targetConc: '0.20',
+      waterFlow: '1250',
+      powderRate: '2.50',
+      cureTime: '38',
+      tankLevel: '1.82',
+      hopperPct: 76,
+      hopperWeight: '114.0',
+      feederHz: '32.5',
+      strokePct: 65
+    },
+    holding: {
+      name: '熟化保温循环',
+      targetConc: '0.20',
+      waterFlow: '0',
+      powderRate: '0.00',
+      cureTime: '12',
+      tankLevel: '2.10',
+      hopperPct: 74,
+      hopperWeight: '111.0',
+      feederHz: '0.0',
+      strokePct: 70
+    },
+    alarm: {
+      name: '低料位联锁保护',
+      targetConc: '0.20',
+      waterFlow: '0',
+      powderRate: '0.00',
+      cureTime: '0',
+      tankLevel: '0.45',
+      hopperPct: 8,
+      hopperWeight: '12.0',
+      feederHz: '0.0',
+      strokePct: 0
+    }
+  };
+
+  const app = Vue.createApp({
+    data() {
+      return {
+        clock: '--:--:--',
+        date: '----/--/--',
+        scenario: 'normal',
+        scenarios: [
+          { id: 'normal', name: '自动连续配药' },
+          { id: 'holding', name: '熟化保温循环' },
+          { id: 'alarm', name: '低料位联锁保护' }
+        ],
+        auditList: [
+          { id: 1, title: '批次 #20260924-04 预混完成', desc: '干粉 2.5kg 注入完成，进水 1250L，溢流至熟化槽', time: '15:20:11', level: 'info' },
+          { id: 2, title: '1# 投加泵冲程自适应修正', desc: '根据生化池进水负荷微调冲程至 65%，背压 0.32MPa', time: '15:16:45', level: 'info' },
+          { id: 3, title: '螺旋喂料机电流巡检正常', desc: '工作电流 1.4A，防结拱振动电机已周期触发', time: '15:10:02', level: 'info' },
+          { id: 4, title: '储药槽高液位溢流保护自检', desc: '防溢位探针信号良好，切断水阀动作正常', time: '14:55:18', level: 'info' }
+        ]
+      };
+    },
+    computed: {
+      current() {
+        return scenariosData[this.scenario];
+      }
+    },
+    methods: {
+      tick() {
+        try {
+          const d = new Date();
+          this.clock = d.toLocaleTimeString('zh-CN', { hour12: false });
+          this.date = d.toLocaleDateString('zh-CN').replaceAll('/', ' · ');
+        } catch(e) {}
+      },
+      switchScenario(id) {
+        this.scenario = id;
+        if (id === 'alarm') {
+          this.auditList.unshift({
+            id: Date.now(),
+            title: '联锁动作：干粉料斗低料位触发',
+            desc: '余量低于 15kg，进水切断阀关闭，喂料停机保护',
+            time: this.clock,
+            level: 'danger'
+          });
+        }
+        if (window.updateDosingCharts) {
+          window.updateDosingCharts(id);
+        }
+      },
+      adjustStroke(delta) {
+        let val = this.current.strokePct + delta;
+        if (val < 0) val = 0;
+        if (val > 100) val = 100;
+        this.current.strokePct = val;
+      },
+      adjustConc(delta) {
+        let val = parseFloat(this.current.targetConc) + delta;
+        if (val < 0.05) val = 0.05;
+        if (val > 0.50) val = 0.50;
+        this.current.targetConc = val.toFixed(2);
+      },
+      triggerClean() {
+        this.auditList.unshift({
+          id: Date.now(),
+          title: '手动触发：投加管路反冲洗循环',
+          desc: '稳压阻尼器旁通开启，稀释冲洗水注入 60 秒',
+          time: this.clock,
+          level: 'warn'
+        });
+      },
+      toggleFullscreen() {
+        try {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          } else {
+            document.exitFullscreen().catch(() => {});
+          }
+        } catch(e) {}
+      }
+    },
+    mounted() {
+      this.tick();
+      setInterval(() => {
+        try { this.tick(); } catch(e) {}
+      }, 1000);
+      this.switchScenario('normal');
+    }
+  });
+
+  const vm = app.mount('#app');
+
+  // ECharts 图表初始化
+  const ratioChart = safeInit('ratioChart');
+  const flowPressChart = safeInit('flowPressChart');
+  const viscosityChart = safeInit('viscosityChart');
+
+  const charts = [ratioChart, flowPressChart, viscosityChart].filter(Boolean);
+
+  const textStyle = { color: '#a8bac8', fontSize: 11 };
+  const axisLine = { lineStyle: { color: '#1a374c' } };
+  const splitLine = { lineStyle: { color: 'rgba(26,55,76,.4)', type: 'dashed' } };
+
+  function renderCharts(scId) {
+    try {
+      const times = ['10:00','11:00','12:00','13:00','14:00','15:00'];
+      
+      // 1. 水粉配比 PID 曲线
+      if (ratioChart) {
+        const factor = scId === 'holding' ? 0.2 : (scId === 'alarm' ? 0 : 1);
+        ratioChart.setOption({
+          grid: { left: 45, right: 35, top: 32, bottom: 24 },
+          tooltip: { trigger: 'axis' },
+          legend: { top: 4, left: 'center', textStyle: { color: '#a8bac8', fontSize: 10 } },
+          xAxis: { type: 'category', data: times, axisLabel: textStyle, axisLine },
+          yAxis: [
+            { type: 'value', name: 'L/h', axisLabel: textStyle, axisLine, splitLine, nameTextStyle: { color: '#6c8496' } },
+            { type: 'value', name: '%', min: 0.1, max: 0.3, axisLabel: textStyle, axisLine, splitLine: { show: false }, nameTextStyle: { color: '#6c8496' } }
+          ],
+          series: [
+            {
+              name: '进水流量',
+              type: 'bar',
+              barWidth: 10,
+              data: [1240, 1260, 1255, 1248, 1250, 1252].map(v => Math.round(v * factor)),
+              itemStyle: { color: '#36c2ff', borderRadius: [2, 2, 0, 0] }
+            },
+            {
+              name: '实测浓度',
+              type: 'line',
+              yAxisIndex: 1,
+              smooth: true,
+              data: [0.198, 0.201, 0.200, 0.199, 0.202, 0.200],
+              itemStyle: { color: '#35d07f' },
+              lineStyle: { width: 2 }
+            }
+          ]
+        });
+      }
+
+      // 2. 出药流量与管路背压双轴趋势图
+      if (flowPressChart) {
+        const flowVal = scId === 'alarm' ? [0, 0, 0, 0, 0, 0] : [240, 245, 252, 248, 255, 250];
+        const pressVal = scId === 'alarm' ? [0.05, 0.05, 0.05, 0.05, 0.05, 0.05] : [0.31, 0.32, 0.33, 0.32, 0.33, 0.32];
+        flowPressChart.setOption({
+          grid: { left: 45, right: 45, top: 34, bottom: 24 },
+          tooltip: { trigger: 'axis' },
+          legend: { top: 4, left: 'center', textStyle: { color: '#a8bac8', fontSize: 10 } },
+          xAxis: { type: 'category', data: times, axisLabel: textStyle, axisLine },
+          yAxis: [
+            { type: 'value', name: 'L/h', axisLabel: textStyle, axisLine, splitLine, nameTextStyle: { color: '#6c8496' } },
+            { type: 'value', name: 'MPa', min: 0, max: 0.6, axisLabel: textStyle, axisLine, splitLine: { show: false }, nameTextStyle: { color: '#6c8496' } }
+          ],
+          series: [
+            {
+              name: '出药投加流量',
+              type: 'line',
+              smooth: true,
+              data: flowVal,
+              itemStyle: { color: '#36c2ff' },
+              areaStyle: { color: 'rgba(54,194,255,.12)' }
+            },
+            {
+              name: '出药管路背压',
+              type: 'line',
+              yAxisIndex: 1,
+              smooth: true,
+              data: pressVal,
+              itemStyle: { color: '#ffb547' },
+              lineStyle: { width: 2, type: 'dashed' }
+            }
+          ]
+        });
+      }
+
+      // 3. 药剂熟化黏度演进曲线
+      if (viscosityChart) {
+        const cureMinutes = ['0m', '10m', '20m', '30m', '40m', '50m', '60m'];
+        viscosityChart.setOption({
+          grid: { left: 52, right: 25, top: 30, bottom: 25 },
+          tooltip: { trigger: 'axis' },
+          legend: { top: 4, left: 'center', textStyle: { color: '#a8bac8', fontSize: 10 } },
+          xAxis: { type: 'category', data: cureMinutes, axisLabel: textStyle, axisLine },
+          yAxis: { type: 'value', name: 'mPa·s', axisLabel: textStyle, axisLine, splitLine, nameTextStyle: { color: '#6c8496' } },
+          series: [{
+            name: 'PAM 药液黏度',
+            type: 'line',
+            smooth: true,
+            data: [120, 380, 850, 1420, 1850, 2050, 2100],
+            itemStyle: { color: '#35d07f' },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(53,208,127,.35)' },
+                { offset: 1, color: 'rgba(53,208,127,.02)' }
+              ])
+            }
+          }]
+        });
+      }
+    } catch(e) {
+      console.error(e);
+    }
+  }
+
+  window.updateDosingCharts = renderCharts;
+  renderCharts('normal');
+
+  function fit() {
+    try {
+      const screen = $id('screen');
+      if (!screen) return;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const scale = Math.min(w / 1920, h / 1080);
+      screen.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    } catch(e) {}
+  }
+
+  fit();
+  window.addEventListener('resize', () => {
+    try {
+      fit();
+      charts.forEach(c => {
+        try { c.resize(); } catch(e) {}
+      });
+    } catch(e) {}
+  });
+  window.addEventListener('pageshow', fit);
+  document.addEventListener('DOMContentLoaded', fit);
+
+})();
+</script>
+</body>
+</html>

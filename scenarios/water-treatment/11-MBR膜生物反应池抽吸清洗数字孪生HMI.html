@@ -1105,7 +1105,7 @@ button{color:inherit}
     try{
       if(THREE.ACESFilmicToneMapping!==undefined){
         renderer.toneMapping=THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure=1.06;
+        renderer.toneMappingExposure=0.82;
       }
     }catch(e){console.error(e);}
     try{
@@ -1123,17 +1123,134 @@ button{color:inherit}
     controls.maxPolarAngle=Math.PI*0.48;
     controls.target.set(0,0.6,0);
 
-    scene.add(new THREE.HemisphereLight(0xf8fcff,0x758c9f,1.12));
-    const sun=new THREE.DirectionalLight(0xffffff,0.92);
+    scene.add(new THREE.HemisphereLight(0xf8fcff,0x758c9f,0.72));
+    const sun=new THREE.DirectionalLight(0xfff4e6,0.85);
     sun.position.set(-14,24,18);
     sun.castShadow=true;
     sun.shadow.mapSize.set(2048,2048);
+    sun.shadow.camera.left=-24;sun.shadow.camera.right=24;
+    sun.shadow.camera.top=24;sun.shadow.camera.bottom=-24;
+    sun.shadow.camera.near=2;sun.shadow.camera.far=80;
+    sun.shadow.bias=-0.0004;
     scene.add(sun);
-    const fill=new THREE.DirectionalLight(0xa5c9e2,0.34);
+    const fill=new THREE.DirectionalLight(0xa5c9e2,0.32);
     fill.position.set(14,10,-12);
     scene.add(fill);
+    const rim=new THREE.DirectionalLight(0xd8ecfa,0.22);
+    rim.position.set(2,8,20);
+    scene.add(rim);
 
-    const floorMat=new THREE.MeshStandardMaterial({color:0xbacbd8,roughness:0.95,metalness:0});
+    // Procedural studio environment for believable metal reflections (offline, no external HDR)
+    try{
+      const pmrem=new THREE.PMREMGenerator(renderer);
+      const envScene=new THREE.Scene();
+      envScene.background=new THREE.Color(0xdfe8f3);
+      const groundGlow=new THREE.Mesh(new THREE.PlaneGeometry(40,40),new THREE.MeshBasicMaterial({color:0x8fa5b5,side:THREE.DoubleSide}));
+      groundGlow.rotation.x=-Math.PI/2;groundGlow.position.y=-4;
+      envScene.add(groundGlow);
+      function softbox(w,h,c,x,y,z){
+        const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:c,side:THREE.DoubleSide}));
+        m.position.set(x,y,z);m.lookAt(0,2,0);envScene.add(m);
+      }
+      softbox(22,13,0xffffff,-9,11,7);
+      softbox(17,11,0xd6e9f7,11,9,-7);
+      softbox(12,8,0xf4f9ff,0,12,-2);
+      const envTex=pmrem.fromScene(envScene,0.05).texture;
+      scene.environment=envTex;
+      pmrem.dispose();
+    }catch(e){console.error(e);}
+
+    function canvasTexture(size,draw,repeatX,repeatY){
+      const c=document.createElement('canvas');
+      c.width=c.height=size;
+      draw(c.getContext('2d'),size);
+      const t=new THREE.CanvasTexture(c);
+      t.wrapS=t.wrapT=THREE.RepeatWrapping;
+      if(repeatX)t.repeat.set(repeatX,repeatY||repeatX);
+      if(THREE.sRGBEncoding!==undefined)t.encoding=THREE.sRGBEncoding;
+      t.anisotropy=4;
+      return t;
+    }
+    const concreteTex=canvasTexture(256,function(ctx,s){
+      ctx.fillStyle='#c7d4dd';ctx.fillRect(0,0,s,s);
+      for(let i=0;i<2600;i++){
+        const g=190+Math.floor(Math.random()*50);
+        ctx.fillStyle='rgba('+g+','+(g+6)+','+(g+12)+',0.5)';
+        ctx.fillRect(Math.random()*s,Math.random()*s,1.4,1.4);
+      }
+      ctx.strokeStyle='rgba(140,160,175,0.35)';
+      for(let i=0;i<5;i++){
+        ctx.beginPath();
+        const y=Math.random()*s;
+        ctx.moveTo(0,y);ctx.bezierCurveTo(s*0.3,y+8,s*0.6,y-8,s,y+4);
+        ctx.stroke();
+      }
+    },3,3);
+    const floorTex=canvasTexture(256,function(ctx,s){
+      ctx.fillStyle='#b9c9d6';ctx.fillRect(0,0,s,s);
+      for(let i=0;i<1800;i++){
+        const g=175+Math.floor(Math.random()*45);
+        ctx.fillStyle='rgba('+g+','+(g+7)+','+(g+13)+',0.5)';
+        ctx.fillRect(Math.random()*s,Math.random()*s,1.6,1.6);
+      }
+      ctx.strokeStyle='rgba(120,140,155,0.55)';ctx.lineWidth=2;
+      ctx.strokeRect(1,1,s-2,s-2);
+    },7,5);
+    const gratingTex=canvasTexture(128,function(ctx,s){
+      ctx.fillStyle='#7c8b96';ctx.fillRect(0,0,s,s);
+      ctx.fillStyle='#aeb9c2';
+      for(let x=4;x<s;x+=16)ctx.fillRect(x,0,7,s);
+      ctx.fillStyle='rgba(60,72,82,0.85)';
+      for(let y=8;y<s;y+=32)ctx.fillRect(0,y,s,3);
+    },6,2);
+    const brushedTex=canvasTexture(256,function(ctx,s){
+      ctx.fillStyle='#8a8a8a';ctx.fillRect(0,0,s,s);
+      for(let i=0;i<380;i++){
+        const g=110+Math.floor(Math.random()*90);
+        ctx.strokeStyle='rgba('+g+','+g+','+g+',0.6)';
+        ctx.lineWidth=1;
+        const y=Math.random()*s;
+        ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(s,y+(Math.random()*4-2));ctx.stroke();
+      }
+    },1,1);
+    brushedTex.wrapS=brushedTex.wrapT=THREE.RepeatWrapping;
+    const fiberTex=canvasTexture(128,function(ctx,s){
+      ctx.fillStyle='#dde6ec';ctx.fillRect(0,0,s,s);
+      for(let x=0;x<s;x+=6){
+        ctx.fillStyle='rgba(148,168,184,0.95)';ctx.fillRect(x,0,2,s);
+        ctx.fillStyle='rgba(255,255,255,0.95)';ctx.fillRect(x+2,0,2,s);
+      }
+    },3,1);
+    const blobTex=(function(){
+      const c=document.createElement('canvas');c.width=c.height=128;
+      const ctx=c.getContext('2d');
+      const g=ctx.createRadialGradient(64,64,6,64,64,62);
+      g.addColorStop(0,'rgba(40,60,78,0.42)');g.addColorStop(1,'rgba(40,60,78,0)');
+      ctx.fillStyle=g;ctx.fillRect(0,0,128,128);
+      return new THREE.CanvasTexture(c);
+    })();
+    const dialTex=(function(){
+      const c=document.createElement('canvas');c.width=128;c.height=128;
+      const ctx=c.getContext('2d');
+      ctx.fillStyle='#f7fafc';ctx.beginPath();ctx.arc(64,64,58,0,7);ctx.fill();
+      ctx.strokeStyle='#3e5668';ctx.lineWidth=6;ctx.beginPath();ctx.arc(64,64,56,0,7);ctx.stroke();
+      ctx.strokeStyle='#8295a6';ctx.lineWidth=2;
+      for(let a=0;a<12;a++){
+        const t=a/12*Math.PI*1.5+Math.PI*0.75;
+        ctx.beginPath();
+        ctx.moveTo(64+Math.cos(t)*44,64+Math.sin(t)*44);
+        ctx.lineTo(64+Math.cos(t)*52,64+Math.sin(t)*52);
+        ctx.stroke();
+      }
+      ctx.strokeStyle='#c0392b';ctx.lineWidth=4;
+      ctx.beginPath();ctx.moveTo(64,64);ctx.lineTo(64+30,64-18);ctx.stroke();
+      ctx.fillStyle='#3e5668';ctx.beginPath();ctx.arc(64,64,6,0,7);ctx.fill();
+      const t=new THREE.CanvasTexture(c);
+      if(THREE.sRGBEncoding!==undefined)t.encoding=THREE.sRGBEncoding;
+      return t;
+    })();
+
+    const floorMat=new THREE.MeshStandardMaterial({map:floorTex,color:0xa9b8c4,roughness:0.94,metalness:0.02,envMapIntensity:0.25});
     const floor=new THREE.Mesh(new THREE.PlaneGeometry(70,52),floorMat);
     floor.rotation.x=-Math.PI/2;
     floor.position.y=-1.4;
@@ -1146,19 +1263,60 @@ button{color:inherit}
     grid.material.transparent=true;
     scene.add(grid);
 
-    const concrete=new THREE.MeshStandardMaterial({color:0xc7d4dd,roughness:0.75,metalness:0.02});
-    const concreteTop=new THREE.MeshStandardMaterial({color:0xdde7ee,roughness:0.68,metalness:0.02});
-    const glassWall=new THREE.MeshPhysicalMaterial({color:0xabc2d0,transparent:true,opacity:0.4,roughness:0.32,metalness:0,clearcoat:0.25,side:THREE.DoubleSide});
-    const waterMat=new THREE.MeshPhysicalMaterial({color:0x4d8cae,transparent:true,opacity:0.7,roughness:0.22,metalness:0,clearcoat:0.35});
-    const steel=new THREE.MeshStandardMaterial({color:0xd1dde5,roughness:0.38,metalness:0.55});
-    const frameWhite=new THREE.MeshStandardMaterial({color:0xf2f6f9,roughness:0.5,metalness:0.08});
-    const fiberWhite=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.62,metalness:0.02});
-    const blue=new THREE.MeshStandardMaterial({color:0x1b72bd,roughness:0.32,metalness:0.45});
-    const green=new THREE.MeshStandardMaterial({color:0x21ad79,roughness:0.32,metalness:0.42});
-    const purple=new THREE.MeshStandardMaterial({color:0x9b76c8,roughness:0.36,metalness:0.35});
-    const pipeBlue=new THREE.MeshStandardMaterial({color:0x226fae,roughness:0.34,metalness:0.42});
-    const pipeSteel=new THREE.MeshStandardMaterial({color:0xc9d6df,roughness:0.3,metalness:0.6});
+    const concrete=new THREE.MeshStandardMaterial({map:concreteTex,color:0xb4c1cd,roughness:0.88,metalness:0.02,envMapIntensity:0.3});
+    const concreteTop=new THREE.MeshStandardMaterial({map:concreteTex,color:0xccd7e0,roughness:0.82,metalness:0.02,envMapIntensity:0.35});
+    const glassWall=new THREE.MeshPhysicalMaterial({color:0x8fb4c9,transparent:true,opacity:0.42,roughness:0.12,metalness:0,clearcoat:0.6,envMapIntensity:1.2,side:THREE.DoubleSide});
+    const waterMat=new THREE.MeshPhysicalMaterial({color:0x2a6285,transparent:true,opacity:0.82,roughness:0.18,metalness:0,clearcoat:0.35,envMapIntensity:0.85});
+    const steel=new THREE.MeshStandardMaterial({color:0xd7e0e7,roughness:0.34,roughnessMap:brushedTex,metalness:0.88,envMapIntensity:1.1});
+    const gratingMat=new THREE.MeshStandardMaterial({map:gratingTex,color:0xc3ccd3,roughness:0.55,metalness:0.7,envMapIntensity:0.8});
+    const frameWhite=new THREE.MeshStandardMaterial({color:0xe9eff3,roughness:0.42,metalness:0.15,envMapIntensity:0.7});
+    const fiberMat=new THREE.MeshStandardMaterial({map:fiberTex,color:0xd3dde3,roughness:0.6,metalness:0.02,envMapIntensity:0.3});
+    const darkMetal=new THREE.MeshStandardMaterial({color:0x4a5a66,roughness:0.5,metalness:0.8,envMapIntensity:0.7});
+    const blue=new THREE.MeshStandardMaterial({color:0x1b72bd,roughness:0.38,metalness:0.35,envMapIntensity:0.9});
+    const bluePaint=new THREE.MeshStandardMaterial({color:0x2a86cf,roughness:0.3,metalness:0.2,envMapIntensity:1.0});
+    const green=new THREE.MeshStandardMaterial({color:0x21ad79,roughness:0.36,metalness:0.35,envMapIntensity:0.9});
+    const purple=new THREE.MeshStandardMaterial({color:0x9b76c8,roughness:0.34,metalness:0.3,envMapIntensity:0.9});
+    const pipeBlue=new THREE.MeshStandardMaterial({color:0x226fae,roughness:0.36,metalness:0.5,envMapIntensity:0.9});
+    const pipeSteel=new THREE.MeshStandardMaterial({color:0xcfd9e0,roughness:0.28,roughnessMap:brushedTex,metalness:0.92,envMapIntensity:1.15});
+    const flangeMat=new THREE.MeshStandardMaterial({color:0xb9c4cc,roughness:0.42,metalness:0.85,envMapIntensity:0.9});
     const edgeMat=new THREE.LineBasicMaterial({color:0x8ca4b4,transparent:true,opacity:0.55});
+
+    function blobShadow(parent,x,y,z,sx,sz,opacity){
+      const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:blobTex,transparent:true,opacity:opacity||0.8,depthWrite:false}));
+      m.rotation.x=-Math.PI/2;
+      m.position.set(x,y,z);
+      m.scale.set(sx,sz,1);
+      (parent||scene).add(m);
+      return m;
+    }
+    function addFlange(parent,x,y,z,r,axis,mat){
+      const g=new THREE.CylinderGeometry(r,r,0.09,18);
+      const m=new THREE.Mesh(g,mat||flangeMat);
+      m.position.set(x,y,z);
+      if(axis==='x')m.rotation.z=Math.PI/2;
+      else if(axis==='z')m.rotation.x=Math.PI/2;
+      m.castShadow=true;
+      (parent||scene).add(m);
+      return m;
+    }
+    function addHandwheel(parent,x,y,z,r,tag){
+      const g=new THREE.Group();
+      g.position.set(x,y,z);
+      const wheel=new THREE.Mesh(new THREE.TorusGeometry(r,0.035,8,22),green);
+      wheel.rotation.x=Math.PI/2;
+      g.add(wheel);
+      for(let i=0;i<3;i++){
+        const sp=new THREE.Mesh(new THREE.BoxGeometry(r*2-0.04,0.03,0.03),green);
+        sp.rotation.y=i*Math.PI/3;
+        g.add(sp);
+      }
+      const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.3,8),darkMetal);
+      stem.position.y=-0.16;
+      g.add(stem);
+      if(tag)g.traverse(function(o){o.userData.tag=tag;});
+      (parent||scene).add(g);
+      return g;
+    }
 
     function addBox(parent,w,h,d,mat,x,y,z){
       const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
@@ -1197,7 +1355,12 @@ button{color:inherit}
     addBox(basinGroup,basinW+1.2,0.18,1.6,concreteTop,0,basinH-0.45,-basinD/2+0.8);
     for(let i=0;i<3;i++){
       const dx=(poolX[i]+poolX[i+1])/2;
-      addBox(basinGroup,0.9,0.14,basinD,steel,dx,basinH-0.32,0);
+      const walk=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.1,basinD),gratingMat);
+      walk.position.set(dx,basinH-0.32,0);
+      walk.castShadow=true;walk.receiveShadow=true;
+      basinGroup.add(walk);
+      addBox(basinGroup,0.08,0.16,basinD,flangeMat,dx-0.54,basinH-0.32,0);
+      addBox(basinGroup,0.08,0.16,basinD,flangeMat,dx+0.54,basinH-0.32,0);
     }
 
     function addRailing(x1,z1,x2,z2){
@@ -1206,16 +1369,28 @@ button{color:inherit}
       const g=new THREE.Group();
       g.position.set(x1,basinH-0.3,z1);
       g.rotation.y=angle;
-      const count=Math.max(2,Math.floor(len/0.9));
+      const count=Math.max(2,Math.floor(len/1.1));
+      const postGeo=new THREE.CylinderGeometry(0.03,0.03,1.05,8);
+      const plateGeo=new THREE.BoxGeometry(0.12,0.03,0.12);
       for(let i=0;i<=count;i++){
-        const post=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.65,8),blue);
-        post.position.set(0,0.32,i*(len/count));
+        const post=new THREE.Mesh(postGeo,bluePaint);
+        post.position.set(0,0.52,i*(len/count));
+        post.castShadow=true;
         g.add(post);
+        const plate=new THREE.Mesh(plateGeo,flangeMat);
+        plate.position.set(0,0.02,i*(len/count));
+        g.add(plate);
       }
-      const railTop=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,len,8),blue);
-      railTop.rotation.x=Math.PI/2;
-      railTop.position.set(0,0.62,len/2);
-      g.add(railTop);
+      [1.02,0.6].forEach(function(h){
+        const rail=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,len,10),bluePaint);
+        rail.rotation.x=Math.PI/2;
+        rail.position.set(0,h,len/2);
+        rail.castShadow=true;
+        g.add(rail);
+      });
+      const kick=new THREE.Mesh(new THREE.BoxGeometry(0.03,0.1,len),blue);
+      kick.position.set(0,0.08,len/2);
+      g.add(kick);
       scene.add(g);
     }
     addRailing(-11.6,basinD/2-0.1,11.6,basinD/2-0.1);
@@ -1239,37 +1414,61 @@ button{color:inherit}
       const g=new THREE.Group();
       g.position.set(cx,0.9,cz);
       const fw=3.6,fh=2.1,fd=1.5;
-      const topBeam=addBox(g,fw+0.2,0.12,fd+0.15,blue,0,fh/2+0.1,0);
-      topBeam.userData.tag=tag;
-      addBox(g,fw,0.1,fd,frameWhite,0,-fh/2,0);
-      const postGeo=new THREE.BoxGeometry(0.09,fh,0.09);
+      function tagBox(w,h,d,mat,x,y,z,click){
+        const m=addBox(g,w,h,d,mat,x,y,z);
+        m.userData.tag=tag;
+        if(click!==false)clickables.push(m);
+        return m;
+      }
+      // Bottom air-scour distribution box + perforated laterals
+      tagBox(fw*0.9,0.16,fd*0.9,darkMetal,0,-fh/2-0.12,0);
+      for(let k=-1;k<=1;k++){
+        const lat=new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.045,fd*0.8,8),pipeBlue);
+        lat.rotation.x=Math.PI/2;
+        lat.position.set(k*fw*0.28,-fh/2-0.02,0);
+        lat.userData.tag=tag;
+        g.add(lat);clickables.push(lat);
+      }
+      // FRP corner posts + end beams
+      const postGeo=new THREE.BoxGeometry(0.11,fh,0.11);
       [[-fw/2,-fd/2],[fw/2,-fd/2],[-fw/2,fd/2],[fw/2,fd/2]].forEach(function(p){
         const post=new THREE.Mesh(postGeo,frameWhite);
         post.position.set(p[0],0,p[1]);
-        post.castShadow=true;
+        post.castShadow=true;post.receiveShadow=true;
         post.userData.tag=tag;
         g.add(post);
         clickables.push(post);
       });
-      for(let i=0;i<10;i++){
-        const fx=-fw/2+0.25+i*(fw-0.5)/9;
-        const fiber=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,1.7,6),fiberWhite);
-        fiber.position.set(fx,0,0);
-        fiber.userData.tag=tag;
-        g.add(fiber);
-        clickables.push(fiber);
-      }
-      for(let k=-1;k<=1;k++){
-        const rib=addBox(g,fw,0.06,0.06,frameWhite,0,0.45*k,fd/2);
-        rib.userData.tag=tag;
-        clickables.push(rib);
-      }
-      const suction=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,fw,10),pipeSteel);
+      tagBox(fw+0.14,0.13,fd+0.14,frameWhite,0,-fh/2+0.02,0);
+      tagBox(fw+0.14,0.13,fd+0.14,frameWhite,0,fh/2-0.02,0);
+      // Membrane curtain bundle with woven texture + side channels
+      const bundle=new THREE.Mesh(new THREE.BoxGeometry(fw-0.5,1.62,fd-0.42),fiberMat);
+      bundle.position.set(0,0.02,0);
+      bundle.castShadow=true;bundle.receiveShadow=true;
+      bundle.userData.tag=tag;
+      g.add(bundle);clickables.push(bundle);
+      tagBox(0.12,1.7,fd-0.3,frameWhite,-(fw-0.5)/2-0.06,0.02,0);
+      tagBox(0.12,1.7,fd-0.3,frameWhite,(fw-0.5)/2+0.06,0.02,0);
+      // Top suction header + downcomers + flanges
+      const suction=new THREE.Mesh(new THREE.CylinderGeometry(0.075,0.075,fw,12),pipeSteel);
       suction.rotation.z=Math.PI/2;
-      suction.position.set(0,fh/2+0.28,0);
+      suction.position.set(0,fh/2+0.3,0);
+      suction.castShadow=true;
       suction.userData.tag=tag;
       g.add(suction);
-      clickables.push(suction,topBeam);
+      clickables.push(suction);
+      [-fw/4,fw/4].forEach(function(fx){
+        const down=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.34,8),pipeSteel);
+        down.position.set(fx,fh/2+0.1,0);
+        down.userData.tag=tag;
+        g.add(down);clickables.push(down);
+        addFlange(g,fx,fh/2+0.22,0,0.09,'y');
+      });
+      // Blue top beam + lifting lugs
+      const topBeam=tagBox(fw+0.2,0.13,fd+0.15,bluePaint,0,fh/2+0.44,0);
+      [-fw/4,fw/4].forEach(function(fx){
+        tagBox(0.07,0.2,0.16,darkMetal,fx,fh/2+0.58,0);
+      });
       scene.add(g);
       cassetteGroups[tag].push(g);
       return g;
@@ -1293,12 +1492,37 @@ button{color:inherit}
       const airMain=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,poolW-0.6,10),pipeBlue);
       airMain.rotation.z=Math.PI/2;
       airMain.position.set(px,-0.35,0);
+      airMain.castShadow=true;
       scene.add(airMain);
+      addFlange(scene,px-(poolW-0.6)/2,-0.35,0,0.13,'x');
+      addFlange(scene,px+(poolW-0.6)/2,-0.35,0,0.13,'x');
       [-3.6,0,3.6].forEach(function(cz){
         const riser=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,1.1,8),pipeBlue);
         riser.position.set(px,-0.1,cz);
         scene.add(riser);
       });
+      // Bottom perforated lateral along pool + diffuser stubs
+      const lateral=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,basinD-2.4,10),pipeBlue);
+      lateral.rotation.x=Math.PI/2;
+      lateral.position.set(px,-0.55,0);
+      scene.add(lateral);
+      for(let k=0;k<6;k++){
+        const stub=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.045,0.22,8),darkMetal);
+        stub.position.set(px-0.16+(k%2)*0.32,-0.42,-4.6+k*1.85);
+        scene.add(stub);
+      }
+      // Front manual air valve with handwheel above walkway
+      const vRiser=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,3.6,10),pipeBlue);
+      vRiser.position.set(px+poolW/2-0.5,1.4,basinD/2-0.75);
+      vRiser.castShadow=true;
+      scene.add(vRiser);
+      const vBody=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.22,12),green);
+      vBody.position.set(px+poolW/2-0.5,2.9,basinD/2-0.75);
+      vBody.castShadow=true;
+      scene.add(vBody);
+      const wheel=addHandwheel(scene,px+poolW/2-0.5,3.25,basinD/2-0.75,0.22,poolTag[pi]);
+      clickables.push(vBody);
+      vBody.userData.tag=poolTag[pi];
     });
 
     const prodCurve=new THREE.CatmullRomCurve3([
@@ -1312,16 +1536,34 @@ button{color:inherit}
     poolX.forEach(function(px){
       const header=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.11,basinD-1.4,12),pipeSteel);
       header.position.set(px,3.35,0);
+      header.castShadow=true;
       scene.add(header);
+      [-4,0,4].forEach(function(hz){
+        addFlange(scene,px,3.35,hz,0.16,'z');
+        const saddle=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.28,0.3),darkMetal);
+        saddle.position.set(px,3.12,hz);
+        scene.add(saddle);
+      });
       const cross=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.11,3.4,10),pipeSteel);
       cross.rotation.x=Math.PI/2;
       cross.position.set(px,3.35,0);
+      cross.castShadow=true;
       scene.add(cross);
+      addFlange(scene,px,3.35,-1.7,0.16,'z');
+      addFlange(scene,px,3.35,1.7,0.16,'z');
     });
     const transverse=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,20.5,12),pipeSteel);
     transverse.rotation.z=Math.PI/2;
     transverse.position.set(0,3.35,-5.6);
+    transverse.castShadow=true;
     scene.add(transverse);
+    [-6,0,6].forEach(function(tx){
+      addFlange(scene,tx,3.35,-5.6,0.19,'x');
+      const plinth=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,0.5),concrete);
+      plinth.position.set(tx,2.95,-5.6);
+      plinth.castShadow=true;plinth.receiveShadow=true;
+      scene.add(plinth);
+    });
 
     const prodBalls=[];
     for(let i=0;i<14;i++){
@@ -1341,26 +1583,77 @@ button{color:inherit}
     function createPump(tag,x,z,running){
       const g=new THREE.Group();
       g.position.set(x,-0.5,z);
-      addBox(g,1.3,0.25,1.3,steel,0,0,0);
-      const casing=new THREE.Mesh(new THREE.CylinderGeometry(0.44,0.5,0.6,16),blue);
-      casing.position.set(0,0.42,0);
-      casing.userData.tag=tag;
-      g.add(casing);
-      const motor=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.9,16),blue);
-      motor.position.set(0,1.05,0);
-      motor.userData.tag=tag;
-      g.add(motor);
-      const spinner=new THREE.Mesh(new THREE.TorusGeometry(0.2,0.045,8,16),steel);
+      function tagMesh(mesh){
+        mesh.castShadow=true;mesh.receiveShadow=true;
+        mesh.userData.tag=tag;
+        g.add(mesh);clickables.push(mesh);
+        return mesh;
+      }
+      // Civil plinth + steel base frame + grounding blob
+      const plinth=new THREE.Mesh(new THREE.BoxGeometry(1.7,0.5,1.7),concrete);
+      plinth.position.set(0,-0.65,0);
+      plinth.castShadow=true;plinth.receiveShadow=true;
+      g.add(plinth);
+      blobShadow(scene,x,-1.38,z,3.2,3.2,0.7);
+      tagMesh(new THREE.Mesh(new THREE.BoxGeometry(1.3,0.16,1.3),darkMetal)).position.set(0,-0.32,0);
+      // Volute casing + suction inlet + feet
+      const casing=new THREE.Mesh(new THREE.CylinderGeometry(0.44,0.5,0.6,18),bluePaint);
+      tagMesh(casing).position.set(0,0.42,0);
+      const suctionNeck=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,0.5,12),pipeSteel);
+      suctionNeck.rotation.x=Math.PI/2;
+      tagMesh(suctionNeck).position.set(0,0.42,0.55);
+      addFlange(g,0,0.42,0.82,0.21,'z');
+      [-0.4,0.4].forEach(function(fx){
+        const foot=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.3,0.5),blue);
+        foot.castShadow=true;
+        foot.position.set(fx,0.0,0);
+        g.add(foot);
+      });
+      // Coupling guard + motor with cooling fins + terminal box + eyebolt
+      const guard=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.34,0.4),steel);
+      tagMesh(guard).position.set(0,0.78,0);
+      const motor=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.9,18),bluePaint);
+      tagMesh(motor).position.set(0,1.35,0);
+      for(let f=0;f<8;f++){
+        const fin=new THREE.Mesh(new THREE.BoxGeometry(0.66,0.7,0.035),blue);
+        fin.position.set(0,1.35,0);
+        fin.rotation.y=f*Math.PI/8;
+        fin.castShadow=true;
+        g.add(fin);
+      }
+      const termBox=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.2,0.34),darkMetal);
+      termBox.position.set(0.36,1.42,0);
+      termBox.castShadow=true;
+      g.add(termBox);
+      const eye=new THREE.Mesh(new THREE.TorusGeometry(0.07,0.022,8,14),darkMetal);
+      eye.position.set(0,1.86,0);
+      g.add(eye);
+      const fanCover=new THREE.Mesh(new THREE.CylinderGeometry(0.31,0.31,0.1,18),darkMetal);
+      fanCover.position.set(0,1.83,0);
+      g.add(fanCover);
+      // Impeller sight spinner (animated when running)
+      const spinner=new THREE.Mesh(new THREE.TorusGeometry(0.2,0.045,8,18),steel);
       spinner.rotation.x=Math.PI/2;
-      spinner.position.set(0,0.42,0);
+      spinner.position.set(0,0.42,-0.1);
       g.add(spinner);
-      const riser=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,2.4,10),pipeSteel);
+      // Discharge riser + valve + pressure gauge with dial
+      const riser=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,2.4,12),pipeSteel);
+      riser.castShadow=true;
       riser.position.set(0.5,1.5,0);
       g.add(riser);
-      const valveBox=addBox(g,0.34,0.26,0.34,green,0.5,2.2,0);
-      valveBox.userData.tag=tag;
+      addFlange(g,0.5,1.1,0,0.15,'y');
+      const valveBox=tagMesh(new THREE.Mesh(new THREE.BoxGeometry(0.34,0.26,0.34),green));
+      valveBox.position.set(0.5,2.2,0);
+      const gStem=new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.4,8),pipeSteel);
+      gStem.position.set(0.5,1.9,0.28);
+      g.add(gStem);
+      const dial=new THREE.Mesh(new THREE.CircleGeometry(0.14,20),new THREE.MeshBasicMaterial({map:dialTex}));
+      dial.position.set(0.5,2.12,0.3);
+      g.add(dial);
+      const dialRim=new THREE.Mesh(new THREE.TorusGeometry(0.14,0.02,8,20),darkMetal);
+      dialRim.position.set(0.5,2.12,0.3);
+      g.add(dialRim);
       scene.add(g);
-      clickables.push(casing,motor,valveBox);
       pumps[tag+'_'+z]={group:g,spinner:spinner,running:running};
     }
     createPump('PUMP-01',13.6,-1.6,true);
@@ -1372,23 +1665,87 @@ button{color:inherit}
     function createCIPTank(x,label){
       const g=new THREE.Group();
       g.position.set(x,0,0);
-      const body=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.05,2.2,20),frameWhite);
-      body.position.set(0,0.4,0);
-      body.castShadow=true;
-      body.userData.tag='CIP-01';
-      g.add(body);
-      const band=new THREE.Mesh(new THREE.CylinderGeometry(1.06,1.06,0.32,20),purple);
-      band.position.set(0,1.15,0);
-      band.userData.tag='CIP-01';
-      g.add(band);
-      const lid=new THREE.Mesh(new THREE.CylinderGeometry(1.05,0.85,0.35,20),steel);
-      lid.position.set(0,1.65,0);
+      function tagMesh(mesh){
+        mesh.castShadow=true;mesh.receiveShadow=true;
+        mesh.userData.tag='CIP-01';
+        g.add(mesh);clickables.push(mesh);
+        return mesh;
+      }
+      // Skid plinth + drip tray + grounding blob
+      const plinth=new THREE.Mesh(new THREE.BoxGeometry(2.7,0.5,2.7),concrete);
+      plinth.position.set(0,-0.95,0);
+      plinth.castShadow=true;plinth.receiveShadow=true;
+      g.add(plinth);
+      blobShadow(scene,x,-1.38,-9.6,4.4,4.4,0.7);
+      const tray=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.1,2.4),darkMetal);
+      tray.position.set(0,-0.65,0);
+      tray.receiveShadow=true;
+      g.add(tray);
+      // PE tank body + stiffener band + dished lid + rim
+      const body=new THREE.Mesh(new THREE.CylinderGeometry(1.05,1.08,2.2,24),frameWhite);
+      tagMesh(body).position.set(0,0.4,0);
+      const band=new THREE.Mesh(new THREE.CylinderGeometry(1.07,1.07,0.3,24),purple);
+      tagMesh(band).position.set(0,1.12,0);
+      const rimF=new THREE.Mesh(new THREE.CylinderGeometry(1.12,1.12,0.09,24),flangeMat);
+      rimF.position.set(0,1.5,0);
+      rimF.castShadow=true;
+      g.add(rimF);
+      const lid=new THREE.Mesh(new THREE.SphereGeometry(1.05,24,10,0,Math.PI*2,0,Math.PI/2.6),frameWhite);
+      lid.position.set(0,1.5,0);
+      lid.scale.y=0.45;
+      lid.castShadow=true;
       g.add(lid);
-      const liquid=new THREE.Mesh(new THREE.CylinderGeometry(0.92,0.92,1.5,16),new THREE.MeshStandardMaterial({color:0xb79dde,roughness:0.4,transparent:true,opacity:0.85}));
-      liquid.position.set(0,0.15,0);
+      // Top mixer motor + shaft + inlet nozzle
+      const mixer=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.16,0.32,12),bluePaint);
+      mixer.position.set(0,2.05,0);
+      mixer.castShadow=true;
+      g.add(mixer);
+      const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.6,8),darkMetal);
+      shaft.position.set(0,1.8,0);
+      g.add(shaft);
+      const nozzle=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.4,10),pipeSteel);
+      nozzle.position.set(0.55,1.75,0);
+      g.add(nozzle);
+      addFlange(g,0.55,1.95,0,0.13,'y');
+      // Level sight glass with animated purple column
+      const tube=new THREE.Mesh(new THREE.CylinderGeometry(0.075,0.075,1.6,12),glassWall);
+      tube.position.set(0.98,0.35,0.42);
+      g.add(tube);
+      const liquidGeo=new THREE.CylinderGeometry(0.05,0.05,1.5,10);
+      liquidGeo.translate(0,0.75,0);
+      const liquid=new THREE.Mesh(liquidGeo,new THREE.MeshStandardMaterial({color:0x8f63c4,roughness:0.3,emissive:0x2a1a44,emissiveIntensity:0.4}));
+      liquid.position.set(0.98,-0.4,0.42);
       g.add(liquid);
+      // Access ladder
+      [-0.25,0.25].forEach(function(lz){
+        const rail=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,2.7,8),steel);
+        rail.position.set(-1.2,0.4,lz);
+        rail.castShadow=true;
+        g.add(rail);
+      });
+      for(let r=0;r<6;r++){
+        const rung=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.5,8),steel);
+        rung.rotation.x=Math.PI/2;
+        rung.position.set(-1.2,-0.7+r*0.45,0);
+        g.add(rung);
+      }
+      // Dosing pump skid + outlet valve
+      const skid=new THREE.Mesh(new THREE.BoxGeometry(0.85,0.5,0.65),frameWhite);
+      skid.position.set(1.75,-0.4,0.9);
+      skid.castShadow=true;skid.receiveShadow=true;
+      g.add(skid);
+      const dpump=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.34,12),green);
+      tagMesh(dpump).position.set(1.75,-0.02,0.9);
+      const dmotor=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.2,0.3),darkMetal);
+      dmotor.position.set(1.75,0.12,0.55);
+      g.add(dmotor);
+      const outlet=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,0.8,10),purple);
+      outlet.rotation.z=Math.PI/2;
+      outlet.position.set(0.6,-0.35,0.9);
+      g.add(outlet);
+      const wheel=addHandwheel(g,0.2,0.1,0.9,0.18,'CIP-01');
+      clickables.push(wheel.children[0]);
       cipGroup.add(g);
-      clickables.push(body,band);
       const canvas=document.createElement('canvas');
       canvas.width=256;canvas.height=64;
       const ctx=canvas.getContext('2d');
@@ -1396,7 +1753,7 @@ button{color:inherit}
       ctx.fillText(label,128,42);
       const tex=new THREE.CanvasTexture(canvas);
       const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false,depthWrite:false}));
-      spr.position.set(x,2.4,-9.6);
+      spr.position.set(x,2.75,-9.6);
       spr.scale.set(2.4,0.6,1);
       scene.add(spr);
       return {group:g,liquid:liquid};
@@ -1426,35 +1783,46 @@ button{color:inherit}
       cipBalls.push(ball);
     }
 
-    function create3DLabel(text,x,y,z){
+    function create3DLabel(text,x,y,z,dot){
       const canvas=document.createElement('canvas');
       canvas.width=512;
-      canvas.height=96;
+      canvas.height=104;
       const ctx=canvas.getContext('2d');
-      ctx.fillStyle='rgba(26,79,122,0.95)';
-      ctx.fillRect(0,0,512,26);
-      ctx.fillStyle='rgba(255,255,255,0.98)';
-      ctx.fillRect(0,26,512,70);
-      ctx.strokeStyle='#2679b3';
-      ctx.lineWidth=4;
-      ctx.strokeRect(2,2,508,92);
+      function rr(px,py,w,h,r){
+        ctx.beginPath();
+        ctx.moveTo(px+r,py);
+        ctx.arcTo(px+w,py,px+w,py+h,r);
+        ctx.arcTo(px+w,py+h,px,py+h,r);
+        ctx.arcTo(px,py+h,px,py,r);
+        ctx.arcTo(px,py,px+w,py,r);
+        ctx.closePath();
+      }
+      ctx.fillStyle='rgba(20,55,85,0.92)';
+      rr(0,0,512,30,7);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.97)';
+      rr(0,28,512,76,7);ctx.fill();
+      ctx.strokeStyle='#2679b3';ctx.lineWidth=3;
+      rr(2,2,508,100,7);ctx.stroke();
       ctx.fillStyle='#ffffff';
       ctx.font='bold 15px Microsoft YaHei';
-      ctx.fillText('MBR / ULTRAFILTRATION',18,19);
+      ctx.fillText('MBR / ULTRAFILTRATION',40,20);
+      ctx.fillStyle=dot||'#21ad79';
+      ctx.beginPath();ctx.arc(22,15,7,0,7);ctx.fill();
       ctx.fillStyle='#0f3957';
-      ctx.font='bold 34px Microsoft YaHei';
-      ctx.fillText(text,24,72);
+      ctx.font='bold 33px Microsoft YaHei';
+      ctx.fillText(text,22,80);
       const texture=new THREE.CanvasTexture(canvas);
+      if(THREE.sRGBEncoding!==undefined)texture.encoding=THREE.sRGBEncoding;
       const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthTest:false,depthWrite:false}));
       sprite.position.set(x,y,z);
-      sprite.scale.set(4.4,0.82,1);
+      sprite.scale.set(4.4,0.9,1);
       scene.add(sprite);
     }
-    create3DLabel('A1/A2 膜池矩阵 · 不锈钢走道',-5.6,5.2,1.2);
-    create3DLabel('B1/B2 膜池矩阵 · 帘式膜箱',5.6,5.2,1.2);
-    create3DLabel('产水总管 · 自吸变频泵房',13.4,4.4,0.4);
-    create3DLabel('CIP 次氯酸盐 / 柠檬酸药洗',0,4.6,-9.4);
-    create3DLabel('连续空气擦洗 · 穿孔曝气',-11.2,3.4,-4.2);
+    create3DLabel('A1/A2 膜池矩阵 · 不锈钢走道',-5.6,5.2,1.2,'#247ac4');
+    create3DLabel('B1/B2 膜池矩阵 · 帘式膜箱',5.6,5.2,1.2,'#21ad79');
+    create3DLabel('产水总管 · 自吸变频泵房',13.4,4.6,0.4,'#247ac4');
+    create3DLabel('CIP 次氯酸盐 / 柠檬酸药洗',0,4.8,-9.4,'#9b76c8');
+    create3DLabel('连续空气擦洗 · 穿孔曝气',-11.2,3.4,-4.2,'#38b8e0');
 
     const ray=new THREE.Raycaster();
     const pointer=new THREE.Vector2();
@@ -1481,16 +1849,30 @@ button{color:inherit}
     }
     $id('viewHome').addEventListener('click',function(){setCamera([21,17,26],[0,0.6,0]);});
     $id('viewTop').addEventListener('click',function(){setCamera([0,34,0.1],[0,0,0]);});
-    $id('viewMembrane').addEventListener('click',function(){setCamera([-6,9,9],[-5.6,1.2,0]);});
-    $id('viewCIP').addEventListener('click',function(){setCamera([2,10,2],[0,2.2,-8.5]);});
+    $id('viewMembrane').addEventListener('click',function(){setCamera([-11,8.5,12.5],[-4.5,1.0,0]);});
+    $id('viewCIP').addEventListener('click',function(){setCamera([6.5,6.5,-2.5],[-0.5,0.8,-9.4]);});
 
     let pulseTag='',pulseEnd=0,flowOffset=0,cipOffset=0,last=performance.now();
     let curPhase='produce',curCip='';
 
+    function wrap01(x){
+      if(!isFinite(x))return 0;
+      x=x%1;
+      return x<0?x+1:x;
+    }
+    function clamp01(x){
+      if(!isFinite(x))return 0;
+      return x<0?0:(x>1?1:x);
+    }
+
     function animate(now){
       requestAnimationFrame(animate);
-      const dt=Math.min(0.05,(now-last)/1000);
+      let rawDt=(now-last)/1000;
+      if(!isFinite(rawDt)||rawDt<0)rawDt=0;
+      const dt=Math.min(0.05,rawDt);
       last=now;
+      if(!isFinite(flowOffset))flowOffset=0;
+      if(!isFinite(cipOffset))cipOffset=0;
       controls.update();
 
       waterSurfaces.forEach(function(item){
@@ -1534,19 +1916,19 @@ button{color:inherit}
       });
 
       if(curPhase==='produce'&&pumpRun){
-        flowOffset=(flowOffset+dt*0.22)%1;
+        flowOffset=wrap01(flowOffset+dt*0.22);
         prodBalls.forEach(function(ball,i){
           ball.visible=true;
           ball.material.color.setHex(0x9fdcff);
-          ball.position.copy(prodCurve.getPointAt((flowOffset+i/prodBalls.length)%1));
+          ball.position.copy(prodCurve.getPointAt(wrap01(flowOffset+i/prodBalls.length)));
         });
         backBalls.forEach(function(b){b.visible=false;});
       }else if(curPhase==='backwash'){
-        flowOffset=(flowOffset+dt*0.18)%1;
+        flowOffset=wrap01(flowOffset+dt*0.18);
         prodBalls.forEach(function(b){b.visible=false;});
         backBalls.forEach(function(ball,i){
           ball.visible=true;
-          const t=1-((flowOffset+i/backBalls.length)%1);
+          const t=clamp01(1-wrap01(flowOffset+i/backBalls.length));
           ball.position.copy(prodCurve.getPointAt(t));
         });
       }else{
@@ -1555,10 +1937,10 @@ button{color:inherit}
       }
 
       if(curPhase==='cip'&&curCip){
-        cipOffset=(cipOffset+dt*0.3)%1;
+        cipOffset=wrap01(cipOffset+dt*0.3);
         cipBalls.forEach(function(ball,i){
           ball.visible=true;
-          ball.position.copy(cipCurve.getPointAt((cipOffset+i/cipBalls.length)%1));
+          ball.position.copy(cipCurve.getPointAt(wrap01(cipOffset+i/cipBalls.length)));
         });
       }else{
         cipBalls.forEach(function(b){b.visible=false;});

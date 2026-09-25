@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>连续分离工艺 · 浅色驾驶舱</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#cbd8e4;color:#29445a;font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+button{font:inherit;cursor:pointer}
+[v-cloak]{display:none}
+:root{--ink:#29445a;--muted:#71899b;--line:#d4e1ea;--blue:#247db4;--cyan:#128fad;--green:#19866d;--amber:#c77e27;--red:#c35361;--paper:#f7fbfe}
+.num{font-family:Bahnschrift,"DIN Alternate",Consolas,monospace;font-variant-numeric:tabular-nums}
+#screen{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:center center;display:grid;grid-template-rows:78px 112px 732px 158px;overflow:hidden;background:linear-gradient(145deg,#e7f0f7,#dce9f3);box-shadow:0 18px 64px #4a64734d}
+.topbar{display:grid;grid-template-columns:540px 1fr 500px;align-items:center;padding:0 24px;background:#f8fcff;border-bottom:1px solid var(--line)}
+.brand small,.section-kicker{display:block;font-size:10px;font-weight:700;letter-spacing:.21em;color:#4384ac}
+.brand h1{margin:5px 0 3px;font-size:25px;line-height:1.15;letter-spacing:.035em}.brand p{margin:0;color:var(--muted);font-size:11px}
+.flow-nav{display:flex;align-items:center;justify-content:center;gap:8px;color:#7890a1;font-size:12px;white-space:nowrap}.flow-nav span{padding:8px 12px;border-radius:4px}.flow-nav .active{background:#e9f3fa;color:#1b6f9f;font-weight:700}.flow-nav i{width:18px;height:1px;background:#9ab5c7}
+.meta{display:flex;align-items:center;justify-content:flex-end;gap:16px;color:#60798c;font-size:11px;white-space:nowrap}.meta strong{color:#27617f}.demo{padding:6px 10px;border:1px solid #e6cc9b;border-radius:4px;background:#fff8e9;color:#936822;font-weight:700}.health{display:inline-flex;align-items:center;gap:7px;font-weight:700;color:var(--green)}.health.warn{color:var(--amber)}.health i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:12px 16px;background:#edf5fa;border-bottom:1px solid #c9dce9}
+.kpi{min-width:0;padding:13px 18px;background:#fff;border:1px solid #d4e3ec;border-radius:7px;box-shadow:0 3px 12px #7896aa14}.kpi-top{display:flex;align-items:center;justify-content:space-between;color:#71889a;font-size:11px}.kpi-top em{font-style:normal;font-size:10px;color:#8ba0b0}.kpi-main{display:flex;align-items:baseline;gap:6px;margin-top:8px}.kpi-main b{font-size:27px;line-height:1;color:#2a5675}.kpi-main small{font-size:11px;color:#71889a}.kpi-foot{margin-top:7px;font-size:10px;color:#8da0ad}.kpi-foot b{color:#1a9074}.kpi.warn .kpi-main b,.kpi.warn .kpi-foot b{color:var(--amber)}
+.workspace{display:grid;grid-template-columns:260px minmax(0,1fr) 260px;gap:10px;padding:10px 14px;min-height:0}
+.rail{min-height:0;display:flex;flex-direction:column;gap:10px}.panel{border:1px solid #d0dfe9;border-radius:7px;background:#fafdff;box-shadow:0 5px 18px #7591a21a;overflow:hidden}.panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 13px 10px;border-bottom:1px solid #e1ebf1}.panel-head strong{font-size:13px}.panel-head small{font-size:9px;color:#91a4b2}.panel-body{padding:12px 13px}.mode-panel{flex:0 0 auto}.mode-stack{display:grid;gap:7px}.mode-button{height:39px;text-align:left;padding:0 11px;border:1px solid #d7e4ec;border-radius:4px;background:#f5f9fc;color:#536d80;font-size:12px}.mode-button.active{border-color:#6da6c9;background:#e8f4fb;color:#176a9b;font-weight:700}.mode-button:hover{border-color:#6da6c9}.mode-button .num{margin-right:8px;color:#8ca5b7;font-size:10px}.mode-note{margin:11px 0 0;padding:9px 10px;border-left:3px solid var(--blue);background:#f1f7fb;color:#607b8f;font-size:10px;line-height:1.55}.mode-note.warn{border-left-color:var(--amber);background:#fff8ed;color:#8b683f}
+.sequence-panel{flex:1}.sequence{list-style:none;margin:0;padding:0}.sequence li{position:relative;display:flex;align-items:flex-start;gap:10px;padding:5px 0;border-bottom:1px dashed #e0eaf0}.sequence li:last-child{border-bottom:0}.sequence .step{display:grid;place-items:center;width:22px;height:22px;flex:0 0 22px;border:1px solid #bcd4e4;border-radius:50%;background:#eaf5fb;color:#2679a9;font-size:10px}.sequence b{display:block;font-size:11px}.sequence small{display:block;margin-top:3px;font-size:9px;color:#8298a8;line-height:1.4}
+.safety-panel{flex:0 0 auto}.status-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed #e0eaf0;font-size:10px;color:#6e8495}.status-row:last-child{border-bottom:0}.status-row b{color:#287c70}.status-row b.warn{color:var(--amber)}
+.diagram{position:relative;min-width:0;overflow:hidden;border:1px solid #cddde8;border-radius:7px;background:#fff;box-shadow:inset 0 1px 0 #fff,0 5px 18px #7591a21a}.diagram::after{content:"";position:absolute;inset:0;pointer-events:none;border:1px solid #fff8}.diagram-caption{position:absolute;z-index:3;left:16px;top:14px;padding:8px 11px;border:1px solid #d9e7ef;border-radius:4px;background:#fafdfff0;box-shadow:0 4px 12px #7c9aac1c;font-size:10px;color:#647f90}.diagram-caption strong{display:block;margin-bottom:2px;color:#2d536d;font-size:12px}.diagram-caption small{font-size:9px;color:#8da2b1}
+.artboard{position:absolute;left:50%;top:0;width:1264px;height:712px;transform:translateX(-50%);background:url('../../assets/process/continuous-separation-flow.png') center/100% 100% no-repeat}.artboard::after{content:"";position:absolute;inset:0;pointer-events:none;border:1px solid #f4f9fd66}
+.flow-overlay{position:absolute;inset:0;z-index:1;width:100%;height:100%;overflow:visible;pointer-events:none}.flow-line{fill:none;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:2 29;animation:flow-dash 1.65s linear infinite;opacity:.76;filter:drop-shadow(0 0 2px #fff)}.flow-route.feed .flow-line{stroke:#1e9bd6}.flow-route.overhead .flow-line{stroke:#8b62a8;animation-duration:1.9s}.flow-route.heat .flow-line{stroke:#ec9a31;animation-duration:1.45s}.flow-route.cooling .flow-line{stroke:#159cab;animation-duration:1.7s}.flow-route.return .flow-line{stroke:#d65770;animation-duration:1.75s}.flow-route.cooling.fault .flow-line{stroke:#d28a30;animation-duration:.9s}.flow-route.dim .flow-line{opacity:.08}.flow-route.focused .flow-line{stroke-width:5;opacity:1;filter:drop-shadow(0 0 4px #fff)}.route-hit{fill:none;stroke:transparent;stroke-width:19;pointer-events:stroke;cursor:pointer}.motion-paused .flow-line,.motion-paused .mixer-liquid,.motion-paused .reactor-glow,.motion-paused .column-scan,.motion-paused .bubble{animation-play-state:paused}
+.mixer-liquid{fill:none;stroke:#e7ffff;stroke-width:3;opacity:.64;stroke-linecap:round;stroke-dasharray:14 12;animation:liquid-shift 2.6s linear infinite;filter:drop-shadow(0 0 3px #3ca8cf)}.reactor-glow{fill:none;stroke:#16a6b7;stroke-width:2;stroke-dasharray:22 20;stroke-linecap:round;opacity:.42;animation:reactor-pulse 2.8s ease-in-out infinite}.bubble{animation:bubble-rise 3.6s ease-in infinite}.bubble.two{animation-duration:4.2s;animation-delay:-1.4s}.bubble.three{animation-duration:3.8s;animation-delay:-2.3s}
+.column-scan{fill:url(#scan-fill);opacity:.68;animation:column-scan 5s ease-in-out infinite}
+@keyframes flow-dash{to{stroke-dashoffset:-62}}@keyframes liquid-shift{to{stroke-dashoffset:-52}}@keyframes reactor-pulse{0%,100%{opacity:.18;stroke-width:1.5}50%{opacity:.58;stroke-width:3}}@keyframes column-scan{0%,8%{transform:translateY(0);opacity:0}20%{opacity:.45}88%{opacity:.4}100%{transform:translateY(315px);opacity:0}}@keyframes bubble-rise{0%{transform:translateY(0);opacity:0}25%{opacity:.72}85%{opacity:.45}100%{transform:translateY(-56px);opacity:0}}
+.hotspot{position:absolute;z-index:3;display:grid;place-items:center;width:31px;height:31px;transform:translate(-50%,-50%);border:2px solid #fff;border-radius:50%;background:var(--blue);color:#fff;box-shadow:0 0 0 4px #247db445,0 4px 12px #416a8b66;font:700 10px Bahnschrift,Consolas,monospace}.hotspot:hover,.hotspot.active{box-shadow:0 0 0 7px #247db44d,0 4px 14px #416a8b80;scale:1.07}.hotspot.fault{background:var(--amber);box-shadow:0 0 0 6px #e4a75466,0 4px 12px #896b4966}.hotspot::after{content:attr(data-name);position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);padding:5px 8px;border:1px solid #bfd4e2;border-radius:4px;background:#fafdfff2;color:#345c76;box-shadow:0 3px 9px #496e8526;font:600 10px "Microsoft YaHei","PingFang SC",sans-serif;white-space:nowrap;pointer-events:none}.hotspot.label-left::after{left:auto;right:calc(100% + 10px)}.hotspot.label-top::after{left:50%;top:auto;bottom:calc(100% + 9px);transform:translateX(-50%)}.hotspot.label-bottom::after{left:50%;top:calc(100% + 9px);transform:translateX(-50%)}.hotspot:focus-visible,.mode-button:focus-visible,.tab:focus-visible{outline:3px solid #0a78ad;outline-offset:3px}
+.diagram-key{position:absolute;z-index:3;left:16px;bottom:14px;display:flex;gap:5px;padding:5px;border:1px solid #d5e3eb;border-radius:5px;background:#fafdfff0;box-shadow:0 4px 12px #688a9f1a}.diagram-key button{height:26px;padding:0 8px;border:1px solid transparent;border-radius:3px;background:transparent;color:#698294;font-size:10px}.diagram-key button:hover,.diagram-key button.active{border-color:#b8d4e4;background:#eaf5fb;color:#216f9d}.diagram-key i{display:inline-block;width:17px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}.diagram-key .feed{background:#328fc6}.diagram-key .overhead{background:#805ba2}.diagram-key .heat{background:#e89a32}.diagram-key .cooling{background:#1c9aab}
+.diagram-toolbar{position:absolute;z-index:3;right:16px;top:14px;display:flex;align-items:center;gap:6px}.diagram-state,.motion-toggle{height:30px;padding:0 10px;border:1px solid #d8e5ed;border-radius:4px;background:#fafdfff0;color:#618093;font-size:10px}.diagram-state{display:flex;align-items:center;gap:4px}.diagram-state b{color:#287c70}.diagram-state b.warn{color:var(--amber)}.motion-toggle:hover{border-color:#84bad7;color:#1d719f}.motion-toggle:disabled{cursor:default;opacity:.65}
+.device-button.active{background:#eef7fc;font-weight:700}.device-button.preview{background:#f1f8fc}.hotspot.preview{box-shadow:0 0 0 7px #247db44d,0 4px 14px #416a8b80;scale:1.07}.hotspot.active::after,.hotspot.preview::after{border-color:#7db3d3;background:#eef8fd;color:#166c9d}
+.diagram-key button:focus-visible,.motion-toggle:focus-visible,.device-button:focus-visible,.route-hit:focus-visible{outline:3px solid #0a78ad;outline-offset:2px}
+.inspector{flex:0 0 auto}.inspector-title{padding:14px 14px 10px}.inspector-title h2{font-size:19px;margin:4px 0 5px}.inspector-title p{margin:0;color:#7c91a1;font-size:10px;line-height:1.5;min-height:30px}.tabs{display:grid;grid-template-columns:1fr 1fr;border-block:1px solid #e0eaf0}.tab{height:35px;border:0;border-bottom:2px solid transparent;background:#f5f9fc;color:#72899b;font-size:11px}.tab.active{background:#fff;color:#247db4;border-bottom-color:#247db4;font-weight:700}.inspection{min-height:162px}.reading{display:flex;align-items:baseline;justify-content:space-between;padding:9px 0;border-bottom:1px dashed #e0eaf0;font-size:10px;color:#6f8697}.reading:last-child{border-bottom:0}.reading b{font-size:15px;color:#315873}.reading b.warn{color:var(--amber)}.process-copy{margin:0;color:#577386;font-size:11px;line-height:1.7}.process-copy + .process-copy{margin-top:8px}
+.device-panel{flex:1}.device-list{padding:6px 11px}.device-button{display:flex;align-items:center;justify-content:space-between;width:100%;padding:10px 2px;border:0;border-bottom:1px solid #e6eef3;background:transparent;color:#526b7e;text-align:left;font-size:11px}.device-button:last-child{border-bottom:0}.device-button:hover,.device-button.active{color:#1d77aa}.device-button small{color:#879eac;font-size:9px}.device-button .dot{display:inline-block;width:6px;height:6px;margin-right:7px;border-radius:50%;background:#3ba48a}.device-button.fault .dot{background:var(--amber)}
+.quality-panel{flex:0 0 auto}.quality-panel p{margin:0;color:#6f8798;font-size:10px;line-height:1.55}.quality-panel strong{color:#527087}
+.bottom{display:grid;grid-template-columns:1.32fr 1fr 1fr;gap:10px;padding:10px 14px;background:#edf5fa;border-top:1px solid #cbdce8}.bottom-card{min-width:0;background:#fff;border:1px solid #d2e1eb;border-radius:7px;padding:10px 13px;overflow:hidden}.bottom-head{display:flex;justify-content:space-between;align-items:center;color:#365b75;font-size:12px;font-weight:700}.bottom-head small{font-weight:400;color:#8ea1ae;font-size:9px}.trend{height:100px;width:100%}.balance{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:19px}.balance div{border-right:1px solid #e0eaf0}.balance div:last-child{border-right:0}.balance small{display:block;color:#7d93a2;font-size:10px}.balance b{display:block;margin-top:5px;color:#315f7a;font-size:19px}.balance em{font-style:normal;font-size:10px;color:#8498a6}.event-time{color:#247db4;font-size:11px;margin-top:13px}.event-title{font-size:13px;margin:5px 0;color:#355b75}.event-desc{font-size:10px;line-height:1.5;color:#71899a;margin:0}.event-desc.warn{color:#a8753c}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.flow-line{stroke-dasharray:none;opacity:.48}.mixer-liquid{stroke-dasharray:none}.bubble{opacity:0}}
+</style>
+</head>
+<body>
+<div id="screen" v-cloak>
+  <header class="topbar">
+    <div class="brand"><small>PROCESS OPERATIONS / DEMO</small><h1>连续分离工艺 · 运行驾驶舱</h1><p>进料预处理 · 塔分离 · 顶部冷凝 · 釜液换热</p></div>
+    <div class="flow-nav" aria-label="工艺主路径"><span>进料预处理</span><i></i><span class="active">塔系统</span><i></i><span>冷凝与产品</span></div>
+    <div class="meta"><span class="health" :class="{warn:mode==='coolingFault'}"><i></i>{{ preset.status }}</span><span class="demo">演示模式 · 模拟数据</span><span>数据质量 <strong>SIM</strong></span><span class="num">{{ clock }}</span></div>
+  </header>
+  <section class="kpi-strip" aria-label="工艺关键指标">
+    <div v-for="item in kpis" :key="item.label" class="kpi" :class="{warn:item.warn}"><div class="kpi-top"><span>{{ item.label }}</span><em>{{ item.tag }}</em></div><div class="kpi-main"><b class="num">{{ item.value }}</b><small>{{ item.unit }}</small></div><div class="kpi-foot">{{ item.note }} <b>{{ item.state }}</b></div></div>
+  </section>
+  <main class="workspace">
+    <aside class="rail">
+      <section class="panel mode-panel"><div class="panel-head"><strong>演示工况</strong><small>SCENARIO</small></div><div class="panel-body"><div class="mode-stack"><button v-for="(item,index) in presets" :key="item.id" class="mode-button" :class="{active:mode===item.id}" :aria-pressed="mode===item.id" @click="setMode(item.id)"><span class="num">0{{ index+1 }}</span>{{ item.name }}</button></div><p class="mode-note" :class="{warn:mode==='coolingFault'}">{{ preset.note }}</p></div></section>
+      <section class="panel sequence-panel"><div class="panel-head"><strong>工艺路径</strong><small>PROCESS ROUTE</small></div><div class="panel-body"><ol class="sequence"><li v-for="(step,index) in steps" :key="step.name"><span class="step num">{{ index+1 }}</span><span><b>{{ step.name }}</b><small>{{ step.detail }}</small></span></li></ol></div></section>
+      <section class="panel safety-panel"><div class="panel-head"><strong>运行边界</strong><small>OPERATING WINDOW</small></div><div class="panel-body"><div class="status-row"><span>塔顶压力上限</span><b class="num">0.32 MPa</b></div><div class="status-row"><span>冷却出口温度上限</span><b class="num" :class="{warn:mode==='coolingFault'}">{{ preset.coolingLimit }}</b></div><div class="status-row"><span>当前越限点</span><b :class="{warn:mode==='coolingFault'}">{{ preset.exceed }}</b></div></div></section>
+    </aside>
+    <section class="diagram" :class="{'motion-paused':!motion}" aria-label="连续分离工艺流程图">
+      <div class="diagram-caption"><strong>工艺流程总览</strong><span>悬停线路查看流向，点击线路聚焦；点击测点查看设备</span><small>图像为工艺示意，设备与测点均为演示映射</small></div>
+      <div class="artboard">
+        <svg class="flow-overlay" viewBox="0 0 1672 941" preserveAspectRatio="none" aria-label="可交互的工艺管线">
+          <defs>
+            <linearGradient id="scan-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5bc8d2" stop-opacity="0"/><stop offset=".5" stop-color="#49bdca" stop-opacity=".54"/><stop offset="1" stop-color="#5bc8d2" stop-opacity="0"/></linearGradient>
+            <clipPath id="mix-vessel"><path d="M530 348 Q530 326 552 322 L626 322 Q659 327 659 353 L659 480 Q657 512 628 519 L551 519 Q527 513 527 482 Z"/></clipPath>
+            <clipPath id="column-vessel"><path d="M946 132 Q946 99 975 92 L1004 92 Q1031 101 1031 132 L1031 520 Q1027 556 988 559 Q951 556 946 520 Z"/></clipPath>
+          </defs>
+          <g v-for="route in flowRoutes" :key="route.id" class="flow-route" :class="[route.id,{dim:displayFocus!=='all'&&displayFocus!==route.focus,focused:displayFocus===route.focus,fault:mode==='coolingFault'&&route.id==='cooling'}]">
+            <path class="flow-line" :d="route.path"/>
+            <path class="route-hit" :d="route.path" :aria-label="'聚焦'+route.name" @mouseenter="hoveredFlow=route.focus" @mouseleave="hoveredFlow=null" @click="setFlowFocus(route.focus)"/>
+          </g>
+          <g clip-path="url(#mix-vessel)">
+            <path class="mixer-liquid" d="M526 424 Q545 412 565 424 T605 424 T645 424 T685 424"/>
+            <path class="reactor-glow" d="M535 341 Q540 329 557 329 H623 Q651 331 652 354 V477 Q651 503 626 511 H555 Q535 507 534 481 Z"/>
+            <circle class="bubble" cx="555" cy="489" r="4" fill="#e5fbff"/>
+            <circle class="bubble two" cx="606" cy="495" r="3" fill="#e5fbff"/>
+            <circle class="bubble three" cx="635" cy="486" r="3.5" fill="#e5fbff"/>
+          </g>
+          <g clip-path="url(#column-vessel)">
+            <rect class="column-scan" x="947" y="145" width="84" height="22"/>
+            <path class="reactor-glow" d="M953 138 V509 Q956 542 988 547 Q1020 542 1024 509 V138"/>
+          </g>
+        </svg>
+        <button v-for="(device,index) in devices" :key="device.id" class="hotspot" :class="['label-'+device.labelSide,{active:selected===device.id,preview:hovered===device.id,fault:mode==='coolingFault'&&device.id==='condenser'}]" :style="{left:device.x+'%',top:device.y+'%'}" :data-name="device.name" :aria-label="'查看'+device.name" @mouseenter="hovered=device.id" @mouseleave="hovered=null" @focus="hovered=device.id" @blur="hovered=null" @click="selectDevice(device.id)">{{ String(index+1).padStart(2,'0') }}</button>
+      </div>
+      <div class="diagram-toolbar"><div class="diagram-state"><template v-if="hoveredDevice">预览 · <b>{{ hoveredDevice.name }}</b></template><template v-else-if="hoveredFlow">流向 · <b>{{ flowNames[hoveredFlow] }}</b></template><template v-else>流程状态 · <b :class="{warn:mode==='coolingFault'}">{{ preset.status }}</b></template></div><button class="motion-toggle" :disabled="reducedMotion" :aria-pressed="!motion" @click="motion=!motion">{{ reducedMotion?'系统已停用动效':motion?'暂停动效':'播放动效' }}</button></div>
+      <div class="diagram-key" aria-label="聚焦工艺线路"><button v-for="flow in flowOptions" :key="flow.id" :class="{active:flowFocus===flow.id}" :aria-pressed="flowFocus===flow.id" @mouseenter="hoveredFlow=flow.id" @mouseleave="hoveredFlow=null" @click="setFlowFocus(flow.id)"><i v-if="flow.id!=='all'" :class="flow.id"></i>{{ flow.name }}</button></div>
+    </section>
+    <aside class="rail">
+      <section class="panel inspector"><div class="inspector-title"><span class="section-kicker">EQUIPMENT INSPECTOR / {{ selectedDevice.tag }}</span><h2>{{ selectedDevice.name }}</h2><p>{{ selectedDevice.summary }}</p></div><div class="tabs"><button class="tab" :class="{active:tab==='readings'}" @click="tab='readings'">运行测点</button><button class="tab" :class="{active:tab==='process'}" @click="tab='process'">工艺作用</button></div><div class="panel-body inspection" v-if="tab==='readings'"><div class="reading" v-for="reading in selectedReadings" :key="reading.label"><span>{{ reading.label }}</span><b class="num" :class="{warn:reading.warn}">{{ reading.value }} <small>{{ reading.unit }}</small></b></div></div><div class="panel-body inspection" v-else><p class="process-copy">{{ selectedDevice.detail }}</p><p class="process-copy">{{ selectedDevice.note }}</p></div></section>
+      <section class="panel device-panel"><div class="panel-head"><strong>设备索引</strong><small>6 个可选测点</small></div><div class="device-list"><button v-for="device in devices" :key="device.id" class="device-button" :class="{active:selected===device.id,preview:hovered===device.id,fault:mode==='coolingFault'&&device.id==='condenser'}" @mouseenter="hovered=device.id" @mouseleave="hovered=null" @focus="hovered=device.id" @blur="hovered=null" @click="selectDevice(device.id)"><span><i class="dot"></i>{{ device.name }}</span><small class="num">{{ device.tag }}</small></button></div></section>
+      <section class="panel quality-panel"><div class="panel-head"><strong>数据说明</strong><small>SIMULATION</small></div><div class="panel-body"><p>当前为预设工况脚本，<strong>未接入现场系统</strong>。数据质量 SIM，最近演示更新时间 <span class="num">{{ lastSeen }}</span>。</p></div></section>
+    </aside>
+  </main>
+  <footer class="bottom">
+    <section class="bottom-card"><div class="bottom-head">塔顶温度与冷却出口趋势 <small>最近 12 分钟 · 演示曲线</small></div><div id="trendChart" class="trend" aria-label="演示温度趋势图"></div></section>
+    <section class="bottom-card"><div class="bottom-head">物料平衡 <small>当前工况</small></div><div class="balance"><div><small>进料量</small><b class="num">{{ preset.balance.feed }}</b><em>t/h</em></div><div><small>顶产品</small><b class="num">{{ preset.balance.top }}</b><em>t/h</em></div><div><small>釜液</small><b class="num">{{ preset.balance.bottom }}</b><em>t/h</em></div></div></section>
+    <section class="bottom-card"><div class="bottom-head">工况事件 <small>随演示切换</small></div><div class="event-time num">{{ lastSeen }}</div><h3 class="event-title">{{ preset.event }}</h3><p class="event-desc" :class="{warn:mode==='coolingFault'}">{{ preset.eventDetail }}</p></section>
+  </footer>
+</div>
+<script>
+(() => {
+  const {createApp,computed,ref,onMounted,nextTick} = Vue;
+  const devices = [
+    {id:'feed',tag:'TK-101',name:'原料缓冲罐',x:7,y:50,labelSide:'right',summary:'稳定入口来料，向混合段连续供料。',detail:'原料经缓冲罐与进料泵送入混合罐，减少上游波动对塔系统的影响。',note:'图中蓝色线路表示主进料方向。',base:[['罐内液位','64.2','%'],['出口流量','32.4','t/h'],['出口温度','31.6','°C']]},
+    {id:'mixer',tag:'MX-201',name:'混合罐',x:35,y:47,labelSide:'top',summary:'来料均化并维持预处理段连续运行。',detail:'混合罐通过搅拌均匀进料，预热换热器将物料送往分离塔。',note:'画面中的支路为示意，实际控制需依据现场 P&ID。',base:[['罐内液位','58.0','%'],['搅拌转速','146','rpm'],['出口流量','32.4','t/h']]},
+    {id:'preheater',tag:'E-202',name:'进料换热器',x:47,y:49,labelSide:'bottom',summary:'进料升温后进入塔中段。',detail:'换热器回收可用热量，提高塔进料温度并减小再沸负荷。',note:'关注进出口温差及压降。',base:[['出口温度','86.2','°C'],['换热温差','54.6','°C'],['管侧压降','0.06','MPa']]},
+    {id:'column',tag:'T-301',name:'分离塔',x:59,y:34,labelSide:'right',summary:'塔内气液接触完成组分分离。',detail:'塔顶蒸汽送冷凝器，塔底釜液进入再沸和产品冷却支路。',note:'塔顶压力、塔釜温度和回流比是关键观察量。',base:[['塔顶压力','0.24','MPa'],['塔顶温度','78.4','°C'],['塔釜温度','118.6','°C']]},
+    {id:'condenser',tag:'E-302',name:'塔顶冷凝器',x:74,y:15,labelSide:'right',summary:'塔顶蒸汽冷凝后进入回流与产品支路。',detail:'冷凝器使用冷却介质移除塔顶热量，部分冷凝液回流至塔内。',note:'冷却出口温度升高时，应检查换热能力与循环水条件。',base:[['冷却出口温度','32.8','°C'],['冷凝负荷','1.84','MW'],['回流比','2.8','—']]},
+    {id:'reboiler',tag:'E-303',name:'塔釜再沸器',x:68,y:69,labelSide:'bottom',summary:'向塔釜提供持续的汽化热量。',detail:'再沸器维持塔内上升汽相，釜液经下游换热冷却后进入产品罐。',note:'关注热媒负荷与塔釜温度。',base:[['塔釜温度','118.6','°C'],['热媒负荷','2.31','MW'],['釜液流量','18.6','t/h']]}
+  ];
+  const flowOptions = [{id:'all',name:'全部线路'},{id:'feed',name:'进料'},{id:'overhead',name:'塔顶物料'},{id:'heat',name:'热源/釜液'},{id:'cooling',name:'冷却循环'}];
+  const flowNames = {all:'全部线路',feed:'进料',overhead:'塔顶物料',heat:'热源/釜液',cooling:'冷却循环'};
+  const deviceFlows = {feed:'feed',mixer:'feed',preheater:'feed',column:'overhead',condenser:'cooling',reboiler:'heat'};
+  const routeDevices = {feed:'preheater',overhead:'column',heat:'reboiler',cooling:'condenser'};
+  const flowRoutes = [
+    {id:'feed',focus:'feed',name:'进料',path:'M183 469 H307 M368 454 H426 Q437 454 437 443 V357 Q437 346 448 346 H499 M670 462 H729 M878 462 H884 Q895 462 895 451 V281 Q895 269 907 269 H935 M590 534 V550 Q590 562 602 562 H789 Q801 562 801 550 V504'},
+    {id:'overhead',focus:'overhead',name:'塔顶物料',path:'M987 83 V50 Q987 36 1001 36 H1087 Q1101 36 1101 50 V121 Q1101 134 1114 134 H1151 M1270 170 V276 M1314 356 H1445 M1609 356 H1654'},
+    {id:'heat',focus:'heat',name:'热源/釜液',path:'M986 584 V657 Q986 670 999 670 H1047 M1102 656 H1212 M1356 662 H1447 M1609 662 H1654'},
+    {id:'return',focus:'heat',name:'塔釜热循环',path:'M1039 208 H1059 Q1071 208 1071 220 V355 Q1071 368 1084 368 H1165 Q1178 368 1178 381 V449 M1226 488 H1280'},
+    {id:'cooling',focus:'cooling',name:'冷却循环',path:'M1330 112 H1444 M1444 151 H1331 M466 849 H483 Q497 849 497 835 V761 Q497 748 483 748 H180 M307 849 H355 M253 874 H66 Q53 874 53 861 V739 Q53 725 67 725 H98'}
+  ];
+  const presets = [
+    {id:'steady',name:'稳定运行',status:'系统稳态',note:'进料与冷却负荷匹配，塔顶和塔釜指标位于演示窗口。',coolingLimit:'36.0 °C',exceed:'0',event:'稳态运行脚本已加载',eventDetail:'塔系统维持设定回流，当前无演示越限点。',balance:{feed:'32.4',top:'13.8',bottom:'18.6'},kpis:[['进料流量','32.4','t/h','FIT-101','目标 32.0','稳定'],['塔顶压力','0.24','MPa','PIT-301','上限 0.32','正常'],['塔顶温度','78.4','°C','TIT-302','目标 79.0','稳定'],['回流比','2.8','—','FIC-303','设定 2.8','跟踪'],['冷却出口','32.8','°C','TIT-305','上限 36.0','正常']],trendTop:[77.9,78.1,78.0,78.2,78.1,78.3,78.2,78.4,78.3,78.4,78.4,78.4],trendCool:[32.1,32.2,32.3,32.2,32.4,32.5,32.5,32.6,32.6,32.7,32.8,32.8]},
+    {id:'highLoad',name:'高负荷演练',status:'负荷提升',note:'进料量提升，回流和再沸负荷同步上调；指标仍处于演示边界内。',coolingLimit:'36.0 °C',exceed:'0',event:'进料负荷提升至 38.2 t/h',eventDetail:'回流比调整为 3.1，塔顶温度缓慢上升。',balance:{feed:'38.2',top:'16.4',bottom:'21.8'},kpis:[['进料流量','38.2','t/h','FIT-101','目标 38.0','跟踪'],['塔顶压力','0.27','MPa','PIT-301','上限 0.32','正常'],['塔顶温度','79.6','°C','TIT-302','目标 80.0','跟踪'],['回流比','3.1','—','FIC-303','设定 3.1','跟踪'],['冷却出口','35.1','°C','TIT-305','上限 36.0','接近']],trendTop:[78.4,78.5,78.7,78.9,79.0,79.1,79.3,79.4,79.5,79.5,79.6,79.6],trendCool:[32.8,33.1,33.4,33.8,34.0,34.2,34.4,34.7,34.9,35.0,35.1,35.1]},
+    {id:'coolingFault',name:'冷却偏弱演练',status:'冷却能力预警',note:'模拟冷凝器换热能力下降，冷却出口温度越过演示上限。',coolingLimit:'36.0 °C',exceed:'1 · TIT-305',event:'冷凝器出口温度高',eventDetail:'TIT-305 达 39.2 °C，建议核查冷却循环与换热器状态。仅为演示提示。',balance:{feed:'32.4',top:'13.8',bottom:'18.6'},kpis:[['进料流量','32.4','t/h','FIT-101','目标 32.0','稳定'],['塔顶压力','0.30','MPa','PIT-301','上限 0.32','接近'],['塔顶温度','82.6','°C','TIT-302','目标 79.0','偏高'],['回流比','2.8','—','FIC-303','设定 2.8','跟踪'],['冷却出口','39.2','°C','TIT-305','上限 36.0','越限']],trendTop:[78.4,78.5,78.8,79.1,79.5,80.0,80.5,81.0,81.5,82.0,82.3,82.6],trendCool:[32.8,33.0,33.5,34.1,34.9,35.8,36.5,37.2,37.9,38.4,38.9,39.2]}
+  ];
+  const steps = [{name:'原料缓冲与混合',detail:'入口缓冲罐 → 进料泵 → 混合罐'},{name:'进料预热',detail:'换热后从塔中段进入'},{name:'塔内分离',detail:'塔顶气相与塔底釜液分流'},{name:'顶部冷凝与回流',detail:'冷凝液进入回流和顶产品支路'},{name:'塔釜再沸与冷却',detail:'热源循环维持分离驱动力'}];
+  let trendChart = null;
+  const app = createApp({setup(){
+    const mode=ref('steady'),selected=ref('column'),tab=ref('readings'),clock=ref(''),lastSeen=ref('');
+    const flowFocus=ref('all'),hoveredFlow=ref(null),hovered=ref(null),motion=ref(true),reducedMotion=ref(false);
+    const preset=computed(()=>presets.find(item=>item.id===mode.value)||presets[0]);
+    const selectedDevice=computed(()=>devices.find(item=>item.id===selected.value)||devices[3]);
+    const hoveredDevice=computed(()=>devices.find(item=>item.id===hovered.value)||null);
+    const displayFocus=computed(()=>hovered.value?deviceFlows[hovered.value]:hoveredFlow.value||flowFocus.value);
+    const kpis=computed(()=>preset.value.kpis.map((item,index)=>({label:item[0],value:item[1],unit:item[2],tag:item[3],note:item[4],state:item[5],warn:mode.value==='coolingFault'&&(index===2||index===4)})));
+    const selectedReadings=computed(()=>selectedDevice.value.base.map((item,index)=>{let value=item[1];if(mode.value==='highLoad'){const overrides={feed:['70.1','38.2','32.0'],mixer:['61.5','154','38.2'],preheater:['88.1','56.1','0.07'],column:['0.27','79.6','120.2'],condenser:['35.1','2.12','3.1'],reboiler:['120.2','2.68','21.8']};value=overrides[selected.value][index]}if(mode.value==='coolingFault'){const overrides={column:['0.30','82.6','119.4'],condenser:['39.2','1.42','2.8']};if(overrides[selected.value])value=overrides[selected.value][index]}return{label:item[0],value,unit:item[2],warn:mode.value==='coolingFault'&&((selected.value==='condenser'&&index===0)||(selected.value==='column'&&index===1))}}));
+    function stamp(){const now=new Date();clock.value=now.toLocaleTimeString('zh-CN',{hour12:false});lastSeen.value=clock.value}
+    function drawChart(){const el=document.getElementById('trendChart');if(!el)return;if(!trendChart)trendChart=echarts.init(el);trendChart.setOption({animationDuration:250,grid:{left:36,right:13,top:12,bottom:20},tooltip:{trigger:'axis'},legend:{show:false},xAxis:{type:'category',boundaryGap:false,data:['-11','-10','-9','-8','-7','-6','-5','-4','-3','-2','-1','现在'],axisLabel:{color:'#8b9fad',fontSize:9,interval:2},axisLine:{lineStyle:{color:'#ccdae4'}},axisTick:{show:false}},yAxis:[{type:'value',min:74,max:86,axisLabel:{color:'#8b9fad',fontSize:9},splitLine:{lineStyle:{color:'#e8eff4'}}},{type:'value',min:28,max:42,show:false}],series:[{name:'塔顶温度',type:'line',data:preset.value.trendTop,smooth:.25,showSymbol:false,lineStyle:{width:2,color:'#267faf'},areaStyle:{color:'rgba(45,141,192,.08)'},itemStyle:{color:'#267faf'}},{name:'冷却出口',type:'line',yAxisIndex:1,data:preset.value.trendCool,smooth:.25,showSymbol:false,lineStyle:{width:2,color:mode.value==='coolingFault'?'#cf8432':'#15a2aa'},itemStyle:{color:mode.value==='coolingFault'?'#cf8432':'#15a2aa'}}]})}
+    function setMode(id){mode.value=id;stamp();nextTick(drawChart)}
+    function selectDevice(id){selected.value=id;flowFocus.value=deviceFlows[id];tab.value='readings'}
+    function setFlowFocus(id){flowFocus.value=id;if(routeDevices[id]){selected.value=routeDevices[id];tab.value='readings'}}
+    function fit(){const el=document.getElementById('screen');if(!el)return;const scale=Math.min(window.innerWidth/1920,window.innerHeight/1080);el.style.transform='translate(-50%,-50%) scale('+scale+')';if(trendChart)trendChart.resize()}
+    onMounted(()=>{stamp();fit();drawChart();window.addEventListener('resize',fit);const preference=window.matchMedia('(prefers-reduced-motion: reduce)');reducedMotion.value=preference.matches;if(preference.matches)motion.value=false;preference.addEventListener('change',event=>{reducedMotion.value=event.matches;if(event.matches)motion.value=false})});
+    return{devices,presets,steps,flowOptions,flowNames,flowRoutes,mode,selected,tab,clock,lastSeen,preset,selectedDevice,hoveredDevice,selectedReadings,kpis,flowFocus,hoveredFlow,hovered,displayFocus,motion,reducedMotion,setMode,selectDevice,setFlowFocus};
+  }});
+  function safeInit(){const el=document.getElementById('screen');if(!el)return;app.mount(el)}
+  safeInit();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>A²/O 生化处理 2.5D 工艺场景</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<script src="../../vendor/three.min.js"></script>
+<script src="../../vendor/OrbitControls.js"></script>
+<script src="../../packages/runtime/dashboard-runtime.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#cbd9e6;color:#2b4359;font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+button{font:inherit;color:inherit;cursor:pointer}
+[v-cloak]{display:none}
+:root{--page:#dfe8f3;--surface:#f8fbff;--line:#c8d5e3;--text:#2b4359;--muted:#718597;--blue:#247ac4;--green:#21ad79;--amber:#d9953a;--danger:#d96060}
+.num{font-family:Bahnschrift,Consolas,monospace;font-variant-numeric:tabular-nums}
+#screen{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:center center;display:grid;grid-template-rows:72px 52px 694px 262px;overflow:hidden;background:#dfe8f3;box-shadow:0 20px 60px #50677d40}
+.topbar{display:grid;grid-template-columns:500px 1fr 430px;align-items:center;background:#f8fbff;border-bottom:1px solid var(--line);padding:0 22px}
+.brand .eyebrow{font-size:11px;color:#247ac4;letter-spacing:.18em;font-weight:700}.brand h1{font-size:24px;line-height:1.1;letter-spacing:.04em;margin:3px 0 2px}.brand p{margin:0;color:var(--muted);font-size:11px}
+.primary-nav{height:100%;display:flex;justify-content:center;align-items:stretch}.primary-nav span{display:grid;place-items:center;padding:0 22px;font-size:14px;color:#7b8fa1;border-bottom:3px solid transparent}.primary-nav .active{color:#216ea9;background:#ebf4fb;border-bottom-color:#247ac4;font-weight:700}
+.top-meta{display:flex;align-items:center;justify-content:flex-end;gap:14px;font-size:12px;color:#52697b}.demo{border:1px solid #e5c990;background:#fff7e8;color:#92691f;padding:5px 9px;border-radius:4px;font-weight:700}.status{color:#137958;font-weight:700}.status::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#21ad79;margin-right:7px}.status.warn{color:#ab6924}.status.warn::before{background:#d9953a}
+.subnav{display:flex;align-items:center;gap:7px;padding:0 16px;background:#f1f6fa;border-bottom:1px solid var(--line)}.subnav button{height:36px;padding:0 18px;border:1px solid transparent;background:transparent;border-radius:4px;font-size:13px;color:#5f7385}.subnav button:hover{background:#e5f1fa}.subnav button.active{background:#247ac4;color:white;font-weight:700}.subnav .hint{margin-left:auto;color:#7b8fa1;font-size:11px}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 420px;min-height:0}.plant3d{position:relative;min-width:0;min-height:0;background:radial-gradient(ellipse at 50% 20%,#f8fcff 0,#e9f2f9 58%,#dce8f1 100%);overflow:hidden;cursor:grab}.plant3d:active{cursor:grabbing}.plant3d canvas{display:block}
+.scene-note{position:absolute;top:16px;left:18px;z-index:3;width:300px;border:1px solid #c8d8e5;background:#fafdffeb;box-shadow:0 6px 18px #6c839329;border-radius:6px;padding:11px 13px;pointer-events:none}.scene-note strong{display:block;font-size:13px}.scene-note p{margin:5px 0 0;color:#6a8091;font-size:11px;line-height:1.55}
+.scene-toolbar{position:absolute;right:16px;top:16px;z-index:3;display:flex;gap:6px}.scene-toolbar button{border:1px solid #bbcfdd;background:#fffdfde8;border-radius:5px;padding:7px 10px;font-size:11px;color:#416078;box-shadow:0 4px 12px #718da025}.scene-toolbar button:hover{border-color:#247ac4;color:#247ac4}
+.scene-legend{position:absolute;left:18px;bottom:14px;z-index:3;display:flex;gap:16px;align-items:center;background:#fafdffeb;border:1px solid #c8d8e5;border-radius:5px;padding:8px 11px;font-size:11px;color:#577085}.scene-legend i{display:inline-block;width:20px;height:4px;border-radius:4px;vertical-align:3px;margin-right:5px}.scene-legend .water{background:#2f9cd5}.scene-legend .air{background:#60b8e8}.scene-legend .sludge{background:#aa7952}
+.asset-label{position:absolute;z-index:2;transform:translate(-50%,-100%);border:1px solid #b9cfdf;border-left:3px solid #247ac4;background:#fffffff0;box-shadow:0 4px 12px #6b859333;border-radius:4px;padding:5px 9px;text-align:left;white-space:nowrap;font-size:12px;line-height:1.3;color:#2d4c61}.asset-label small{display:block;color:#778fa0;font-size:10px;margin-top:2px}.asset-label:hover,.asset-label.selected{border-color:#247ac4;background:white;box-shadow:0 0 0 2px #d9edfa,0 4px 12px #6b859333}.asset-label.fault{border-left-color:#d96060}
+.flow-tag{position:absolute;z-index:2;transform:translate(-50%,-50%);font-size:12px;font-weight:700;letter-spacing:.08em;color:#126caa;text-shadow:0 1px 0 #fff,0 0 5px #fff;pointer-events:none}.flow-tag.sludge{color:#895d37}
+.control-panel{min-height:0;background:#f8fbff;border-left:1px solid var(--line);display:flex;flex-direction:column}.panel-head{padding:16px 18px 11px;border-bottom:1px solid #dbe5ed}.panel-head .eyebrow{font-size:10px;letter-spacing:.16em;color:#247ac4;font-weight:700}.panel-head h2{font-size:20px;margin:5px 0 4px}.panel-head p{color:#718597;font-size:11px;margin:0;line-height:1.5}
+.tabs{display:flex;border-bottom:1px solid #dbe5ed;background:#f1f6fa}.tabs button{flex:1;padding:11px;border:0;border-bottom:2px solid transparent;background:none;color:#60778a;font-size:13px}.tabs button.active{border-bottom-color:#247ac4;color:#247ac4;background:#fff;font-weight:700}
+.panel-body{padding:16px 18px;min-height:0;overflow-y:auto}.section-title{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:700;color:#456076;margin:0 0 10px}.section-title small{font-weight:400;color:#8aa0ae}.equipment-list{display:grid;grid-template-columns:1fr 1fr;gap:8px}.equipment{border:1px solid #d4e1eb;background:#fff;border-radius:6px;text-align:left;padding:10px 11px;min-height:67px}.equipment:hover,.equipment.active{border-color:#247ac4;background:#eef7fc}.equipment strong{font-size:13px;display:block}.equipment span{font-size:10px;color:#718597;display:block;margin-top:5px}.equipment em{font-style:normal;color:#16845f;float:right;font-size:10px}.equipment em.bad{color:#c65050}
+.data-card{margin-top:13px;border:1px solid #d4e1eb;background:white;border-radius:7px;padding:13px}.data-card h3{font-size:14px;margin:0 0 11px}.data-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed #e4ecf1;font-size:12px;color:#62798c}.data-row:last-child{border-bottom:0}.data-row b{font-size:14px;color:#2b4c63}.data-row b.blue{color:#1978b5}.data-row b.warn{color:#c47324}
+.process-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:13px}.process-strip div{background:#edf5fa;border:1px solid #d8e7f0;padding:8px;text-align:center;font-size:11px;color:#597387}.process-strip b{display:block;color:#247ac4;font-size:12px;margin-bottom:2px}.process-strip div+div::before{content:"→";position:relative;left:-14px;float:left;color:#70aacf}
+.mode-note{margin-top:13px;padding:10px 12px;border-left:3px solid #d9953a;background:#fff8ed;color:#876538;font-size:11px;line-height:1.6}
+.bottom-grid{display:grid;grid-template-columns:1.27fr 1.18fr 1fr 1fr 1fr 1fr;gap:10px;padding:11px 14px;background:#f1f6fa;border-top:1px solid #c8d5e3}.bmod{min-width:0;background:#fff;border:1px solid #d7e3ec;border-radius:7px;padding:10px 12px;display:flex;flex-direction:column}.bmod h3{font-size:12px;margin:0 0 9px;color:#35536a}.bmod h3 small{float:right;font-weight:400;color:#8a9ca9;font-size:10px}.chart{flex:1;min-height:150px}.metric-large{font-size:29px;font-weight:700;color:#2077b3;line-height:1.2}.metric-large small{font-size:12px;font-weight:400;color:#718597}.metric-caption{font-size:11px;color:#718597;margin:3px 0 12px}.mini-row{display:flex;justify-content:space-between;border-bottom:1px dashed #e4ecf1;padding:7px 0;font-size:11px;color:#667d8e}.mini-row:last-child{border-bottom:0}.mini-row b{color:#34536a}.mini-row b.ok{color:#17835e}.mini-row b.warn{color:#bb7627}.mini-row b.bad{color:#c95252}
+.bar{height:8px;background:#e8f0f5;border-radius:20px;margin-top:8px;overflow:hidden}.bar i{display:block;height:100%;background:#3c9bd2;border-radius:20px}.footer-note{font-size:10px;color:#8296a6;margin-top:auto;line-height:1.5}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="screen" v-cloak>
+  <header class="topbar">
+    <div class="brand"><span class="eyebrow">WATER TREATMENT / PROCESS TWIN</span><h1>A²/O 生化处理 · 2.5D 工艺场景</h1><p>缺氧反硝化 · 好氧曝气 · 二沉泥水分离 · 外回流闭环</p></div>
+    <nav class="primary-nav"><span>厂区总览</span><span class="active">生化处理段</span><span>设备状态</span><span>工艺报表</span></nav>
+    <div class="top-meta"><span class="status" :class="{warn:mode==='airFault'}">{{ preset.status }}</span><span class="demo">演示模式 · 模拟数据</span><span>数据质量 <b>GOOD</b></span><span class="num">{{ clock }}</span></div>
+  </header>
+  <nav class="subnav">
+    <button v-for="item in presets" :key="item.id" :class="{active:mode===item.id}" @click="setMode(item.id)">{{ item.name }}</button>
+    <span class="hint">轴测视角 · 可拖动旋转 / 滚轮缩放 · 点击场景标签查看设备</span>
+  </nav>
+  <main class="main">
+    <section id="scene3d" class="plant3d" aria-label="A²/O 生化处理三维工艺场景">
+      <div class="scene-note"><strong>生化处理工艺总览</strong><p>进水 → 缺氧池 → 好氧池 → 二沉池 → 出水<br>鼓风机供气至好氧池，二沉池底泥回流至缺氧池。</p></div>
+      <div class="scene-toolbar"><button @click="resetView">复位视角</button><button @click="toggleMotion">{{ motion ? '暂停动效' : '播放动效' }}</button></div>
+      <button v-for="item in labels" :key="item.id" class="asset-label" :class="{selected:selected===item.id,fault:mode==='airFault'&&item.id==='blower'}" :data-label="item.id" @click="select(item.id)"><strong>{{ item.name }}</strong><small>{{ item.sub }}</small></button>
+      <span class="flow-tag" data-flow="in">进水 →</span><span class="flow-tag" data-flow="out">→ 出水</span><span class="flow-tag sludge" data-flow="return">← 回流污泥</span>
+      <div class="scene-legend"><span><i class="water"></i>工艺水</span><span><i class="air"></i>曝气空气</span><span><i class="sludge"></i>回流污泥</span></div>
+    </section>
+    <aside class="control-panel">
+      <div class="panel-head"><span class="eyebrow">PROCESS INSPECTOR</span><h2>{{ selectedItem.name }}</h2><p>{{ selectedItem.detail }}</p></div>
+      <div class="tabs"><button :class="{active:tab==='status'}" @click="tab='status'">运行状态</button><button :class="{active:tab==='process'}" @click="tab='process'">工艺说明</button><button :class="{active:tab==='event'}" @click="tab='event'">演示事件</button></div>
+      <div class="panel-body" v-if="tab==='status'">
+        <p class="section-title">工艺单元 <small>点击定位场景标签</small></p>
+        <div class="equipment-list"><button v-for="item in labels" :key="item.id" class="equipment" :class="{active:selected===item.id}" @click="select(item.id)"><strong>{{ item.name }}<em :class="{bad:mode==='airFault'&&item.id==='blower'}">{{ mode==='airFault'&&item.id==='blower'?'告警':'运行' }}</em></strong><span>{{ item.sub }}</span></button></div>
+        <div class="data-card"><h3>{{ selectedItem.name }} · 演示读数</h3><div class="data-row" v-for="row in selectedRows" :key="row.name"><span>{{ row.name }}</span><b class="num" :class="row.tone">{{ row.value }}</b></div></div>
+        <div class="mode-note">演示数据用于工艺展示；设备选择仅查看状态，不向现场控制系统下发指令。</div>
+      </div>
+      <div class="panel-body" v-else-if="tab==='process'">
+        <p class="section-title">流程与设备作用</p>
+        <div class="process-strip"><div><b>01 缺氧</b>反硝化</div><div><b>02 好氧</b>曝气硝化</div><div><b>03 二沉</b>泥水分离</div></div>
+        <div class="data-card"><h3>{{ selectedItem.name }}</h3><p style="font-size:12px;line-height:1.8;color:#5e788a;margin:0">{{ selectedItem.explain }}</p></div>
+        <div class="data-card"><h3>参考图中的工艺关系</h3><div class="data-row"><span>蓝色主管</span><b>进水 / 池间 / 出水</b></div><div class="data-row"><span>上方蓝色管线</span><b>鼓风供气</b></div><div class="data-row"><span>前方棕色管线</span><b>二沉池污泥回流</b></div></div>
+      </div>
+      <div class="panel-body" v-else>
+        <p class="section-title">固定工况脚本 <small>非实时告警</small></p>
+        <div class="data-card"><h3>{{ preset.name }}</h3><p style="font-size:12px;line-height:1.8;color:#5e788a;margin:0">{{ preset.event }}</p></div>
+        <div class="data-card"><div class="data-row"><span>数据来源</span><b>本地演示脚本</b></div><div class="data-row"><span>更新时间</span><b class="num">{{ clock }}</b></div><div class="data-row"><span>数据质量</span><b>GOOD / SIMULATED</b></div></div>
+      </div>
+    </aside>
+  </main>
+  <section class="bottom-grid" aria-label="工艺状态模块">
+    <div class="bmod"><h3>进出水流量趋势 <small>m³/h · 近 6 小时</small></h3><div class="chart" id="flowChart"></div></div>
+    <div class="bmod"><h3>好氧池 DO 趋势 <small>mg/L · 近 6 小时</small></h3><div class="chart" id="doChart"></div></div>
+    <div class="bmod"><h3>水力负荷</h3><div class="metric-large num">{{ preset.flow }} <small>m³/h</small></div><div class="metric-caption">生化段当前处理量</div><div class="mini-row"><span>进水流量计</span><b class="ok">GOOD</b></div><div class="mini-row"><span>二沉出水</span><b class="num">{{ preset.outflow }} m³/h</b></div><div class="bar"><i :style="{width:preset.load+'%'}"></i></div><span class="footer-note">负荷率 {{ preset.load }}% · 设计值 760 m³/h</span></div>
+    <div class="bmod"><h3>生化控制</h3><div class="mini-row"><span>缺氧 ORP</span><b class="num">{{ preset.orp }} mV</b></div><div class="mini-row"><span>好氧 DO</span><b class="num" :class="mode==='airFault'?'bad':'ok'">{{ preset.do }} mg/L</b></div><div class="mini-row"><span>硝化液内回流</span><b class="num">{{ preset.internal }}%</b></div><div class="mini-row"><span>污泥外回流</span><b class="num">{{ preset.return }}%</b></div><span class="footer-note">指标用于演示工况切换</span></div>
+    <div class="bmod"><h3>设备状态</h3><div class="mini-row"><span>鼓风机 1# / 2#</span><b :class="mode==='airFault'?'warn':'ok'">{{ mode==='airFault'?'1 运 1 停':'2 台运行' }}</b></div><div class="mini-row"><span>缺氧搅拌器</span><b class="ok">运行</b></div><div class="mini-row"><span>二沉池刮泥机</span><b class="ok">运行</b></div><div class="mini-row"><span>回流污泥泵</span><b class="ok">运行</b></div><span class="footer-note">设备状态随演示工况联动</span></div>
+    <div class="bmod"><h3>出水与质量</h3><div class="mini-row"><span>出水 NH₄-N</span><b class="num">{{ preset.nh4 }} mg/L</b></div><div class="mini-row"><span>出水 SS</span><b class="num">{{ preset.ss }} mg/L</b></div><div class="mini-row"><span>模拟质量位</span><b class="ok">GOOD</b></div><div class="mini-row"><span>现场连接</span><b>未接入</b></div><span class="footer-note">无需网络连接，可离线演示</span></div>
+  </section>
+</div>
+<script>
+(() => {
+  'use strict';
+  const $id = id => document.getElementById(id);
+  function safeInit(el, create) { if (!el) return null; try { return create(el); } catch (error) { console.error(error); return null; } }
+  const presets = [
+    {id:'steady',name:'稳定运行',status:'系统稳定',flow:532,outflow:526,load:70,orp:-186,do:'2.38',internal:205,return:76,nh4:'0.72',ss:'7.4',event:'进水负荷平稳，鼓风机双机运行；缺氧搅拌、好氧曝气与二沉刮泥连续运行。'},
+    {id:'peak',name:'高峰负荷',status:'高负荷受控',flow:641,outflow:633,load:84,orp:-172,do:'2.16',internal:220,return:84,nh4:'0.94',ss:'8.6',event:'模拟高峰进水，鼓风量与污泥回流比上调，出水指标仍保持在演示控制范围。'},
+    {id:'airFault',name:'曝气故障演练',status:'曝气支路预警',flow:518,outflow:512,load:68,orp:-180,do:'1.26',internal:190,return:78,nh4:'1.34',ss:'8.1',event:'模拟 2# 鼓风机停机；好氧池气泡减少，DO 下降。此场景仅用于可视化演练。'}
+  ];
+  const labels = [
+    {id:'anoxic',name:'缺氧池',sub:'反硝化 · 潜水搅拌',detail:'低溶解氧环境，搅拌维持混合并促进反硝化。',explain:'缺氧池接收进水与回流污泥，潜水搅拌器保持泥水混合。场景前侧的棕色管道从二沉池底部返回。'},
+    {id:'aerobic',name:'好氧池',sub:'微孔曝气 · 硝化',detail:'鼓风机供气至池底曝气盘，维持硝化所需溶解氧。',explain:'四组曝气盘在池底形成上升气泡。上方蓝色管道来自鼓风机平台，支管向池内供气。'},
+    {id:'clarifier',name:'二沉池',sub:'辐流沉淀 · 刮泥',detail:'泥水分离后，澄清水经右侧管道出水，底泥回流。',explain:'圆形二沉池中心进水、周边出水，中心轴和刮泥臂缓慢旋转；底部污泥经棕色管道回到前端。'},
+    {id:'blower',name:'鼓风机',sub:'双机组 · 曝气供气',detail:'两台鼓风机置于后方平台，经蓝色主管向好氧池供气。',explain:'鼓风机双机组通过汇流管连接好氧池。故障演练时第二台停机，曝气气泡数量与动画速度同步降低。'}
+  ];
+  const app = Vue.createApp({
+    data() { return {presets,labels,mode:'steady',selected:'aerobic',tab:'status',motion:true,clock:'--:--:--',sceneApi:null,charts:[]}; },
+    computed: {
+      preset() { return this.presets.find(p=>p.id===this.mode); },
+      selectedItem() { return this.labels.find(p=>p.id===this.selected); },
+      selectedRows() {
+        const p=this.preset;
+        return {
+          anoxic:[{name:'氧化还原电位 ORP',value:p.orp+' mV'},{name:'硝化液内回流',value:p.internal+'%'},{name:'搅拌器状态',value:'运行',tone:'blue'}],
+          aerobic:[{name:'溶解氧 DO',value:p.do+' mg/L',tone:this.mode==='airFault'?'warn':'blue'},{name:'曝气支路',value:this.mode==='airFault'?'单机供气':'双机供气'},{name:'曝气盘',value:'4 组'}],
+          clarifier:[{name:'出水流量',value:p.outflow+' m³/h',tone:'blue'},{name:'外回流比',value:p.return+'%'},{name:'刮泥机',value:'运行'}],
+          blower:[{name:'鼓风机 1#',value:'运行',tone:'blue'},{name:'鼓风机 2#',value:this.mode==='airFault'?'停机':'运行',tone:this.mode==='airFault'?'warn':'blue'},{name:'供气方式',value:this.mode==='airFault'?'单机':'双机'}]
+        }[this.selected];
+      }
+    },
+    methods: {
+      setMode(id) { this.mode=id; this.sceneApi?.setMode(id); this.updateCharts(); },
+      select(id) { this.selected=id; this.sceneApi?.highlight(id); },
+      resetView() { this.sceneApi?.resetView(); },
+      toggleMotion() { this.motion=!this.motion; this.sceneApi?.setMotion(this.motion); },
+      updateCharts() {
+        const p=this.preset;
+        const times=['08:00','09:00','10:00','11:00','12:00','13:00'];
+        const flow=[.88,.92,.95,1.02,.98,1].map(v=>Math.round(p.flow*v));
+        const oxygen=this.mode==='airFault'?[2.35,2.29,2.23,2.02,1.59,1.26]:[2.31,2.39,2.35,2.42,2.33,Number(p.do)];
+        const base={animationDuration:350,grid:{left:44,right:12,top:10,bottom:28},tooltip:{trigger:'axis'},xAxis:{type:'category',data:times,axisLine:{lineStyle:{color:'#c9d7e2'}},axisTick:{show:false},axisLabel:{color:'#8093a2',fontSize:10}},yAxis:{type:'value',scale:true,splitLine:{lineStyle:{color:'#edf2f6'}},axisLabel:{color:'#8093a2',fontSize:10}},series:[{type:'line',smooth:.3,symbol:'circle',symbolSize:5,lineStyle:{width:2.5,color:'#2d91ca'},itemStyle:{color:'#2d91ca'},areaStyle:{color:'rgba(48,151,209,.12)'}}]};
+        this.charts[0]?.setOption({...base,series:[{...base.series[0],data:flow}]},true);
+        this.charts[1]?.setOption({...base,series:[{...base.series[0],data:oxygen}]},true);
+      }
+    },
+    mounted() {
+      const fit=()=>{const el=$id('screen');if (!el) return;const scale=Math.min(innerWidth/1920,innerHeight/1080);el.style.transform='translate(-50%, -50%) scale('+scale+')';};
+      fit(); window.addEventListener('resize',fit);
+      this.clock=new Date().toLocaleTimeString('zh-CN',{hour12:false});
+      setInterval(()=>{this.clock=new Date().toLocaleTimeString('zh-CN',{hour12:false});},1000);
+      this.charts=[safeInit($id('flowChart'),el=>echarts.init(el)),safeInit($id('doChart'),el=>echarts.init(el))];
+      this.updateCharts();
+      this.sceneApi=safeInit($id('scene3d'),el=>buildScene(el));
+      window.addEventListener('resize',()=>{this.charts.forEach(c=>c?.resize());this.sceneApi?.resize();});
+    }
+  });
+  app.mount('#screen');
+
+  function buildScene(host) {
+    const W=host.clientWidth,H=host.clientHeight;
+    const scene=new THREE.Scene(); scene.background=new THREE.Color(0xeaf2f9);
+    const camera=new THREE.OrthographicCamera(-15.6,15.6,7.2,-7.2,.1,120);
+    const cameraHome=new THREE.Vector3(20,17,24), targetHome=new THREE.Vector3(.2,.4,0);
+    camera.position.copy(cameraHome);camera.lookAt(targetHome);
+    const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.setSize(W,H);renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.9;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.setClearColor(0xeaf2f9);host.insertBefore(renderer.domElement,host.firstChild);
+    const controls=new THREE.OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.dampingFactor=.08;controls.target.copy(targetHome);controls.minZoom=.8;controls.maxZoom=1.6;controls.maxPolarAngle=Math.PI*.48;controls.minPolarAngle=.42;controls.enablePan=false;
+    scene.add(new THREE.HemisphereLight(0xffffff,0x97aec0,.95));
+    const sun=new THREE.DirectionalLight(0xffffff,1.15);sun.position.set(-6,14,10);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-20;sun.shadow.camera.right=20;sun.shadow.camera.top=16;sun.shadow.camera.bottom=-16;sun.shadow.normalBias=.025;scene.add(sun);
+    const mat=(color,roughness=.75,metalness=0,opacity=1)=>new THREE.MeshStandardMaterial({color,roughness,metalness,transparent:opacity<1,opacity,side:THREE.DoubleSide,depthWrite:opacity===1});
+    const concrete=mat(0xb2c2cb), edge=mat(0xe0e9ee), inside=mat(0x729eae), water=mat(0x188bad,.28,.08,.78), blue=mat(0x146aa6,.38,.22), darkBlue=mat(0x104a7d,.42,.26), steel=mat(0x6d8797,.3,.6), silver=mat(0xb4c6d0,.32,.46), copper=mat(0x93613d,.36,.56), black=mat(0x294b60,.48,.25), glass=mat(0x91c7d6,.16,.08,.45);
+    const flowParticles=[],bubbles=[],ripples=[],rotators=[];
+    const waterBead=mat(0xcaf7ff,.2,0,.95),sludgeBead=mat(0xf4c48a,.3,0,.95);
+    const add=(geo,m,x,y,z,parent=scene)=>{const mesh=new THREE.Mesh(geo,m);mesh.position.set(x,y,z);mesh.castShadow=m!==glass&&m!==water;mesh.receiveShadow=true;parent.add(mesh);return mesh;};
+    const box=(x,y,z,w,h,d,m,parent)=>add(new THREE.BoxGeometry(w,h,d),m,x,y,z,parent);
+    const cyl=(x,y,z,rTop,rBottom,h,m,segments=24,parent)=>add(new THREE.CylinderGeometry(rTop,rBottom,h,segments),m,x,y,z,parent);
+    const pipe=(points,r,m,particles=0)=>{
+      const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)),false,'centripetal',.4);
+      const mesh=add(new THREE.TubeGeometry(curve,Math.max(20,points.length*10),r,10,false),m,0,0,0);
+      for(let i=0;i<particles;i++){const ball=add(new THREE.SphereGeometry(r*.68,8,8),m===copper?sludgeBead:waterBead,0,0,0);flowParticles.push({ball,curve,offset:i/particles,speed:m===copper?.07:.12});}
+      return mesh;
+    };
+    const rail=(cx,cz,w,d,y)=>{
+      const countX=Math.ceil(w/.75),countZ=Math.ceil(d/.75);let path=[];
+      for(let i=0;i<=countX;i++)for(const z of [-d/2,d/2]){const x=cx-w/2+w*i/countX;pipe([[x,y,z+cz],[x,y+.47,z+cz]],.019,steel);}
+      for(let i=1;i<countZ;i++)for(const x of [-w/2,w/2]){const z=cz-d/2+d*i/countZ;pipe([[x+cx,y,z],[x+cx,y+.47,z]],.019,steel);}
+      for(const h of [.23,.47]){path=[[cx-w/2,y+h,cz-d/2],[cx+w/2,y+h,cz-d/2],[cx+w/2,y+h,cz+d/2],[cx-w/2,y+h,cz+d/2],[cx-w/2,y+h,cz-d/2]];pipe(path,.018,steel);}
+    };
+    box(.2,-.43,0,24.6,.85,13.1,concrete);box(.2,-.85,0,25.0,.12,13.5,edge);
+    const ground=add(new THREE.PlaneGeometry(200,200),mat(0xe9f2f9),0,-.92,0);ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;
+    function rectTank(cx,w,d){
+      const cz=.4;
+      box(cx,.23,cz,w,.52,d,inside);box(cx-w/2,1.25,cz,.25,1.55,d,concrete);box(cx+w/2,1.25,cz,.25,1.55,d,concrete);box(cx,1.25,cz-d/2,w,1.55,.25,concrete);box(cx,1.25,cz+d/2,w,1.55,.16,glass);
+      const waterMesh=box(cx,1.25,cz,w-.3,.07,d-.3,water);waterMesh.material.depthWrite=false;
+      for(const x of [-w/2,w/2])box(cx+x,2.02,cz,.3,.11,d+.1,edge);
+      for(const z of [-d/2,d/2])box(cx,2.02,cz+z,w+.3,.11,.3,edge);
+      rail(cx,cz,w+.2,d+.2,2.07);
+      return {cx,cz,w,d};
+    }
+    rectTank(-7.25,5.7,4.3);rectTank(-.45,6.2,4.3);
+    // 缺氧池搅拌器、轴座与水面波纹。
+    cyl(-7.25,2.21,.45,.3,.3,.18,blue);cyl(-7.25,1.6,.45,.07,.07,1.4,steel);
+    const agitator=new THREE.Group();scene.add(agitator);agitator.position.set(-7.25,.78,.45);
+    cyl(0,0,0,.08,.08,.35,darkBlue,24,agitator);
+    for(let i=0;i<3;i++){const blade=box(0,0,0,.9,.06,.17,steel,agitator);blade.position.x=.49;blade.rotation.y=i*Math.PI*2/3;const arm=new THREE.Group();arm.add(blade);agitator.add(arm);arm.rotation.y=i*Math.PI*2/3;}
+    rotators.push({mesh:agitator,speed:.4});
+    for(let i=0;i<3;i++){const ring=add(new THREE.RingGeometry(.28+i*.28,.3+i*.28,48),mat(0xe7fcff,.2,0,.42-i*.08),-7.25,1.3,.45);ring.rotation.x=-Math.PI/2;ripples.push({mesh:ring,phase:i*.7});}
+    // 好氧池四组曝气盘与气泡。
+    pipe([[-2.8,.7,1.45],[1.9,.7,1.45]],.09,black);
+    for(let i=0;i<4;i++){
+      const x=-2.2+i*1.15;cyl(x,.72,1.45,.35,.35,.07,silver);pipe([[x,.7,1.45],[x,.74,.75]],.045,steel);
+      for(let j=0;j<12;j++){const bubble=add(new THREE.SphereGeometry(.04+(j%3)*.014,8,8),mat(0xc9f5ff,.1,0,.9),x+(j%4-1.5)*.13,1.25+(j%5)*.1,1.3+Math.floor(j/4)*.14);bubbles.push({mesh:bubble,baseX:bubble.position.x,baseZ:bubble.position.z,offset:(i*12+j)/48});}
+      const ring=add(new THREE.RingGeometry(.18,.21,32),mat(0xf4ffff,.2,0,.65),x,1.3,1.45);ring.rotation.x=-Math.PI/2;ripples.push({mesh:ring,phase:i*.75});
+    }
+    // 圆形二沉池：锥形底、半透明池壁、周边堰和中心刮泥轴。
+    const clarX=7.6,clarZ=.4;
+    cyl(clarX,.34,clarZ,2.25,.85,.55,concrete,64);
+    cyl(clarX,.75,clarZ,2.55,2.25,.55,inside,64);
+    const clarWater=cyl(clarX,1.39,clarZ,2.55,2.55,.045,water,64);clarWater.material.depthWrite=false;
+    const wall=add(new THREE.CylinderGeometry(2.69,2.5,1.22,72,1,true),glass,clarX,1.42,clarZ);wall.castShadow=false;
+    const rim=add(new THREE.TorusGeometry(2.7,.075,8,72),silver,clarX,2.04,clarZ);rim.rotation.x=Math.PI/2;
+    for(const h of [.22,.49]){const hoop=add(new THREE.TorusGeometry(2.78,.022,6,72),steel,clarX,2.04+h,clarZ);hoop.rotation.x=Math.PI/2;}
+    for(let i=0;i<30;i++){const a=i*Math.PI*2/30;pipe([[clarX+Math.cos(a)*2.78,2.08,clarZ+Math.sin(a)*2.78],[clarX+Math.cos(a)*2.78,2.55,clarZ+Math.sin(a)*2.78]],.018,steel);}
+    cyl(clarX,1.98,clarZ,.15,.15,1.1,steel);cyl(clarX,2.59,clarZ,.25,.25,.22,blue);
+    const scraper=new THREE.Group();scraper.position.set(clarX,1.62,clarZ);scene.add(scraper);
+    box(0,0,0,4.7,.07,.14,steel,scraper);box(0,-.34,0,4.4,.04,.12,steel,scraper);for(const x of [-1.8,-.9,.9,1.8])box(x,-.17,0,.025,.28,.025,steel,scraper);
+    rotators.push({mesh:scraper,speed:.085});
+    for(let i=0;i<3;i++){const ring=add(new THREE.RingGeometry(.45+i*.4,.47+i*.4,64),mat(0xe7fcff,.2,0,.33),clarX,1.43,clarZ);ring.rotation.x=-Math.PI/2;ripples.push({mesh:ring,phase:i*.9});}
+    // 后方鼓风机平台与两台蓝色机组。
+    box(-.45,.25,-4.8,5.3,.5,2.5,concrete);box(-.45,.54,-4.8,5.4,.09,2.6,edge);
+    const blowers=[];
+    for(const x of [-1.55,.65]){
+      box(x,.69,-4.85,1.55,.22,1.38,steel);box(x,.85,-4.85,1.42,.2,1.18,darkBlue);
+      const motor=cyl(x,1.27,-4.85,.47,.47,1.45,blue,28);motor.rotation.z=Math.PI/2;
+      const end=cyl(x-.77,1.27,-4.85,.43,.43,.14,darkBlue,28);end.rotation.z=Math.PI/2;
+      const fan=cyl(x-.86,1.27,-4.85,.24,.24,.04,silver,24);fan.rotation.z=Math.PI/2;
+      for(let k=-2;k<=2;k++)pipe([[x+k*.18,1.69,-5.22],[x+k*.18,1.69,-4.48]],.014,steel);
+      blowers.push(motor);pipe([[x+.8,1.18,-4.85],[x+1.1,1.18,-4.85],[x+1.1,1.18,-3.4]],.12,blue);
+    }
+    box(2.0,1.16,-4.8,.74,1.3,.65,edge);box(2.0,1.24,-4.46,.43,.28,.04,black);
+    pipe([[-.45,1.2,-3.4],[-.45,2.75,-3.4],[-.45,2.75,-2.35],[-.45,1.05,-2.35]],.095,blue,9);
+    pipe([[1.75,1.2,-3.4],[1.75,2.75,-3.4],[1.75,2.75,-2.35],[1.75,1.05,-2.35]],.095,blue,9);
+    // 进水、池间、出水主管；可视化粒子沿路径前进。
+    pipe([[-12.35,1.15,.3],[-10.1,1.15,.3],[-10.1,1.15,1.2]],.18,blue,10);
+    pipe([[-4.35,1.3,1.45],[-3.65,1.3,1.45],[-3.65,1.3,1.15]],.17,blue,9);
+    pipe([[2.7,1.3,1.45],[4.05,1.3,1.45],[4.05,1.3,.5],[4.9,1.3,.5]],.17,blue,11);
+    pipe([[10.25,1.35,.4],[12.45,1.35,.4]],.18,blue,10);
+    // 二沉池底部污泥回流，位于池体前侧。
+    pipe([[7.6,.2,1.1],[7.6,.22,3.7],[4.9,.22,5.1],[-7.25,.22,5.1],[-7.25,.95,2.9]],.12,copper,18);
+    for(const x of [-5,-1,3,6]){const ring=cyl(x,.22,5.1,.145,.145,.12,silver);ring.rotation.z=Math.PI/2;}
+    const points={anoxic:new THREE.Vector3(-7.25,2.75,.4),aerobic:new THREE.Vector3(-.45,2.76,.4),clarifier:new THREE.Vector3(7.6,3.15,.4),blower:new THREE.Vector3(-.45,2.1,-4.8),in:new THREE.Vector3(-11.2,1.4,.3),out:new THREE.Vector3(11.4,1.55,.4),return:new THREE.Vector3(-1.3,.02,5.1)};
+    let mode='steady',motion=true;
+    const tmp=new THREE.Vector3();
+    function projectLabels(){
+      for(const [key,point] of Object.entries(points)){
+        tmp.copy(point).project(camera);const node=host.querySelector(key==='in'||key==='out'||key==='return'?'[data-flow="'+key+'"]':'[data-label="'+key+'"]');if (!node) continue;node.style.left=((tmp.x+1)/2*host.clientWidth)+'px';node.style.top=((-tmp.y+1)/2*host.clientHeight)+'px';
+      }
+    }
+    function resetView(){camera.position.copy(cameraHome);controls.target.copy(targetHome);camera.zoom=1;camera.updateProjectionMatrix();controls.update();}
+    function resize(){const w=host.clientWidth,h=host.clientHeight;const half=15.6;camera.left=-half;camera.right=half;camera.top=half*h/w;camera.bottom=-half*h/w;camera.updateProjectionMatrix();renderer.setSize(w,h);projectLabels();}
+    resize();
+    const clock=new THREE.Clock();
+    function animate(){requestAnimationFrame(animate);const delta=Math.min(clock.getDelta(),.05);if(motion){
+      for(const r of rotators)r.mesh.rotation.y+=delta*r.speed*(mode==='airFault'&&r.mesh===agitator?1:1);
+      for(const p of flowParticles){const rate=mode==='peak'?1.25:mode==='airFault'?.88:1;p.offset=(p.offset+delta*p.speed*rate)%1;p.ball.position.copy(p.curve.getPointAt(p.offset)).add(new THREE.Vector3(0,.13,0));}
+      for(const b of bubbles){const rate=mode==='airFault'?.55:mode==='peak'?1.25:1;b.offset=(b.offset+delta*.24*rate)%1;b.mesh.position.set(b.baseX+Math.sin(b.offset*19)*.04,1.25+b.offset*.62,b.baseZ);b.mesh.visible=mode!=='airFault'||b.baseX<-.4||b.offset<.32;}
+      const t=clock.elapsedTime;for(const r of ripples)r.mesh.material.opacity=.2+.13*Math.sin(t*1.5+r.phase);
+    }controls.update();projectLabels();renderer.render(scene,camera);}
+    animate();
+    return {resize,resetView,setMode(id){mode=id;blowers[1].material=id==='airFault'?mat(0x83939c):blue;},setMotion(value){motion=value;flowParticles.forEach(p=>p.ball.visible=value);bubbles.forEach(b=>b.mesh.visible=value);},highlight(){}};
+  }
+})();
+</script>
+</body>
+</html>

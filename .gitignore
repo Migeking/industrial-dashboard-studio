@@ -37,6 +37,13 @@ release/industrial-dashboard-offline/
 *.pem
 *.key
 
-# Large local exports (optional)
-# uncomment if you don't want to track works drafts
-# works/
+# Test outputs
+test-results/
+playwright-report/
+
+# Large local exports
+works/
+
+# Plan & tasks
+implementation_plan.md
+task.md

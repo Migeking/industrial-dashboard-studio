@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>园区供水管网多节点平衡监控数字看板</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#02070c;color:#f2f7fa;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+button{font:inherit;outline:none}
+[v-cloak]{display:none}
+
+:root{
+  --bg:#050c14;
+  --surface-1:#081420;
+  --surface-2:#0d1d2c;
+  --surface-3:#122638;
+  --line:#1c384d;
+  --line-light:#2c5472;
+  --accent:#36c2ff;
+  --accent-soft:rgba(54,194,255,.14);
+  --success:#35d07f;
+  --success-soft:rgba(53,208,127,.12);
+  --warning:#ffb547;
+  --warning-soft:rgba(255,181,71,.12);
+  --danger:#ff5d5d;
+  --danger-soft:rgba(255,93,93,.12);
+  --text-1:#f2f7fa;
+  --text-2:#a8bac8;
+  --text-3:#6c8496;
+}
+
+#screen{
+  width:1920px;
+  height:1080px;
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform-origin:center center;
+  display:grid;
+  grid-template-rows:74px 1fr 40px;
+  overflow:hidden;
+  background:radial-gradient(circle at 50% 20%,rgba(54,194,255,.06),transparent 45%),
+             linear-gradient(135deg,#061019 0%,#040a10 50%,#03070b 100%);
+}
+#screen:after{
+  content:"";
+  position:absolute;
+  inset:74px 0 40px;
+  pointer-events:none;
+  background-image:linear-gradient(rgba(54,194,255,.018) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(54,194,255,.018) 1px,transparent 1px);
+  background-size:40px 40px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.6),transparent 85%);
+}
+
+/* 顶部导航与大态势 */
+.topbar{
+  position:relative;
+  z-index:10;
+  display:grid;
+  grid-template-columns:460px 1fr 440px;
+  align-items:center;
+  padding:0 24px;
+  border-bottom:1px solid var(--line);
+  background:rgba(5,13,21,.92);
+  box-shadow:0 8px 32px rgba(0,0,0,.35);
+}
+.brand{display:flex;align-items:center;gap:14px;white-space:nowrap}
+.brand-icon{
+  width:42px;
+  height:42px;
+  border:1px solid var(--line-light);
+  border-radius:8px;
+  display:grid;
+  place-items:center;
+  color:var(--accent);
+  background:linear-gradient(145deg,#0f2436,#07121b);
+  flex-shrink:0;
+}
+.brand-icon svg{width:24px;height:24px}
+.brand-text{white-space:nowrap}
+.brand-text strong{display:block;font-size:16px;font-weight:700;letter-spacing:1px;white-space:nowrap}
+.brand-text span{display:block;font-size:11px;color:var(--text-3);letter-spacing:1.5px;margin-top:2px;white-space:nowrap}
+
+.macro-kpis{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:12px;
+  white-space:nowrap;
+}
+.macro-item{
+  display:flex;
+  align-items:baseline;
+  gap:6px;
+  padding:5px 10px;
+  border-radius:6px;
+  background:rgba(13,29,44,.45);
+  border:1px solid rgba(28,56,77,.6);
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.macro-label{font-size:11px;color:var(--text-2);white-space:nowrap}
+.macro-val{font-size:20px;font-weight:700;color:var(--accent);white-space:nowrap}
+.macro-unit{font-size:11px;color:var(--text-3);margin-left:1px;white-space:nowrap}
+
+.top-right{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:14px;
+  white-space:nowrap;
+}
+.scenario-tabs{
+  display:flex;
+  padding:3px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:#07121c;
+  white-space:nowrap;
+}
+.scenario-tabs button{
+  height:28px;
+  padding:0 12px;
+  border:0;
+  border-radius:4px;
+  background:transparent;
+  color:var(--text-3);
+  cursor:pointer;
+  font-size:12px;
+  white-space:nowrap;
+  transition:all .2s;
+}
+.scenario-tabs button.active{
+  background:var(--accent-soft);
+  color:var(--text-1);
+  box-shadow:inset 0 0 0 1px rgba(54,194,255,.4);
+  font-weight:600;
+}
+.clock-box{text-align:right;min-width:120px;white-space:nowrap}
+.clock-box strong{display:block;font-size:18px;letter-spacing:1px;color:var(--text-1);white-space:nowrap}
+.clock-box span{display:block;font-size:11px;color:var(--text-3);margin-top:1px;white-space:nowrap}
+.btn-screen{
+  border:1px solid var(--line);
+  background:rgba(54,194,255,.08);
+  color:var(--accent);
+  border-radius:5px;
+  padding:6px 10px;
+  cursor:pointer;
+  font-size:12px;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.btn-screen:hover{border-color:var(--accent)}
+
+/* 主体网格布局 */
+.main-stage{
+  position:relative;
+  z-index:2;
+  min-height:0;
+  display:grid;
+  grid-template-columns:360px 1fr 370px;
+  gap:14px;
+  padding:14px 18px;
+}
+.column{min-height:0;display:grid;gap:14px}
+.col-left{grid-template-rows:320px 290px 1fr}
+.col-center{grid-template-rows:575px 1fr}
+.col-right{grid-template-rows:300px 290px 1fr}
+
+/* 面板通用样式 */
+.panel{
+  position:relative;
+  min-height:0;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:linear-gradient(155deg,rgba(11,24,36,.92),rgba(6,14,22,.94));
+  box-shadow:inset 0 1px rgba(255,255,255,.03),0 8px 24px rgba(0,0,0,.25);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.panel:before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  width:3px;
+  height:36px;
+  background:var(--accent);
+}
+.panel-head{
+  height:42px;
+  padding:0 14px 0 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid rgba(28,56,77,.55);
+  flex-shrink:0;
+  white-space:nowrap;
+}
+.panel-title{
+  font-size:15px;
+  font-weight:700;
+  letter-spacing:.5px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+}
+.panel-title:before{
+  content:"";
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--accent);
+  flex-shrink:0;
+}
+.panel-badge{
+  font-size:11px;
+  color:var(--text-3);
+  padding:3px 7px;
+  border:1px solid var(--line);
+  border-radius:4px;
+  background:rgba(5,13,21,.5);
+  white-space:nowrap;
+}
+.panel-body{
+  flex:1;
+  min-height:0;
+  padding:12px;
+  position:relative;
+}
+
+/* 图表容器 */
+.chart-box{width:100%;height:100%}
+
+/* 左侧：微指标卡与水温 */
+.temp-stat-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-bottom:10px;
+}
+.temp-card{
+  padding:9px 10px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:rgba(6,15,24,.5);
+  white-space:nowrap;
+  overflow:hidden;
+}
+.temp-card span{display:block;font-size:11px;color:var(--text-3);white-space:nowrap}
+.temp-card strong{display:block;margin-top:4px;font-size:18px;color:var(--accent);white-space:nowrap}
+.water-health-box{
+  border:1px dashed var(--line);
+  border-radius:6px;
+  padding:9px 10px;
+  background:rgba(54,194,255,.03);
+  margin-top:6px;
+}
+.health-title{font-size:12px;color:var(--text-2);margin-bottom:5px;display:flex;justify-content:space-between;white-space:nowrap}
+.health-title span, .health-title b{white-space:nowrap}
+.health-progress{height:6px;border-radius:3px;background:#102230;overflow:hidden}
+.health-progress i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--success));border-radius:3px}
+
+/* 中央主视觉：管网拓扑 */
+.topo-panel{position:relative}
+.topo-tools{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.topo-legend{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  font-size:11px;
+  color:var(--text-3);
+}
+.legend-item{display:flex;align-items:center;gap:5px}
+.legend-item i{width:8px;height:8px;border-radius:50%}
+.legend-item.pipe i{width:16px;height:3px;border-radius:2px;background:var(--accent)}
+.legend-norm i{background:var(--success)}
+.legend-warn i{background:var(--warning)}
+
+.topo-svg-container{
+  width:100%;
+  height:100%;
+  position:relative;
+  overflow:hidden;
+}
+.topo-svg{
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+/* SVG 管网样式与动效 */
+.pipe-bg{fill:none;stroke:#122a3d;stroke-width:6;stroke-linecap:round;stroke-linejoin:round}
+.pipe-water{
+  fill:none;
+  stroke:var(--accent);
+  stroke-width:2.5;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  stroke-dasharray:8 12;
+  animation:waterFlow 2s linear infinite;
+}
+.pipe-water.fast{animation-duration:1.2s}
+.pipe-water.slow{animation-duration:3.2s}
+@keyframes waterFlow{
+  from{stroke-dashoffset:40}
+  to{stroke-dashoffset:0}
+}
+
+.pump-station-box{
+  fill:url(#pumpGrad);
+  stroke:#2c5472;
+  stroke-width:1.5;
+  rx:8;
+}
+.node-circle{
+  fill:#091927;
+  stroke:var(--line-light);
+  stroke-width:1.5;
+  cursor:pointer;
+  transition:all .25s;
+}
+.node-circle:hover{
+  fill:#102c44;
+  stroke:var(--accent);
+  filter:drop-shadow(0 0 8px rgba(54,194,255,.6));
+}
+.node-circle.active{
+  stroke:var(--accent);
+  fill:#133350;
+  filter:drop-shadow(0 0 10px rgba(54,194,255,.8));
+}
+
+.node-pulse{
+  animation:nodePulse 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+  transform-origin:center;
+}
+@keyframes nodePulse{
+  0%{r:14;opacity:.7}
+  100%{r:26;opacity:0}
+}
+
+.node-badge-text{
+  font-size:12px;
+  font-weight:700;
+  fill:#f2f7fa;
+  pointer-events:none;
+}
+.node-sub-text{
+  font-size:10px;
+  fill:var(--text-3);
+  pointer-events:none;
+}
+.node-flow-tag{
+  fill:rgba(7,19,30,.88);
+  stroke:var(--line);
+  stroke-width:1;
+  rx:4;
+}
+
+/* 中央下方：紧凑矩阵与片区筛选 */
+.filter-bar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+}
+.filter-tabs{display:flex;gap:6px}
+.filter-tabs button{
+  padding:3px 9px;
+  font-size:11px;
+  border-radius:4px;
+  border:1px solid var(--line);
+  background:rgba(9,22,34,.6);
+  color:var(--text-3);
+  cursor:pointer;
+}
+.filter-tabs button.active{
+  border-color:var(--accent);
+  color:var(--accent);
+  background:rgba(54,194,255,.1);
+}
+.matrix-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:8px;
+  height:calc(100% - 32px);
+  overflow-y:auto;
+  padding-right:4px;
+}
+.matrix-grid::-webkit-scrollbar{width:4px}
+.matrix-grid::-webkit-scrollbar-thumb{background:#1e3e56;border-radius:2px}
+
+.node-card{
+  padding:8px 10px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:rgba(9,20,30,.7);
+  cursor:pointer;
+  transition:all .2s;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+}
+.node-card:hover{
+  border-color:var(--accent);
+  transform:translateY(-2px);
+  background:rgba(14,32,48,.85);
+}
+.node-card.selected{
+  border-color:var(--accent);
+  background:rgba(18,40,60,.9);
+  box-shadow:0 0 0 1px rgba(54,194,255,.4),0 4px 12px rgba(0,0,0,.3);
+}
+.nc-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  white-space:nowrap;
+}
+.nc-title{font-size:12px;font-weight:700;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nc-status{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  font-size:10px;
+  color:var(--success);
+  white-space:nowrap;
+}
+.nc-status i{width:5px;height:5px;border-radius:50%;background:var(--success)}
+.nc-metrics{
+  margin-top:6px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:4px;
+}
+.nc-item{white-space:nowrap;overflow:hidden}
+.nc-item span{display:block;font-size:9px;color:var(--text-3);white-space:nowrap}
+.nc-item strong{display:block;font-size:12px;color:var(--text-1);margin-top:1px;white-space:nowrap}
+.nc-foot{
+  margin-top:6px;
+  padding-top:4px;
+  border-top:1px dashed rgba(28,56,77,.5);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:10px;
+  color:var(--text-3);
+  white-space:nowrap;
+}
+.nc-dn{color:var(--text-2);white-space:nowrap}
+.nc-net{color:var(--accent);white-space:nowrap}
+
+/* 右侧：事件与审计流水 */
+.event-list{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  height:100%;
+  overflow-y:auto;
+}
+.event-item{
+  display:grid;
+  grid-template-columns:6px 1fr auto;
+  gap:8px;
+  align-items:start;
+  padding:7px 9px;
+  border:1px solid var(--line);
+  border-radius:5px;
+  background:rgba(6,15,24,.4);
+}
+.event-item i{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  margin-top:5px;
+  background:var(--dot,var(--success));
+}
+.event-copy b{display:block;font-size:12px;color:var(--text-1)}
+.event-copy span{display:block;font-size:10px;color:var(--text-3);margin-top:2px}
+.event-time{font-size:10px;color:var(--text-3)}
+
+/* 下钻抽屉 (Drawer) */
+.drawer-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.6);
+  backdrop-filter:blur(3px);
+  z-index:90;
+  display:flex;
+  justify-content:flex-end;
+}
+.drawer{
+  width:460px;
+  height:100%;
+  background:linear-gradient(175deg,#0a1b2a,#050e17);
+  border-left:1px solid var(--line-light);
+  box-shadow:-12px 0 36px rgba(0,0,0,.5);
+  display:flex;
+  flex-direction:column;
+  padding:20px;
+  position:relative;
+}
+.drawer-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  border-bottom:1px solid var(--line);
+  padding-bottom:14px;
+}
+.dh-title h3{margin:0;font-size:20px;letter-spacing:1px}
+.dh-title span{font-size:11px;color:var(--text-3);margin-top:4px;display:block}
+.btn-close{
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.05);
+  color:var(--text-2);
+  width:30px;
+  height:30px;
+  border-radius:6px;
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+  font-size:14px;
+}
+.btn-close:hover{border-color:var(--accent);color:var(--accent)}
+
+.drawer-metrics{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin:16px 0;
+}
+.dm-card{
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:rgba(7,18,29,.6);
+}
+.dm-card span{display:block;font-size:11px;color:var(--text-3)}
+.dm-card strong{display:block;margin-top:6px;font-size:20px;color:var(--text-1)}
+.dm-card small{font-size:11px;color:var(--text-3);margin-left:3px}
+
+.drawer-chart-container{
+  flex:1;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  margin-top:8px;
+}
+.dcc-title{font-size:13px;font-weight:700;color:var(--text-2);margin-bottom:6px}
+.drawer-chart{flex:1;min-height:180px}
+
+.drawer-meta-table{
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:10px;
+  background:rgba(5,13,21,.5);
+  font-size:11px;
+  margin-top:12px;
+}
+.dmt-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed rgba(28,56,77,.4)}
+.dmt-row:last-child{border:0}
+.dmt-label{color:var(--text-3)}
+.dmt-val{color:var(--text-1);font-weight:600}
+
+/* 底部状态栏 */
+.statusbar{
+  position:relative;
+  z-index:10;
+  display:grid;
+  grid-template-columns:420px 1fr 480px;
+  align-items:center;
+  padding:0 24px;
+  border-top:1px solid var(--line);
+  background:#03080e;
+  font-size:11px;
+  color:var(--text-2);
+}
+.statusbar>div{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  white-space:nowrap;
+  overflow:hidden;
+}
+.live-beacon{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--success);
+  box-shadow:0 0 8px var(--success);
+}
+.status-center{justify-content:center;color:var(--text-3)}
+.status-right{justify-content:flex-end}
+.quality-tag{color:var(--success);font-weight:600}
+.bar-sep{color:#1e3d54}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+<div id="screen" :class="'scenario-'+scenario">
+
+  <!-- 顶部态势栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+          <circle cx="12" cy="12" r="4"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <strong>智慧园区 · 供水管网多节点平衡监控系统</strong>
+        <span>WATER DISTRIBUTION NETWORK BALANCING HMI</span>
+      </div>
+    </div>
+
+    <!-- 宏观 KPI 指标带 -->
+    <div class="macro-kpis">
+      <div class="macro-item">
+        <span class="macro-label">全网瞬时供水</span>
+        <strong class="macro-val num">{{macro.totalInstantFlow}}</strong>
+        <span class="macro-unit">m³/h</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">本日累计供水量</span>
+        <strong class="macro-val num">{{macro.totalCumulativeWater}}</strong>
+        <span class="macro-unit">m³</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">管网平均压力</span>
+        <strong class="macro-val num" style="color:#35d07f">{{macro.avgPressure}}</strong>
+        <span class="macro-unit">MPa</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">出水平均水温</span>
+        <strong class="macro-val num">{{macro.avgTemp}}</strong>
+        <span class="macro-unit">℃</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">监测节点在网</span>
+        <strong class="macro-val num" style="color:#35d07f">15 / 15</strong>
+        <span class="macro-unit">在线</span>
+      </div>
+    </div>
+
+    <!-- 顶部右侧：场景工况切换与时钟 -->
+    <div class="top-right">
+      <div class="scenario-tabs">
+        <button v-for="sc in scenarios" :key="sc.id" :class="{active:scenario===sc.id}" @click="switchScenario(sc.id)">
+          {{sc.name}}
+        </button>
+      </div>
+      <div class="clock-box num">
+        <strong>{{clock}}</strong>
+        <span>{{date}}</span>
+      </div>
+      <button class="btn-screen" @click="toggleFullscreen" title="切换全屏">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        全屏
+      </button>
+    </div>
+  </header>
+
+  <!-- 主体工作区 -->
+  <main class="main-stage">
+    
+    <!-- 左侧栏：宏观水力态势与能耗 -->
+    <section class="column col-left">
+      <!-- 面板 1：用水大户瞬时流量 TOP 6 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">楼宇瞬时用水 TOP 排行</div>
+          <span class="panel-badge">实时更新</span>
+        </div>
+        <div class="panel-body">
+          <div id="rankChart" class="chart-box"></div>
+        </div>
+      </article>
+
+      <!-- 面板 2：15节点管网水压平衡分布 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">分区管网水力平衡度</div>
+          <span class="panel-badge">0.25~0.42 MPa 区间</span>
+        </div>
+        <div class="panel-body">
+          <div id="pressureRadar" class="chart-box"></div>
+        </div>
+      </article>
+
+      <!-- 面板 3：供水水温与能效状态 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">水质与水温热力平衡</div>
+          <span class="panel-badge">水力工况</span>
+        </div>
+        <div class="panel-body">
+          <div class="temp-stat-grid">
+            <div class="temp-card">
+              <span>最高水温 (普科10)</span>
+              <strong class="num">{{scenario==='leak' ? '29.62' : '29.45'}} ℃</strong>
+            </div>
+            <div class="temp-card">
+              <span>最低水温 (普科4)</span>
+              <strong class="num">{{scenario==='peak' ? '25.80' : '26.27'}} ℃</strong>
+            </div>
+          </div>
+          <div class="water-health-box">
+            <div class="health-title">
+              <span>全网水力平衡合规指数</span>
+              <b class="num" style="color:#35d07f">{{scenario==='leak' ? '93.2%' : '98.6%'}}</b>
+            </div>
+            <div class="health-progress">
+              <i :style="{width: scenario==='leak' ? '93.2%' : '98.6%'}"></i>
+            </div>
+          </div>
+          <div class="water-health-box" style="margin-top:6px">
+            <div class="health-title">
+              <span>倒流/回水微扰风险评估</span>
+              <b class="num" style="color:#36c2ff">极低 (0.02%)</b>
+            </div>
+            <div class="health-progress">
+              <i style="width: 99.8%; background:#36c2ff"></i>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- 中间栏：管网数字拓扑走向 + 15楼宇紧凑矩阵 -->
+    <section class="column col-center">
+      <!-- 上半：SVG 园区供水管网数字拓扑图 -->
+      <article class="panel topo-panel">
+        <div class="panel-head">
+          <div class="panel-title">园区供水管网拓扑与水流走向</div>
+          <div class="topo-tools">
+            <div class="topo-legend">
+              <div class="legend-item pipe"><i></i><span>供水主管</span></div>
+              <div class="legend-item legend-norm"><i></i><span>压力正常</span></div>
+              <div class="legend-item legend-warn"><i></i><span>微流关注</span></div>
+            </div>
+            <span class="panel-badge">点击楼宇查看详情</span>
+          </div>
+        </div>
+        <div class="panel-body" style="padding:0">
+          <div class="topo-svg-container">
+            <svg class="topo-svg" viewBox="0 0 1140 520">
+              <defs>
+                <linearGradient id="pumpGrad" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#143147"/>
+                  <stop offset="100%" stop-color="#0a1a26"/>
+                </linearGradient>
+                <linearGradient id="glowLine" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#36c2ff" stop-opacity="0.2"/>
+                  <stop offset="50%" stop-color="#36c2ff" stop-opacity="1"/>
+                  <stop offset="100%" stop-color="#35d07f" stop-opacity="0.8"/>
+                </linearGradient>
+              </defs>
+
+              <!-- 市政主管与泵房 -->
+              <rect class="pump-station-box" x="25" y="215" width="130" height="90"/>
+              <text x="90" y="248" fill="#36c2ff" font-size="13" font-weight="700" text-anchor="middle">市政加压总泵站</text>
+              <text x="90" y="268" fill="#a8bac8" font-size="11" text-anchor="middle">变频恒压 0.38MPa</text>
+              <text x="90" y="286" fill="#35d07f" font-size="10" text-anchor="middle">● 3泵联动并联</text>
+
+              <!-- 主干管走向线底管 -->
+              <path class="pipe-bg" d="M155 260 H230"/>
+              <path class="pipe-bg" d="M230 260 V90 H480 V170 H780"/>
+              <path class="pipe-bg" d="M230 260 H540 V360 H820"/>
+              <path class="pipe-bg" d="M540 260 H760 V440 H1020"/>
+              <path class="pipe-bg" d="M760 260 H1020"/>
+
+              <!-- 支管分支线至各个楼宇节点 -->
+              <path class="pipe-bg" d="M310 90 V50 H360"/>
+              <path class="pipe-bg" d="M410 90 V50 H460"/>
+              <path class="pipe-bg" d="M480 130 H550"/>
+              <path class="pipe-bg" d="M620 170 V130 H680"/>
+              <path class="pipe-bg" d="M740 170 V130 H800"/>
+              <path class="pipe-bg" d="M350 260 V220 H410"/>
+              <path class="pipe-bg" d="M460 260 V220 H520"/>
+              <path class="pipe-bg" d="M630 260 V220 H690"/>
+              <path class="pipe-bg" d="M860 260 V220 H920"/>
+              <path class="pipe-bg" d="M960 260 V220 H1020"/>
+              <path class="pipe-bg" d="M380 360 V390 H440"/>
+              <path class="pipe-bg" d="M500 360 V390 H560"/>
+              <path class="pipe-bg" d="M680 360 V390 H740"/>
+              <path class="pipe-bg" d="M840 440 V470 H900"/>
+              <path class="pipe-bg" d="M950 440 V470 H1010"/>
+
+              <!-- 动态水流层 -->
+              <path :class="['pipe-water', scenario==='peak'?'fast':(scenario==='leak'?'slow':'')]" d="M155 260 H230"/>
+              <path :class="['pipe-water', scenario==='peak'?'fast':'']" d="M230 260 V90 H480 V170 H780"/>
+              <path :class="['pipe-water', scenario==='peak'?'fast':'']" d="M230 260 H540 V360 H820"/>
+              <path :class="['pipe-water', scenario==='peak'?'fast':'']" d="M540 260 H760 V440 H1020"/>
+              <path :class="['pipe-water', scenario==='peak'?'fast':'']" d="M760 260 H1020"/>
+
+              <!-- 15个楼宇测点节点 SVG 渲染 -->
+              <g v-for="(node, idx) in nodes" :key="node.id" :transform="`translate(${node.x}, ${node.y})`" @click="selectNode(node)" style="cursor:pointer">
+                <!-- 选中波纹光环 -->
+                <circle v-if="selectedNode && selectedNode.id === node.id" class="node-pulse" cx="0" cy="0" r="16" fill="none" stroke="#36c2ff" stroke-width="2"/>
+                <!-- 节点主体圆盘 -->
+                <circle :class="['node-circle', selectedNode && selectedNode.id === node.id ? 'active' : '']" cx="0" cy="0" r="14"/>
+                <circle cx="0" cy="0" r="4" :fill="node.pressureStatus === 'warn' ? '#ffb547' : '#35d07f'"/>
+
+                <!-- 楼宇标签铭牌 -->
+                <rect class="node-flow-tag" x="-45" y="-38" width="90" height="20"/>
+                <text class="node-badge-text" x="0" y="-24" text-anchor="middle">{{node.name}}</text>
+                
+                <!-- 流量与压力胶囊 -->
+                <text class="node-sub-text" x="0" y="26" text-anchor="middle">
+                  {{node.instantFlow}} m³/h · {{node.pressure}} MPa
+                </text>
+              </g>
+
+              <!-- 管网分区区域标识水印 -->
+              <text x="440" y="80" fill="rgba(54,194,255,.2)" font-size="20" font-weight="700">普科教学区管网</text>
+              <text x="440" y="340" fill="rgba(54,194,255,.2)" font-size="20" font-weight="700">综合科研与实验区</text>
+              <text x="820" y="420" fill="rgba(54,194,255,.2)" font-size="20" font-weight="700">后勤生活与宿舍区</text>
+            </svg>
+          </div>
+        </div>
+      </article>
+
+      <!-- 下半：15 楼宇矩阵与片区筛选器 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">15 处楼宇测点运行工况矩阵</div>
+          <span class="panel-badge">已去除无用信号参数 · 聚焦水力工况</span>
+        </div>
+        <div class="panel-body">
+          <div class="filter-bar">
+            <div class="filter-tabs">
+              <button :class="{active: currentFilter==='all'}" @click="currentFilter='all'">全部楼宇 (15)</button>
+              <button :class="{active: currentFilter==='puke'}" @click="currentFilter='puke'">普科教学区 (8)</button>
+              <button :class="{active: currentFilter==='lab'}" @click="currentFilter='lab'">实验综合区 (2)</button>
+              <button :class="{active: currentFilter==='living'}" @click="currentFilter='living'">后勤生活区 (5)</button>
+            </div>
+            <span style="font-size:11px;color:var(--text-3)">点击卡片在拓扑中定位下钻</span>
+          </div>
+
+          <div class="matrix-grid">
+            <div v-for="node in filteredNodes" :key="node.id" :class="['node-card', selectedNode && selectedNode.id===node.id ? 'selected':'']" @click="selectNode(node)">
+              <div class="nc-head">
+                <span class="nc-title">{{node.name}}</span>
+                <span class="nc-status"><i></i>在线</span>
+              </div>
+              <div class="nc-metrics">
+                <div class="nc-item">
+                  <span>瞬时流量</span>
+                  <strong class="num">{{node.instantFlow}} <small style="font-size:9px;color:var(--text-3)">m³/h</small></strong>
+                </div>
+                <div class="nc-item">
+                  <span>供水压力</span>
+                  <strong class="num" style="color:#35d07f">{{node.pressure}} <small style="font-size:9px;color:var(--text-3)">MPa</small></strong>
+                </div>
+                <div class="nc-item">
+                  <span>净累积量</span>
+                  <strong class="num" style="font-size:11px">{{node.netCumulative}} <small style="font-size:8px;color:var(--text-3)">m³</small></strong>
+                </div>
+                <div class="nc-item">
+                  <span>供水水温</span>
+                  <strong class="num" style="font-size:11px">{{node.temp}} ℃</strong>
+                </div>
+              </div>
+              <div class="nc-foot">
+                <span class="nc-dn">口径: {{node.dn}}</span>
+                <span class="nc-net">计量正常</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- 右侧栏：24小时水力趋势与异常审计 -->
+    <section class="column col-right">
+      <!-- 面板 1：24小时全网供水流量与水压双轴曲线 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">24小时流量与水压趋势</div>
+          <span class="panel-badge">水力波动</span>
+        </div>
+        <div class="panel-body">
+          <div id="trendChart" class="chart-box"></div>
+        </div>
+      </article>
+
+      <!-- 面板 2：正/负/净累积流量对比 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">正负累积流量水力平衡</div>
+          <span class="panel-badge">倒流/水锤诊断</span>
+        </div>
+        <div class="panel-body">
+          <div id="balanceChart" class="chart-box"></div>
+        </div>
+      </article>
+
+      <!-- 面板 3：管网事件与微漏审计流水 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">管网动态告警与工况审计</div>
+          <span class="panel-badge">实时流水</span>
+        </div>
+        <div class="panel-body">
+          <div class="event-list">
+            <div class="event-item" v-for="evt in eventList" :key="evt.id" :style="{'--dot': evt.level==='warn'?'#ffb547':(evt.level==='danger'?'#ff5d5d':'#35d07f')}">
+              <i></i>
+              <div class="event-copy">
+                <b>{{evt.title}}</b>
+                <span>{{evt.desc}}</span>
+              </div>
+              <div class="event-time num">{{evt.time}}</div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+  </main>
+
+  <!-- 沉浸式下钻抽屉（测点水力全景详情） -->
+  <div v-if="drawerVisible && selectedNode" class="drawer-backdrop" @click.self="drawerVisible = false">
+    <div class="drawer">
+      <div class="drawer-head">
+        <div class="dh-title">
+          <h3>{{selectedNode.name}} · 水力测点全景</h3>
+          <span>设备编码: {{selectedNode.code}} · 表具类型: 超声波远传水表</span>
+        </div>
+        <button class="btn-close" @click="drawerVisible = false">✕</button>
+      </div>
+
+      <div class="drawer-metrics">
+        <div class="dm-card">
+          <span>瞬时流量 (Instant Flow)</span>
+          <strong class="num">{{selectedNode.instantFlow}}<small>m³/h</small></strong>
+        </div>
+        <div class="dm-card">
+          <span>供水水压 (Pressure)</span>
+          <strong class="num" style="color:#35d07f">{{selectedNode.pressure}}<small>MPa</small></strong>
+        </div>
+        <div class="dm-card">
+          <span>正累积流量 (+Cum)</span>
+          <strong class="num">{{selectedNode.posCumulative}}<small>m³</small></strong>
+        </div>
+        <div class="dm-card">
+          <span>负累积流量 (-Cum)</span>
+          <strong class="num" style="color:#ffb547">{{selectedNode.negCumulative}}<small>m³</small></strong>
+        </div>
+        <div class="dm-card">
+          <span>净累积流量 (Net Cum)</span>
+          <strong class="num" style="color:#36c2ff">{{selectedNode.netCumulative}}<small>m³</small></strong>
+        </div>
+        <div class="dm-card">
+          <span>供水水温 (Temp)</span>
+          <strong class="num">{{selectedNode.temp}}<small>℃</small></strong>
+        </div>
+      </div>
+
+      <div class="drawer-chart-container">
+        <div class="dcc-title">24小时该节点水力波动特征</div>
+        <div id="drawerChart" class="drawer-chart"></div>
+      </div>
+
+      <div class="drawer-meta-table">
+        <div class="dmt-row">
+          <span class="dmt-label">安装区域</span>
+          <span class="dmt-val">{{selectedNode.zone}}</span>
+        </div>
+        <div class="dmt-row">
+          <span class="dmt-label">管道口径</span>
+          <span class="dmt-val">{{selectedNode.dn}} · 法兰连接</span>
+        </div>
+        <div class="dmt-row">
+          <span class="dmt-label">计量状态</span>
+          <span class="dmt-val" style="color:#35d07f">双向高精度声波计量 · 正常</span>
+        </div>
+        <div class="dmt-row">
+          <span class="dmt-label">最新采样时间</span>
+          <span class="dmt-val num">{{selectedNode.timestamp}}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部工业状态栏 -->
+  <footer class="statusbar">
+    <div>
+      <i class="live-beacon"></i>
+      <b>全网监测正常</b>
+      <span class="bar-sep">|</span>
+      <span>15/15 节点在网</span>
+      <span class="bar-sep">|</span>
+      <span>通信协议：OPC UA / Modbus TCP 轮询</span>
+    </div>
+    <div class="status-center">
+      数据质量：<span class="quality-tag">GOOD (100%)</span> · 采样周期：1.0s · 水力拓扑防渗漏模型在线
+    </div>
+    <div class="status-right">
+      <span>更新时间：{{clock}}</span>
+      <span class="bar-sep">|</span>
+      <span>分辨率：1920×1080 (等比自适应)</span>
+    </div>
+  </footer>
+
+</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const $id = (id) => document.getElementById(id);
+  const safeInit = (id) => {
+    try {
+      const el = $id(id);
+      if (!el) return null;
+      return echarts.init(el);
+    } catch(e) {
+      console.error(e);
+      return null;
+    }
+  };
+
+  // 原始15个测点基准数据（基于用户现场原型）
+  const baseNodesData = [
+    { id: 1, name: '普科1号楼', zone: '普科教学区', category: 'puke', dn: 'DN80', code: '862323088344', x: 360, y: 50, instantFlow: 0.00, posCumulative: 315.82, negCumulative: 1.92, netCumulative: 313.90, pressure: 0.32, temp: 26.84, timestamp: '2026-09-23 15:35:00', pressureStatus: 'norm' },
+    { id: 2, name: '普科2号楼', zone: '普科教学区', category: 'puke', dn: 'DN80', code: '862323088349', x: 460, y: 50, instantFlow: 0.00, posCumulative: 295.35, negCumulative: 3.55, netCumulative: 291.80, pressure: 0.31, temp: 26.52, timestamp: '2026-09-23 15:35:00', pressureStatus: 'norm' },
+    { id: 3, name: '普科3号楼', zone: '普科教学区', category: 'puke', dn: 'DN100', code: '862323088597', x: 550, y: 130, instantFlow: 0.00, posCumulative: 532.46, negCumulative: 4.54, netCumulative: 527.92, pressure: 0.30, temp: 26.70, timestamp: '2026-09-23 15:35:00', pressureStatus: 'norm' },
+    { id: 4, name: '普科4号楼', zone: '普科教学区', category: 'puke', dn: 'DN100', code: '862323088546', x: 680, y: 130, instantFlow: 0.00, posCumulative: 537.20, negCumulative: 2.72, netCumulative: 534.48, pressure: 0.29, temp: 26.27, timestamp: '2026-09-23 15:35:01', pressureStatus: 'norm' },
+    { id: 5, name: '普科5号楼', zone: '普科教学区', category: 'puke', dn: 'DN100', code: '862323088264', x: 800, y: 130, instantFlow: 0.00, posCumulative: 601.26, negCumulative: 2.51, netCumulative: 598.74, pressure: 0.33, temp: 26.83, timestamp: '2026-09-23 15:35:01', pressureStatus: 'norm' },
+    
+    { id: 6, name: '普科6号楼', zone: '普科教学区', category: 'puke', dn: 'DN80', code: '862323088951', x: 410, y: 220, instantFlow: 0.00, posCumulative: 494.04, negCumulative: 25.33, netCumulative: 468.71, pressure: 0.30, temp: 26.28, timestamp: '2026-09-23 15:35:00', pressureStatus: 'norm' },
+    { id: 7, name: '普科20号楼', zone: '普科高层区', category: 'puke', dn: 'DN150', code: '862323088742', x: 520, y: 220, instantFlow: 0.00, posCumulative: 1168.20, negCumulative: 2.01, netCumulative: 1166.20, pressure: 0.34, temp: 27.96, timestamp: '2026-09-23 15:35:00', pressureStatus: 'norm' },
+    { id: 8, name: '普科8号楼', zone: '普科教学区', category: 'puke', dn: 'DN80', code: '862323088902', x: 690, y: 220, instantFlow: 0.00, posCumulative: 420.05, negCumulative: 6.20, netCumulative: 413.86, pressure: 0.31, temp: 26.34, timestamp: '2026-09-23 15:35:00', pressureStatus: 'norm' },
+    { id: 9, name: '综合实验9号楼', zone: '实验综合区', category: 'lab', dn: 'DN100', code: '862323088767', x: 920, y: 220, instantFlow: 0.00, posCumulative: 621.58, negCumulative: 11.11, netCumulative: 610.47, pressure: 0.28, temp: 27.26, timestamp: '2026-09-23 15:35:01', pressureStatus: 'norm' },
+    { id: 10, name: '中心实验10号楼', zone: '实验综合区', category: 'lab', dn: 'DN200', code: '862323088988', x: 1020, y: 220, instantFlow: 0.00, posCumulative: 4844.80, negCumulative: 0.41, netCumulative: 4844.40, pressure: 0.35, temp: 29.45, timestamp: '2026-09-23 15:35:08', pressureStatus: 'norm' },
+    
+    { id: 11, name: '后勤1号楼', zone: '后勤生活区', category: 'living', dn: 'DN125', code: '862323088387', x: 440, y: 390, instantFlow: 0.00, posCumulative: 2565.10, negCumulative: 3.21, netCumulative: 2561.80, pressure: 0.32, temp: 26.50, timestamp: '2026-09-23 15:35:00', pressureStatus: 'norm' },
+    { id: 12, name: '后勤2号楼', zone: '后勤生活区', category: 'living', dn: 'DN125', code: '862323088478', x: 560, y: 390, instantFlow: 0.00, posCumulative: 1713.30, negCumulative: 3.67, netCumulative: 1709.60, pressure: 0.31, temp: 26.32, timestamp: '2026-09-23 15:35:00', pressureStatus: 'norm' },
+    { id: 13, name: '后勤3号楼', zone: '后勤生活区', category: 'living', dn: 'DN80', code: '862323088791', x: 740, y: 390, instantFlow: 0.00, posCumulative: 571.79, negCumulative: 1.73, netCumulative: 570.06, pressure: 0.29, temp: 28.77, timestamp: '2026-09-23 15:35:01', pressureStatus: 'norm' },
+    { id: 14, name: '启光南楼', zone: '后勤生活区', category: 'living', dn: 'DN100', code: '862323088593', x: 900, y: 470, instantFlow: 0.00, posCumulative: 781.28, negCumulative: 0.34, netCumulative: 780.94, pressure: 0.30, temp: 27.44, timestamp: '2026-09-23 15:35:01', pressureStatus: 'norm' },
+    { id: 15, name: '启光北楼', zone: '后勤生活区', category: 'living', dn: 'DN80', code: '862323088031', x: 1010, y: 470, instantFlow: 0.00, posCumulative: 306.48, negCumulative: 0.13, netCumulative: 306.35, pressure: 0.30, temp: 28.48, timestamp: '2026-09-23 15:35:01', pressureStatus: 'norm' }
+  ];
+
+  // 3种工艺工况配置
+  const scenariosData = {
+    normal: {
+      name: '标准稳态',
+      macro: { totalInstantFlow: '124.6', totalCumulativeWater: '15,648.3', avgPressure: '0.31', avgTemp: '27.2' },
+      flowFactors: [3.2, 2.8, 5.4, 5.1, 6.2, 4.8, 14.5, 4.2, 8.6, 32.4, 18.2, 11.5, 5.2, 8.1, 4.4],
+      pressures: [0.32, 0.31, 0.30, 0.29, 0.33, 0.30, 0.34, 0.31, 0.28, 0.35, 0.32, 0.31, 0.29, 0.30, 0.30]
+    },
+    peak: {
+      name: '用水高峰',
+      macro: { totalInstantFlow: '248.2', totalCumulativeWater: '16,892.5', avgPressure: '0.28', avgTemp: '26.8' },
+      flowFactors: [7.8, 6.5, 12.2, 11.8, 14.1, 10.6, 28.5, 9.6, 16.2, 54.0, 31.5, 22.0, 11.8, 18.4, 9.2],
+      pressures: [0.29, 0.28, 0.27, 0.26, 0.30, 0.27, 0.31, 0.28, 0.25, 0.32, 0.29, 0.28, 0.26, 0.27, 0.27]
+    },
+    leak: {
+      name: '夜间微漏排查',
+      macro: { totalInstantFlow: '18.4', totalCumulativeWater: '15,702.1', avgPressure: '0.36', avgTemp: '25.6' },
+      flowFactors: [0.1, 0.0, 0.2, 0.1, 0.3, 0.1, 0.8, 0.2, 1.2, 12.8, 1.4, 0.6, 0.2, 0.3, 0.1], // 10号楼持续有12.8流量渗漏
+      pressures: [0.37, 0.36, 0.36, 0.35, 0.37, 0.36, 0.37, 0.36, 0.33, 0.34, 0.37, 0.36, 0.35, 0.36, 0.36]
+    }
+  };
+
+  const app = Vue.createApp({
+    data() {
+      return {
+        clock: '--:--:--',
+        date: '----/--/--',
+        scenario: 'normal',
+        scenarios: [
+          { id: 'normal', name: '标准稳态' },
+          { id: 'peak', name: '早间高峰' },
+          { id: 'leak', name: '夜间微漏排查' }
+        ],
+        currentFilter: 'all',
+        nodes: JSON.parse(JSON.stringify(baseNodesData)),
+        selectedNode: null,
+        drawerVisible: false,
+        eventList: [
+          { id: 1, title: '变频增压泵站 2# 泵自动投切', desc: '管网水压稳定在 0.31 MPa 基准线', time: '15:34:22', level: 'info' },
+          { id: 2, title: '中心实验10号楼 瞬时流量达到峰值', desc: '大型冷却循环系统进水开启，流速正常', time: '15:31:05', level: 'info' },
+          { id: 3, title: '全网15个超声波测点完成自检', desc: '双向声波计量零点标定完成，零偏移', time: '15:28:40', level: 'info' },
+          { id: 4, title: '综合实验9号楼 末端压力偏低微调', desc: '末端调压阀开度上调 5%，压力回升至 0.28MPa', time: '15:19:12', level: 'warn' }
+        ]
+      };
+    },
+    computed: {
+      macro() {
+        return scenariosData[this.scenario].macro;
+      },
+      filteredNodes() {
+        if (this.currentFilter === 'all') return this.nodes;
+        return this.nodes.filter(n => n.category === this.currentFilter);
+      }
+    },
+    methods: {
+      tick() {
+        try {
+          const d = new Date();
+          this.clock = d.toLocaleTimeString('zh-CN', { hour12: false });
+          this.date = d.toLocaleDateString('zh-CN').replaceAll('/', ' · ');
+        } catch(e) {}
+      },
+      selectNode(node) {
+        this.selectedNode = node;
+        this.drawerVisible = true;
+        this.$nextTick(() => {
+          renderDrawerChart(node);
+        });
+      },
+      switchScenario(id) {
+        this.scenario = id;
+        const sc = scenariosData[id];
+        // 动态根据工况重算15个节点的瞬时流量与压力
+        this.nodes.forEach((node, i) => {
+          node.instantFlow = sc.flowFactors[i];
+          node.pressure = sc.pressures[i];
+          if (id === 'leak' && node.id === 10) {
+            node.pressureStatus = 'warn';
+          } else {
+            node.pressureStatus = 'norm';
+          }
+        });
+        if (id === 'leak') {
+          this.eventList.unshift({
+            id: Date.now(),
+            title: '微漏预警：中心实验10号楼夜间微流异常',
+            desc: '凌晨非用水期持续检测到 12.8 m³/h 基底流速，疑地下支管渗漏',
+            time: this.clock,
+            level: 'warn'
+          });
+        }
+        if (window.updateScenarioCharts) {
+          window.updateScenarioCharts(id);
+        }
+      },
+      toggleFullscreen() {
+        try {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          } else {
+            document.exitFullscreen().catch(() => {});
+          }
+        } catch(e) {}
+      }
+    },
+    mounted() {
+      this.tick();
+      setInterval(() => {
+        try { this.tick(); } catch(e) {}
+      }, 1000);
+      // 默认应用初始工况数据
+      this.switchScenario('normal');
+      // 默认选中第一节点
+      this.selectedNode = this.nodes[0];
+    }
+  });
+
+  const vm = app.mount('#app');
+
+  // ECharts 图表初始化
+  const rankChart = safeInit('rankChart');
+  const pressureRadar = safeInit('pressureRadar');
+  const trendChart = safeInit('trendChart');
+  const balanceChart = safeInit('balanceChart');
+  let drawerChart = null;
+
+  const charts = [rankChart, pressureRadar, trendChart, balanceChart].filter(Boolean);
+
+  const textStyle = { color: '#a8bac8', fontSize: 11 };
+  const axisLine = { lineStyle: { color: '#1c384d' } };
+  const splitLine = { lineStyle: { color: 'rgba(28,56,77,.4)', type: 'dashed' } };
+
+  function renderCharts(scId) {
+    try {
+      const sc = scenariosData[scId] || scenariosData.normal;
+
+      // 1. 排行榜（横向柱状图）
+      if (rankChart) {
+        const sorted = [...vm.nodes].sort((a,b) => a.instantFlow - b.instantFlow).slice(7, 15);
+        rankChart.setOption({
+          grid: { left: 95, right: 35, top: 15, bottom: 25 },
+          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+          xAxis: { type: 'value', axisLabel: textStyle, axisLine, splitLine },
+          yAxis: { type: 'category', data: sorted.map(d => d.name), axisLabel: textStyle, axisLine },
+          series: [{
+            type: 'bar',
+            data: sorted.map(d => d.instantFlow),
+            barWidth: 10,
+            itemStyle: {
+              borderRadius: [0, 5, 5, 0],
+              color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+                { offset: 0, color: '#103952' },
+                { offset: 1, color: '#36c2ff' }
+              ])
+            }
+          }]
+        });
+      }
+
+      // 2. 管网水压平衡雷达图
+      if (pressureRadar) {
+        pressureRadar.setOption({
+          tooltip: { trigger: 'item' },
+          radar: {
+            radius: '62%',
+            center: ['50%', '52%'],
+            indicator: [
+              { name: '普科低层', max: 0.45 },
+              { name: '普科高层', max: 0.45 },
+              { name: '实验北区', max: 0.45 },
+              { name: '实验南区', max: 0.45 },
+              { name: '后勤生活', max: 0.45 },
+              { name: '启光宿舍', max: 0.45 }
+            ],
+            axisName: { color: '#a8bac8', fontSize: 10 },
+            splitLine: { lineStyle: { color: 'rgba(28,56,77,.6)' } },
+            splitArea: { areaStyle: { color: ['rgba(9,22,34,.3)', 'rgba(13,32,48,.4)'] } },
+            axisLine: { lineStyle: { color: '#1c384d' } }
+          },
+          series: [{
+            type: 'radar',
+            data: [{
+              value: scId === 'peak' ? [0.28, 0.31, 0.27, 0.25, 0.29, 0.27] : (scId === 'leak' ? [0.36, 0.37, 0.36, 0.34, 0.36, 0.36] : [0.31, 0.34, 0.30, 0.28, 0.32, 0.30]),
+              name: '实测水压 (MPa)',
+              itemStyle: { color: '#35d07f' },
+              areaStyle: { color: 'rgba(53,208,127,.2)' }
+            }]
+          }]
+        });
+      }
+
+      // 3. 24小时流量与水压趋势双轴折线
+      if (trendChart) {
+        const hours = ['00:00','03:00','06:00','09:00','12:00','15:00','18:00','21:00'];
+        const flowBase = scId === 'peak' ? [45, 28, 110, 248, 220, 195, 235, 140] : (scId === 'leak' ? [26, 24, 45, 115, 120, 110, 118, 65] : [32, 18, 85, 168, 155, 125, 160, 95]);
+        const pressBase = scId === 'peak' ? [0.37, 0.38, 0.31, 0.28, 0.29, 0.31, 0.28, 0.33] : [0.38, 0.39, 0.34, 0.31, 0.32, 0.33, 0.31, 0.35];
+
+        trendChart.setOption({
+          grid: { left: 45, right: 45, top: 34, bottom: 24 },
+          tooltip: { trigger: 'axis' },
+          legend: { top: 4, left: 'center', textStyle: { color: '#a8bac8', fontSize: 10 } },
+          xAxis: { type: 'category', data: hours, axisLabel: textStyle, axisLine },
+          yAxis: [
+            { type: 'value', name: 'm³/h', axisLabel: textStyle, axisLine, splitLine, nameTextStyle: { color: '#6c8496' } },
+            { type: 'value', name: 'MPa', min: 0.2, max: 0.45, axisLabel: textStyle, axisLine, splitLine: { show: false }, nameTextStyle: { color: '#6c8496' } }
+          ],
+          series: [
+            {
+              name: '全网供水流量',
+              type: 'line',
+              smooth: true,
+              data: flowBase,
+              itemStyle: { color: '#36c2ff' },
+              areaStyle: { color: 'rgba(54,194,255,.12)' }
+            },
+            {
+              name: '管网平均水压',
+              type: 'line',
+              yAxisIndex: 1,
+              smooth: true,
+              data: pressBase,
+              itemStyle: { color: '#35d07f' },
+              lineStyle: { width: 2, type: 'dashed' }
+            }
+          ]
+        });
+      }
+
+      // 4. 正负累积流量水力平衡对比图
+      if (balanceChart) {
+        balanceChart.setOption({
+          grid: { left: 52, right: 20, top: 30, bottom: 25 },
+          tooltip: { trigger: 'axis' },
+          legend: { top: 4, right: 8, textStyle: { color: '#a8bac8', fontSize: 10 } },
+          xAxis: { type: 'category', data: ['教学区', '高层区', '实验区', '生活区', '宿舍区'], axisLabel: textStyle, axisLine },
+          yAxis: { type: 'value', name: 'm³', axisLabel: textStyle, axisLine, splitLine, nameTextStyle: { color: '#6c8496' } },
+          series: [
+            {
+              name: '正累积水量',
+              type: 'bar',
+              barWidth: 12,
+              data: [2745, 1168, 5466, 4850, 1087],
+              itemStyle: { color: '#36c2ff', borderRadius: [3, 3, 0, 0] }
+            },
+            {
+              name: '负累积回水',
+              type: 'bar',
+              barWidth: 12,
+              data: [38.2, 2.0, 11.5, 8.6, 0.5],
+              itemStyle: { color: '#ffb547', borderRadius: [3, 3, 0, 0] }
+            }
+          ]
+        });
+      }
+    } catch(e) {
+      console.error(e);
+    }
+  }
+
+  function renderDrawerChart(node) {
+    try {
+      if (!drawerChart) {
+        drawerChart = safeInit('drawerChart');
+        if (drawerChart) charts.push(drawerChart);
+      }
+      if (drawerChart && node) {
+        const times = ['08:00','10:00','12:00','14:00','16:00','18:00','20:00','22:00'];
+        const flowCurve = [node.instantFlow * 0.8, node.instantFlow * 1.1, node.instantFlow * 1.3, node.instantFlow * 0.9, node.instantFlow, node.instantFlow * 1.2, node.instantFlow * 1.05, node.instantFlow * 0.6];
+        drawerChart.setOption({
+          grid: { left: 40, right: 20, top: 25, bottom: 25 },
+          tooltip: { trigger: 'axis' },
+          xAxis: { type: 'category', data: times, axisLabel: textStyle, axisLine },
+          yAxis: { type: 'value', name: 'm³/h', axisLabel: textStyle, axisLine, splitLine, nameTextStyle: { color: '#6c8496' } },
+          series: [{
+            name: '测点瞬时流量',
+            type: 'line',
+            smooth: true,
+            data: flowCurve,
+            itemStyle: { color: '#36c2ff' },
+            areaStyle: { color: 'rgba(54,194,255,.15)' }
+          }]
+        });
+        drawerChart.resize();
+      }
+    } catch(e) {
+      console.error(e);
+    }
+  }
+
+  window.updateScenarioCharts = renderCharts;
+  renderCharts('normal');
+
+  // 自适应缩放适配：1920×1080 居中无损缩放
+  function fit() {
+    try {
+      const screen = $id('screen');
+      if (!screen) return;
+      const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      screen.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    } catch(e) {}
+  }
+
+  fit();
+  window.addEventListener('resize', () => {
+    try {
+      fit();
+      charts.forEach(c => {
+        try { c.resize(); } catch(e) {}
+      });
+      if (drawerChart) {
+        try { drawerChart.resize(); } catch(e) {}
+      }
+    } catch(e) {}
+  });
+
+})();
+</script>
+</body>
+</html>

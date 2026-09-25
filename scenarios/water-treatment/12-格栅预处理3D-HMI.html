@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>调蓄池格栅预处理 3D HMI</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<script src="../../vendor/three.min.js"></script>
+<script src="../../vendor/OrbitControls.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#b7c6d6;color:#344b5f;font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+button,input,select{font:inherit}
+[v-cloak]{display:none}
+.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+:root{--page:#dfe8f3;--surface:#f8fbff;--surface-strong:#ffffff;--line:#c8d5e3;--line-soft:#dbe4ee;--text:#344b5f;--muted:#718597;--blue:#247ac4;--blue-soft:#dcecf9;--green:#21ad79;--amber:#f0a54a;--danger:#e15555;--purple:#a975d6}
+#screen{width:1920px;height:1080px;position:absolute;left:50%;top:50%;transform-origin:center center;display:grid;grid-template-rows:76px 52px 1fr 268px;overflow:hidden;background:linear-gradient(145deg,#eaf0f7,#d9e4ef 58%,#d3dfeb);box-shadow:0 18px 60px rgba(54,75,96,.25)}
+/* 第一层顶栏 */
+.topbar{display:grid;grid-template-columns:430px 1fr 430px;align-items:center;padding:0 18px;border-bottom:1px solid var(--line);background:rgba(248,251,255,.94)}
+.brand strong{display:block;font-size:21px;letter-spacing:1px;color:#29465a;white-space:nowrap}
+.brand span{display:block;margin-top:3px;color:var(--muted);font-size:11px;white-space:nowrap}
+.primary-nav{height:100%;display:flex;align-items:stretch;justify-content:center}
+.primary-nav button{min-width:150px;padding:0 14px;border:0;border-bottom:3px solid transparent;background:transparent;color:#3e5364;font-size:14px;cursor:pointer}
+.primary-nav button:hover{color:var(--blue);background:#eef5fb}
+.primary-nav button.active{color:var(--blue);background:#eef5fb;border-bottom-color:var(--blue);font-weight:700}
+.primary-nav button:disabled{color:#9db0c0;cursor:not-allowed}
+.system-meta{display:flex;align-items:center;justify-content:flex-end;gap:16px;color:#41586b;font-size:12px}
+.meta-item{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.demo-badge{padding:4px 12px;border-radius:12px;background:#fdf3e4;border:1px solid #f0d9b0;color:#a4702a;font-weight:700;letter-spacing:1px}
+/* 第二层工段导航 */
+.subnav{display:flex;align-items:stretch;gap:0;padding:0 12px;border-bottom:1px solid var(--line);background:#f4f8fc}
+.subnav .section-btn{border:0;border-right:1px solid #e0e8f0;background:transparent;color:#536a7c;font-size:14px;padding:0 26px;cursor:pointer}
+.subnav .section-btn:hover{background:#e8f1f8;color:var(--blue)}
+.subnav .section-btn.active{margin:6px 0;border-radius:5px;background:var(--blue);color:#fff;font-weight:700}
+.subnav .chips{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:11px;background:var(--surface-strong);border:1px solid var(--line-soft)}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot.ok{background:var(--green)}.dot.warn{background:var(--amber)}.dot.bad{background:var(--danger)}.dot.idle{background:#b6c5d3}
+/* 主区 */
+.main{position:relative;overflow:hidden}
+#scene3d{position:absolute;inset:0}
+#scene3d canvas{display:block}
+.scene-hud{position:absolute;z-index:5;pointer-events:none}
+.hud-overview{left:14px;top:14px;width:210px;background:rgba(248,251,255,.92);border:1px solid var(--line);border-radius:8px;padding:10px 12px;pointer-events:auto}
+.hud-overview b{font-size:13px;color:#29465a}
+.hud-overview p{margin:5px 0 0;font-size:11px;color:var(--muted);line-height:1.6}
+.hud-kpi{left:14px;bottom:14px;display:grid;grid-template-columns:repeat(3,150px);gap:8px}
+.kpi{background:rgba(248,251,255,.93);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.kpi small{display:block;font-size:11px;color:var(--muted)}
+.kpi b{font-size:20px;font-weight:600;color:#29465a}
+.kpi b.blue{color:var(--blue)}.kpi b.green{color:var(--green)}.kpi b.amber{color:var(--amber)}.kpi b.danger{color:var(--danger)}
+.kpi .sub{font-size:10px;color:var(--muted)}
+/* 3D 设备标签 */
+.dev-label{position:absolute;z-index:4;transform:translate(-50%,-100%);background:rgba(248,251,255,.94);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:4px;padding:2px 8px;font-size:11px;color:#2c4356;white-space:nowrap;pointer-events:auto;cursor:pointer}
+.dev-label small{color:var(--muted);margin-left:4px}
+.dev-label.sel{border-color:var(--blue);background:var(--blue-soft);box-shadow:0 2px 8px rgba(36,122,196,.25)}
+.dev-label.manual{border-left-color:var(--amber)}
+.dev-label.fault{border-left-color:var(--danger)}
+.dev-label.hidden{display:none}
+/* 右侧控制面板 */
+.control-panel{position:absolute;right:0;top:0;bottom:0;width:440px;background:rgba(248,251,255,.96);border-left:1px solid var(--line);display:flex;flex-direction:column;z-index:6}
+.panel-tabs{display:flex;border-bottom:1px solid var(--line)}
+.panel-tabs button{flex:1;border:0;background:transparent;padding:11px 0;font-size:13px;color:#536a7c;cursor:pointer}
+.panel-tabs button.active{color:var(--blue);font-weight:700;box-shadow:inset 0 -3px 0 var(--blue);background:var(--surface-strong)}
+.panel-body{flex:1;overflow-y:auto;padding:12px 14px;font-size:12px}
+.panel-body h4{margin:2px 0 8px;font-size:13px;color:#29465a}
+.panel-body h4 small{color:var(--muted);font-weight:400;margin-left:6px}
+.pt-table{width:100%;border-collapse:collapse;background:var(--surface-strong);border:1px solid var(--line-soft)}
+.pt-table th,.pt-table td{border-bottom:1px solid var(--line-soft);padding:5px 8px;text-align:left;font-size:11px}
+.pt-table th{background:#eef4fa;color:#41586b;font-weight:600}
+.q-tag{padding:1px 7px;border-radius:8px;font-size:10px}
+.q-good{background:#e3f5ee;color:#177a56}.q-bad{background:#fde8e8;color:#b23c3c}.q-stale{background:#fdf3e4;color:#a4702a}
+.card{background:var(--surface-strong);border:1px solid var(--line-soft);border-radius:8px;padding:10px 12px;margin-bottom:10px}
+.card .row{display:flex;justify-content:space-between;align-items:center;padding:3px 0}
+.card .row b{font-weight:600}
+.phase-tag{padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700}
+.ph-idle{background:#eef2f6;color:#5b7186}.ph-run{background:#e3f5ee;color:#177a56}.ph-seq{background:var(--blue-soft);color:#1b5f96}.ph-fault{background:#fde8e8;color:#b23c3c}
+.param-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.param-grid label{font-size:11px;color:var(--muted);display:block;margin-bottom:2px}
+.param-grid input{width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:5px;background:var(--surface-strong);color:var(--text)}
+.btn{padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--surface-strong);color:#3e5364;cursor:pointer;font-size:12px}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.warn{border-color:var(--amber);color:#a4702a}
+.btn.danger{border-color:var(--danger);color:var(--danger)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+/* —— 借鉴 11-MBR 的面板组件体系 —— */
+.control-head{position:relative;padding:10px 14px 0}
+.control-head strong{display:block;font-size:14px;color:#29465a}
+.control-head span{display:block;margin-top:3px;color:var(--blue);font-size:12px;font-weight:700}
+.state-line{display:flex;align-items:center;justify-content:space-between;padding:6px 0 9px;border-bottom:1px solid var(--line-soft);font-size:11px}
+.state-left{display:flex;gap:14px}
+.state-left span{color:#708597}
+.state-left b{margin-left:4px;color:#40586b}
+.state-ok{color:var(--green);font-weight:700}
+.state-warn{color:var(--amber);font-weight:700}
+.state-bad{color:var(--danger);font-weight:700}
+.tiny-state{display:inline-block;width:8px;height:8px;margin-right:5px;border-radius:2px;background:var(--green)}
+.phase-track{margin-top:10px;padding:10px;border:1px solid var(--line-soft);background:#f5f9fc}
+.phase-steps{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px}
+.phase-step{padding:6px 7px;border:1px solid var(--line-soft);background:#fff;text-align:center;border-radius:4px;color:#8295a6;font-size:10px}
+.phase-step b{display:block;margin-top:3px;font-size:12px;color:#3e5668}
+.phase-step.on{border-color:var(--blue);background:#eaf4fc;color:var(--blue)}
+.phase-step.on b{color:var(--blue)}
+.phase-step.done{border-color:#bfe3d4;background:#f0faf5;color:#177a56}
+.phase-bar{height:6px;margin-top:8px;border-radius:3px;background:#e2ebf2;overflow:hidden}
+.phase-bar i{display:block;height:100%;background:var(--blue);border-radius:3px;transition:width .5s linear}
+.phase-meta{display:flex;justify-content:space-between;margin-top:6px;color:#718597;font-size:10px}
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.quick-cell{padding:8px;border:1px solid var(--line-soft);background:#f5f9fc}
+.quick-cell span{display:block;color:#8295a6;font-size:9px;white-space:nowrap}
+.quick-cell b{display:inline-block;margin-top:5px;color:#3f586b;font-size:16px}
+.quick-cell small{margin-left:2px;color:#718597;font-size:8px}
+.control-device{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid var(--line-soft);background:#f5f9fc;margin-bottom:8px}
+.control-device b{font-size:12px;color:#3e5668}
+.control-note{margin-top:8px;padding:7px 9px;border:1px solid var(--line-soft);background:#f4f8fc;color:#708597;font-size:10px;line-height:1.7}
+.control-note.purple{border-color:#dcd0ec;background:#f6f1fb;color:#7a57ad}
+.slider-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line-soft);background:#f5f9fc;margin-bottom:8px}
+.slider-row span{font-size:11px;color:#536a7c;white-space:nowrap}
+.slider-row input[type=range]{flex:1}
+.value-box{min-width:58px;text-align:center;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:#fff;font-size:12px;color:#29465a}
+.op-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:8px}
+.op-btn{padding:7px 4px;border:1px solid var(--line);border-radius:6px;background:#fff;color:#3e5364;cursor:pointer;font-size:11px}
+.op-btn:hover{border-color:var(--blue);color:var(--blue)}
+.op-btn.open{border-color:#bfe3d4;background:#f0faf5;color:#177a56}
+.op-btn.close{border-color:#f2d8d8;background:#fdf3f3;color:#b23c3c}
+.op-btn.warn{border-color:#f0dcb8;background:#fdf8ee;color:#a4702a}
+.demo-tag{display:inline-block;padding:1px 7px;border-radius:8px;font-size:9px;background:#fdf3e4;color:#a4702a;font-weight:700}
+.bhead{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 5px;font-size:12px;color:#29465a;letter-spacing:1px}
+.bhead small{color:var(--muted);font-weight:400}
+.bhead .target{font-size:10px;color:var(--blue);font-weight:700}
+.ev-filter{display:flex;gap:6px;margin-bottom:8px}
+.ev-filter button{padding:2px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#536a7c;font-size:10px;cursor:pointer}
+.ev-filter button.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+.donut-wrap{display:flex;align-items:center;gap:6px;flex:1;min-height:0}
+.donut{width:92px;height:86px;flex:none}
+.donut-legend{font-size:10px;color:#41586b;line-height:1.9}
+.donut-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+
+.scen-row{display:flex;flex-wrap:wrap;gap:6px}
+.ev-item{border-left:3px solid var(--line);background:var(--surface-strong);padding:6px 9px;margin-bottom:6px;border-radius:0 6px 6px 0}
+.ev-item.warn{border-left-color:var(--amber)}.ev-item.alarm{border-left-color:var(--danger)}.ev-item.info{border-left-color:var(--blue)}
+.ev-item .t{font-size:10px;color:var(--muted)}
+.ev-actions{margin-top:4px;display:flex;gap:6px}
+.ev-actions .btn{padding:2px 8px;font-size:10px}
+/* 全局工控质感细滚动条 */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:rgba(219,228,238,.4);border-radius:4px}
+::-webkit-scrollbar-thumb{background:rgba(36,122,196,.3);border-radius:4px;transition:background .2s}
+::-webkit-scrollbar-thumb:hover{background:rgba(36,122,196,.6)}
+*{scrollbar-width:thin;scrollbar-color:rgba(36,122,196,.3) rgba(219,228,238,.4)}
+/* 底部六联模块 */
+.bottom-grid{display:grid;grid-template-columns:1.25fr 1.25fr 1fr 1.15fr 1fr 1fr;gap:10px;padding:10px 12px;border-top:1px solid var(--line);background:linear-gradient(180deg,#e5edf5,#d9e4ee);min-height:0}
+.bmod{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 4px 12px rgba(42,66,88,.07)}
+.bmod h5{margin:0 0 6px;font-size:12px;color:#29465a;letter-spacing:1px}
+.bmod h5 small{color:var(--muted);font-weight:400;margin-left:4px}
+.bmod .chart{flex:1;min-height:0}
+.st-row{display:flex;align-items:center;justify-content:space-between;padding:2px 0;font-size:11px;color:#41586b}
+.st-row .name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
+.st-row .val{font-weight:600;white-space:nowrap}
+.st-ok{color:var(--green)}.st-warn{color:#a4702a}.st-bad{color:#b23c3c}.st-idle{color:#7c92a4}
+.lock-seq{display:flex;gap:4px;margin-top:6px}
+.lock-step{flex:1;text-align:center;font-size:10px;padding:3px 0;border-radius:4px;background:#eef2f6;color:#7c92a4}
+.lock-step.on{background:var(--blue-soft);color:#1b5f96;font-weight:700}
+.lock-step.done{background:#e3f5ee;color:#177a56}
+@media (prefers-reduced-motion: reduce){ .pipe-pulse{animation:none} }
+</style>
+</head>
+<body>
+<div id="screen" v-cloak>
+  <!-- 第一层顶栏 -->
+  <header class="topbar">
+    <div class="brand"><strong>调蓄池 · 格栅预处理 3D HMI</strong><span>智能调蓄工程 格栅间 · 16 台控制器 · 424 点位基线 V1.0</span></div>
+    <nav class="primary-nav">
+      <button class="active">格栅预处理</button>
+      <button disabled title="待 S1 验收后交付">调蓄池主体</button>
+      <button disabled title="待排期">安全通风</button>
+      <button disabled title="待排期">排出及辅助</button>
+    </nav>
+    <div class="system-meta">
+      <span class="demo-badge">演示模式</span>
+      <span class="meta-item">数据质量 <b class="num" :style="{color:qualityColor}">{{ qGood }}/{{ qTotal }}</b></span>
+      <span class="meta-item">更新时间 <b class="num">{{ clock }}</b></span>
+    </div>
+  </header>
+  <!-- 第二层工段导航 -->
+  <nav class="subnav">
+    <button v-for="s in sections" :key="s.id" class="section-btn" :class="{active:section===s.id}" @click="focusSection(s.id)">{{ s.name }}</button>
+    <div class="chips">
+      <span class="chip"><span class="dot" :class="t2Dot"></span>T2 联锁 {{ t2PhaseText }}</span>
+      <span class="chip"><span class="dot" :class="commDot"></span>通信 演示链路</span>
+      <span class="chip"><span class="dot" :class="alarmDot"></span>报警 {{ alarmCount }}</span>
+    </div>
+  </nav>
+  <!-- 主区：3D + 浮层 + 右面板 -->
+  <section class="main">
+    <div id="scene3d" class="plant3d"></div>
+    <div class="scene-hud hud-overview" @click="resetView" title="点击返回总览视角">
+      <b>格栅预处理总览</b>
+      <p>进水 → 粗格栅 1~3# → 潜污泵 1~5#<br>液位差计 LE11~13 驱动 T2 联动<br>18 台空逻辑设备按手动管理监视</p>
+    </div>
+    <div class="scene-hud hud-kpi">
+      <div class="kpi"><small>液位差 ΔL_max</small><b class="num" :class="dlClass">{{ dlMaxText }}</b><span class="sub">mm · 启停 {{params.dlStart}}/{{params.dlStop}}</span></div>
+      <div class="kpi"><small>进水流量（估算）</small><b class="num blue">{{ inletFlowText }}</b><span class="sub">m³/h</span></div>
+      <div class="kpi"><small>潜污泵运行</small><b class="num">{{ pumpRunCount }} / 5</b><span class="sub">手动管理 · 监视</span></div>
+      <div class="kpi"><small>粗格栅 1~3#</small><b class="num" :class="screenRunCount?'green':''">{{ screenRunCount ? '运行 ×'+screenRunCount : '停止' }}</b><span class="sub">T2 联动对象</span></div>
+      <div class="kpi"><small>皮带输送机</small><b class="num" :class="belt.run&&!belt.fault?'green':''">{{ belt.fault?'故障':(belt.run?'运行':'停止') }}</b><span class="sub">先启后停 · 强联锁</span></div>
+      <div class="kpi"><small>未确认报警</small><b class="num" :class="unconfirmedCount?'danger':''">{{ unconfirmedCount }}</b><span class="sub">事件 {{ events.length }}</span></div>
+    </div>
+    <aside class="control-panel">
+      <div class="control-head"><strong>设备控制面板</strong><span>{{ selected ? (selected.controller + ' · ' + selected.modeText) : '调蓄池 · 未选中设备（T2 全局）' }}</span>
+        <button v-if="selected" class="btn" style="position:absolute;right:12px;top:10px;padding:2px 10px;font-size:10px" @click="selectedId=null">返回全局</button>
+      </div>
+      <div class="panel-tabs">
+        <button v-for="t in panelTabs" :key="t.id" :class="{active:panelTab===t.id}" @click="panelTab=t.id">{{ t.name }}</button>
+      </div>
+      <div class="panel-body">
+        <!-- 状态 -->
+        <template v-if="panelTab==='status'">
+          <div class="state-line">
+            <div class="state-left">
+              <span>状态 <b>{{ selected ? selectedStateText : '—' }}</b></span>
+              <span>模式 <b>{{ selected ? selectedModeShort : 'T2 自动' }}</b></span>
+            </div>
+            <div :class="faultActive ? 'state-bad' : 'state-ok'"><i class="tiny-state" :style="faultActive?'background:var(--danger)':''"></i>{{ faultActive ? '故障联锁' : '联锁正常' }}</div>
+          </div>
+          <div class="phase-track">
+            <div class="phase-steps">
+              <div class="phase-step" :class="seqCls(0)">皮带先启<b>2 s</b></div>
+              <div class="phase-step" :class="seqCls(1)">格栅后启<b>同步</b></div>
+              <div class="phase-step" :class="seqCls(2)">格栅先停<b>迟滞 {{params.hyst}}s</b></div>
+              <div class="phase-step" :class="seqCls(3)">皮带后停<b>2 s</b></div>
+            </div>
+            <div class="phase-bar"><i :style="{width: phaseProgress + '%'}"></i></div>
+            <div class="phase-meta">
+              <span>{{ t2.mode==='level' ? '液位差优先' : '时间循环' }} · ΔL_max {{ dlMaxText }} mm（启停 {{params.dlStart}}/{{params.dlStop}}）</span>
+              <span>{{ t2.countdown > 0 ? '倒计时 ' + t2.countdown + ' s' : t2PhaseText }}</span>
+            </div>
+          </div>
+          <div class="quick-grid">
+            <div class="quick-cell"><span>液位差 ΔL_max</span><b class="num" :style="{color: dlClass==='danger' ? 'var(--danger)' : '#3f586b'}">{{ dlMaxText }}</b><small>mm</small></div>
+            <div class="quick-cell"><span>进水流量（估算）</span><b class="num">{{ inletFlowText }}</b><small>m³/h</small></div>
+            <div class="quick-cell"><span>潜污泵运行</span><b class="num">{{ pumpRunCount }}</b><small>/ 5 台</small></div>
+            <div class="quick-cell"><span>出水流量（估算）</span><b class="num">{{ outletFlow }}</b><small>m³/h</small></div>
+          </div>
+          <h4 v-if="selected" style="margin-top:12px">{{ selected.name }}<small>{{ selected.controller }} · 点位明细</small></h4>
+          <h4 v-else style="margin-top:12px">点位说明<small>在 3D 场景点击设备标签或构筑物</small></h4>
+          <table v-if="selected" class="pt-table">
+            <thead><tr><th>点位别名</th><th>信号</th><th>值</th><th>质量位</th></tr></thead>
+            <tbody>
+              <tr v-for="p in selected.points" :key="p.alias">
+                <td>{{ p.alias }}</td><td>{{ p.sig }}</td>
+                <td class="num">{{ p.q==='good' ? p.display : '--' }}</td>
+                <td><span class="q-tag" :class="'q-'+p.q">{{ qText(p.q) }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-if="selected" style="color:var(--muted);font-size:11px;margin-top:8px">演示数据 · 非现场接入 · 点位别名与《设备控制业务台账_主控版.xlsx》点位明细逐点对应。</p>
+        </template>
+        <!-- 控制 -->
+        <template v-else-if="panelTab==='control'">
+          <div class="control-device" v-if="selected">
+            <b>{{ selected.name }} · {{ selected.controller }}</b>
+            <span :class="faultActive ? 'state-bad' : 'state-ok'">{{ selectedStateText }} · {{ selectedModeShort }}</span>
+          </div>
+          <!-- 泵类演示操作（手动管理设备） -->
+          <template v-if="selected && selectedKind==='pump'">
+            <div class="slider-row">
+              <span>频率给定</span>
+              <input type="range" min="0" max="50" step="0.5" v-model.number="tempFreq">
+              <div class="value-box num">{{ tempFreq.toFixed(1) }}Hz</div>
+            </div>
+            <div class="op-btns">
+              <button class="op-btn open" @click="demoPump(true)">启动运行</button>
+              <button class="op-btn close" @click="demoPump(false)">停机备用</button>
+              <button class="op-btn" @click="demoPumpFreq">调频应用</button>
+              <button class="op-btn warn" style="grid-column:span 2" @click="demoDeviceFault('pump', selectedIndex)">注入故障（演示）</button>
+              <button class="op-btn" @click="demoDeviceReset('pump', selectedIndex)">交回自动</button>
+            </div>
+            <div class="control-note">该泵为空逻辑控制器（手动管理）。此处为<b>演示注入</b>，仅改变本屏演示数据，不下发现场；频率给定对应 AO 通道，现场以手动/旋钮控制为准。</div>
+          </template>
+          <!-- 阀门/闸门演示操作 -->
+          <template v-else-if="selected && (selectedKind==='valve' || selectedKind==='gate')">
+            <div class="op-btns">
+              <button class="op-btn open" @click="demoValve(true)">开启</button>
+              <button class="op-btn close" @click="demoValve(false)">关闭</button>
+              <button class="op-btn warn" @click="demoDeviceFault(selectedKind, selectedIndex)">注入故障（演示）</button>
+              <button class="op-btn" style="grid-column:span 3" @click="demoDeviceReset(selectedKind, selectedIndex)">复位并交回自动</button>
+            </div>
+            <div class="control-note">启闭机/出口阀为空逻辑控制器（手动管理）。开→关需现场确认到位反馈；此处为<b>演示注入</b>，3D 阀体与闸门动作、管道粒子随演示状态联动。</div>
+          </template>
+          <!-- 格栅/皮带/砂水分离器：T2 联锁对象 -->
+          <template v-else-if="selected && (selectedKind==='screen' || selectedKind==='belt' || selectedKind==='sep')">
+            <div class="op-btns">
+              <button class="op-btn warn" style="grid-column:span 2" @click="demoDeviceFault(selectedKind, selectedIndex)">注入故障（演示联锁）</button>
+              <button class="op-btn open" @click="demoDeviceReset(selectedKind, selectedIndex)">故障复位</button>
+            </div>
+            <div class="control-note">启停由基站 T2 联锁脚本统一调度（先皮带后格栅/先格栅后皮带），上位不直接下发。注入故障用于演练<b>全组立即停机</b>与复位重新计时逻辑。</div>
+          </template>
+          <!-- 液位差计/气体探头：只读 -->
+          <template v-else-if="selected && (selectedKind==='le' || selectedKind==='gas')">
+            <div class="op-btns">
+              <button class="op-btn warn" style="grid-column:span 3" @click="demoProbeBad">模拟探头断线（演示）</button>
+            </div>
+            <div class="control-note">纯监视仪表（T4 预处理输出）。断线演示用于验证质量位失效分支：ΔL 组失效、T2 视为输入无效暂停。</div>
+          </template>
+          <!-- 未选中：T2 全局参数 + 剧本 -->
+          <template v-else>
+            <div class="card" style="margin-top:0">
+              <h4>T2 格栅联动参数<small>示例值 · 待工艺标定</small></h4>
+              <div class="param-grid">
+                <div><label>液位差启动值 (mm)</label><input type="number" v-model.number="params.dlStart" min="50" max="1500"></div>
+                <div><label>液位差停止值 (mm)</label><input type="number" v-model.number="params.dlStop" min="20" max="1000"></div>
+                <div><label>停止延时迟滞 (s)</label><input type="number" v-model.number="params.hyst" min="0" max="300"></div>
+                <div><label>仿真速度 (倍)</label><input type="number" v-model.number="params.speed" min="1" max="600"></div>
+                <div v-if="t2.mode==='time'"><label>循环运行 T_run (s)</label><input type="number" v-model.number="params.tRun" min="30" max="7200"></div>
+                <div v-if="t2.mode==='time'"><label>循环停止 T_stop (s)</label><input type="number" v-model.number="params.tStop" min="30" max="7200"></div>
+              </div>
+              <div class="row" style="margin-top:6px"><span>联动模式</span><b>{{ t2.mode==='level' ? '液位差优先' : '时间循环' }}</b>
+                <button class="btn" style="margin-left:8px;padding:2px 10px" @click="toggleT2Mode">切换</button></div>
+            </div>
+            <div class="card">
+              <h4>演示剧本注入<small>固定工况脚本 · 有界变化</small></h4>
+              <div class="scen-row">
+                <button v-for="sc in scenarios" :key="sc.id" class="btn" :class="{primary:scenario===sc.id}" @click="setScenario(sc.id)">{{ sc.name }}</button>
+              </div>
+              <div class="row" style="margin-top:8px" v-if="faultActive">
+                <span style="color:var(--danger)">存在故障注入，全组联锁停机</span>
+                <button class="btn warn" @click="resetFault">全部复位</button>
+              </div>
+            </div>
+          </template>
+          <div class="control-note" style="margin-top:10px"><span class="demo-tag">演示模式</span> 所有操作仅作用于本屏演示数据，不连接现场 PLC/基站。</div>
+        </template>
+        <!-- 趋势 -->
+        <template v-else-if="panelTab==='trend'">
+          <h4>{{ trendTitle }}<small>60 点滑动窗口</small></h4>
+          <div ref="trendChart" style="height:400px"></div>
+          <p style="color:var(--muted);font-size:11px">{{ trendNote }}</p>
+        </template>
+        <!-- 事件 -->
+        <template v-else>
+          <h4>事件记录<small>启停 / 联锁 / 报警流水</small></h4>
+          <div class="ev-filter">
+            <button v-for="f in evFilters" :key="f.id" :class="{active:evFilter===f.id}" @click="evFilter=f.id">{{ f.name }}</button>
+            <button style="margin-left:auto" @click="clearEvents">清除已确认</button>
+          </div>
+          <div v-for="(e,i) in filteredEvents" :key="events.length-i" class="ev-item" :class="e.level">
+            <div>{{ e.text }}</div>
+            <div class="t num">{{ e.ts }} · {{ e.level==='alarm'?'报警':(e.level==='warn'?'预警':'信息') }}<template v-if="e.level!=='info'"> · <a v-if="!e.confirmed" style="color:var(--blue);cursor:pointer" @click="e.confirmed=true">确认</a><span v-else>已确认</span></template></div>
+          </div>
+          <p v-if="!filteredEvents.length" style="color:var(--muted)">暂无事件。</p>
+        </template>
+      </div>
+    </aside>
+    <!-- 3D 设备标签 -->
+    <div v-for="lb in labels" :key="lb.id" class="dev-label" :class="{sel:selectedId===lb.id, manual:lb.manual, fault:lb.fault, hidden:!lb.visible}"
+         :style="{left:lb.x+'px', top:lb.y+'px'}" :data-device="lb.id">{{ lb.name }}<small>{{ lb.sub }}</small></div>
+  </section>
+  <!-- 底部六联模块 -->
+  <footer class="bottom-grid">
+    <div class="bmod"><div class="bhead">液位趋势 <small>ΔL 三组 · mm</small><span class="target">启停 {{params.dlStart}}/{{params.dlStop}}</span></div><div class="chart" ref="bTrendLevel"></div></div>
+    <div class="bmod"><div class="bhead">流量趋势 <small>进/出 · m³/h</small><span class="target">设计 {{params.speed}}× 演示</span></div><div class="chart" ref="bTrendFlow"></div></div>
+    <div class="bmod"><div class="bhead">仪表状态 <small>LE11~13 / AE-11a</small></div>
+      <div class="st-row" v-for="p in probeRows" :key="p.alias"><span class="name">{{ p.alias }}</span><span class="val num" :class="p.cls">{{ p.text }}</span></div>
+    </div>
+    <div class="bmod"><div class="bhead">联锁状态 <small>T2 时序 · 运行占比</small></div>
+      <div class="st-row"><span class="name">触发源</span><span class="val">{{ t2sourceText }}</span></div>
+      <div class="st-row"><span class="name">联锁对象</span><span class="val">格栅 1~3# + 皮带</span></div>
+      <div class="lock-seq">
+        <span class="lock-step" :class="seqCls(0)">皮带先启</span>
+        <span class="lock-step" :class="seqCls(1)">格栅后启</span>
+        <span class="lock-step" :class="seqCls(2)">格栅先停</span>
+        <span class="lock-step" :class="seqCls(3)">皮带后停</span>
+      </div>
+      <div class="donut-wrap">
+        <div class="donut" ref="runDonut"></div>
+        <div class="donut-legend">
+          <div><i style="background:#21ad79"></i>运行 <b class="num">{{ runAccumPct.run }}%</b></div>
+          <div><i style="background:#b6c5d3"></i>停止 <b class="num">{{ runAccumPct.stop }}%</b></div>
+          <div><i style="background:#e15555"></i>故障 <b class="num">{{ runAccumPct.fault }}%</b></div>
+        </div>
+      </div>
+      <div class="st-row" style="margin-top:4px"><span class="name">故障联锁</span><span class="val" :class="faultActive?'st-bad':'st-ok'">{{ faultActive?'全组停机':'正常' }}</span></div>
+    </div>
+    <div class="bmod"><div class="bhead">阀门状态 <small>启闭机 / 出口阀 / 补水阀</small></div>
+      <div class="st-row" v-for="v in valveRows" :key="v.name"><span class="name">{{ v.name }}</span><span class="val" :class="v.cls">{{ v.text }}</span></div>
+    </div>
+    <div class="bmod"><div class="bhead">设备健康 <small>16 台控制器</small></div>
+      <div class="st-row"><span class="name">通信正常</span><span class="val st-ok num">16 / 16</span></div>
+      <div class="st-row"><span class="name">故障设备</span><span class="val" :class="faultCount?'st-bad':'st-ok'">{{ faultCount }} 台</span></div>
+      <div class="st-row"><span class="name">手动管理</span><span class="val st-warn num">18 台全站（本屏 13 台）</span></div>
+      <div class="st-row"><span class="name">备用</span><span class="val st-idle">IOT-11# 无点位</span></div>
+      <div class="st-row"><span class="name">质量位汇总</span><span class="val num">{{ qGood }}/{{ qTotal }} good</span></div>
+    </div>
+  </footer>
+</div>
+<script>
+'use strict';
+/* ========== 工具 ========== */
+function safeInit(fn){ try { fn(); } catch (e) { console.error(e); } }
+function fitScreen(){
+  var el = document.getElementById('screen');
+  if (!el) return;
+  var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+  el.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
+}
+function pad(n){ return (n < 10 ? '0' : '') + n; }
+function nowText(d){ return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); }
+var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ========== Vue 应用 ========== */
+var app = null;
+safeInit(function () {
+  var el = document.getElementById('screen');
+  if (!el) return;
+  var V = Vue;
+  var state = V.reactive({
+    /* —— 静态结构 —— */
+    sections: [
+      { id:'A', name:'进水段' }, { id:'B', name:'格栅段' },
+      { id:'C', name:'泵阀段' }, { id:'D', name:'辅助段' }
+    ],
+    panelTabs: [ {id:'status',name:'状态'}, {id:'control',name:'控制'}, {id:'trend',name:'趋势'}, {id:'events',name:'事件'} ],
+    scenarios: [ {id:'normal',name:'正常运行'}, {id:'trigger',name:'液位差触发'}, {id:'cycle',name:'时间循环'}, {id:'fault',name:'设备故障'}, {id:'probe',name:'探头断线'} ],
+    /* —— 运行数据 —— */
+    clock: '--:--:--',
+    section: 'A',
+    panelTab: 'status',
+    selectedId: null,
+    scenario: 'normal',
+    params: { dlStart:300, dlStop:120, hyst:45, tRun:600, tStop:1800, speed:60 },
+    t2: { mode:'level', phase:'stop', seq:0, countdown:0, reason:'', stopTimer:0, runTimer:0 },
+    /* 点位（质量位/时间戳全携带） */
+    probes: [
+      { alias:'LE11a', v:150 }, { alias:'LE11b', v:148 },
+      { alias:'LE12a', v:152 }, { alias:'LE12b', v:149 },
+      { alias:'LE13a', v:151 }, { alias:'LE13b', v:147 }
+    ].map(function (p) { return { alias:p.alias, v:p.v, q:'good', ts:'--' }; }),
+    gas: [ { alias:'AE-11a 反馈1', v:3.2, q:'good', ts:'--', unit:'ppm' }, { alias:'AE-11a 反馈2', v:3.4, q:'good', ts:'--', unit:'ppm' } ],
+    gate: { name:'进水启闭机', controller:'GS-K01-14', mode:'manual', open:1, fault:false },
+    screens: [
+      { name:'1# 粗格栅机', controller:'GS-K01-11', run:false, fault:false },
+      { name:'2# 粗格栅机', controller:'GS-K01-11', run:false, fault:false },
+      { name:'3# 粗格栅机', controller:'GS-K01-11', run:false, fault:false }
+    ],
+    belt: { name:'皮带输送机', controller:'GS-K01-12', run:false, fault:false },
+    pumps: [1,2,3,4,5].map(function (i) {
+      return { name:i+'# 潜污泵', controller:'GS-K01-0'+i, mode:'manual', run:false, fault:false, freq:0 };
+    }),
+    valves: [1,2,3,4,5].map(function (i) {
+      return { name:i+'# 出口阀', controller:'GS-K01-0'+(i+5), open:false, fault:false };
+    }),
+    sep: { name:'砂水分离器', controller:'GS-K01-13', mode:'manual', run:false, fault:false },
+    wvalves: [
+      { name:'1# 补水阀', controller:'GS-K01-13', open:false, fault:false },
+      { name:'2# 补水阀', controller:'GS-K01-13', open:false, fault:false }
+    ],
+    events: [],
+    dlMax: null, dlMaxText: '--', dlClass: '', inletFlow: 0, inletFlowText: 0, outletFlow: 0,
+    tempFreq: 38.5, evFilter: 'all',
+    evFilters: [ {id:'all',name:'全部'}, {id:'alarm',name:'报警'}, {id:'warn',name:'预警'}, {id:'info',name:'操作'} ],
+    runAccum: { run: 0, stop: 0, fault: 0 },
+    hist: { dl1:[], dl2:[], dl3:[], fin:[], fout:[], pfreq:[[],[],[],[],[]], gas1:[], gas2:[], labels:[] }
+  });
+  var computed = { dlMax:0, dlGroups:[0,0,0], inletFlow:0, outletFlow:0, simTick:0, pumpTick:0 };
+  var eventSeq = 0;
+  /* 3D 设备标签（reactive：动画循环逐帧更新 x/y/visible） */
+  function L(id, name, sub, anchor) { return { id:id, name:name, sub:sub, anchor:anchor, visible:true, x:0, y:0, manual:false, fault:false }; }
+  var labelState = V.reactive([
+    L('gate', '进水启闭机', 'GS-K01-14', new THREE.Vector3(-10.3, 3.4, 0)),
+    L('le', '液位差计 LE11~13', 'GS-K01-16', new THREE.Vector3(-9.9, 2.8, 2.6)),
+    L('screen1', '1# 粗格栅机', 'GS-K01-11', new THREE.Vector3(-8.8, 3.3, -2)),
+    L('screen2', '2# 粗格栅机', 'GS-K01-11', new THREE.Vector3(-8.8, 3.3, 0)),
+    L('screen3', '3# 粗格栅机', 'GS-K01-11', new THREE.Vector3(-8.8, 3.3, 2)),
+    L('belt', '皮带输送机', 'GS-K01-12', new THREE.Vector3(-6.4, 1.8, -4.2)),
+    L('pump1', '潜污泵 1~5#', 'GS-K01-01~05', new THREE.Vector3(1.2, 3.0, 0)),
+    L('valve1', '出口阀 1~5#', 'GS-K01-06~10', new THREE.Vector3(6.9, 2.7, 0)),
+    L('sep', '砂水分离器', 'GS-K01-13', new THREE.Vector3(-4.8, 2.3, 4.4)),
+    L('gas', '气体探头 AE-11a', 'GS-K01-01', new THREE.Vector3(-12.6, 3.0, 2.4))
+  ]);
+
+  app = V.createApp({
+    data: function () { return state; },
+    computed: {
+      qualityColor: function () { return this.qBad ? '#a4702a' : '#177a56'; },
+      qGood: function () { return this.allPoints.filter(function (p) { return p.q === 'good'; }).length; },
+      qBad: function () { return this.allPoints.filter(function (p) { return p.q !== 'good'; }).length; },
+      qTotal: function () { return this.allPoints.length; },
+      allPoints: function () {
+        var pts = this.probes.concat(this.gas);
+        this.pumps.forEach(function (p) {
+          pts.push({ alias:p.name+' 运行反馈', q:'good', display:p.run?'运行':'停止' });
+          pts.push({ alias:p.name+' 故障反馈', q:'good', display:p.fault?'故障':'正常' });
+          pts.push({ alias:p.name+' 频率反馈', q:'good', display:p.freq.toFixed(1)+' Hz' });
+        });
+        return pts;
+      },
+      pumpRunCount: function () { return this.pumps.filter(function (p) { return p.run && !p.fault; }).length; },
+      screenRunCount: function () { return this.screens.filter(function (s) { return s.run && !s.fault; }).length; },
+      faultCount: function () {
+        var n = this.screens.filter(function (s) { return s.fault; }).length
+          + this.pumps.filter(function (p) { return p.fault; }).length
+          + this.valves.filter(function (v) { return v.fault; }).length;
+        return n + (this.belt.fault ? 1 : 0) + (this.gate.fault ? 1 : 0) + (this.sep.fault ? 1 : 0);
+      },
+      faultActive: function () { return this.faultCount > 0; },
+      unconfirmedCount: function () { return this.events.filter(function (e) { return e.level !== 'info' && !e.confirmed; }).length; },
+      alarmCount: function () { return this.unconfirmedCount; },
+      t2PhaseText: function () {
+        var ph = this.t2.phase;
+        if (ph === 'run') return '运行中';
+        if (ph === 'startBelt' || ph === 'startScreens') return '启动时序';
+        if (ph === 'stopScreens' || ph === 'stopBelt') return '停止时序';
+        return this.t2.mode === 'time' ? '循环停止段' : '停止';
+      },
+      t2Dot: function () { return this.t2.phase === 'run' ? 'ok' : (this.t2.phase === 'stop' ? 'idle' : 'warn'); },
+      commDot: function () { return 'ok'; },
+      alarmDot: function () { return this.unconfirmedCount ? 'bad' : 'ok'; },
+      t2sourceText: function () {
+        if (this.t2.mode === 'time' && this.t2.phase === 'run') return '时间循环';
+        if (this.dlMax !== null && this.dlMax >= this.params.dlStart) return '液位差触发';
+        return '未触发';
+      },
+      probeRows: function () {
+        var rows = [];
+        this.probes.forEach(function (p) {
+          rows.push({ alias:p.alias, text:p.q==='good'?p.v.toFixed(0)+' mm':'断线', cls:p.q==='good'?'st-ok':'st-bad' });
+        });
+        this.gas.forEach(function (p) {
+          rows.push({ alias:p.alias, text:p.q==='good'?p.v.toFixed(1)+' ppm':'断线', cls:p.q==='good'?(p.v>20?'st-warn':'st-ok'):'st-bad' });
+        });
+        return rows;
+      },
+      valveRows: function () {
+        var rows = [{ name:'进水启闭机', text:this.gate.open>0.5?'开启':'关闭', cls:this.gate.fault?'st-bad':(this.gate.open>0.5?'st-ok':'st-idle') }];
+        this.valves.forEach(function (v) {
+          rows.push({ name:v.name, text:v.fault?'故障':(v.open?'开到位':'关到位'), cls:v.fault?'st-bad':(v.open?'st-ok':'st-idle') });
+        });
+        this.wvalves.forEach(function (v) {
+          rows.push({ name:v.name, text:v.open?'开启':'关闭', cls:v.open?'st-ok':'st-idle' });
+        });
+        return rows;
+      },
+      selected: function () { return deviceById(this.selectedId); },
+      selectedKind: function () { return parseKind(this.selectedId).kind; },
+      selectedIndex: function () { return parseKind(this.selectedId).idx; },
+      selectedStateText: function () {
+        var id = this.selectedId; if (!id) return '—';
+        if (id === 'gate') return this.gate.open > 0.5 ? '开启' : '关闭';
+        if (id.indexOf('screen') === 0) { var s = this.screens[+id.slice(6) - 1]; return s.fault ? '故障' : (s.run ? '运行' : '停止'); }
+        if (id === 'belt') return this.belt.fault ? '故障' : (this.belt.run ? '运行' : '停止');
+        if (id.indexOf('pump') === 0) { var p = this.pumps[+id.slice(4) - 1]; return p.fault ? '故障' : (p.run ? '运行 ' + p.freq.toFixed(1) + 'Hz' : '停止'); }
+        if (id.indexOf('valve') === 0) { var v = this.valves[+id.slice(5) - 1]; return v.fault ? '故障' : (v.open ? '开到位' : '关到位'); }
+        if (id === 'sep') return this.sep.run ? '运行' : '停止';
+        if (id === 'le' || id === 'gas') return '监视中';
+        return '—';
+      },
+      selectedModeShort: function () {
+        var k = this.selectedKind;
+        if (k === 'pump' || k === 'valve' || k === 'gate' || k === 'sep') return '手动管理';
+        if (k === 'le' || k === 'gas') return 'T4 监视';
+        return 'T2 联锁';
+      },
+      phaseProgress: function () {
+        var m = { stop: 0, startBelt: 25, startScreens: 55, run: 100, stopScreens: 55, stopBelt: 25 };
+        return m[this.t2.phase] || 0;
+      },
+      runAccumPct: function () {
+        var a = this.runAccum, n = a.run + a.stop + a.fault;
+        if (!n) return { run: 0, stop: 100, fault: 0 };
+        var pc = function (x) { return Math.round(x / n * 100); };
+        return { run: pc(a.run), stop: pc(a.stop), fault: pc(a.fault) };
+      },
+      filteredEvents: function () {
+        var f = this.evFilter;
+        return this.events.filter(function (e) { return f === 'all' || e.level === f; });
+      },
+      trendTitle: function () {
+        var k = this.selectedKind, id = this.selectedId;
+        if (k === 'pump') return this.pumps[+id.slice(4) - 1].name + ' · 频率趋势';
+        if (k === 'gas') return '气体探头 AE-11a · 浓度趋势';
+        if (k === 'valve' || k === 'gate') return '进出水流量 · 阀位联动';
+        return '液位差三组趋势';
+      },
+      trendNote: function () {
+        var k = this.selectedKind;
+        if (k === 'pump') return '频率给定对应 AO 通道（演示注入）；启停时序与湿井液位联动。';
+        if (k === 'gas') return 'H₂S/CH₄ 浓度 ppm；通风联动逻辑见 S3 安全通风场景。';
+        if (k === 'valve' || k === 'gate') return '开阀/启泵后流量建立，关阀停泵后流量回落（演示估算）。';
+        return '质量位无效的组显示断线；红色虚线为当前启动设定值。';
+      },
+      labels: function () { return labelState; }
+    },
+    methods: {
+      qText: function (q) { return q === 'good' ? '正常' : (q === 'stale' ? '逾期' : '断线'); },
+      seqCls: function (i) {
+        var ph = this.t2.phase, run = this.t2.phase === 'run', stop = this.t2.phase === 'stop';
+        if (i === 0) return (ph === 'startBelt' || run) ? (ph === 'startBelt' ? 'on' : 'done') : (stop ? '' : (this.belt.run ? 'done' : ''));
+        if (i === 1) return (ph === 'startScreens' || run) ? (ph === 'startScreens' ? 'on' : 'done') : (stop ? '' : (this.screenRunCount ? 'done' : ''));
+        if (i === 2) return (ph === 'stopScreens') ? 'on' : (stop ? 'done' : '');
+        if (i === 3) return (ph === 'stopBelt') ? 'on' : (stop ? 'done' : '');
+        return '';
+      },
+      focusSection: function (id) { this.section = id; if (window.__sceneFocus) window.__sceneFocus(id); },
+      resetView: function () { if (window.__sceneFocus) window.__sceneFocus('overview'); },
+      selectByLabel: function (evt) {
+        var t = evt.target.closest ? evt.target.closest('.dev-label') : null;
+        if (t && t.getAttribute('data-device')) this.selectedId = t.getAttribute('data-device');
+      },
+      setScenario: function (id) {
+        this.scenario = id;
+        addEvent('info', '切换演示剧本：' + this.scenarios.filter(function (s) { return s.id === id; })[0].name);
+        if (id !== 'fault') this.resetFault(true);
+        if (id === 'fault') this.injectFault();
+        if (id === 'probe') {
+          this.probes[2].q = 'bad'; this.probes[3].q = 'bad';
+          addEvent('warn', 'LE12a/LE12b 质量位无效（断线），ΔL2 组失效');
+        } else {
+          this.probes.forEach(function (p) { p.q = 'good'; });
+        }
+        if (id === 'trigger') { triggerPhase = 'ramp'; }
+        if (id === 'cycle') { this.t2.mode = 'time'; this.t2.runTimer = this.params.tRun; this.t2.stopTimer = 0; }
+      },
+      toggleT2Mode: function () {
+        this.t2.mode = this.t2.mode === 'level' ? 'time' : 'level';
+        this.t2.runTimer = this.params.tRun; this.t2.stopTimer = 0;
+        addEvent('info', 'T2 切换为' + (this.t2.mode === 'time' ? '时间循环' : '液位差优先') + '模式');
+      },
+      injectFault: function () {
+        this.screens[1].fault = true;
+        addEvent('alarm', '2# 粗格栅机故障反馈动作 → T2 全组立即停机联锁');
+      },
+      resetFault: function (silent) {
+        var had = this.faultActive;
+        this.screens.forEach(function (s) { s.fault = false; });
+        this.pumps.forEach(function (p) { p.fault = false; });
+        this.valves.forEach(function (v) { v.fault = false; });
+        this.belt.fault = false; this.gate.fault = false; this.sep.fault = false;
+        if (had && !silent) addEvent('info', '故障复位，T2 重新计时（不允许断点续跑）');
+      },
+      clearEvents: function () { this.events = this.events.filter(function (e) { return e.level !== 'info' && !e.confirmed; }); },
+      /* —— 演示注入操作（不连现场） —— */
+      demoPump: function (run) {
+        var i = this.selectedIndex, p = this.pumps[i];
+        if (!p) return;
+        p.override = true; p.run = run; p.freq = run ? this.tempFreq : 0;
+        addEvent('info', '演示注入：' + p.name + (run ? ' 启动 ' + this.tempFreq.toFixed(1) + 'Hz' : ' 停机备用'));
+      },
+      demoPumpFreq: function () {
+        var i = this.selectedIndex, p = this.pumps[i];
+        if (!p || !p.run) return;
+        p.freq = this.tempFreq;
+        addEvent('info', '演示注入：' + p.name + ' 调频至 ' + this.tempFreq.toFixed(1) + 'Hz');
+      },
+      demoValve: function (open) {
+        var k = this.selectedKind, i = this.selectedIndex;
+        if (k === 'gate') { this.gate.open = open ? 1 : 0; addEvent('info', '演示注入：进水启闭机' + (open ? '开启' : '关闭')); return; }
+        var v = this.valves[i];
+        if (!v) return;
+        v.override = true; v.open = open;
+        addEvent('info', '演示注入：' + v.name + (open ? '开启' : '关闭'));
+      },
+      demoDeviceFault: function (kind, idx) {
+        var name = '';
+        if (kind === 'pump') { this.pumps[idx].fault = true; name = this.pumps[idx].name; }
+        else if (kind === 'valve') { this.valves[idx].fault = true; name = this.valves[idx].name; }
+        else if (kind === 'screen') { this.screens[idx].fault = true; name = this.screens[idx].name; }
+        else if (kind === 'belt') { this.belt.fault = true; name = '皮带输送机'; }
+        else if (kind === 'sep') { this.sep.fault = true; name = '砂水分离器'; }
+        if (name) addEvent('alarm', '演示注入故障：' + name + ' → T2 全组立即停机联锁');
+      },
+      demoDeviceReset: function (kind, idx) {
+        if (kind === 'pump') { this.pumps[idx].fault = false; this.pumps[idx].override = false; addEvent('info', this.pumps[idx].name + ' 故障复位，交回自动（重新计时）'); }
+        else if (kind === 'valve') { this.valves[idx].fault = false; this.valves[idx].override = false; addEvent('info', this.valves[idx].name + ' 复位，交回自动'); }
+        else if (kind === 'screen') { this.screens[idx].fault = false; addEvent('info', this.screens[idx].name + ' 故障复位，T2 重新计时'); }
+        else if (kind === 'belt') { this.belt.fault = false; addEvent('info', '皮带输送机故障复位，T2 重新计时'); }
+        else if (kind === 'sep') { this.sep.fault = false; addEvent('info', '砂水分离器故障复位'); }
+      },
+      demoProbeBad: function () {
+        this.probes[2].q = 'bad'; this.probes[3].q = 'bad';
+        addEvent('warn', '演示注入：LE12a/LE12b 质量位无效（断线），ΔL2 组失效');
+      }
+    },
+    watch: {
+      panelTab: function (t) { if (t === 'trend') this.$nextTick(renderTrendChart); },
+      selectedId: function () {
+        var k = parseKind(this.selectedId);
+        if (k.kind === 'pump') this.tempFreq = this.pumps[k.idx].freq > 0 ? this.pumps[k.idx].freq : this.tempFreq;
+        if (this.panelTab === 'trend') this.$nextTick(renderTrendChart);
+      }
+    }
+  });
+  var appVm = app.mount('#screen'); /* mount 返回根组件代理，$refs 可用 */
+
+  /* —— 事件与设备索引 —— */
+  function addEvent(level, text) {
+    state.events.push({ ts: nowText(new Date()), level: level, text: text, confirmed: false });
+    if (state.events.length > 60) state.events.shift();
+  }
+  function P(alias, sig, display, q) { return { alias:alias, sig:sig, display:display, q:q || 'good' }; }
+  /* 设备 id → 类型/序号（演示操作与趋势切换用） */
+  function parseKind(id) {
+    if (!id) return { kind: null, idx: -1 };
+    if (id.indexOf('screen') === 0) return { kind: 'screen', idx: +id.slice(6) - 1 };
+    if (id.indexOf('pump') === 0) return { kind: 'pump', idx: +id.slice(4) - 1 };
+    if (id.indexOf('valve') === 0) return { kind: 'valve', idx: +id.slice(5) - 1 };
+    return { kind: id, idx: -1 };
+  }
+  function deviceById(id) {
+    var pts = [];
+    if (id === 'gate') {
+      pts = [ P('进水启闭机手/自动反馈','DI', state.gate.mode==='manual'?'手动':'自动'),
+        P('进水启闭机全开反馈','DI', state.gate.open>0.95?'是':'否'),
+        P('进水启闭机全关反馈','DI', state.gate.open<0.05?'是':'否'),
+        P('进水启闭机故障反馈','DI', state.gate.fault?'故障':'正常', state.gate.fault?'bad':'good'),
+        P('进水启闭机开阀控制','DO','(基站脚本侧)'), P('进水启闭机关阀控制','DO','(基站脚本侧)') ];
+      return { name:'进水启闭机', controller:'GS-K01-14', modeText:'手动管理 · 需求待补齐', points:pts };
+    }
+    if (id && id.indexOf('screen') === 0) {
+      var i = +id.slice(6) - 1, s = state.screens[i];
+      var base = i === 0 ? '主板本地IO' : 'DI扩展A12';
+      pts = [ P((i+1)+'# 粗格栅机手/自动反馈','DI','自动'),
+        P((i+1)+'# 粗格栅机运行反馈','DI', s.run?'运行':'停止'),
+        P((i+1)+'# 粗格栅机故障反馈','DI', s.fault?'故障':'正常', s.fault?'bad':'good'),
+        P((i+1)+'# 粗格栅机综合故障反馈','DI', s.fault?'故障':'正常', s.fault?'bad':'good'),
+        P((i+1)+'# 粗格栅机启停控制','DO','(T2 联动)') ];
+      return { name:s.name, controller:'GS-K01-11 · '+base, modeText:'T2 联动 · 自动', points:pts };
+    }
+    if (id === 'belt') {
+      pts = [ P('皮带输送机手/自动反馈','DI','自动'),
+        P('皮带输送机运行反馈','DI', state.belt.run?'运行':'停止'),
+        P('皮带输送机故障反馈','DI', state.belt.fault?'故障':'正常', state.belt.fault?'bad':'good'),
+        P('皮带输送机综合故障反馈','DI', state.belt.fault?'故障':'正常', state.belt.fault?'bad':'good'),
+        P('皮带输送机启停控制','DO','(T2 联动)') ];
+      return { name:'皮带输送机', controller:'GS-K01-12', modeText:'T2 联动 · 自动', points:pts };
+    }
+    if (id && id.indexOf('pump') === 0) {
+      var j = +id.slice(4) - 1, p = state.pumps[j];
+      pts = [ P((j+1)+'# 潜污泵手/自动反馈','DI','手动'),
+        P((j+1)+'# 潜污泵运行反馈','DI', p.run?'运行':'停止'),
+        P((j+1)+'# 潜污泵故障反馈','DI', p.fault?'故障':'正常', p.fault?'bad':'good'),
+        P((j+1)+'# 潜污泵综合故障反馈','DI', p.fault?'故障':'正常', p.fault?'bad':'good'),
+        P((j+1)+'# 潜污泵频率反馈','AI', p.freq.toFixed(1)+' Hz') ];
+      if (j === 0) pts.push(P('有害气体传感器 AE-11a 反馈1','AI', state.gas[0].v.toFixed(1)+' ppm', state.gas[0].q));
+      return { name:p.name, controller:p.controller, modeText:'手动管理 · 需求待补齐', points:pts };
+    }
+    if (id && id.indexOf('valve') === 0) {
+      var k = +id.slice(5) - 1, v = state.valves[k];
+      pts = [ P((k+1)+'# 出口阀手/自动反馈','DI','手动'),
+        P((k+1)+'# 出口阀开到位反馈','DI', v.open?'开到位':'—'),
+        P((k+1)+'# 出口阀关到位反馈','DI', v.open?'—':'关到位'),
+        P((k+1)+'# 出口阀故障反馈','DI', v.fault?'故障':'正常', v.fault?'bad':'good') ];
+      return { name:v.name, controller:v.controller, modeText:'手动管理 · 需求待补齐', points:pts };
+    }
+    if (id === 'sep') {
+      pts = [ P('砂水分离器手/自动反馈','DI','手动'), P('砂水分离器运行反馈','DI', state.sep.run?'运行':'停止'),
+        P('砂水分离器故障反馈','DI', state.sep.fault?'故障':'正常'), P('砂水分离器启停控制','DO','(手动)') ];
+      return { name:'砂水分离器', controller:'GS-K01-13', modeText:'手动管理 · 需求待补齐', points:pts };
+    }
+    if (id === 'le') {
+      state.probes.forEach(function (p) { pts.push(P(p.alias + '（超声波液位差计）','AI', p.q==='good'?p.v.toFixed(0)+' mm':'--', p.q)); });
+      return { name:'液位差计 LE11~13', controller:'GS-K01-16', modeText:'T4 信号预处理', points:pts };
+    }
+    if (id === 'gas') {
+      state.gas.forEach(function (p) { pts.push(P(p.alias,'AI', p.q==='good'?p.v.toFixed(1)+' ppm':'--', p.q)); });
+      return { name:'气体探头 AE-11a', controller:'GS-K01-01 · AI3/AI4', modeText:'监视 · 通风联动见 S3', points:pts };
+    }
+    return null;
+  }
+
+  /* ========== 演示工况引擎（固定剧本 + 有界周期变化） ========== */
+  var triggerPhase = 'idle', triggerTick = 0, cycleStop = false;
+  var simTime = 0;
+  function tick() {
+    var d = new Date();
+    state.clock = nowText(d);
+    var ts = nowText(d);
+    state.probes.concat(state.gas).forEach(function (p) { p.ts = ts; });
+    computed.simTick++;
+
+    /* 剧本驱动 */
+    var sc = state.scenario, base = 150 + 42 * Math.sin(computed.simTick / 9) + 12 * Math.sin(computed.simTick / 3.3);
+    if (sc === 'normal') {
+      setProbeTarget(base);
+      triggerPhase = 'idle';
+    } else if (sc === 'trigger') {
+      if (triggerPhase === 'ramp') {
+        setProbeTarget(345);
+        if ((state.dlMax || 0) >= 335) { triggerPhase = 'hold'; triggerTick = 0; }
+      } else if (triggerPhase === 'hold') {
+        setProbeTarget(330 + 8 * Math.sin(computed.simTick / 4));
+        if (++triggerTick > 24) { triggerPhase = 'fall'; }
+      } else if (triggerPhase === 'fall') {
+        setProbeTarget((state.dlMax || 300) - 12);
+        if ((state.dlMax || 0) <= 100) triggerPhase = 'idle';
+      }
+    } else if (sc === 'probe') {
+      setProbeTarget(160 + 30 * Math.sin(computed.simTick / 7));
+    } else if (sc === 'fault' || sc === 'cycle') {
+      setProbeTarget(base);
+    }
+    state.probes.forEach(function (p) {
+      if (p.q === 'bad') { p.v = 0; return; }
+      var drift = (p.target === undefined || !isFinite(p.target)) ? p.v : (p.v + (p.target - p.v) * 0.5);
+      var nv = drift + (Math.sin(computed.simTick * 2.1 + p.alias.charCodeAt(4)) * 2);
+      p.v = isFinite(nv) ? Math.max(60, nv) : p.v;
+    });
+    calcDL();
+
+    /* 泵组（手动管理：演示固定工况；被演示注入接管的泵不覆盖） */
+    computed.pumpTick++;
+    var run1 = state.gate.open > 0.5 && !isFaultActive();
+    if (!state.pumps[0].override) {
+      state.pumps[0].run = run1;
+      state.pumps[0].freq = run1 ? 38.5 + 3 * Math.sin(computed.simTick / 5) : 0;
+    }
+    state.pumps.forEach(function (p, idx) { if (idx > 0 && !p.override) { p.run = false; p.freq = 0; } });
+    state.valves.forEach(function (v, idx) { if (!v.override) v.open = state.pumps[idx].run && !state.pumps[idx].fault; });
+    state.inletFlow = Math.round(320 + state.gate.open * 480 + (state.dlMax || 0) * 0.6);
+    var of = 0; state.pumps.forEach(function (p) { if (p.run && !p.fault) of += p.freq * 8.4; });
+    state.outletFlow = Math.round(of);
+    state.inletFlowText = state.inletFlow;
+
+    /* T2 联锁时序 */
+    t2Step(ts);
+
+    /* 皮带/分离器随动 */
+    state.sep.run = (state.belt.run && !state.belt.fault) || (state.t2.phase === 'run');
+    state.wvalves[0].open = state.sep.run;
+    if (!state.wvalves[0].override) state.wvalves[0].open = state.sep.run;
+
+    /* T2 运行占比累计 */
+    if (isFaultActive()) state.runAccum.fault++;
+    else if (state.t2.phase === 'run') state.runAccum.run++;
+    else state.runAccum.stop++;
+
+    /* 趋势历史 */
+    pushHist();
+
+    if (window.__sceneSync) window.__sceneSync();
+    if (state.panelTab === 'trend') renderTrendChart();
+    renderBottomCharts();
+    renderDonut();
+  }
+
+  function setProbeTarget(t) {
+    var offs = [0, 2, -1, 3, 1, -2];
+    state.probes.forEach(function (p, i) {
+      if (p.q !== 'good') return;
+      var v = t + offs[i];
+      p.target = isFinite(v) ? v : p.v;
+    });
+  }
+
+  /* 故障判定（tick 引擎用闭包版，不依赖 Vue computed） */
+  function isFaultActive() {
+    return state.screens.some(function (s) { return s.fault; }) ||
+      state.pumps.some(function (p) { return p.fault; }) ||
+      state.valves.some(function (v) { return v.fault; }) ||
+      state.belt.fault || state.gate.fault || state.sep.fault;
+  }
+
+  /* 液位差：组内取最大 → 组间取最大（质量位强制消费） */
+  function calcDL() {    var g = [];
+    for (var i = 0; i < 3; i++) {
+      var a = state.probes[i*2], b = state.probes[i*2+1];
+      g.push((a.q !== 'good' || b.q !== 'good') ? null : Math.max(a.v, b.v));
+    }
+    computed.dlGroups = g;
+    var valid = g.filter(function (x) { return x !== null && isFinite(x); });
+    state.dlMax = valid.length ? Math.max.apply(null, valid) : null;
+    state.dlMaxText = (state.dlMax === null || !isFinite(state.dlMax)) ? '--' : String(Math.round(state.dlMax));
+    state.dlClass = (state.dlMax === null || !isFinite(state.dlMax)) ? 'amber'
+      : (state.dlMax >= state.params.dlStart ? 'danger' : (state.dlMax >= state.params.dlStop ? 'blue' : ''));
+    return g;
+  }
+
+  function t2Step(ts) {
+    var t2 = state.t2, dl = state.dlMax;
+    if (isFaultActive()) {
+      if (t2.phase !== 'stop') {
+        t2.phase = 'stop'; t2.seq = 0;
+        forceStopGroup();
+        t2.reason = '故障联锁：全组停机，复位后重新计时';
+      }
+      return;
+    }
+    if (dl === null) { t2.reason = '输入无效：探头质量位失效，T2 暂停（视为故障）'; forceStopGroup(); t2.phase = 'stop'; return; }
+    t2.reason = '';
+    var levelReq = dl >= state.params.dlStart;
+    /* 停止迟滞计时 */
+    if (dl < state.params.dlStop && t2.phase === 'run' && t2.mode === 'level') { t2.stopTimer++; } else { t2.stopTimer = 0; }
+    var stopReq = t2.mode === 'level' && t2.stopTimer >= state.params.hyst;
+    /* 时间循环 */
+    var timeReq = false;
+    if (t2.mode === 'time') {
+      if (t2.phase === 'run') { t2.runTimer--; timeReq = true; if (t2.runTimer <= 0) { stopReq = true; t2.countdown = 0; } else { t2.countdown = Math.ceil(t2.runTimer / Math.max(1, state.params.speed / 60)); } }
+      else if (t2.phase === 'stop') { t2.stopTimer2 = (t2.stopTimer2 || 0) + 1; t2.countdown = Math.ceil(Math.max(0, state.params.tStop - t2.stopTimer2) / Math.max(1, state.params.speed / 60)); if (t2.stopTimer2 >= state.params.tStop) { t2.stopTimer2 = 0; timeReq = true; t2.runTimer = state.params.tRun; addEvent('info', '时间循环到时，重新进入运行段'); } }
+    } else { t2.countdown = t2.stopTimer > 0 ? Math.max(0, state.params.hyst - t2.stopTimer) : 0; }
+
+    var wantRun = state.t2.mode === 'time' ? (timeReq || (t2.phase === 'run')) : levelReq;
+    /* 时序推进 */
+    switch (t2.phase) {
+      case 'stop':
+        if (wantRun) { t2.phase = 'startBelt'; t2.seq = 0; addEvent('info', 'T2 启动时序：先启皮带输送机'); }
+        break;
+      case 'startBelt':
+        if (++t2.seq >= 2) {
+          state.belt.run = true;
+          addEvent('info', '皮带输送机启动（先皮带后格栅）');
+          t2.phase = 'startScreens'; t2.seq = 0;
+        }
+        break;
+      case 'startScreens':
+        if (++t2.seq >= 2) {
+          state.screens.forEach(function (s) { s.run = true; });
+          addEvent('info', '粗格栅 1~3# 同步启动，T2 进入运行段');
+          t2.phase = 'run';
+        }
+        break;
+      case 'run':
+        if (stopReq) { t2.phase = 'stopScreens'; t2.seq = 0; addEvent('info', '满足停止条件（迟滞 ' + state.params.hyst + 's），格栅先停'); }
+        break;
+      case 'stopScreens':
+        if (++t2.seq >= 2) {
+          state.screens.forEach(function (s) { s.run = false; });
+          t2.phase = 'stopBelt'; t2.seq = 0;
+        }
+        break;
+      case 'stopBelt':
+        if (++t2.seq >= 2) {
+          state.belt.run = false;
+          addEvent('info', '皮带输送机停止（先格栅后皮带），T2 回到停止段');
+          t2.phase = 'stop';
+        }
+        break;
+    }
+  }
+  function forceStopGroup() {
+    state.screens.forEach(function (s) { s.run = false; });
+    state.belt.run = false;
+  }
+  function pushHist() {
+    var h = state.hist, g = computed.dlGroups, n = 60;
+    h.dl1.push(g[0] === null ? null : Math.round(g[0]));
+    h.dl2.push(g[1] === null ? null : Math.round(g[1]));
+    h.dl3.push(g[2] === null ? null : Math.round(g[2]));
+    h.fin.push(state.inletFlow); h.fout.push(state.outletFlow);
+    state.pumps.forEach(function (p, i) { h.pfreq[i].push(Math.round(p.freq * 10) / 10); });
+    h.gas1.push(Math.round(state.gas[0].v * 10) / 10);
+    h.gas2.push(Math.round(state.gas[1].v * 10) / 10);
+    h.labels.push('');
+    [h.dl1, h.dl2, h.dl3, h.fin, h.fout, h.gas1, h.gas2].forEach(function (arr) { while (arr.length > n) arr.shift(); });
+    h.pfreq.forEach(function (arr) { while (arr.length > n) arr.shift(); });
+    while (h.labels.length > n) h.labels.shift();
+  }
+
+  /* ========== ECharts ========== */
+  var chartTrend = null, chartLevel = null, chartFlow = null, chartDonut = null;
+  var CH_OPT_COMMON = { grid:{left:44,right:10,top:18,bottom:20}, tooltip:{trigger:'axis'}, xAxis:{type:'category',data:[],axisLine:{lineStyle:{color:'#c8d5e3'}},axisLabel:{color:'#718597',fontSize:9},boundaryGap:false}, yAxis:{type:'value',splitLine:{lineStyle:{color:'#dbe4ee'}},axisLabel:{color:'#718597',fontSize:9}} };
+  function mkLine(name, data, color) { return { name:name, type:'line', data:data, showSymbol:false, lineStyle:{width:2,color:color}, itemStyle:{color:color}, areaStyle:{opacity:0.12,color:color}, connectNulls:false }; }
+  function ensureCharts() {
+    var c1 = appVm.$refs.trendChart, c2 = appVm.$refs.bTrendLevel, c3 = appVm.$refs.bTrendFlow, c4 = appVm.$refs.runDonut;
+    if (c1 && !chartTrend) chartTrend = echarts.init(c1);
+    if (c2 && !chartLevel) chartLevel = echarts.init(c2);
+    if (c3 && !chartFlow) chartFlow = echarts.init(c3);
+    if (c4 && !chartDonut) chartDonut = echarts.init(c4);
+  }
+  function trendOptionFor(kind, idx) {
+    var o = JSON.parse(JSON.stringify(CH_OPT_COMMON));
+    if (kind === 'pump' && idx >= 0) {
+      o.legend = { data: ['频率'], textStyle: { color: '#41586b', fontSize: 10 }, top: 0 };
+      o.series = [mkLine('频率', state.hist.pfreq[idx], '#247ac4')];
+      o.yAxis.min = 0; o.yAxis.max = 50;
+    } else if (kind === 'gas') {
+      o.legend = { data: ['反馈1', '反馈2'], textStyle: { color: '#41586b', fontSize: 10 }, top: 0 };
+      o.series = [mkLine('反馈1', state.hist.gas1, '#f0a54a'), mkLine('反馈2', state.hist.gas2, '#a975d6')];
+      o.yAxis.min = 0; o.yAxis.max = 25;
+    } else if (kind === 'valve' || kind === 'gate') {
+      o.legend = { data: ['进水', '出水'], textStyle: { color: '#41586b', fontSize: 10 }, top: 0 };
+      o.series = [mkLine('进水', state.hist.fin, '#247ac4'), mkLine('出水', state.hist.fout, '#21ad79')];
+    } else {
+      o.legend = { data: ['ΔL1', 'ΔL2', 'ΔL3'], textStyle: { color: '#41586b', fontSize: 10 }, top: 0 };
+      o.series = [
+        mkLine('ΔL1', state.hist.dl1, '#247ac4'),
+        mkLine('ΔL2', state.hist.dl2, '#a975d6'),
+        mkLine('ΔL3', state.hist.dl3, '#21ad79')
+      ];
+      o.yAxis.max = Math.max(400, state.params.dlStart + 80);
+      o.series.push({ name: '启动值', type: 'line', data: state.hist.dl1.map(function () { return state.params.dlStart; }), showSymbol: false, lineStyle: { width: 1, type: 'dashed', color: '#e15555' }, itemStyle: { color: '#e15555' } });
+    }
+    return o;
+  }
+  function trendOption() {
+    var k = parseKind(state.selectedId);
+    return trendOptionFor(k.kind, k.idx);
+  }
+  function renderTrendChart() {
+    safeInit(function () {
+      ensureCharts();
+      var el = appVm.$refs.trendChart;
+      if (!el || !chartTrend) return;
+      chartTrend.setOption(trendOption());
+    });
+  }
+  function renderBottomCharts() {
+    safeInit(function () {
+      ensureCharts();
+      var ol = JSON.parse(JSON.stringify(CH_OPT_COMMON));
+      ol.series = [ mkLine('ΔL1', state.hist.dl1, '#247ac4'), mkLine('ΔL2', state.hist.dl2, '#a975d6'), mkLine('ΔL3', state.hist.dl3, '#21ad79') ];
+      ol.yAxis.max = Math.max(400, state.params.dlStart + 80);
+      ol.series.push({ name:'启动值', type:'line', data: state.hist.dl1.map(function(){ return state.params.dlStart; }), showSymbol:false, lineStyle:{width:1,type:'dashed',color:'#e15555'}, itemStyle:{color:'#e15555'} });
+      if (chartLevel) chartLevel.setOption(ol);
+      var of = JSON.parse(JSON.stringify(CH_OPT_COMMON));
+      of.legend = { data:['进水','出水'], textStyle:{color:'#41586b',fontSize:10}, top:0 };
+      of.series = [ mkLine('进水', state.hist.fin, '#247ac4'), mkLine('出水', state.hist.fout, '#21ad79') ];
+      if (chartFlow) chartFlow.setOption(of);
+    });
+  }
+  function renderDonut() {
+    safeInit(function () {
+      ensureCharts();
+      var el = appVm.$refs.runDonut;
+      if (!el) return;
+      if (!chartDonut) chartDonut = echarts.init(el);
+      chartDonut.setOption({
+        series: [{
+          type: 'pie', radius: ['58%', '82%'], label: { show: false }, silent: true,
+          data: [
+            { value: state.runAccum.run, name: '运行', itemStyle: { color: '#21ad79' } },
+            { value: state.runAccum.stop, name: '停止', itemStyle: { color: '#b6c5d3' } },
+            { value: state.runAccum.fault, name: '故障', itemStyle: { color: '#e15555' } }
+          ]
+        }]
+      });
+    });
+  }
+  window.addEventListener('resize', function () { safeInit(function () { ensureCharts(); if (chartTrend) chartTrend.resize(); if (chartLevel) chartLevel.resize(); if (chartFlow) chartFlow.resize(); if (chartDonut) chartDonut.resize(); fitScreen(); }); });
+
+  /* ========== Three.js 白模场景 ========== */
+  var scene, camera, renderer, controls, animParts = {};
+  function buildScene() {
+    var holder = document.getElementById('scene3d');
+    if (!holder) return;
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xdfe8f3);
+    scene.fog = new THREE.Fog(0xdfe8f3, 40, 85);
+    camera = new THREE.PerspectiveCamera(34, holder.clientWidth / holder.clientHeight, 0.1, 220);
+    camera.position.set(11.5, 8.2, 15.0);
+    renderer = new THREE.WebGLRenderer({ antialias:true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(holder.clientWidth, holder.clientHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    holder.appendChild(renderer.domElement);
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.dampingFactor = 0.35;
+    controls.rotateSpeed = 0.6; controls.zoomSpeed = 0.9; controls.panSpeed = 0.8;
+    controls.minDistance = 6; controls.maxDistance = 44;
+    controls.maxPolarAngle = Math.PI * 0.46; controls.minPolarAngle = Math.PI * 0.12;
+    controls.target.set(-0.8, 0.8, -0.4);
+
+    var hemi = new THREE.HemisphereLight(0xf4f9ff, 0xb9c8d8, 0.7); scene.add(hemi);
+    var sun = new THREE.DirectionalLight(0xffffff, 0.55);
+    sun.position.set(18, 26, 14); sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -30; sun.shadow.camera.right = 30;
+    sun.shadow.camera.top = 30; sun.shadow.camera.bottom = -30;
+    scene.add(sun);
+
+    /* 地面与网格 */
+    var ground = new THREE.Mesh(new THREE.PlaneGeometry(70, 46), new THREE.MeshLambertMaterial({ color:0xccd9e6 }));
+    ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+    var grid = new THREE.GridHelper(64, 32, 0xb9cadb, 0xcfdce9);
+    grid.position.y = 0.01; scene.add(grid);
+
+    var concrete = new THREE.MeshLambertMaterial({ color:0xe4ebf2 });
+    var concreteDark = new THREE.MeshLambertMaterial({ color:0xc9d6e2 });
+    var blueMetal = new THREE.MeshLambertMaterial({ color:0x35648f });
+    var whiteMetal = new THREE.MeshLambertMaterial({ color:0xf4f8fb });
+    var waterMat = new THREE.MeshLambertMaterial({ color:0x7fa8cc, transparent:true, opacity:0.5 });
+    var glassWall = new THREE.MeshLambertMaterial({ color:0xbcd4e8, transparent:true, opacity:0.16, depthWrite:false });
+    var pipeMat = new THREE.MeshLambertMaterial({ color:0x4a90c4 });
+    var purplePipe = new THREE.MeshLambertMaterial({ color:0xa975d6 });
+    var edgeMat = new THREE.LineBasicMaterial({ color:0xa8bdd0 });
+
+    function box(w, h, d, x, y, z, mat, shadow) {
+      var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      m.position.set(x, y, z);
+      if (shadow !== false) { m.castShadow = true; m.receiveShadow = true; }
+      scene.add(m);
+      var e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), edgeMat);
+      e.position.copy(m.position); scene.add(e);
+      return m;
+    }
+    function cyl(rt, rb, h, x, y, z, mat, seg) {
+      var m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg || 20), mat);
+      m.position.set(x, y, z); m.castShadow = true; scene.add(m); return m;
+    }
+    function pipe(points, r, mat) {
+      var curve = new THREE.CatmullRomCurve3(points.map(function (p) { return new THREE.Vector3(p[0], p[1], p[2]); }));
+      var m = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, r, 10, false), mat);
+      m.castShadow = true; scene.add(m); return curve;
+    }
+
+    /* A 进水段：进水井 + 启闭机闸门 */
+    var inletWell = box(2.8, 2.6, 3.0, -11.6, 1.3, 0, concrete);
+    inletWell.userData.device = 'gate';
+    box(2.8, 0.2, 3.0, -11.6, 2.7, 0, concreteDark);
+    var gateFrame1 = box(0.2, 3.0, 0.24, -10.3, 1.5, -0.7, blueMetal);
+    var gateFrame2 = box(0.2, 3.0, 0.24, -10.3, 1.5, 0.7, blueMetal);
+    var gateLeaf = box(0.14, 1.9, 1.5, -10.3, 1.1, 0, new THREE.MeshLambertMaterial({ color:0x2c5a84 }));
+    [gateFrame1, gateFrame2, gateLeaf].forEach(function (m) { m.userData.device = 'gate'; });
+    animParts.gate = gateLeaf;
+    box(2.4, 0.08, 2.6, -11.6, 1.0, 0, waterMat, false);
+
+    /* B 格栅段：三条渠道 + 粗格栅机 + 液位差计测杆 */
+    [-2, 0, 2].forEach(function (z, i) {
+      box(7.2, 0.2, 1.9, -6.7, 0.1, z, concreteDark);
+      box(7.2, 1.5, 0.16, -6.7, 0.75, z - 0.95, concrete);
+      box(7.2, 1.5, 0.16, -6.7, 0.75, z + 0.95, concrete);
+      box(0.16, 1.5, 1.9, -10.2, 0.75, z, concrete);
+      box(0.16, 1.5, 1.9, -3.2, 0.75, z, concrete);
+      box(6.8, 0.07, 1.6, -6.7, 0.82, z, waterMat, false);
+      /* 格栅机：白色机体 + 蓝色顶驱 + 渠内耙齿 */
+      var grp = new THREE.Group();
+      var housing = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.35, 1.25), whiteMetal);
+      housing.position.y = 1.9; housing.castShadow = true; grp.add(housing);
+      var motorTop = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.35, 16), blueMetal);
+      motorTop.position.set(0, 2.75, 0); grp.add(motorTop);
+      var rail = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.2, 0.08), blueMetal);
+      rail.position.set(-0.5, 1.9, 0); grp.add(rail);
+      var rake = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.7, 1.1), new THREE.MeshLambertMaterial({ color:0x247ac4 }));
+      rake.position.set(0.1, 1.0, 0); grp.add(rake);
+      for (var b = 0; b < 6; b++) {
+        var bar = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.3, 0.05), blueMetal);
+        bar.position.set(0.28, 0.65, -0.5 + b * 0.2); grp.add(bar);
+      }
+      grp.position.set(-8.8, 0, z);
+      grp.traverse(function (o) { o.userData.device = 'screen' + (i + 1); });
+      scene.add(grp);
+      animParts['rake' + i] = rake;
+      /* 液位差计测杆 */
+      cyl(0.035, 0.035, 2.1, -9.9, 1.05, z + 0.62, blueMetal);
+      var head = box(0.2, 0.24, 0.2, -9.9, 2.2, z + 0.62, new THREE.MeshLambertMaterial({ color:0xe15555 }));
+      head.userData.device = 'le';
+    });
+
+    /* 皮带输送机：水平机架 + 两端滚筒 + 支腿 */
+    var beltGrp = new THREE.Group();
+    var beltLine = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.1, 0.8), new THREE.MeshLambertMaterial({ color:0x4a617a }));
+    beltLine.position.set(0, 0.62, 0); beltLine.castShadow = true; beltGrp.add(beltLine);
+    var beltTop = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.03, 0.66), new THREE.MeshLambertMaterial({ color:0x33475c }));
+    beltTop.position.set(0, 0.69, 0); beltGrp.add(beltTop);
+    var rollSpins = [];
+    [-2.7, 2.7].forEach(function (x) {
+      var wrap = new THREE.Group(); wrap.position.set(x, 0.62, 0); wrap.rotation.x = Math.PI / 2;
+      var roller = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.9, 18), blueMetal);
+      roller.castShadow = true; wrap.add(roller); beltGrp.add(wrap);
+      rollSpins.push(roller);
+    });
+    [-2.2, -0.8, 0.8, 2.2].forEach(function (x) {
+      var leg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.58, 0.1), blueMetal);
+      leg.position.set(x, 0.29, 0); beltGrp.add(leg);
+    });
+    beltGrp.position.set(-6.4, 0, -4.2);
+    beltGrp.traverse(function (o) { o.userData.device = 'belt'; });
+    scene.add(beltGrp);
+    animParts.roll = rollSpins;
+
+    /* C 泵阀段：开顶湿井（前壁半透明玻璃）+ 5 泵 + 出口阀 + 总管 */
+    box(8.6, 0.28, 6.6, 2, 0.14, 0, concreteDark);
+    box(8.6, 2.2, 0.2, 2, 1.24, -3.2, concrete);
+    box(8.6, 2.2, 0.2, 2, 1.24, 3.2, concrete);
+    box(0.2, 2.2, 6.6, -2.3, 1.24, 0, concrete);
+    var frontWall = box(0.12, 2.2, 6.6, 6.3, 1.24, 0, glassWall, false);
+    frontWall.userData.device = 'pump1';
+    box(9.0, 0.09, 6.4, 2, 1.05, 0, waterMat, false);
+    var pumpMeshes = [];
+    [[-0.6, -1.9], [-0.6, 0], [-0.6, 1.9], [2.4, -1], [2.4, 1]].forEach(function (pos, i) {
+      var body = cyl(0.5, 0.56, 0.75, pos[0], 0.62, pos[1], whiteMetal);
+      var motor = cyl(0.3, 0.3, 0.45, pos[0], 1.2, pos[1], blueMetal);
+      var fin = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.07, 0.12), new THREE.MeshLambertMaterial({ color:0x247ac4 }));
+      fin.position.set(pos[0], 1.47, pos[1]); scene.add(fin);
+      [body, motor, fin].forEach(function (m) { m.userData.device = 'pump' + (i + 1); });
+      pumpMeshes.push({ body:body, motor:motor, fin:fin });
+    });
+    animParts.pumps = pumpMeshes;
+    /* 井顶栏杆 */
+    for (var rp = 0; rp < 7; rp++) { cyl(0.028, 0.028, 0.75, -1.6 + rp * 1.3, 2.65, 3.2, blueMetal); }
+    pipe([[-1.6, 3.0, 3.2], [6.2, 3.0, 3.2]], 0.03, blueMetal);
+    /* 出口支管 + 阀门 + 总管 */
+    var outCurves = [];
+    [[-0.6, -1.9], [-0.6, 0], [-0.6, 1.9], [2.4, -1], [2.4, 1]].forEach(function (pos, i) {
+      var c = pipe([[pos[0] + 0.3, 1.5, pos[1]], [5.0, 1.5, pos[1]], [6.9, 1.5, pos[1]], [7.8, 1.5, 0]], 0.12, pipeMat);
+      outCurves.push(c);
+      var vm = cyl(0.22, 0.22, 0.42, 6.9, 1.5, pos[1], new THREE.MeshLambertMaterial({ color:0x247ac4 }));
+      var handle = new THREE.Group(); handle.position.set(6.9, 1.82, pos[1]);
+      var hb = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.06, 0.44), blueMetal);
+      handle.add(hb); scene.add(handle);
+      [vm, handle].forEach(function (m) { m.userData.device = 'valve' + (i + 1); });
+      if (!animParts.valves) animParts.valves = [];
+      animParts.valves.push({ body:vm, handle:handle });
+    });
+    pipe([[7.8, 1.5, 0], [10.2, 1.5, 0], [11.8, 1.15, 0]], 0.22, pipeMat);
+    animParts.outCurves = outCurves;
+
+    /* D 辅助段：砂水分离器 + 补水管 + 气体探头 */
+    var sepBody = box(2.2, 1.4, 2.0, -4.8, 0.8, 4.4, concrete);
+    sepBody.userData.device = 'sep';
+    var sepStir = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.09, 0.13), blueMetal);
+    sepStir.position.set(-4.8, 1.62, 4.4); sepStir.userData.device = 'sep'; scene.add(sepStir);
+    cyl(0.06, 0.06, 0.5, -4.8, 1.9, 4.4, blueMetal).userData.device = 'sep';
+    animParts.sepStir = sepStir;
+    pipe([[-3.6, 0.7, 4.4], [-2.6, 0.7, 3.8], [-1.6, 0.6, 3.2]], 0.1, purplePipe);
+    cyl(0.045, 0.045, 2.4, -12.6, 1.2, 2.4, blueMetal).userData.device = 'gas';
+    var gasHead = box(0.28, 0.36, 0.28, -12.6, 2.5, 2.4, new THREE.MeshLambertMaterial({ color:0xf0a54a }));
+    gasHead.userData.device = 'gas';
+
+    /* 检修楼梯（湿井右侧） */
+    box(1.3, 0.09, 0.5, 7.2, 0.3, -2.4, concreteDark);
+    box(1.3, 0.09, 0.5, 7.2, 0.62, -1.9, concreteDark);
+    box(1.3, 0.09, 0.5, 7.2, 0.94, -1.4, concreteDark);
+
+    /* 流动粒子（进水 / 出水支路） */
+    var dotGeo = new THREE.SphereGeometry(0.1, 8, 8);
+    var dotMat = new THREE.MeshBasicMaterial({ color:0x247ac4 });
+    function makeFlow(curve, n) {
+      var dots = [];
+      for (var i = 0; i < n; i++) {
+        var m = new THREE.Mesh(dotGeo, dotMat);
+        scene.add(m); dots.push({ m:m, off:i / n });
+      }
+      return { curve:curve, dots:dots, t:0 };
+    }
+    var inCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-15, 0.45, 0), new THREE.Vector3(-11.6, 0.45, 0),
+      new THREE.Vector3(-10.3, 0.45, 0), new THREE.Vector3(-6.7, 0.42, 0), new THREE.Vector3(-3.2, 0.45, 0), new THREE.Vector3(-1, 0.6, 0)
+    ]);
+    animParts.flowIn = makeFlow(inCurve, 14);
+    animParts.flowOut = animParts.outCurves.map(function (c) { return makeFlow(c, 6); });
+
+    /* 射线拾取：点击构筑物/设备 → 右侧面板显示点位 */
+    var ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+    renderer.domElement.addEventListener('click', function (ev) {
+      var r = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+      mouse.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+      ray.setFromCamera(mouse, camera);
+      var hits = ray.intersectObjects(scene.children, true);
+      for (var i = 0; i < hits.length; i++) {
+        var o = hits[i].object, dev = null;
+        while (o && !dev) { dev = o.userData ? o.userData.device : null; o = o.parent; }
+        if (dev) { if (appVm) appVm.selectedId = dev; return; }
+      }
+    });
+
+    window.__sceneSync = syncScene;
+    /* 调试/自测钩子：读取相机状态 */
+    window.__sceneDebug = function () {
+      return { p: camera.position.toArray(), t: controls.target.toArray() };
+    };
+    controls.addEventListener('start', function () { animParts.camAnimating = false; }); /* 用户拖拽/缩放立即接管 */
+    window.__sceneFocus = function (id) {
+      var view = {
+        A: { pos:[-5.5, 5, 9.5], tgt:[-10.6, 1.0, 0] },
+        B: { pos:[-2, 5.5, 10], tgt:[-7.2, 0.8, -0.6] },
+        C: { pos:[8.5, 6.5, 11], tgt:[2.2, 0.8, 0] },
+        D: { pos:[0.5, 5.5, 9.5], tgt:[-4, 0.7, 3.6] },
+        overview: { pos:[11.5, 8.2, 15.0], tgt:[-0.8, 0.8, -0.4] }
+      }[id];
+      if (view) { camGoal.pos = view.pos; camGoal.tgt = view.tgt; animParts.camAnimating = true; }
+    };
+    var camGoal = { pos:[11.5, 8.2, 15.0], tgt:[-0.8, 0.8, -0.4] };
+    animParts.camGoal = camGoal;
+
+    window.addEventListener('resize', function () {
+      var h = document.getElementById('scene3d');
+      if (!h || !renderer) return;
+      renderer.setSize(h.clientWidth, h.clientHeight);
+      camera.aspect = h.clientWidth / h.clientHeight;
+      camera.updateProjectionMatrix();
+    });
+
+    animate();
+  }
+
+  function syncScene() {
+    /* 由数据引擎回调：更新 3D 目标状态 */
+    if (!animParts.gate) return;
+    animParts.gate.position.y = 1.1 + state.gate.open * 1.4;
+    labelState.forEach(function (lb) {
+      lb.manual = false; lb.fault = false;
+      if (lb.id === 'gate') lb.manual = true;
+      if (lb.id === 'screen2') lb.fault = state.screens[1].fault;
+      if (lb.id === 'pump1' || lb.id === 'valve1' || lb.id === 'sep') lb.manual = true;
+    });
+  }
+
+  var clock3 = null;
+  function animate() {
+    requestAnimationFrame(animate);
+    if (!animParts.camGoal) return;
+    var g = animParts.camGoal;
+    /* 仅在工段聚焦过渡期间驱动相机；用户交互（controls start 事件）即中断，避免拉扯/归位 */
+    if (animParts.camAnimating) {
+      camera.position.lerp(new THREE.Vector3(g.pos[0], g.pos[1], g.pos[2]), 0.08);
+      controls.target.lerp(new THREE.Vector3(g.tgt[0], g.tgt[1], g.tgt[2]), 0.08);
+      if (camera.position.distanceTo(new THREE.Vector3(g.pos[0], g.pos[1], g.pos[2])) < 0.06) {
+        animParts.camAnimating = false;
+      }
+    }
+    controls.update();
+    var t = performance.now() / 1000;
+    if (!REDUCED) {
+      /* 泵电机旋转（频率映射，顶部搅动 fin 可见旋转） */
+      if (animParts.pumps) animParts.pumps.forEach(function (p, i) {
+        var run = state.pumps[i].run && !state.pumps[i].fault;
+        if (run) p.fin.rotation.y += 0.08 + state.pumps[i].freq / 300;
+      });
+      /* 格栅耙齿往复 */
+      for (var i = 0; i < 3; i++) {
+        var rk = animParts['rake' + i];
+        if (rk && state.screens[i].run && !state.screens[i].fault) rk.position.y = 1.0 + 0.45 * Math.sin(t * 2.2 + i);
+      }
+      /* 皮带滚筒（wrapper 已转 x 轴，子级绕本地 Y 自旋） */
+      if (animParts.roll && state.belt.run && !state.belt.fault) animParts.roll.forEach(function (r) { r.rotation.y += 0.09; });
+      /* 分离器搅拌棒 */
+      if (animParts.sepStir && state.sep.run) animParts.sepStir.rotation.y += 0.07;
+      /* 出口阀开关到位旋转 */
+      if (animParts.valves) animParts.valves.forEach(function (v, i) {
+        var want = state.valves[i].open ? Math.PI / 2 : 0;
+        v.handle.rotation.y += (want - v.handle.rotation.y) * 0.1;
+      });
+      /* 流动粒子 */
+      var inFlow = state.gate.open > 0.05;
+      stepFlow(animParts.flowIn, inFlow ? 0.055 + state.inletFlow / 26000 : 0);
+      animParts.flowOut.forEach(function (f, i) {
+        var run = state.pumps[i].run && !state.pumps[i].fault;
+        stepFlow(f, run ? 0.05 + state.pumps[i].freq / 420 : 0);
+      });
+    }
+    renderer.render(scene, camera);
+    updateLabels();
+  }
+  function stepFlow(flow, speed) {
+    if (!flow) return;
+    flow.t = speed > 0 ? (flow.t + speed) % 1 : flow.t;
+    flow.dots.forEach(function (d) {
+      var u = (d.off + flow.t) % 1;
+      var p = flow.curve.getPoint(u);
+      d.m.position.copy(p);
+      d.m.visible = speed > 0;
+    });
+  }
+  function updateLabels() {
+    var holder = document.getElementById('scene3d');
+    if (!holder) return;
+    var rect = { w:holder.clientWidth, h:holder.clientHeight };
+    labelState.forEach(function (lb) {
+      var v = lb.anchor.clone().project(camera);
+      lb.visible = v.z < 1 && v.x > -1.05 && v.x < 1.05 && v.y > -1.1 && v.y < 1.1;
+      lb.x = (v.x * 0.5 + 0.5) * rect.w;
+      lb.y = (-v.y * 0.5 + 0.5) * rect.h;
+    });
+  }
+
+  /* ========== 启动 ========== */
+  /* 设备标签点击选择（挂载容器上的属性不参与模板编译，须用原生监听） */
+  document.getElementById('screen').addEventListener('click', function (evt) {
+    var t = evt.target && evt.target.closest ? evt.target.closest('.dev-label') : null;
+    var dev = t && t.getAttribute('data-device');
+    if (dev && appVm) appVm.selectedId = dev;
+  });
+  safeInit(function () { buildScene(); });
+  safeInit(function () { syncScene(); });
+  tick(); tick();
+  setInterval(tick, 1000);
+  window.addEventListener('resize', fitScreen);
+  fitScreen();
+});
+</script>
+</body>
+</html>

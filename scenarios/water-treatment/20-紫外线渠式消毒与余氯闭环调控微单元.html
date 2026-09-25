@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>紫外线渠式消毒与余氯闭环调控微单元</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#03080e;color:#f2f7fa;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+#app{width:100%;height:100%;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+button{font:inherit;outline:none}
+[v-cloak]{display:none}
+
+:root{
+  --bg:#040911;
+  --surface-1:#07131e;
+  --surface-2:#0b1d2e;
+  --surface-3:#10283e;
+  --line:#1a374c;
+  --line-light:#2b5472;
+  --accent:#36c2ff;
+  --accent-soft:rgba(54,194,255,.14);
+  --uv-glow:#9d65ff;
+  --uv-soft:rgba(157,101,255,.15);
+  --success:#35d07f;
+  --success-soft:rgba(53,208,127,.12);
+  --warning:#ffb547;
+  --warning-soft:rgba(255,181,71,.12);
+  --danger:#ff5d5d;
+  --danger-soft:rgba(255,93,93,.12);
+  --text-1:#f2f7fa;
+  --text-2:#a8bac8;
+  --text-3:#6c8496;
+}
+
+#screen{
+  width:1920px;
+  height:1080px;
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform-origin:center center;
+  display:grid;
+  grid-template-rows:74px 1fr 40px;
+  overflow:hidden;
+  background:radial-gradient(circle at 55% 25%,rgba(157,101,255,.06),transparent 40%),
+             linear-gradient(135deg,#061019 0%,#040a10 50%,#02060b 100%);
+}
+#screen:after{
+  content:"";
+  position:absolute;
+  inset:74px 0 40px;
+  pointer-events:none;
+  background-image:linear-gradient(rgba(54,194,255,.018) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(54,194,255,.018) 1px,transparent 1px);
+  background-size:40px 40px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.6),transparent 85%);
+}
+
+/* 顶部导航与微工艺态势 */
+.topbar{
+  position:relative;
+  z-index:10;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  padding:0 24px;
+  gap:16px;
+  border-bottom:1px solid var(--line);
+  background:rgba(5,13,21,.92);
+  box-shadow:0 8px 32px rgba(0,0,0,.35);
+  white-space:nowrap;
+}
+.brand{display:flex;align-items:center;gap:14px;white-space:nowrap}
+.brand-icon{
+  width:42px;
+  height:42px;
+  border:1px solid var(--line-light);
+  border-radius:8px;
+  display:grid;
+  place-items:center;
+  color:var(--uv-glow);
+  background:linear-gradient(145deg,#13162e,#070b1b);
+  flex-shrink:0;
+}
+.brand-icon svg{width:24px;height:24px}
+.brand-text{white-space:nowrap}
+.brand-text strong{display:block;font-size:16px;font-weight:700;letter-spacing:1px;white-space:nowrap}
+.brand-text span{display:block;font-size:11px;color:var(--text-3);letter-spacing:1.5px;margin-top:2px;white-space:nowrap}
+
+.macro-kpis{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+}
+.macro-item{
+  display:flex;
+  align-items:baseline;
+  gap:5px;
+  padding:4px 8px;
+  border-radius:6px;
+  background:rgba(13,29,44,.45);
+  border:1px solid rgba(28,56,77,.6);
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.macro-label{font-size:11px;color:var(--text-2);white-space:nowrap}
+.macro-val{font-size:17px;font-weight:700;color:var(--accent);white-space:nowrap}
+.macro-unit{font-size:10px;color:var(--text-3);margin-left:1px;white-space:nowrap}
+
+.top-right{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:12px;
+  white-space:nowrap;
+}
+.scenario-tabs{
+  display:flex;
+  padding:2px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:#07121c;
+  white-space:nowrap;
+}
+.scenario-tabs button{
+  height:26px;
+  padding:0 8px;
+  border:0;
+  border-radius:4px;
+  background:transparent;
+  color:var(--text-3);
+  cursor:pointer;
+  font-size:11px;
+  white-space:nowrap;
+  transition:all .2s;
+}
+.scenario-tabs button.active{
+  background:var(--uv-soft);
+  color:#cbb2ff;
+  box-shadow:inset 0 0 0 1px rgba(157,101,255,.4);
+  font-weight:600;
+}
+.clock-box{text-align:right;min-width:120px;white-space:nowrap}
+.clock-box strong{display:block;font-size:18px;letter-spacing:1px;color:var(--text-1);white-space:nowrap}
+.clock-box span{display:block;font-size:11px;color:var(--text-3);margin-top:1px;white-space:nowrap}
+.btn-screen{
+  border:1px solid var(--line);
+  background:rgba(157,101,255,.08);
+  color:var(--uv-glow);
+  border-radius:5px;
+  padding:6px 10px;
+  cursor:pointer;
+  font-size:12px;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.btn-screen:hover{border-color:var(--uv-glow)}
+
+/* 主体布局 */
+.main-stage{
+  position:relative;
+  z-index:2;
+  min-height:0;
+  display:grid;
+  grid-template-columns:370px 1fr 380px;
+  gap:14px;
+  padding:14px 18px;
+}
+.column{min-height:0;display:grid;gap:14px}
+.col-left{grid-template-rows:270px 300px 1fr}
+.col-center{grid-template-rows:620px 1fr}
+.col-right{grid-template-rows:290px 290px 1fr}
+
+/* 通用面板 */
+.panel{
+  position:relative;
+  min-height:0;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:linear-gradient(155deg,rgba(11,24,36,.92),rgba(6,14,22,.94));
+  box-shadow:inset 0 1px rgba(255,255,255,.03),0 8px 24px rgba(0,0,0,.25);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.panel:before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  width:3px;
+  height:36px;
+  background:var(--uv-glow);
+}
+.panel-head{
+  height:42px;
+  padding:0 14px 0 16px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  border-bottom:1px solid rgba(28,56,77,.55);
+  flex-shrink:0;
+  white-space:nowrap;
+  gap:8px;
+}
+.panel-title{
+  font-size:14px;
+  font-weight:700;
+  letter-spacing:.5px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  white-space:nowrap;
+  min-width:0;
+}
+.panel-title:before{
+  content:"";
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--uv-glow);
+  flex-shrink:0;
+}
+.panel-badge{
+  font-size:10px;
+  color:var(--text-3);
+  padding:2px 6px;
+  border:1px solid var(--line);
+  border-radius:4px;
+  background:rgba(5,13,21,.5);
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.panel-body{
+  flex:1;
+  min-height:0;
+  padding:12px;
+  position:relative;
+}
+.chart-box{width:100%;height:100%}
+
+/* 左侧擦洗机构与镇流器 */
+.wiper-stat-grid{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  height:100%;
+  justify-content:space-around;
+}
+.wiper-row{
+  padding:8px 10px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:rgba(6,15,24,.5);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  white-space:nowrap;
+}
+.wiper-row span{font-size:11px;color:var(--text-3);white-space:nowrap}
+.wiper-row strong{font-size:14px;color:var(--text-1);white-space:nowrap}
+
+.ballast-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:6px;
+  height:100%;
+}
+.ballast-card{
+  padding:8px 4px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:rgba(8,18,28,.65);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:space-between;
+  text-align:center;
+  white-space:nowrap;
+}
+.bc-name{font-size:11px;font-weight:700;color:var(--text-2);white-space:nowrap}
+.bc-power{font-size:14px;font-weight:700;color:var(--uv-glow);margin:3px 0;white-space:nowrap}
+.bc-temp{font-size:10px;color:var(--text-3);white-space:nowrap}
+.bc-tag{font-size:9px;padding:2px 4px;border-radius:3px;background:var(--success-soft);color:var(--success);white-space:nowrap}
+
+/* SVG 明渠主视觉 */
+.channel-svg{width:100%;height:100%;display:block}
+.wall-concrete{fill:url(#concreteGrad);stroke:#244c68;stroke-width:2}
+.water-flow-channel{fill:url(#uvWaterGrad);opacity:.85}
+.uv-lamp-on{
+  stroke:#cbb2ff;
+  stroke-width:5;
+  filter:drop-shadow(0 0 10px rgba(157,101,255,.9));
+}
+.wiper-ring{
+  fill:#ffb547;
+  stroke:#fff;
+  stroke-width:1;
+  animation:wiperMove 4s ease-in-out infinite alternate;
+}
+@keyframes wiperMove{
+  from{transform:translateY(0)}
+  to{transform:translateY(140px)}
+}
+.water-wave{
+  fill:none;
+  stroke:rgba(54,194,255,.4);
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-dasharray:8 12;
+  animation:waveShift 2s linear infinite;
+}
+@keyframes waveShift{to{stroke-dashoffset:-40}}
+
+/* 下方微操小面板 */
+.ctrl-bar-uv{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:12px;
+  height:100%;
+  align-items:center;
+}
+.ctrl-card-uv{
+  padding:10px 14px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:rgba(8,20,32,.6);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  white-space:nowrap;
+}
+.cc-label span{display:block;font-size:10px;color:var(--text-3);white-space:nowrap}
+.cc-label strong{display:block;font-size:13px;color:var(--text-1);margin-top:2px;white-space:nowrap}
+.cc-btns{display:flex;gap:6px}
+.cc-btns button{
+  padding:4px 8px;
+  font-size:11px;
+  border:1px solid var(--line);
+  background:rgba(157,101,255,.1);
+  color:var(--uv-glow);
+  border-radius:4px;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.cc-btns button:hover{border-color:var(--uv-glow);background:rgba(157,101,255,.25)}
+
+/* 右侧审计流水 */
+.uv-audit-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  height:100%;
+  overflow-y:auto;
+}
+.uv-audit-item{
+  display:grid;
+  grid-template-columns:6px 1fr auto;
+  gap:8px;
+  align-items:start;
+  padding:6px 8px;
+  border:1px solid var(--line);
+  border-radius:5px;
+  background:rgba(6,15,24,.4);
+  white-space:nowrap;
+}
+.uv-audit-item i{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  margin-top:5px;
+  background:var(--dot,var(--success));
+}
+.uv-copy{
+  min-width:0;
+  overflow:hidden;
+}
+.uv-copy b{display:block;font-size:11px;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uv-copy span{display:block;font-size:10px;color:var(--text-3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uv-time{font-size:10px;color:var(--text-3);white-space:nowrap;flex-shrink:0}
+
+/* 底部状态栏 */
+.statusbar{
+  position:relative;
+  z-index:10;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  padding:0 24px;
+  gap:16px;
+  border-top:1px solid var(--line);
+  background:#03080e;
+  font-size:11px;
+  color:var(--text-2);
+  white-space:nowrap;
+}
+.statusbar>div{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.live-beacon{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--success);
+  box-shadow:0 0 8px var(--success);
+}
+.status-center{justify-content:center;color:var(--text-3);white-space:nowrap;flex-shrink:1;min-width:0}
+.status-right{justify-content:flex-end;white-space:nowrap;flex-shrink:0}
+.quality-tag{color:var(--success);font-weight:600;white-space:nowrap}
+.bar-sep{color:#1e3d54}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+<div id="screen" :class="'scenario-'+scenario">
+
+  <!-- 顶部态势栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <strong>出水把关 · 紫外线渠式消毒与余氯闭环调控微单元</strong>
+        <span>UV OPEN-CHANNEL DISINFECTION & CHLORINE LOOP HMI</span>
+      </div>
+    </div>
+
+    <!-- 宏观 KPI 指标带 -->
+    <div class="macro-kpis">
+      <div class="macro-item">
+        <span class="macro-label">瞬时水流</span>
+        <strong class="macro-val num">{{current.flowRate}}</strong>
+        <span class="macro-unit">m³/h</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">紫外照度</span>
+        <strong class="macro-val num" style="color:#cbb2ff">{{current.uvIntensity}}</strong>
+        <span class="macro-unit">mW/cm²</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">穿透率 UVT</span>
+        <strong class="macro-val num">{{current.uvt}}</strong>
+        <span class="macro-unit">%</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">游离余氯</span>
+        <strong class="macro-val num" style="color:#35d07f">{{current.residualCl}}</strong>
+        <span class="macro-unit">mg/L</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">灯管阵列</span>
+        <strong class="macro-val num" style="color:#35d07f">32 / 32</strong>
+        <span class="macro-unit">全亮</span>
+      </div>
+      <div class="macro-item">
+        <span class="macro-label">调光功率</span>
+        <strong class="macro-val num" style="color:#ffb547">{{current.powerOutput}}</strong>
+        <span class="macro-unit">%</span>
+      </div>
+    </div>
+
+    <!-- 顶部右侧：场景工况切换与时钟 -->
+    <div class="top-right">
+      <div class="scenario-tabs">
+        <button v-for="sc in scenarios" :key="sc.id" :class="{active:scenario===sc.id}" @click="switchScenario(sc.id)">
+          {{sc.name}}
+        </button>
+      </div>
+      <div class="clock-box num">
+        <strong>{{clock}}</strong>
+        <span>{{date}}</span>
+      </div>
+      <button class="btn-screen" @click="toggleFullscreen" title="切换全屏">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+        全屏
+      </button>
+    </div>
+  </header>
+
+  <!-- 主体工作区 -->
+  <main class="main-stage">
+    
+    <!-- 左侧栏：套管擦洗机构与镇流器功率 -->
+    <section class="column col-left">
+      <!-- 面板 1：套管擦洗机构状态 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">石英套管机械擦洗机构</div>
+          <span class="panel-badge">气动往复</span>
+        </div>
+        <div class="panel-body">
+          <div class="wiper-stat-grid">
+            <div class="wiper-row">
+              <span>擦洗动作状态</span>
+              <strong :style="{color:scenario==='clean'?'#ffb547':'#35d07f'}">{{scenario==='clean'?'● 正在往复刮洗':'在线待命'}}</strong>
+            </div>
+            <div class="wiper-row">
+              <span>清洗驱动气压</span>
+              <strong class="num">0.58 MPa</strong>
+            </div>
+            <div class="wiper-row">
+              <span>上次清洗时间</span>
+              <strong class="num">25 min 前</strong>
+            </div>
+            <div class="wiper-row">
+              <span>套管透光结垢率</span>
+              <strong class="num" style="color:#35d07f">1.2% (良好)</strong>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 面板 2：紫外灯管寿命衰减分布 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">灯管累计点亮寿命分布</div>
+          <span class="panel-badge">额定 12000h</span>
+        </div>
+        <div class="panel-body">
+          <div id="lifeChart" class="chart-box"></div>
+        </div>
+      </article>
+
+      <!-- 面板 3：4组电子镇流器矩阵 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">智能镇流器矩阵状态</div>
+          <span class="panel-badge">无级调光</span>
+        </div>
+        <div class="panel-body">
+          <div class="ballast-grid">
+            <div class="ballast-card" v-for="b in ballasts" :key="b.name">
+              <span class="bc-name">{{b.name}}</span>
+              <span class="bc-power num">{{current.powerOutput}}%</span>
+              <span class="bc-temp num">{{b.temp}} ℃</span>
+              <span class="bc-tag">正常</span>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- 中间栏：出水消毒明渠透视图 SVG 与闭环微操 -->
+    <section class="column col-center">
+      <!-- 上部：SVG 消毒明渠透视与流向 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">出水紫外线消毒接触明渠与次氯酸钠复合投加流程</div>
+          <span class="panel-badge">微工艺侧剖透视</span>
+        </div>
+        <div class="panel-body" style="padding:0">
+          <svg class="channel-svg" viewBox="0 0 1100 560">
+            <defs>
+              <linearGradient id="concreteGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#142c3d"/>
+                <stop offset="100%" stop-color="#081520"/>
+              </linearGradient>
+              <linearGradient id="uvWaterGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#103c58" stop-opacity="0.6"/>
+                <stop offset="35%" stop-color="#3b2b6e" stop-opacity="0.85"/>
+                <stop offset="65%" stop-color="#2d1f58" stop-opacity="0.85"/>
+                <stop offset="100%" stop-color="#12506e" stop-opacity="0.7"/>
+              </linearGradient>
+            </defs>
+
+            <!-- 渠道混凝土侧剖面 (预留右侧宽敞通道) -->
+            <!-- 进水导流堰 -->
+            <polygon points="20,120 100,120 120,240 20,240" fill="url(#concreteGrad)" stroke="#1a374c" stroke-width="2"/>
+            <text x="65" y="180" fill="#a8bac8" font-size="12" font-weight="700" text-anchor="middle">二沉池出水</text>
+            <text x="65" y="200" fill="#36c2ff" font-size="11" text-anchor="middle">自流进水 ➔</text>
+
+            <!-- 渠道主池水体 -->
+            <rect class="water-flow-channel" x="120" y="160" width="820" height="230"/>
+            <rect class="wall-concrete" x="120" y="390" width="820" height="40"/>
+            <text x="530" y="415" fill="#6c8496" font-size="12" text-anchor="middle">不锈钢水力明渠底衬 (渠深 2.2m · 水深 1.8m)</text>
+
+            <!-- 动态波浪水流线 -->
+            <path class="water-wave" d="M120 180 Q230 170 340 180 T560 180 T780 180 T940 180"/>
+            <path class="water-wave" d="M120 220 Q230 210 340 220 T560 220 T780 220 T940 220" style="animation-delay:-1s"/>
+
+            <!-- 浸没式紫外灯模块排架 (A组、B组、C组、D组 共4排) -->
+            <!-- 模块支架横梁 -->
+            <rect x="180" y="130" width="410" height="25" rx="4" fill="#18364c" stroke="#2b5472"/>
+            <text x="385" y="147" fill="#f2f7fa" font-size="12" font-weight="700" text-anchor="middle">紫外灯排浸没框架 (4排 × 8管 = 32管)</text>
+
+            <!-- 灯排 A -->
+            <g transform="translate(220, 160)">
+              <line class="uv-lamp-on" x1="0" y1="10" x2="0" y2="210"/>
+              <line class="uv-lamp-on" x1="20" y1="10" x2="20" y2="210"/>
+              <rect :class="['wiper-ring', scenario==='clean'?'':'']" x="-6" y="40" width="32" height="10" rx="3"/>
+            </g>
+
+            <!-- 灯排 B -->
+            <g transform="translate(320, 160)">
+              <line class="uv-lamp-on" x1="0" y1="10" x2="0" y2="210"/>
+              <line class="uv-lamp-on" x1="20" y1="10" x2="20" y2="210"/>
+              <rect class="wiper-ring" x="-6" y="60" width="32" height="10" rx="3"/>
+            </g>
+
+            <!-- 灯排 C -->
+            <g transform="translate(420, 160)">
+              <line class="uv-lamp-on" x1="0" y1="10" x2="0" y2="210"/>
+              <line class="uv-lamp-on" x1="20" y1="10" x2="20" y2="210"/>
+              <rect class="wiper-ring" x="-6" y="80" width="32" height="10" rx="3"/>
+            </g>
+
+            <!-- 灯排 D -->
+            <g transform="translate(520, 160)">
+              <line class="uv-lamp-on" x1="0" y1="10" x2="0" y2="210"/>
+              <line class="uv-lamp-on" x1="20" y1="10" x2="20" y2="210"/>
+              <rect class="wiper-ring" x="-6" y="50" width="32" height="10" rx="3"/>
+            </g>
+
+            <!-- 水下 UV 强度传感器 -->
+            <circle cx="580" cy="270" r="10" fill="#ffb547" stroke="#fff" stroke-width="1.5"/>
+            <text x="580" y="300" fill="#ffb547" font-size="10" text-anchor="middle" font-weight="700">UV强度探头</text>
+            <text x="580" y="315" fill="#a8bac8" font-size="9" text-anchor="middle">{{current.uvIntensity}} mW/cm²</text>
+
+            <!-- 末端复合消毒区：次氯酸钠投加喷管 -->
+            <rect x="660" y="110" width="30" height="40" fill="#0c2538" stroke="#1c384d" rx="3"/>
+            <text x="675" y="100" fill="#36c2ff" font-size="10" text-anchor="middle">NaClO 补氯</text>
+            <path d="M675 150 V240" stroke="#36c2ff" stroke-width="3" stroke-dasharray="3 3"/>
+            <polygon points="670,240 680,240 675,250" fill="#36c2ff"/>
+
+            <!-- 渠末混合挡板 -->
+            <rect x="720" y="160" width="12" height="140" fill="#1b3c56" stroke="#2b5472"/>
+            <rect x="760" y="220" width="12" height="170" fill="#1b3c56" stroke="#2b5472"/>
+
+            <!-- 出水余氯在线水质分析探头 -->
+            <rect x="820" y="150" width="45" height="26" rx="4" fill="#081827" stroke="#35d07f"/>
+            <text x="842" y="167" fill="#35d07f" font-size="10" text-anchor="middle" font-weight="700">余氯电极</text>
+            <line x1="842" y1="176" x2="842" y2="280" stroke="#35d07f" stroke-width="2"/>
+            <circle cx="842" cy="280" r="5" fill="#35d07f"/>
+
+            <!-- 出水排放堰门 -->
+            <polygon points="940,230 980,230 1000,390 940,390" fill="url(#concreteGrad)" stroke="#1a374c" stroke-width="2"/>
+            
+            <!-- 出水排放终点发光微徽章 (安全收纳在 930 ~ 1070 范围内，绝不溢出) -->
+            <g transform="translate(930, 285)">
+              <rect x="0" y="0" width="140" height="42" rx="6" fill="rgba(53,208,127,0.12)" stroke="rgba(53,208,127,0.4)" stroke-width="1.2"/>
+              <circle cx="16" cy="21" r="4" fill="#35d07f"/>
+              <text x="78" y="19" fill="#35d07f" font-size="12" font-weight="700" text-anchor="middle">出水排放 ➔</text>
+              <text x="78" y="33" fill="#a8bac8" font-size="10" text-anchor="middle">达到一级A标准</text>
+            </g>
+          </svg>
+        </div>
+      </article>
+
+      <!-- 下部：紫外调光与加氯闭环微操 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">紫外调光功率与次氯酸钠复合闭环微操</div>
+          <span class="panel-badge">动态跟随流量与UVT</span>
+        </div>
+        <div class="panel-body">
+          <div class="ctrl-bar-uv">
+            <div class="ctrl-card-uv">
+              <div class="cc-label">
+                <span>紫外灯排调光功率</span>
+                <strong class="num" style="color:#cbb2ff">{{current.powerOutput}} %</strong>
+              </div>
+              <div class="cc-btns">
+                <button @click="adjustPower(-5)">-5%</button>
+                <button @click="adjustPower(5)">+5%</button>
+              </div>
+            </div>
+
+            <div class="ctrl-card-uv">
+              <div class="cc-label">
+                <span>出水余氯目标设定</span>
+                <strong class="num" style="color:#35d07f">{{current.targetCl}} mg/L</strong>
+              </div>
+              <div class="cc-btns">
+                <button @click="adjustCl(-0.05)">-0.05</button>
+                <button @click="adjustCl(0.05)">+0.05</button>
+              </div>
+            </div>
+
+            <div class="ctrl-card-uv">
+              <div class="cc-label">
+                <span>石英套管刮洗周期</span>
+                <strong>就绪待命</strong>
+              </div>
+              <div class="cc-btns">
+                <button @click="triggerWipe">执行刮洗</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- 右侧栏：接触CT双轴、灭活对数与审计流水 -->
+    <section class="column col-right">
+      <!-- 面板 1：接触时间与出水余氯双轴趋势 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">接触时间与余氯响应</div>
+          <span class="panel-badge">CT闭环控制</span>
+        </div>
+        <div class="panel-body">
+          <div id="ctChart" class="chart-box"></div>
+        </div>
+      </article>
+
+      <!-- 面板 2：紫外剂量与大肠菌群灭活对数 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">紫外有效剂量与灭活特性</div>
+          <span class="panel-badge">Log 灭活率</span>
+        </div>
+        <div class="panel-body">
+          <div id="doseChart" class="chart-box"></div>
+        </div>
+      </article>
+
+      <!-- 面板 3：出水质检与运行审计流水 -->
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">出水水质合规与运行审计</div>
+          <span class="panel-badge">实时流水</span>
+        </div>
+        <div class="panel-body">
+          <div class="uv-audit-list">
+            <div class="uv-audit-item" v-for="item in auditList" :key="item.id" :style="{'--dot': item.level==='warn'?'#ffb547':(item.level==='danger'?'#ff5d5d':'#35d07f')}">
+              <i></i>
+              <div class="uv-copy">
+                <b>{{item.title}}</b>
+                <span>{{item.desc}}</span>
+              </div>
+              <div class="uv-time num">{{item.time}}</div>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+  </main>
+
+  <!-- 底部状态栏 -->
+  <footer class="statusbar">
+    <div>
+      <i class="live-beacon"></i>
+      <b>出水消毒系统正常</b>
+      <span class="bar-sep">|</span>
+      <span>Profinet 环网通信正常</span>
+      <span class="bar-sep">|</span>
+      <span>紫外有效剂量：24.5 mJ/cm² (合规)</span>
+    </div>
+    <div class="status-center">
+      数据质量：<span class="quality-tag">GOOD (100%)</span> · 采样周期：1.0s · 大肠菌群达标率 100%
+    </div>
+    <div class="status-right">
+      <span>更新时间：{{clock}}</span>
+      <span class="bar-sep">|</span>
+      <span>基准画布：1920×1080</span>
+    </div>
+  </footer>
+
+</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const $id = (id) => document.getElementById(id);
+  const safeInit = (id) => {
+    try {
+      const el = $id(id);
+      if (!el) return null;
+      return echarts.init(el);
+    } catch(e) {
+      console.error(e);
+      return null;
+    }
+  };
+
+  const scenariosData = {
+    normal: {
+      name: '晴天标称',
+      flowRate: '4500',
+      uvIntensity: '28.6',
+      uvt: '72.5',
+      residualCl: '0.35',
+      targetCl: '0.35',
+      powerOutput: 75
+    },
+    rainy: {
+      name: '高负荷调光',
+      flowRate: '7200',
+      uvIntensity: '34.2',
+      uvt: '65.0',
+      residualCl: '0.38',
+      targetCl: '0.35',
+      powerOutput: 100
+    },
+    clean: {
+      name: '套管刮洗',
+      flowRate: '4350',
+      uvIntensity: '26.8',
+      uvt: '72.8',
+      residualCl: '0.34',
+      targetCl: '0.35',
+      powerOutput: 70
+    }
+  };
+
+  const app = Vue.createApp({
+    data() {
+      return {
+        clock: '--:--:--',
+        date: '----/--/--',
+        scenario: 'normal',
+        scenarios: [
+          { id: 'normal', name: '晴天标称功率' },
+          { id: 'rainy', name: '雨季高负荷调光' },
+          { id: 'clean', name: '套管机械清洗' }
+        ],
+        ballasts: [
+          { name: 'A组 (1~8)', temp: '42.5' },
+          { name: 'B组 (9~16)', temp: '43.1' },
+          { name: 'C组 (17~24)', temp: '41.8' },
+          { name: 'D组 (25~32)', temp: '44.0' }
+        ],
+        auditList: [
+          { id: 1, title: '套管在线透光率巡检完成', desc: '石英套管平均结垢指数 1.2%，处于洁净透光区', time: '15:22:04', level: 'info' },
+          { id: 2, title: '出水游离余氯闭环微调', desc: '检测值 0.35mg/L，次氯酸钠计量泵维持 2.4L/h 微调', time: '15:18:30', level: 'info' },
+          { id: 3, title: '出水粪大肠菌群抽检合规', desc: '< 10 MPN/L，达到地表水环境准 IV 类标准', time: '15:00:15', level: 'info' },
+          { id: 4, title: '镇流器温度自适应巡检', desc: '4 组模块电子镇流器工作温度均低于 45℃ 警戒线', time: '14:45:00', level: 'info' }
+        ]
+      };
+    },
+    computed: {
+      current() {
+        return scenariosData[this.scenario];
+      }
+    },
+    methods: {
+      tick() {
+        try {
+          const d = new Date();
+          this.clock = d.toLocaleTimeString('zh-CN', { hour12: false });
+          this.date = d.toLocaleDateString('zh-CN').replaceAll('/', ' · ');
+        } catch(e) {}
+      },
+      switchScenario(id) {
+        this.scenario = id;
+        if (id === 'clean') {
+          this.auditList.unshift({
+            id: Date.now(),
+            title: '气动清洗机构动作触发',
+            desc: '4 排刮环架执行往复刮洗循环，清洗气压 0.58MPa 正常',
+            time: this.clock,
+            level: 'warn'
+          });
+        } else if (id === 'rainy') {
+          this.auditList.unshift({
+            id: Date.now(),
+            title: '智能调光响应：流量跃升至 7200 m³/h',
+            desc: '镇流器功率自动上调至 100% 满负荷，保证有效紫外剂量',
+            time: this.clock,
+            level: 'info'
+          });
+        }
+        if (window.updateUVCharts) {
+          window.updateUVCharts(id);
+        }
+      },
+      adjustPower(delta) {
+        let val = this.current.powerOutput + delta;
+        if (val < 50) val = 50;
+        if (val > 100) val = 100;
+        this.current.powerOutput = val;
+      },
+      adjustCl(delta) {
+        let val = parseFloat(this.current.targetCl) + delta;
+        if (val < 0.1) val = 0.1;
+        if (val > 0.8) val = 0.8;
+        this.current.targetCl = val.toFixed(2);
+      },
+      triggerWipe() {
+        this.switchScenario('clean');
+      },
+      toggleFullscreen() {
+        try {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          } else {
+            document.exitFullscreen().catch(() => {});
+          }
+        } catch(e) {}
+      }
+    },
+    mounted() {
+      this.tick();
+      setInterval(() => {
+        try { this.tick(); } catch(e) {}
+      }, 1000);
+      this.switchScenario('normal');
+    }
+  });
+
+  const vm = app.mount('#app');
+
+  // ECharts 图表初始化
+  const lifeChart = safeInit('lifeChart');
+  const ctChart = safeInit('ctChart');
+  const doseChart = safeInit('doseChart');
+
+  const charts = [lifeChart, ctChart, doseChart].filter(Boolean);
+
+  const textStyle = { color: '#a8bac8', fontSize: 11 };
+  const axisLine = { lineStyle: { color: '#1a374c' } };
+  const splitLine = { lineStyle: { color: 'rgba(26,55,76,.4)', type: 'dashed' } };
+
+  function renderCharts(scId) {
+    try {
+      const times = ['10:00','11:00','12:00','13:00','14:00','15:00'];
+
+      // 1. 灯管寿命衰减分布
+      if (lifeChart) {
+        lifeChart.setOption({
+          grid: { left: 45, right: 20, top: 25, bottom: 25 },
+          tooltip: { trigger: 'axis' },
+          xAxis: { type: 'category', data: ['0-3k', '3-6k', '6-9k', '9-12k'], axisLabel: textStyle, axisLine },
+          yAxis: { type: 'value', name: '管数', axisLabel: textStyle, axisLine, splitLine, nameTextStyle: { color: '#6c8496' } },
+          series: [{
+            type: 'bar',
+            barWidth: 14,
+            data: [4, 18, 8, 2],
+            itemStyle: {
+              borderRadius: [3, 3, 0, 0],
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#9d65ff' },
+                { offset: 1, color: '#3b2b6e' }
+              ])
+            }
+          }]
+        });
+      }
+
+      // 2. 接触时间与出水余氯双轴趋势
+      if (ctChart) {
+        const ctVal = scId === 'rainy' ? [18, 17, 16, 17, 16, 17] : [26, 25, 26, 25, 25, 26];
+        const clVal = scId === 'rainy' ? [0.38, 0.37, 0.38, 0.37, 0.38, 0.38] : [0.35, 0.34, 0.35, 0.35, 0.36, 0.35];
+        ctChart.setOption({
+          grid: { left: 45, right: 45, top: 34, bottom: 24 },
+          tooltip: { trigger: 'axis' },
+          legend: { top: 4, left: 'center', textStyle: { color: '#a8bac8', fontSize: 10 } },
+          xAxis: { type: 'category', data: times, axisLabel: textStyle, axisLine },
+          yAxis: [
+            { type: 'value', name: '秒', min: 10, max: 40, axisLabel: textStyle, axisLine, splitLine, nameTextStyle: { color: '#6c8496' } },
+            { type: 'value', name: 'mg/L', min: 0.1, max: 0.6, axisLabel: textStyle, axisLine, splitLine: { show: false }, nameTextStyle: { color: '#6c8496' } }
+          ],
+          series: [
+            {
+              name: '明渠接触停留时间',
+              type: 'line',
+              smooth: true,
+              data: ctVal,
+              itemStyle: { color: '#36c2ff' },
+              areaStyle: { color: 'rgba(54,194,255,.12)' }
+            },
+            {
+              name: '出水游离余氯',
+              type: 'line',
+              yAxisIndex: 1,
+              smooth: true,
+              data: clVal,
+              itemStyle: { color: '#35d07f' },
+              lineStyle: { width: 2, type: 'dashed' }
+            }
+          ]
+        });
+      }
+
+      // 3. 紫外有效剂量与灭活特性
+      if (doseChart) {
+        const doses = [10, 15, 20, 25, 30, 35, 40];
+        doseChart.setOption({
+          grid: { left: 45, right: 25, top: 30, bottom: 25 },
+          tooltip: { trigger: 'axis' },
+          legend: { top: 4, left: 'center', textStyle: { color: '#a8bac8', fontSize: 10 } },
+          xAxis: { type: 'category', data: doses.map(d => d + 'mJ'), axisLabel: textStyle, axisLine },
+          yAxis: { type: 'value', name: 'Log 灭活率', min: 1, max: 5, axisLabel: textStyle, axisLine, splitLine, nameTextStyle: { color: '#6c8496' } },
+          series: [{
+            name: '大肠杆菌灭活对数',
+            type: 'line',
+            smooth: true,
+            data: [1.8, 2.6, 3.4, 4.1, 4.6, 4.8, 4.9],
+            itemStyle: { color: '#cbb2ff' },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(157,101,255,.35)' },
+                { offset: 1, color: 'rgba(157,101,255,.02)' }
+              ])
+            }
+          }]
+        });
+      }
+    } catch(e) {
+      console.error(e);
+    }
+  }
+
+  window.updateUVCharts = renderCharts;
+  renderCharts('normal');
+
+  function fit() {
+    try {
+      const screen = $id('screen');
+      if (!screen) return;
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const scale = Math.min(w / 1920, h / 1080);
+      screen.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    } catch(e) {}
+  }
+
+  fit();
+  window.addEventListener('resize', () => {
+    try {
+      fit();
+      charts.forEach(c => {
+        try { c.resize(); } catch(e) {}
+      });
+    } catch(e) {}
+  });
+  window.addEventListener('pageshow', fit);
+  document.addEventListener('DOMContentLoaded', fit);
+
+})();
+</script>
+</body>
+</html>
