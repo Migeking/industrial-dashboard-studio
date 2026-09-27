@@ -329,16 +329,46 @@ with sync_playwright() as playwright:
         assert_uv_disinfect_interaction,
     )
 
+    def assert_coarse_screen_sump_interaction(page):
+        page.locator(".brand-title").filter(has_text="粗格栅及进水提升泵房").wait_for()
+        assert page.locator("#screen").count() == 1
+        # 点击 1# 混流泵展开 Faceplate
+        page.locator(".pump-group").first.click()
+        page.locator(".faceplate-window").wait_for()
+        assert page.locator("#radarCanvasBox canvas").count() == 1
+        # 触发 SBO 防误确认
+        page.locator(".fp-ctrl-btn.stop").click()
+        page.locator(".sbo-box").wait_for()
+        assert "SBO 两步防误确认" in page.locator(".sbo-header").inner_text()
+        page.locator(".btn-sbo-yes").click()
+        page.locator(".sbo-box").wait_for(state="detached")
+        # 关闭 Faceplate
+        page.locator(".fp-close-btn").click()
+        page.locator(".faceplate-window").wait_for(state="detached")
+        # 切换工况：汛期暴雨超量大流量
+        page.get_by_role("button", name="汛期暴雨超量大流量").click()
+        page.locator(".sump-level-pill").filter(has_text="13.80").wait_for()
+        # 确认告警 (ACK)
+        page.locator(".ack-btn-table").first.click()
+        page.locator(".alarm-table td").filter(has_text="已确认").first.wait_for()
+
+    run_case(
+        page,
+        "water-treatment/21-粗格栅及进水提升泵房数字孪生SCADA.html",
+        lambda p: None,
+        assert_coarse_screen_sump_interaction,
+    )
+
     showcase = browser.new_page(viewport={"width": 1440, "height": 900})
     showcase.route("http://**/*", lambda route: route.abort())
     showcase.route("https://**/*", lambda route: route.abort())
     showcase.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="networkidle")
-    assert showcase.locator(".card").count() == 20
-    latest_card = showcase.locator('.card[data-src*="20-"]')
+    assert showcase.locator(".card").count() == 21
+    latest_card = showcase.locator('.card[data-src*="21-"]')
     latest_card.scroll_into_view_if_needed()
     assert latest_card.is_visible()
     latest_card.click()
-    assert "紫外消毒" in showcase.locator("#stageTitle").inner_text() or "紫外线" in showcase.locator("#stageTitle").inner_text()
+    assert "粗格栅" in showcase.locator("#stageTitle").inner_text() or "提升泵房" in showcase.locator("#stageTitle").inner_text()
     portrait = browser.new_page(viewport={"width": 390, "height": 844})
     portrait.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="domcontentloaded")
     assert portrait.locator(".rotate").is_visible()

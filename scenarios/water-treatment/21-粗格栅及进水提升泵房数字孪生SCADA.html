@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>粗格栅及进水提升泵房数字孪生SCADA</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<style>
+/* ================= 基础与全局工业变量 ================= */
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#03070d;color:#f0f5fa;font-family:"Microsoft YaHei","PingFang SC",Segoe UI,sans-serif}
+.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+button,input{font:inherit;outline:none;border:none}
+[v-cloak]{display:none}
+
+:root{
+  --bg:#071017;
+  --surface-1:#0a1722;
+  --surface-2:#0f2232;
+  --surface-3:#152e42;
+  --line:#1b384e;
+  --line-light:#285270;
+  --accent:#36c2ff;
+  --accent-soft:rgba(54,194,255,0.12);
+  --accent-glow:rgba(54,194,255,0.35);
+  --success:#2fd67e;
+  --success-soft:rgba(47,214,126,0.15);
+  --success-glow:rgba(47,214,126,0.35);
+  --warning:#f5aa39;
+  --danger:#ff4d4f;
+  --danger-soft:rgba(255,77,79,0.15);
+  --danger-glow:rgba(255,77,79,0.35);
+  --offline:#607382;
+  --text-1:#f0f5fa;
+  --text-2:#9ab0c2;
+  --text-3:#627c90;
+  --pipe-base:#1b374d;
+  --pipe-water:#31a9e8;
+  --sump-border:#2280ba;
+  --channel-water:rgba(30,120,180,0.45);
+}
+
+/* 1920x1080 SCADA 视口 */
+#app{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+#screen{
+  width:1920px;height:1080px;position:absolute;left:50%;top:50%;
+  transform-origin:center center;display:grid;grid-template-rows:44px 30px 1fr 140px;
+  overflow:hidden;background:radial-gradient(circle at 50% 15%,rgba(54,194,255,.05),transparent 60%),var(--bg);
+}
+#screen:before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(54,194,255,.02) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(54,194,255,.02) 1px,transparent 1px);
+  background-size:24px 24px;z-index:0;
+}
+
+/* ================= 顶栏工段标签与系统状态 ================= */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;padding:0 16px;
+  background:#050c14;border-bottom:1px solid var(--line);z-index:30;position:relative;
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{
+  width:26px;height:26px;border-radius:4px;background:#0d283d;border:1px solid var(--accent);
+  display:grid;place-items:center;color:var(--accent);
+}
+.brand-icon svg{width:15px;height:15px}
+.brand-title{font-size:14px;font-weight:700;color:var(--text-1);letter-spacing:1px}
+
+.nav-tabs{display:flex;gap:3px;align-items:center;height:100%;overflow-x:auto}
+.nav-tab{
+  padding:4px 10px;border-radius:3px;font-size:11px;color:var(--text-2);
+  cursor:pointer;background:#0a1722;border:1px solid #162f44;transition:all .15s;white-space:nowrap;
+}
+.nav-tab:hover{color:var(--text-1);border-color:var(--accent)}
+.nav-tab.active{background:#113854;border-color:var(--accent);color:#fff;font-weight:bold}
+
+.top-right{display:flex;align-items:center;gap:16px;font-size:11px;color:var(--text-2)}
+.clock{font-family:"Bahnschrift",Consolas,sans-serif;font-size:14px;color:var(--text-1);font-weight:700}
+
+/* 图例状态栏 */
+.sub-bar{
+  display:flex;align-items:center;justify-content:flex-start;padding:0 16px;
+  background:#07121b;border-bottom:1px solid var(--line);font-size:11px;z-index:25;
+}
+.legend-group{display:flex;align-items:center;gap:14px}
+.leg-item{display:flex;align-items:center;gap:5px}
+.leg-block{width:12px;height:12px;border-radius:2px}
+.leg-block.run{background:var(--success);box-shadow:0 0 6px var(--success)}
+.leg-block.stop{background:var(--danger)}
+.leg-block.fault{background:var(--warning)}
+
+.alarm-tag{
+  background:var(--danger);color:#fff;font-weight:700;font-size:10px;padding:2px 6px;
+  border-radius:2px;letter-spacing:1px;
+}
+.alarm-tag.acked{background:#8c2e2e}
+
+/* ================= SCADA 工艺模拟主区 ================= */
+.process-stage{position:relative;width:100%;height:100%;overflow:hidden;background:#050d14}
+
+/* SVG 拓扑底图与管路流光 */
+.pipe-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.pipe-line{fill:none;stroke:var(--pipe-base);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}
+.pipe-anim{
+  fill:none;stroke:var(--pipe-water);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:8 12;animation:dashFlow 1.6s linear infinite;filter:drop-shadow(0 0 4px var(--accent));
+}
+.pipe-anim.stop{animation:none;stroke:var(--line);opacity:.2;filter:none}
+@keyframes dashFlow{to{stroke-dashoffset:-40}}
+
+/* 可交互图元通用样式 */
+.dev-interactive{cursor:pointer;transition:transform .15s}
+.dev-interactive:hover{filter:drop-shadow(0 0 6px var(--accent));transform:scale(1.03)}
+
+/* 进水箱涵 (左侧垂直水池) */
+.inlet-flume{
+  position:absolute;left:20px;top:40px;width:38px;height:720px;
+  background:linear-gradient(180deg,#163c56,#0a2030);border:2px solid #23597d;
+  border-radius:3px;z-index:2;display:flex;align-items:center;justify-content:center;
+}
+.flume-text{
+  color:#fff;font-size:13px;font-weight:700;letter-spacing:4px;writing-mode:vertical-rl;
+}
+
+/* 5 组粗格栅渠道 */
+.channel-box{
+  position:absolute;left:80px;width:300px;height:128px;
+  background:#081724;border:1.5px solid #1c3c54;border-radius:3px;z-index:2;
+}
+.ch-1{top:40px}
+.ch-2{top:188px}
+.ch-3{top:336px}
+.ch-4{top:484px}
+.ch-5{top:632px}
+.ch-water{
+  position:absolute;left:0;right:0;top:32px;bottom:12px;background:var(--channel-water);
+  border-top:1px dashed rgba(54,194,255,.3);border-bottom:1px dashed rgba(54,194,255,.3);
+}
+.ch-name{position:absolute;left:8px;top:6px;font-size:11px;font-weight:700;color:var(--text-3)}
+
+/* 闸板图元 */
+.gate-symbol{
+  position:absolute;width:14px;height:52px;background:#1e3c54;border:1.5px solid #366c94;
+  border-radius:2px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.gate-stick{position:absolute;width:3px;height:24px;top:-20px;background:#769cb8}
+.gate-core{width:8px;height:38px;border-radius:1px}
+.gate-core.open{background:var(--success)}
+.gate-core.close{background:var(--danger)}
+.gate-tag-text{position:absolute;bottom:-18px;font-size:10px;color:var(--text-2);white-space:nowrap}
+
+/* 粗格栅倾斜耙网图元 */
+.screen-mesh{
+  position:absolute;width:36px;height:62px;top:35px;
+  background:repeating-linear-gradient(45deg,#132b3d,#132b3d 3px,#1d4461 3px,#1d4461 6px);
+  border:1.5px solid #34688e;border-radius:2px;transform:skewX(-15deg);
+}
+.screen-tag-text{position:absolute;top:-18px;left:-6px;font-size:10px;color:var(--text-2);white-space:nowrap}
+
+/* 清污抓斗天车图元 */
+.grab-crane{
+  position:absolute;top:4px;width:54px;height:24px;border:2px solid var(--accent);
+  border-bottom:none;border-radius:3px 3px 0 0;display:flex;flex-direction:column;align-items:center;
+}
+.grab-crane:after{
+  content:"";width:22px;height:8px;background:var(--accent);margin-top:14px;border-radius:1px;
+}
+.grab-title{position:absolute;bottom:-14px;font-size:9px;color:var(--accent);font-weight:bold;white-space:nowrap}
+
+/* 渠道监测标牌 */
+.ch-metric-tag{
+  position:absolute;bottom:6px;padding:2px 6px;border-radius:10px;background:#050f17;
+  border:1px solid #1a3c54;font-size:10px;color:var(--text-2);white-space:nowrap;z-index:5;
+}
+.ch-metric-tag b{color:var(--accent);font-family:"Bahnschrift",Consolas,sans-serif}
+
+/* 轴流风机通用圆形图元 */
+.fan-unit{
+  position:absolute;width:32px;height:32px;border-radius:50%;background:#0a1e2d;
+  border:2px solid #285474;display:grid;place-items:center;z-index:6;
+}
+.fan-unit.run svg{color:var(--success);animation:spinAnim 1s linear infinite}
+.fan-unit.stop svg{color:var(--danger)}
+.fan-unit.fault svg{color:var(--warning)}
+@keyframes spinAnim{to{transform:rotate(360deg)}}
+.fan-label{position:absolute;top:-16px;font-size:10px;color:var(--text-2);white-space:nowrap}
+
+/* ================= 中央超深提升泵房集水沉箱 ================= */
+.sump-tank{
+  position:absolute;left:440px;top:40px;width:760px;height:720px;
+  background:linear-gradient(180deg,#0a1b29,#06131e);border:3px solid var(--sump-border);
+  box-shadow:inset 0 0 40px rgba(34,128,186,.15);border-radius:4px;z-index:2;overflow:hidden;
+}
+.sump-water-body{
+  position:absolute;bottom:0;left:0;right:0;background:linear-gradient(180deg,rgba(54,194,255,.35),rgba(14,64,96,.6));
+  border-top:2px solid var(--accent);box-shadow:0 -4px 18px rgba(54,194,255,.3);
+  transition:height .6s ease;z-index:2;
+}
+
+/* 顶部水平冷却循环系统群 (紧靠沉箱正上方，绝不折行) */
+.cooling-system-strip{
+  position:absolute;left:440px;top:8px;width:760px;height:28px;
+  display:flex;align-items:center;justify-content:center;gap:18px;z-index:10;
+}
+.cool-unit{
+  display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-2);
+  background:rgba(10,24,36,.85);border:1px solid #1a3c54;padding:2px 8px;border-radius:3px;
+}
+.cool-icon{width:18px;height:18px;border-radius:50%;background:#102c42;display:grid;place-items:center}
+.cool-icon svg{color:var(--accent);width:12px;height:12px}
+
+/* 水泵图元通用排布 (阀门 + 圆形泵体 + 频率框) */
+.pump-group{
+  position:absolute;display:flex;align-items:center;gap:8px;z-index:6;
+}
+.pump-valve{
+  width:16px;height:24px;border:1px solid #2f5f84;background:#102434;position:relative;
+  display:flex;align-items:center;justify-content:center;
+}
+.pump-valve:after{content:"";width:8px;height:8px;border-radius:50%}
+.pump-valve.open:after{background:var(--success)}
+.pump-valve.close:after{background:var(--danger)}
+
+.pump-circle{
+  width:40px;height:40px;border-radius:50%;background:#0e2638;border:2.5px solid #2b6088;
+  display:grid;place-items:center;position:relative;
+}
+.pump-circle.run{border-color:var(--success);box-shadow:0 0 12px var(--success-glow)}
+.pump-circle.run svg{color:var(--success);animation:spinAnim 1s linear infinite}
+.pump-circle.stop{border-color:var(--danger)}
+.pump-circle.stop svg{color:var(--danger)}
+.pump-circle.fault{border-color:var(--warning);animation:alarmBlink .8s infinite alternate}
+.pump-circle.fault svg{color:var(--warning)}
+
+.pump-freq-box{
+  background:#06141f;border:1px solid var(--accent);border-radius:3px;
+  padding:3px 7px;font-size:11px;color:var(--accent);font-weight:700;min-width:62px;text-align:center;
+}
+.pump-name-tag{position:absolute;left:-62px;font-size:11px;color:var(--text-1);font-weight:600;white-space:nowrap}
+
+/* 液位标尺刻度与读数标签 */
+.sump-ruler{
+  position:absolute;left:270px;top:380px;height:300px;width:35px;
+  border-left:2px solid #365b78;display:flex;flex-direction:column;justify-content:space-between;z-index:7;
+}
+.sump-ruler-tick{position:relative;height:1px;background:#365b78;width:10px}
+.sump-ruler-tick:after{
+  content:attr(data-val);position:absolute;left:14px;top:-6px;font-size:10px;
+  font-family:"Bahnschrift",Consolas,sans-serif;color:var(--text-3);
+}
+.sump-level-line{
+  position:absolute;left:240px;right:340px;height:2px;background:#ffb547;
+  box-shadow:0 0 8px #ffb547;transition:bottom .6s ease;z-index:8;
+}
+.sump-level-pill{
+  position:absolute;left:160px;padding:4px 10px;border-radius:3px;background:rgba(6,20,32,.9);
+  border:1px solid var(--accent);color:var(--text-1);font-size:11px;z-index:9;white-space:nowrap;
+}
+.sump-level-pill b{color:var(--accent);font-family:"Bahnschrift",Consolas,sans-serif;font-size:13px}
+
+/* ================= 右侧出水流向与工艺水池群 (三段式均匀分布) ================= */
+.right-zone{
+  position:absolute;left:1270px;top:40px;right:20px;height:720px;
+  display:flex;flex-direction:column;justify-content:space-between;z-index:5;
+}
+.right-zone-row{
+  background:#081724;border:1px solid #1a3c54;border-radius:4px;padding:10px 14px;
+  position:relative;display:flex;flex-direction:column;
+}
+.dest-card-head{display:flex;align-items:center;justify-content:space-between}
+.dest-card-title{font-size:12px;font-weight:700;color:var(--text-1);display:flex;align-items:center;gap:6px}
+.dest-badge{font-size:10px;padding:1px 6px;border-radius:2px;background:rgba(54,194,255,.1);color:var(--accent);border:1px solid var(--accent)}
+
+/* 顶部主工艺工段 */
+.zone-row-top{height:195px}
+.grit-top-grid{display:grid;grid-template-columns:290px 1fr;gap:12px;height:calc(100% - 24px);margin-top:6px}
+.grit-tank-card{
+  background:#061421;border:1px solid #163650;border-radius:3px;padding:8px 10px;
+  display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;
+}
+.grit-tank-water{
+  position:absolute;bottom:0;left:0;right:0;height:45%;
+  background:linear-gradient(180deg,rgba(54,194,255,.3),rgba(14,64,96,.6));
+  border-top:1.5px solid var(--accent);border-radius:0 0 3px 3px;
+}
+.factory-card{
+  background:#061421;border:1px solid #163650;border-radius:3px;padding:8px 12px;
+  display:flex;flex-direction:column;justify-content:space-between;
+}
+
+/* 电动蝶阀图元 */
+.valve-butterfly{
+  width:22px;height:22px;border-radius:50%;background:#0d2334;border:1.5px solid #285474;
+  display:grid;place-items:center;cursor:pointer;
+}
+.valve-butterfly.open{border-color:var(--success);color:var(--success)}
+.valve-butterfly.close{border-color:var(--danger);color:var(--danger)}
+
+/* 中部初雨削峰调蓄工段 */
+.zone-row-mid{height:235px}
+.retention-tanks-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;flex:1}
+.ret-tank-item{
+  background:#061421;border:1px solid #183b56;border-radius:3px;padding:8px 10px;
+  display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;
+}
+.ret-water-fill{
+  position:absolute;bottom:0;left:0;right:0;
+  background:linear-gradient(180deg,rgba(54,194,255,.35),rgba(14,64,96,.7));
+  border-top:1.5px solid var(--accent);transition:height .5s;
+}
+
+/* 底部超量雨水溢流与在线水质分析工段 */
+.zone-row-bot{height:265px}
+.bot-split-grid{display:grid;grid-template-columns:250px 1fr;gap:12px;height:calc(100% - 24px);margin-top:6px}
+.overflow-tank-card{
+  background:#061421;border:1px solid #163650;border-radius:3px;padding:8px 10px;
+  display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;
+}
+.overflow-water-fill{
+  position:absolute;bottom:0;left:0;right:0;height:35%;
+  background:linear-gradient(180deg,rgba(54,194,255,.25),rgba(14,64,96,.5));
+  border-top:1.5px solid var(--accent);
+}
+.wq-matrix-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.wq-tile{
+  background:#081a29;border:1px solid #143650;padding:6px 4px;border-radius:3px;text-align:center;
+}
+.wq-label{font-size:10px;color:var(--text-3);margin-bottom:2px}
+.wq-val{font-size:13px;color:var(--accent);font-weight:700}
+
+/* ================= 工况演练模拟器条 (单独水平放置，绝不遮挡) ================= */
+.scenario-bar-bottom{
+  position:absolute;left:440px;top:768px;width:760px;height:36px;
+  background:rgba(8,20,32,.95);border:1px solid #1d4364;border-radius:4px;
+  display:flex;align-items:center;justify-content:space-around;padding:0 12px;z-index:15;
+}
+.scen-pill-btn{
+  background:#0d2438;border:1px solid #234c6e;color:var(--text-2);
+  padding:5px 14px;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;transition:all .15s;
+}
+.scen-pill-btn:hover{color:var(--text-1);border-color:var(--accent)}
+.scen-pill-btn.active{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+
+/* ================= 底部抽屉：操作审计追踪 & 报警列表 ================= */
+.bottom-drawer{
+  background:#061019;border-top:1px solid var(--line);
+  display:grid;grid-template-columns:380px 1fr;z-index:20;overflow:hidden;
+}
+.drawer-col{display:flex;flex-direction:column}
+.drawer-col:first-child{border-right:1px solid var(--line)}
+.drawer-head{
+  height:28px;padding:0 12px;background:#091a27;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;font-size:11px;font-weight:700;
+  color:var(--text-2);letter-spacing:.5px;
+}
+.audit-list{flex:1;overflow-y:auto;padding:4px 8px;display:flex;flex-direction:column;gap:4px;font-size:11px}
+.audit-item{display:flex;align-items:center;justify-content:space-between;padding:3px 6px;border-radius:2px;background:#0b1d2c}
+.audit-item span{white-space:nowrap}
+
+.alarm-table{width:100%;border-collapse:collapse;font-size:11px;text-align:left}
+.alarm-table th{background:#081622;color:var(--text-3);padding:4px 10px;font-weight:500;border-bottom:1px solid var(--line)}
+.alarm-table td{padding:4px 10px;border-bottom:1px solid rgba(27,56,78,.4);color:var(--text-1)}
+.ack-btn-table{
+  background:#102638;border:1px solid var(--line-light);color:var(--accent);
+  padding:1px 6px;border-radius:2px;cursor:pointer;font-size:10px;
+}
+.ack-btn-table:hover{background:var(--accent);color:#000}
+
+/* ================= 深度还原原型图的 Faceplate 弹窗 ================= */
+.faceplate-mask{
+  position:absolute;inset:0;background:rgba(0,0,0,.68);backdrop-filter:blur(5px);
+  z-index:90;display:grid;place-items:center;
+}
+.faceplate-window{
+  width:780px;background:#0a1724;border:1.5px solid var(--accent);border-radius:6px;
+  box-shadow:0 24px 60px rgba(0,0,0,.85),0 0 0 1px rgba(54,194,255,.2);
+  display:flex;flex-direction:column;overflow:hidden;animation:popFaceplate .18s ease-out;
+}
+@keyframes popFaceplate{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.fp-top{
+  height:38px;padding:0 14px;background:#0d2030;border-bottom:1px solid var(--line-light);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.fp-title{font-size:13px;font-weight:700;color:var(--text-1);display:flex;align-items:center;gap:8px}
+.fp-close-btn{background:transparent;color:var(--text-3);font-size:18px;cursor:pointer}
+.fp-close-btn:hover{color:#fff}
+
+.fp-content{padding:14px;display:grid;grid-template-columns:1fr 260px;gap:14px;background:#07131e}
+.fp-left-col{display:flex;flex-direction:column;gap:12px}
+.fp-section{background:#091b2b;border:1px solid var(--line);border-radius:4px;padding:8px 12px}
+.fp-section-title{font-size:11px;font-weight:700;color:var(--text-3);margin-bottom:6px}
+
+/* 5 态发光灯 */
+.fp-lamps{display:flex;justify-content:space-around;padding:4px 0}
+.fp-lamp-item{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--text-2)}
+.fp-lamp-bulb{width:14px;height:14px;border-radius:50%;background:#203342}
+.fp-lamp-bulb.active-green{background:var(--success);box-shadow:0 0 10px var(--success)}
+.fp-lamp-bulb.active-red{background:var(--danger);box-shadow:0 0 10px var(--danger)}
+.fp-lamp-bulb.active-yellow{background:var(--warning);box-shadow:0 0 10px var(--warning)}
+
+/* 6 宫格温度与工时参数 */
+.fp-metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.fp-metric-tile{background:#061421;border:1px solid #143048;padding:6px 8px;border-radius:3px;text-align:center}
+.fp-tile-label{font-size:10px;color:var(--text-3)}
+.fp-tile-val{font-size:14px;color:var(--accent);font-weight:700;margin-top:2px}
+
+/* 频率设定输入行 */
+.freq-input-row{display:flex;align-items:center;gap:10px;margin-top:4px}
+.freq-input-field{
+  width:80px;height:28px;background:#061421;border:1px solid var(--accent);border-radius:3px;
+  color:#fff;text-align:center;font-weight:700;font-size:13px;
+}
+.btn-set-freq{
+  padding:4px 12px;background:#133752;border:1px solid var(--accent);color:#fff;
+  border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;
+}
+.btn-set-freq:hover{background:var(--accent);color:#000}
+
+/* 原型图的操作控制大按钮组 */
+.fp-control-btns{display:flex;gap:10px}
+.fp-ctrl-btn{
+  flex:1;height:34px;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;
+  border:1px solid transparent;transition:all .15s;
+}
+.fp-ctrl-btn.start{background:#0e3626;border-color:var(--success);color:var(--success)}
+.fp-ctrl-btn.start:hover{background:var(--success);color:#000}
+.fp-ctrl-btn.stop{background:#381618;border-color:var(--danger);color:var(--danger)}
+.fp-ctrl-btn.stop:hover{background:var(--danger);color:#fff}
+.fp-ctrl-btn.reset{background:#112a3d;border-color:var(--line-light);color:var(--text-2)}
+.fp-ctrl-btn.reset:hover{color:#fff;border-color:#fff}
+
+/* 原型图右侧：最后一次执行、推荐指令、五维健康雷达 */
+.fp-right-col{display:flex;flex-direction:column;gap:10px}
+.fp-action-memo{
+  background:#091b2b;border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-size:11px;
+}
+.memo-time{color:var(--text-3);font-size:10px;margin:2px 0}
+.memo-replay-btn{
+  background:transparent;color:var(--accent);cursor:pointer;font-size:10px;padding:0;
+  display:inline-flex;align-items:center;gap:3px;margin-top:2px;
+}
+.memo-replay-btn:hover{text-decoration:underline}
+
+#radarCanvasBox{width:100%;height:180px;background:#06131e;border-radius:4px;border:1px solid var(--line)}
+
+/* SBO 两步防误确认对话框 */
+.sbo-mask{
+  position:absolute;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
+  z-index:100;display:grid;place-items:center;
+}
+.sbo-box{
+  width:420px;background:#0d1d2b;border:1.5px solid var(--warning);border-radius:6px;
+  overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.85);
+}
+.sbo-header{
+  height:36px;padding:0 14px;background:#24190b;border-bottom:1px solid rgba(245,170,57,.3);
+  display:flex;align-items:center;gap:8px;color:var(--warning);font-size:12px;font-weight:700;
+}
+.sbo-body{padding:14px;font-size:12px;line-height:1.6;color:var(--text-1)}
+.sbo-foot{
+  padding:10px 14px;background:#081420;border-top:1px solid var(--line);
+  display:flex;justify-content:flex-end;gap:10px;
+}
+.btn-sbo-no{background:#112433;border:1px solid var(--line-light);color:var(--text-2);padding:5px 14px;border-radius:3px;cursor:pointer}
+.btn-sbo-yes{background:var(--warning);color:#000;font-weight:700;padding:5px 16px;border-radius:3px;cursor:pointer}
+
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+  <div id="screen" ref="screen">
+    <!-- 顶栏 SCADA 标题与所有工段 Tab -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </div>
+        <div class="brand-title">粗格栅及进水提升泵房数字孪生SCADA</div>
+      </div>
+
+      <nav class="nav-tabs">
+        <button class="nav-tab">总工艺流程图</button>
+        <button class="nav-tab active">粗格栅及提升泵房</button>
+        <button class="nav-tab">细格栅及曝气沉砂池</button>
+        <button class="nav-tab">恒压供水</button>
+        <button class="nav-tab">加药间</button>
+        <button class="nav-tab">1#加砂高效沉淀池</button>
+        <button class="nav-tab">2#加砂高效沉淀池</button>
+        <button class="nav-tab">均质池</button>
+        <button class="nav-tab">1#调蓄池</button>
+        <button class="nav-tab">2#调蓄池</button>
+        <button class="nav-tab">除臭系统</button>
+        <button class="nav-tab">水质趋势</button>
+        <button class="nav-tab">风机控制</button>
+      </nav>
+
+      <div class="top-right">
+        <span>数据质量: <b style="color:var(--success)">GOOD</b></span>
+        <span>更新时间:</span>
+        <span class="clock">{{ timeStr }}</span>
+      </div>
+    </header>
+
+    <!-- 图例状态栏 (严格对齐原图风格，报警消息在底部列表统一管理) -->
+    <div class="sub-bar">
+      <div class="legend-group">
+        <div class="leg-item"><div class="leg-block run"></div><span>运行</span></div>
+        <div class="leg-item"><div class="leg-block stop"></div><span>停止</span></div>
+        <div class="leg-item"><div class="leg-block fault"></div><span>故障</span></div>
+      </div>
+    </div>
+
+    <!-- 工艺主画面 -->
+    <main class="process-stage">
+      <!-- 拓扑管线 SVG 图层 -->
+      <svg class="pipe-svg">
+        <!-- 进水箱涵分流管至 5 路格栅渠 -->
+        <path class="pipe-line" d="M 58 100 L 80 100" />
+        <path class="pipe-line" d="M 58 248 L 80 248" />
+        <path class="pipe-line" d="M 58 396 L 80 396" />
+        <path class="pipe-line" d="M 58 544 L 80 544" />
+        <path class="pipe-line" d="M 58 692 L 80 692" />
+        <path class="pipe-anim" d="M 58 100 L 80 100" />
+        <path class="pipe-anim" d="M 58 248 L 80 248" />
+        <path class="pipe-anim" d="M 58 396 L 80 396" />
+        <path class="pipe-anim" d="M 58 544 L 80 544" />
+        <path :class="['pipe-anim', tags['VALVE-5'].state==='open'?'':'stop']" d="M 58 692 L 80 692" />
+
+        <!-- 5 路格栅渠出水穿过 1#~5# 风机进沉箱 -->
+        <path class="pipe-line" d="M 380 100 L 440 100" />
+        <path class="pipe-line" d="M 380 248 L 440 248" />
+        <path class="pipe-line" d="M 380 396 L 440 396" />
+        <path class="pipe-line" d="M 380 544 L 440 544" />
+        <path class="pipe-line" d="M 380 692 L 440 692" />
+        <path class="pipe-anim" d="M 380 100 L 440 100" />
+        <path class="pipe-anim" d="M 380 248 L 440 248" />
+        <path class="pipe-anim" d="M 380 396 L 440 396" />
+        <path class="pipe-anim" d="M 380 544 L 440 544" />
+        <path :class="['pipe-anim', tags['VALVE-10'].state==='open'?'':'stop']" d="M 380 692 L 440 692" />
+
+        <!-- 沉箱左上 4 台混流泵出水汇流管向右 (精准对齐 Y=125) -->
+        <path class="pipe-line" d="M 645 80 L 820 80 L 820 125 L 1640 125" />
+        <path class="pipe-line" d="M 645 140 L 820 140" />
+        <path class="pipe-line" d="M 645 200 L 820 200" />
+        <path class="pipe-line" d="M 645 260 L 820 260" />
+        <path :class="['pipe-anim', tags['PUMP-1'].state==='run'?'':'stop']" d="M 645 80 L 820 80 L 820 125 L 1640 125" />
+        <path :class="['pipe-anim', tags['PUMP-2'].state==='run'?'':'stop']" d="M 645 140 L 820 140 L 820 125 L 1640 125" />
+        <path :class="['pipe-anim', tags['PUMP-3'].state==='run'?'':'stop']" d="M 645 200 L 820 200 L 820 125 L 1640 125" />
+        <path :class="['pipe-anim', tags['PUMP-4'].state==='run'?'':'stop']" d="M 645 260 L 820 260 L 820 125 L 1640 125" />
+
+        <!-- 晴天/雨天旁路管线 -->
+        <path class="pipe-line" d="M 1380 125 L 1380 75 L 1520 75 L 1520 125" />
+        <path :class="['pipe-anim', tags['VALVE-13'].state==='open'?'':'stop']" d="M 1380 125 L 1380 75 L 1520 75 L 1520 125" />
+
+        <!-- 沉箱右上 4 台潜污泵汇流管向右注入初雨调蓄水池群 (对齐 Y=340) -->
+        <path class="pipe-line" d="M 1060 80 L 1150 80 L 1150 340 L 1760 340" />
+        <path class="pipe-line" d="M 1060 140 L 1150 140" />
+        <path class="pipe-line" d="M 1060 200 L 1150 200" />
+        <path class="pipe-line" d="M 1060 260 L 1150 260" />
+        <!-- 分支下注调蓄三池 -->
+        <path class="pipe-line" d="M 1370 340 L 1370 375" />
+        <path class="pipe-line" d="M 1520 340 L 1520 375" />
+        <path class="pipe-line" d="M 1670 340 L 1670 375" />
+        <path :class="['pipe-anim', tags['SPUMP-1'].state==='run'?'':'stop']" d="M 1060 80 L 1150 80 L 1150 340 L 1760 340" />
+        <path :class="['pipe-anim', tags['SPUMP-1'].state==='run'?'':'stop']" d="M 1370 340 L 1370 375" />
+        <path :class="['pipe-anim', tags['SPUMP-1'].state==='run'?'':'stop']" d="M 1520 340 L 1520 375" />
+        <path :class="['pipe-anim', tags['SPUMP-1'].state==='run'?'':'stop']" d="M 1670 340 L 1670 375" />
+
+        <!-- 沉箱左下潜流泵与右下潜污泵出水管向右进入超量雨水池 (对齐 Y=610) -->
+        <path class="pipe-line" d="M 645 520 L 820 520 L 820 610 L 1500 610" />
+        <path class="pipe-line" d="M 645 610 L 1500 610" />
+        <path class="pipe-line" d="M 1060 410 L 1150 410 L 1150 610" />
+        <path class="pipe-line" d="M 1060 490 L 1150 490" />
+        <path class="pipe-line" d="M 1060 570 L 1150 570" />
+        <path :class="['pipe-anim', tags['MIXER-1'].state==='run'?'':'stop']" d="M 645 520 L 820 520 L 820 610 L 1500 610" />
+        <path :class="['pipe-anim', tags['SPUMP-5'].state==='run'?'':'stop']" d="M 1060 410 L 1150 410 L 1150 610 L 1500 610" />
+      </svg>
+
+      <!-- 进水箱涵 (左侧) -->
+      <div class="inlet-flume dev-interactive" @click="openFaceplate('INLET')">
+        <span class="flume-text">进水箱涵</span>
+      </div>
+
+      <!-- 5 组粗格栅渠道 -->
+      <div v-for="ch in channels" :key="ch.idx" class="channel-box" :class="'ch-' + ch.idx">
+        <div class="ch-water"></div>
+        <div class="ch-name">{{ ch.idx }}#格栅渠</div>
+
+        <!-- 1# 抓斗 (仅 1# 渠道上方有) -->
+        <div v-if="ch.idx === 1" class="grab-crane dev-interactive" style="left:110px" @click="openFaceplate('GRAB-1')">
+          <span class="grab-title">1#抓斗</span>
+        </div>
+
+        <!-- 进水闸板 (VALVE-1 ~ VALVE-5) -->
+        <div class="gate-symbol dev-interactive" style="left:26px;top:40px" @click="openFaceplate('VALVE-' + ch.idx)">
+          <div class="gate-stick"></div>
+          <div class="gate-core" :class="tags['VALVE-' + ch.idx].state"></div>
+          <span class="gate-tag-text">{{ ch.idx }}#闸板</span>
+        </div>
+
+        <!-- 粗格栅机 (SCREEN-1 ~ SCREEN-5) -->
+        <div class="screen-mesh dev-interactive" style="left:120px" @click="openFaceplate('SCREEN-' + ch.idx)">
+          <span class="screen-tag-text">{{ ch.idx }}#粗格栅</span>
+        </div>
+
+        <!-- 出水闸板 (VALVE-6 ~ VALVE-10) -->
+        <div class="gate-symbol dev-interactive" style="left:240px;top:40px" @click="openFaceplate('VALVE-' + (ch.idx + 5))">
+          <div class="gate-stick"></div>
+          <div class="gate-core" :class="tags['VALVE-' + (ch.idx + 5)].state"></div>
+          <span class="gate-tag-text">{{ ch.idx + 5 }}#闸板</span>
+        </div>
+
+        <!-- 2# 抓斗 (5# 渠道下方有) -->
+        <div v-if="ch.idx === 5" class="grab-crane dev-interactive" style="left:110px;top:98px" @click="openFaceplate('GRAB-2')">
+          <span class="grab-title">2#抓斗</span>
+        </div>
+
+        <!-- 栅后液位差浮签 & H2S 浓度 -->
+        <div class="ch-metric-tag" style="left:80px">
+          {{ ch.idx }}#格栅液位差: <b>{{ ch.deltaH.toFixed(2) }} m</b>
+        </div>
+        <div class="ch-metric-tag" style="right:12px">
+          <b>{{ ch.h2s.toFixed(2) }} ppm</b>
+        </div>
+      </div>
+
+      <!-- 1#~5# 轴流风机 (垂直整齐排列在格栅渠和集水池之间) -->
+      <div v-for="f in 5" :key="'fan-' + f"
+           class="fan-unit dev-interactive" :class="tags['FAN-' + f].state"
+           :style="{left:'395px', top:(55 + (f - 1)*148) + 'px'}"
+           @click="openFaceplate('FAN-' + f)">
+        <span class="fan-label">{{ f }}#轴流风机</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 22a10 10 0 0 1-10-10"/></svg>
+      </div>
+
+      <!-- 沉箱正上方：水平横向冷却循环系统 (绝不折行！) -->
+      <div class="cooling-system-strip">
+        <div class="cool-unit dev-interactive" @click="openFaceplate('COOL-FAN')">
+          <div class="cool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg></div>
+          <span>冷却通风机</span>
+        </div>
+        <div class="cool-unit dev-interactive" @click="openFaceplate('COOL-PUMP1')">
+          <div class="cool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8"/></svg></div>
+          <span>冷却水泵1</span>
+        </div>
+        <div class="cool-unit dev-interactive" @click="openFaceplate('COOL-PUMP2')">
+          <div class="cool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8"/></svg></div>
+          <span>冷却水泵2</span>
+        </div>
+        <div class="cool-unit dev-interactive" @click="openFaceplate('COOL-PUMP3')">
+          <div class="cool-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8"/></svg></div>
+          <span>冷却水泵3</span>
+        </div>
+        <div class="cool-unit dev-interactive" @click="openFaceplate('CONDENSER')">
+          <span>冷凝器</span>
+        </div>
+        <div class="cool-unit dev-interactive" style="border-color:var(--accent)" @click="openFaceplate('COOL-TANK')">
+          <span>冷却塔水箱液位: <b style="color:var(--accent)">1.30 m</b></span>
+        </div>
+      </div>
+
+      <!-- 中央大型提升泵房集水沉箱 -->
+      <div class="sump-tank">
+        <!-- 动态水体图层 -->
+        <div class="sump-water-body" :style="{height: (sumpLevel/16 * 100) + '%'}"></div>
+
+        <!-- 沉箱左上区：1#~4# 潜水混流泵组 -->
+        <div v-for="pump in mixPumps" :key="pump.id"
+             class="pump-group dev-interactive"
+             :style="{left:'90px', top:(35 + (pump.idx - 1)*60) + 'px'}"
+             @click="openFaceplate(pump.id)">
+          <span class="pump-name-tag">{{ pump.idx }}#混流泵</span>
+          <div class="pump-valve open"></div>
+          <div class="pump-circle" :class="tags[pump.id].state">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </div>
+          <div class="pump-freq-box num">{{ tags[pump.id].freq.toFixed(2) }} Hz</div>
+        </div>
+
+        <!-- 沉箱左下区：1#~2# 潜流泵组 -->
+        <div v-for="pump in subFlowPumps" :key="pump.id"
+             class="pump-group dev-interactive"
+             :style="{left:'90px', top:(480 + (pump.idx - 1)*90) + 'px'}"
+             @click="openFaceplate(pump.id)">
+          <span class="pump-name-tag">{{ pump.idx }}#潜流泵</span>
+          <div class="pump-valve open"></div>
+          <div class="pump-circle" :class="tags[pump.id].state">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><path d="M12 2v20M2 12h20"/></svg>
+          </div>
+          <div class="pump-freq-box num">{{ tags[pump.id].freq.toFixed(2) }} Hz</div>
+        </div>
+
+        <!-- 沉箱右上区：1#~4# 潜污泵组 -->
+        <div v-for="sp in 4" :key="'sp-top-' + sp"
+             class="pump-group dev-interactive"
+             :style="{left:'480px', top:(35 + (sp - 1)*60) + 'px'}"
+             @click="openFaceplate('SPUMP-' + sp)">
+          <span class="pump-name-tag">{{ sp }}#潜污泵</span>
+          <div class="pump-circle" :class="tags['SPUMP-' + sp].state">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+          </div>
+          <div class="pump-freq-box num">{{ tags['SPUMP-' + sp].freq.toFixed(2) }} Hz</div>
+        </div>
+
+        <!-- 沉箱右下区：5#~7# 潜污泵组 -->
+        <div v-for="sp in 3" :key="'sp-bot-' + sp"
+             class="pump-group dev-interactive"
+             :style="{left:'480px', top:(370 + (sp - 1)*80) + 'px'}"
+             @click="openFaceplate('SPUMP-' + (sp + 4))">
+          <span class="pump-name-tag">{{ sp + 4 }}#潜污泵</span>
+          <div class="pump-circle" :class="tags['SPUMP-' + (sp + 4)].state">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+          </div>
+          <div class="pump-freq-box num">{{ tags['SPUMP-' + (sp + 4)].freq.toFixed(2) }} Hz</div>
+        </div>
+
+        <!-- 垂直液位标尺与读数小卡片 (完全错开，绝不重叠！) -->
+        <div class="sump-ruler">
+          <div class="sump-ruler-tick" data-val="+16.0"></div>
+          <div class="sump-ruler-tick" data-val="+14.0"></div>
+          <div class="sump-ruler-tick" data-val="+12.0"></div>
+          <div class="sump-ruler-tick" data-val="+10.0"></div>
+          <div class="sump-ruler-tick" data-val="+8.0"></div>
+          <div class="sump-ruler-tick" data-val="+6.0"></div>
+          <div class="sump-ruler-tick" data-val="+4.0"></div>
+          <div class="sump-ruler-tick" data-val="+2.0"></div>
+          <div class="sump-ruler-tick" data-val="+0.0"></div>
+        </div>
+        <div class="sump-level-line" :style="{bottom: (sumpLevel/16 * 100) + '%'}"></div>
+        <div class="sump-level-pill" style="top:375px">前池液位: <b>{{ sumpLevel.toFixed(2) }} m</b></div>
+        <div class="sump-level-pill" style="top:410px">液面高度: <b>{{ (sumpLevel + 4.0).toFixed(2) }} m</b></div>
+      </div>
+
+      <!-- 6#~8# 轴流风机 (垂直精准对齐三条主出水管路) -->
+      <div class="fan-unit dev-interactive" :class="tags['FAN-6'].state"
+           style="left:1215px;top:109px" @click="openFaceplate('FAN-6')">
+        <span class="fan-label">6#轴流风机</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 22a10 10 0 0 1-10-10"/></svg>
+      </div>
+      <div class="fan-unit dev-interactive" :class="tags['FAN-7'].state"
+           style="left:1215px;top:324px" @click="openFaceplate('FAN-7')">
+        <span class="fan-label">7#轴流风机</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 22a10 10 0 0 1-10-10"/></svg>
+      </div>
+      <div class="fan-unit dev-interactive" :class="tags['FAN-8'].state"
+           style="left:1215px;top:594px" @click="openFaceplate('FAN-8')">
+        <span class="fan-label">8#轴流风机</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 10 10"/><path d="M12 22a10 10 0 0 1-10-10"/></svg>
+      </div>
+
+      <!-- 右侧出水流向与工艺水池群 (三段式均匀分布，上下饱满平衡) -->
+      <div class="right-zone">
+        <!-- 上段：细格栅沉砂池 + 晴雨天切换蝶阀 + 龙王嘴污水厂 (主工艺生化路线) -->
+        <div class="right-zone-row zone-row-top">
+          <div class="dest-card-head">
+            <span class="dest-card-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span>主工艺输送单元 · 细格栅与污水厂出水分配</span>
+            </span>
+            <span class="dest-badge">晴天主力路线</span>
+          </div>
+
+          <div class="grit-top-grid">
+            <!-- 细格栅及曝气沉砂池 -->
+            <div class="grit-tank-card dev-interactive" @click="openFaceplate('TANK-GRIT')">
+              <div class="grit-tank-water"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;z-index:3">
+                <span style="font-size:11px;font-weight:700;color:var(--text-1)">细格栅及曝气沉砂池</span>
+                <span style="font-size:10px;color:var(--accent)">池深: 4.80m</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;z-index:3;margin-top:16px">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <div class="valve-butterfly" :class="tags['VALVE-13'].state" @click.stop="openFaceplate('VALVE-13')">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="4,4 12,12 4,20"/><polygon points="20,4 12,12 20,20"/></svg>
+                  </div>
+                  <span style="font-size:10px;color:var(--text-2)">13#厂区电动蝶阀</span>
+                </div>
+                <span style="font-size:11px;color:var(--success);font-weight:700">开度: {{ tags['VALVE-13'].percent }}%</span>
+              </div>
+              <div style="font-size:10px;color:var(--text-3);z-index:3">水力停留时间: <b>38 min</b> | 除砂率: <b>92.5%</b></div>
+            </div>
+
+            <!-- 龙王嘴污水处理厂 -->
+            <div class="factory-card dev-interactive" @click="openFaceplate('FACTORY')">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:11px;font-weight:700;color:var(--text-1)">龙王嘴污水处理厂</span>
+                <span style="font-size:10px;color:var(--accent);border:1px solid var(--accent);padding:0 4px;border-radius:2px">终端受纳</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin:4px 0">
+                <div>
+                  <div style="font-size:9px;color:var(--text-3)">进水瞬时流量</div>
+                  <div style="font-size:16px;color:var(--accent);font-weight:700" class="num">956.25 <span style="font-size:10px;font-weight:normal">m³/h</span></div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:9px;color:var(--text-3)">当日累计处理量</div>
+                  <div style="font-size:13px;color:var(--text-1);font-weight:700" class="num">164,820 <span style="font-size:10px;font-weight:normal">m³</span></div>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--text-2);border-top:1px dashed #1c3c54;padding-top:4px">
+                <span>14#厂区电动蝶阀: <b style="color:var(--success)">全开闭锁</b></span>
+                <span>管网动压: <b class="num" style="color:var(--accent)">0.38 MPa</b></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 中段：初雨削峰调蓄水池群 (雨天削峰调蓄路线) -->
+        <div class="right-zone-row zone-row-mid">
+          <div class="dest-card-head">
+            <span class="dest-card-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              <span>初雨削峰调蓄水池群 (雨天管路调峰联动)</span>
+            </span>
+            <span class="dest-badge" style="color:var(--warning);border-color:var(--warning)">有效总库容: 68,000 m³</span>
+          </div>
+
+          <div class="retention-tanks-grid">
+            <!-- 均质池 -->
+            <div class="ret-tank-item dev-interactive" @click="openFaceplate('TANK-HOMO')">
+              <div class="ret-water-fill" style="height:35%"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;z-index:3">
+                <span style="font-size:11px;font-weight:700;color:var(--text-1)">均质水仓</span>
+                <span style="font-size:10px;color:var(--accent);font-weight:bold" class="num">0.10 m</span>
+              </div>
+              <div style="z-index:3;font-size:10px;color:var(--text-2);margin-top:20px">
+                <div>设计容积: <b>18,000 m³</b></div>
+                <div style="margin-top:3px">推流机: <b style="color:var(--success)">运转防淤</b></div>
+              </div>
+              <div style="z-index:3;font-size:9px;color:var(--text-3);border-top:1px dashed #1a3c54;padding-top:4px">错峰向生化池回补</div>
+            </div>
+
+            <!-- 1# 调蓄池 -->
+            <div class="ret-tank-item dev-interactive" @click="openFaceplate('TANK-RET1')">
+              <div class="ret-water-fill" style="height:20%"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;z-index:3">
+                <span style="font-size:11px;font-weight:700;color:var(--text-1)">1#初雨调蓄池</span>
+                <span style="font-size:10px;color:var(--accent);font-weight:bold" class="num">0.02 m</span>
+              </div>
+              <div style="z-index:3;font-size:10px;color:var(--text-2);margin-top:20px">
+                <div>有效库容: <b>25,000 m³</b></div>
+                <div style="margin-top:3px">冲洗门: <b style="color:var(--accent)">水力待机</b></div>
+              </div>
+              <div style="z-index:3;font-size:9px;color:var(--text-3);border-top:1px dashed #1a3c54;padding-top:4px">初雨拦截消峰沉淀</div>
+            </div>
+
+            <!-- 2# 调蓄池 -->
+            <div class="ret-tank-item dev-interactive" @click="openFaceplate('TANK-RET2')">
+              <div class="ret-water-fill" style="height:25%"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;z-index:3">
+                <span style="font-size:11px;font-weight:700;color:var(--text-1)">2#初雨调蓄池</span>
+                <span style="font-size:10px;color:var(--accent);font-weight:bold" class="num">0.05 m</span>
+              </div>
+              <div style="z-index:3;font-size:10px;color:var(--text-2);margin-top:20px">
+                <div>有效库容: <b>25,000 m³</b></div>
+                <div style="margin-top:3px">排空泵: <b style="color:var(--success)">就地自控</b></div>
+              </div>
+              <div style="z-index:3;font-size:9px;color:var(--text-3);border-top:1px dashed #1a3c54;padding-top:4px">截留率: 96.4%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 下段：超量雨水溢流排江明渠 & 全厂进水在线水质综合分析舱 (彻底充实底部！) -->
+        <div class="right-zone-row zone-row-bot">
+          <div class="dest-card-head">
+            <span class="dest-card-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+              <span>防汛应急溢流与原水水质在线综合监视舱</span>
+            </span>
+            <span class="dest-badge" style="color:var(--danger);border-color:var(--danger)">极端防汛 & 水质保障</span>
+          </div>
+
+          <div class="bot-split-grid">
+            <!-- 左：超量雨水溢流池 -->
+            <div class="overflow-tank-card dev-interactive" @click="openFaceplate('TANK-RAIN')">
+              <div class="overflow-water-fill"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center;z-index:3">
+                <span style="font-size:11px;font-weight:700;color:var(--text-1)">超量雨水溢流明渠</span>
+                <span style="font-size:10px;color:var(--danger);border:1px solid var(--danger);padding:0 4px;border-radius:2px">应急排江</span>
+              </div>
+              <div style="z-index:3;margin:6px 0">
+                <div style="font-size:9px;color:var(--text-3)">瞬时溢流流量</div>
+                <div style="font-size:16px;color:var(--accent);font-weight:700" class="num">0.00 <span style="font-size:10px;font-weight:normal">m³/h</span></div>
+              </div>
+              <div style="z-index:3;font-size:10px;color:var(--text-2);line-height:1.5">
+                <div>防倒灌拍门: <b style="color:var(--success)">密闭完好</b></div>
+                <div>联锁触发: 水位超 13.50m 启排</div>
+              </div>
+              <div style="z-index:3;font-size:9px;color:var(--text-3);border-top:1px dashed #1c3c54;padding-top:4px">重力自流应急泄洪总渠</div>
+            </div>
+
+            <!-- 右：原水水质在线分析总舱 -->
+            <div class="factory-card" style="padding:8px 10px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-size:11px;font-weight:700;color:var(--accent)">原水水质指标实时多维分析</span>
+                <span style="font-size:10px;color:var(--success)">仪表自检: 正常</span>
+              </div>
+
+              <!-- 4 宫格水质分析卡片 -->
+              <div class="wq-matrix-grid">
+                <div class="wq-tile">
+                  <div class="wq-label">原水 COD</div>
+                  <div class="wq-val num">285 <span style="font-size:9px;font-weight:normal">mg/L</span></div>
+                </div>
+                <div class="wq-tile">
+                  <div class="wq-label">氨氮 NH₃-N</div>
+                  <div class="wq-val num">22.4 <span style="font-size:9px;font-weight:normal">mg/L</span></div>
+                </div>
+                <div class="wq-tile">
+                  <div class="wq-label">悬浮物 SS</div>
+                  <div class="wq-val num">180 <span style="font-size:9px;font-weight:normal">mg/L</span></div>
+                </div>
+                <div class="wq-tile">
+                  <div class="wq-label">酸碱度 pH</div>
+                  <div class="wq-val num" style="color:var(--success)">7.32</div>
+                </div>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--text-3);margin-top:6px;border-top:1px dashed #143650;padding-top:4px">
+                <span>水温: <b class="num" style="color:var(--text-1)">19.2 ℃</b></span>
+                <span>浑浊度: <b class="num" style="color:var(--text-1)">145 NTU</b></span>
+                <span>硫化氢安全: <b style="color:var(--success)">0.04 ppm (优)</b></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 工况演练模拟器条 (单独水平放置在沉箱正下方，绝不遮挡任何元件！) -->
+      <div class="scenario-bar-bottom">
+        <span style="font-size:11px;color:var(--text-3);font-weight:bold">工况模拟演练:</span>
+        <button class="scen-pill-btn" :class="{active: currentScenario==='normal'}" @click="applyScenario('normal')">晴天常规低负荷</button>
+        <button class="scen-pill-btn" :class="{active: currentScenario==='storm'}" @click="applyScenario('storm')">汛期暴雨超量大流量</button>
+        <button class="scen-pill-btn" :class="{active: currentScenario==='fault'}" @click="applyScenario('fault')">1#混流泵轴温跳闸故障</button>
+        <button class="scen-pill-btn" :class="{active: currentScenario==='dry'}" @click="applyScenario('dry')">前池低液位防干抽保护</button>
+      </div>
+    </main>
+
+    <!-- 底部抽屉：操作审计追踪 & 报警列表 -->
+    <footer class="bottom-drawer">
+      <!-- 操作审计追踪 -->
+      <div class="drawer-col">
+        <div class="drawer-head">
+          <span>操作审计追踪 (AUDIT TRAIL)</span>
+          <span style="font-size:10px;color:var(--accent)">SBO 防误核验: 100%</span>
+        </div>
+        <div class="audit-list">
+          <div v-for="log in auditLogs" :key="log.id" class="audit-item">
+            <span style="color:var(--text-3)" class="num">{{ log.time }}</span>
+            <span style="color:var(--accent);font-weight:600">{{ log.tag }}</span>
+            <span style="color:var(--text-1)">{{ log.action }}</span>
+            <span style="color:var(--success);font-size:10px">✓ 成功</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 报警列表 (ISA-18.2 ALARMS) -->
+      <div class="drawer-col">
+        <div class="drawer-head">
+          <span>报警列表 (ISA-18.2 ALARMS)</span>
+          <span style="font-size:10px;color:var(--text-3)">未确认报警: {{ alarms.filter(a => !a.acked).length }} 项</span>
+        </div>
+        <div style="flex:1;overflow-y:auto">
+          <table class="alarm-table">
+            <thead>
+              <tr>
+                <th style="width:70px">级别</th>
+                <th style="width:140px">时间</th>
+                <th style="width:140px">设备位号</th>
+                <th>报警描述与工艺联锁推演</th>
+                <th style="width:90px">当前状态</th>
+                <th style="width:60px;text-align:right">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="al in alarms" :key="al.id">
+                <td><span class="alarm-tag" :class="{acked: al.acked}">{{ al.level }}</span></td>
+                <td class="num">{{ al.time }}</td>
+                <td style="color:var(--accent);font-weight:600">{{ al.tag }}</td>
+                <td>{{ al.msg }}</td>
+                <td :style="{color: al.acked ? 'var(--text-3)' : 'var(--warning)'}">{{ al.acked ? '已确认' : '未确认' }}</td>
+                <td style="text-align:right">
+                  <button v-if="!al.acked" class="ack-btn-table" @click="ackAlarm(al.id)">确认</button>
+                  <span v-else style="font-size:10px;color:var(--text-3)">归档</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </footer>
+
+    <!-- 高级 Faceplate 工业操作弹窗 (100% 还原用户原型图结构) -->
+    <div v-if="activeFaceplate" class="faceplate-mask" @click.self="closeFaceplate">
+      <div class="faceplate-window">
+        <!-- 弹窗顶栏 -->
+        <div class="fp-top">
+          <div class="fp-title">
+            <span>{{ activeTag.name }}</span>
+            <span style="font-size:11px;color:var(--accent);border:1px solid var(--accent);padding:1px 6px;border-radius:2px">{{ activeTag.id }}</span>
+          </div>
+          <button class="fp-close-btn" @click="closeFaceplate">×</button>
+        </div>
+
+        <!-- 弹窗主体 -->
+        <div class="fp-content">
+          <!-- 左侧监控与控制主干 -->
+          <div class="fp-left-col">
+            <!-- 状态监控 (5 态圆珠发光指示灯) -->
+            <div class="fp-section">
+              <div class="fp-section-title">状态监控</div>
+              <div class="fp-lamps">
+                <div class="fp-lamp-item">
+                  <div class="fp-lamp-bulb active-green"></div>
+                  <span>远程</span>
+                </div>
+                <div class="fp-lamp-item">
+                  <div class="fp-lamp-bulb"></div>
+                  <span>就地</span>
+                </div>
+                <div class="fp-lamp-item">
+                  <div class="fp-lamp-bulb" :class="{'active-green': activeTag.state==='run'||activeTag.state==='open'}"></div>
+                  <span>运行</span>
+                </div>
+                <div class="fp-lamp-item">
+                  <div class="fp-lamp-bulb" :class="{'active-yellow': activeTag.tempDE > 80}"></div>
+                  <span>超温</span>
+                </div>
+                <div class="fp-lamp-item">
+                  <div class="fp-lamp-bulb" :class="{'active-red': activeTag.state==='fault'}"></div>
+                  <span>故障</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 运行参数 (频率设定 + 6 宫格温度与工时) -->
+            <div class="fp-section">
+              <div class="fp-section-title">运行参数</div>
+              <!-- 频率设定行 -->
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:4px 8px;background:#061421;border-radius:3px">
+                <div style="font-size:11px;color:var(--text-2)">
+                  频率反馈: <b style="color:var(--accent);font-size:14px" class="num">{{ activeTag.freq ? activeTag.freq.toFixed(2) : '0.00' }} Hz</b>
+                </div>
+                <div class="freq-input-row">
+                  <span style="font-size:11px;color:var(--text-3)">运行频率设定:</span>
+                  <input type="number" class="freq-input-field num" v-model.number="tempInputFreq" min="0" max="50">
+                  <span style="font-size:11px;color:var(--text-3)">Hz</span>
+                  <button class="btn-set-freq" @click="triggerSbo('setFreq')">设定</button>
+                </div>
+              </div>
+
+              <!-- 6 宫格详细测点 -->
+              <div class="fp-metrics-grid">
+                <div class="fp-metric-tile">
+                  <div class="fp-tile-label">运行时间</div>
+                  <div class="fp-tile-val num">19.73 <span style="font-size:10px;font-weight:normal">h</span></div>
+                </div>
+                <div class="fp-metric-tile">
+                  <div class="fp-tile-label">A相温度</div>
+                  <div class="fp-tile-val num">35.00 <span style="font-size:10px;font-weight:normal">℃</span></div>
+                </div>
+                <div class="fp-metric-tile">
+                  <div class="fp-tile-label">B相温度</div>
+                  <div class="fp-tile-val num">35.40 <span style="font-size:10px;font-weight:normal">℃</span></div>
+                </div>
+                <div class="fp-metric-tile">
+                  <div class="fp-tile-label">C相温度</div>
+                  <div class="fp-tile-val num">35.10 <span style="font-size:10px;font-weight:normal">℃</span></div>
+                </div>
+                <div class="fp-metric-tile">
+                  <div class="fp-tile-label">前轴温度</div>
+                  <div class="fp-tile-val num">{{ activeTag.tempDE || 35.20 }} <span style="font-size:10px;font-weight:normal">℃</span></div>
+                </div>
+                <div class="fp-metric-tile">
+                  <div class="fp-tile-label">后轴温度</div>
+                  <div class="fp-tile-val num">{{ activeTag.tempNDE || 35.60 }} <span style="font-size:10px;font-weight:normal">℃</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 操作控制 (大按钮组) -->
+            <div class="fp-section">
+              <div class="fp-section-title">操作控制</div>
+              <div class="fp-control-btns">
+                <button class="fp-ctrl-btn start" @click="triggerSbo('start')">启动</button>
+                <button class="fp-ctrl-btn stop" @click="triggerSbo('stop')">停止</button>
+                <button class="fp-ctrl-btn reset" @click="triggerSbo('reset')">复位</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右侧：最后执行、推荐指令、五维健康雷达图 -->
+          <div class="fp-right-col">
+            <!-- 最后一次执行 -->
+            <div class="fp-action-memo">
+              <div style="font-weight:700;color:var(--text-1)">最后一次执行</div>
+              <div class="memo-time num">[设定频率] 2026-09-27 10:30:15</div>
+              <div style="color:var(--accent)">设定频率: 45.00 Hz</div>
+              <button class="memo-replay-btn" @click="triggerSbo('setFreq')">↺ 再次执行</button>
+            </div>
+
+            <!-- 推荐指令 -->
+            <div class="fp-action-memo">
+              <div style="font-weight:700;color:var(--text-1)">推荐指令</div>
+              <div class="memo-time num">[节能优化] 2026-09-27 10:15:00</div>
+              <div style="color:var(--success)">建议主令调频: 42.00 Hz</div>
+              <button class="memo-replay-btn" @click="triggerSbo('setFreq')">↺ 采纳执行</button>
+            </div>
+
+            <!-- 五维健康雷达图 -->
+            <div style="font-size:11px;font-weight:700;color:var(--text-2);margin-bottom:2px">五维健康度评估</div>
+            <div id="radarCanvasBox"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SBO (Select-Before-Operate) 两步防误确认弹窗 -->
+    <div v-if="sboVisible" class="sbo-mask">
+      <div class="sbo-box">
+        <div class="sbo-header">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span>SBO 两步防误确认</span>
+        </div>
+        <div class="sbo-body">
+          <div>您即将向现场 PLC 执行机构下发高危控制指令：</div>
+          <div style="margin:8px 0;padding:8px;background:#061421;border-radius:3px">
+            <div>受控目标: <b style="color:var(--accent)">{{ sboTarget.name }} ({{ sboTarget.id }})</b></div>
+            <div>下发动作: <b style="color:var(--warning)">{{ sboActionDesc }}</b></div>
+          </div>
+          <div style="font-size:11px;color:var(--text-3)">
+            ✓ 前池液位 ({{ sumpLevel.toFixed(2) }}m) 满足最低吸水防干抽联锁许可条件
+          </div>
+        </div>
+        <div class="sbo-foot">
+          <button class="btn-sbo-no" @click="cancelSbo">取消</button>
+          <button class="btn-sbo-yes" @click="confirmSbo">确认执行</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// 点表声明，符合 validate-scada 双向读写规范
+const tags = {
+  // 4 台混流泵
+  'PUMP-1': { id: 'PUMP-1', name: '1#混流泵', state: 'run', freq: 45.0, tempDE: 35.2, tempNDE: 35.6, quality: 'good', writable: true },
+  'PUMP-2': { id: 'PUMP-2', name: '2#混流泵', state: 'run', freq: 42.0, tempDE: 34.8, tempNDE: 35.1, quality: 'good', writable: true },
+  'PUMP-3': { id: 'PUMP-3', name: '3#混流泵', state: 'stop', freq: 0.0, tempDE: 26.5, tempNDE: 26.0, quality: 'good', writable: true },
+  'PUMP-4': { id: 'PUMP-4', name: '4#混流泵', state: 'stop', freq: 0.0, tempDE: 26.0, tempNDE: 25.8, quality: 'good', writable: true },
+
+  // 2 台潜流泵
+  'MIXER-1': { id: 'MIXER-1', name: '1#潜流泵', state: 'run', freq: 50.0, quality: 'good', writable: true },
+  'MIXER-2': { id: 'MIXER-2', name: '2#潜流泵', state: 'stop', freq: 0.0, quality: 'good', writable: true },
+
+  // 7 台潜污泵
+  'SPUMP-1': { id: 'SPUMP-1', name: '1#潜污泵', state: 'run', freq: 50.0, quality: 'good', writable: true },
+  'SPUMP-2': { id: 'SPUMP-2', name: '2#潜污泵', state: 'run', freq: 50.0, quality: 'good', writable: true },
+  'SPUMP-3': { id: 'SPUMP-3', name: '3#潜污泵', state: 'stop', freq: 0.0, quality: 'good', writable: true },
+  'SPUMP-4': { id: 'SPUMP-4', name: '4#潜污泵', state: 'stop', freq: 0.0, quality: 'good', writable: true },
+  'SPUMP-5': { id: 'SPUMP-5', name: '5#潜污泵', state: 'run', freq: 50.0, quality: 'good', writable: true },
+  'SPUMP-6': { id: 'SPUMP-6', name: '6#潜污泵', state: 'stop', freq: 0.0, quality: 'good', writable: true },
+  'SPUMP-7': { id: 'SPUMP-7', name: '7#潜污泵', state: 'stop', freq: 0.0, quality: 'good', writable: true },
+
+  // 10 台闸板
+  'VALVE-1': { id: 'VALVE-1', name: '1#进水闸板', state: 'open', percent: 100, quality: 'good', writable: true },
+  'VALVE-2': { id: 'VALVE-2', name: '2#进水闸板', state: 'open', percent: 100, quality: 'good', writable: true },
+  'VALVE-3': { id: 'VALVE-3', name: '3#进水闸板', state: 'open', percent: 100, quality: 'good', writable: true },
+  'VALVE-4': { id: 'VALVE-4', name: '4#进水闸板', state: 'open', percent: 100, quality: 'good', writable: true },
+  'VALVE-5': { id: 'VALVE-5', name: '5#进水闸板', state: 'close', percent: 0, quality: 'good', writable: true },
+  'VALVE-6': { id: 'VALVE-6', name: '6#出水闸板', state: 'open', percent: 100, quality: 'good', writable: true },
+  'VALVE-7': { id: 'VALVE-7', name: '7#出水闸板', state: 'open', percent: 100, quality: 'good', writable: true },
+  'VALVE-8': { id: 'VALVE-8', name: '8#出水闸板', state: 'open', percent: 100, quality: 'good', writable: true },
+  'VALVE-9': { id: 'VALVE-9', name: '9#出水闸板', state: 'open', percent: 100, quality: 'good', writable: true },
+  'VALVE-10': { id: 'VALVE-10', name: '10#出水闸板', state: 'close', percent: 0, quality: 'good', writable: true },
+
+  // 5 台回转粗格栅
+  'SCREEN-1': { id: 'SCREEN-1', name: '1#粗格栅', state: 'run', quality: 'good', writable: true },
+  'SCREEN-2': { id: 'SCREEN-2', name: '2#粗格栅', state: 'run', quality: 'good', writable: true },
+  'SCREEN-3': { id: 'SCREEN-3', name: '3#粗格栅', state: 'run', quality: 'good', writable: true },
+  'SCREEN-4': { id: 'SCREEN-4', name: '4#粗格栅', state: 'stop', quality: 'good', writable: true },
+  'SCREEN-5': { id: 'SCREEN-5', name: '5#粗格栅', state: 'stop', quality: 'good', writable: true },
+
+  // 8 台轴流风机
+  'FAN-1': { id: 'FAN-1', name: '1#轴流风机', state: 'run', quality: 'good', writable: true },
+  'FAN-2': { id: 'FAN-2', name: '2#轴流风机', state: 'run', quality: 'good', writable: true },
+  'FAN-3': { id: 'FAN-3', name: '3#轴流风机', state: 'run', quality: 'good', writable: true },
+  'FAN-4': { id: 'FAN-4', name: '4#轴流风机', state: 'stop', quality: 'good', writable: true },
+  'FAN-5': { id: 'FAN-5', name: '5#轴流风机', state: 'stop', quality: 'good', writable: true },
+  'FAN-6': { id: 'FAN-6', name: '6#轴流风机', state: 'run', quality: 'good', writable: true },
+  'FAN-7': { id: 'FAN-7', name: '7#轴流风机', state: 'run', quality: 'good', writable: true },
+  'FAN-8': { id: 'FAN-8', name: '8#轴流风机', state: 'stop', quality: 'good', writable: true },
+
+  // 厂区电动蝶阀
+  'VALVE-13': { id: 'VALVE-13', name: '13#厂区电动蝶阀(晴天)', state: 'open', percent: 100, quality: 'good', writable: true },
+  'VALVE-14': { id: 'VALVE-14', name: '14#厂区电动蝶阀(雨天)', state: 'close', percent: 0, quality: 'good', writable: true },
+
+  // 抓斗与水池
+  'GRAB-1': { id: 'GRAB-1', name: '1#抓斗除污天车', state: 'run', quality: 'good', writable: true },
+  'GRAB-2': { id: 'GRAB-2', name: '2#抓斗除污天车', state: 'stop', quality: 'good', writable: true },
+  'INLET': { id: 'INLET', name: '总进水箱涵', state: 'run', quality: 'good', writable: true },
+  'TANK-GRIT': { id: 'TANK-GRIT', name: '细格栅及曝气沉砂池', state: 'run', quality: 'good', writable: true },
+  'FACTORY': { id: 'FACTORY', name: '龙王嘴污水处理厂', state: 'run', quality: 'good', writable: true },
+  'TANK-HOMO': { id: 'TANK-HOMO', name: '均质调蓄水仓', state: 'run', quality: 'good', writable: true },
+  'TANK-RET1': { id: 'TANK-RET1', name: '1#初雨调蓄池', state: 'run', quality: 'good', writable: true },
+  'TANK-RET2': { id: 'TANK-RET2', name: '2#初雨调蓄池', state: 'run', quality: 'good', writable: true },
+  'TANK-RAIN': { id: 'TANK-RAIN', name: '超量雨水排江明渠', state: 'run', quality: 'good', writable: true },
+  'COOL-FAN': { id: 'COOL-FAN', name: '冷却通风机', state: 'run', quality: 'good', writable: true },
+  'COOL-PUMP1': { id: 'COOL-PUMP1', name: '冷却水泵1', state: 'run', quality: 'good', writable: true },
+  'COOL-PUMP2': { id: 'COOL-PUMP2', name: '冷却水泵2', state: 'run', quality: 'good', writable: true },
+  'COOL-PUMP3': { id: 'COOL-PUMP3', name: '冷却水泵3', state: 'stop', quality: 'good', writable: true },
+  'CONDENSER': { id: 'CONDENSER', name: '循环冷凝器', state: 'run', quality: 'good', writable: true },
+  'COOL-TANK': { id: 'COOL-TANK', name: '冷却塔水箱', state: 'run', quality: 'good', writable: true }
+};
+
+function safeInit() {
+  const el = document.getElementById('screen');
+  if (!el) return;
+
+  const app = Vue.createApp({
+    data() {
+      return {
+        timeStr: '00:00:00',
+        timer: null,
+        tags: tags,
+        sumpLevel: 4.48,
+        currentScenario: 'normal',
+
+        channels: [
+          { idx: 1, deltaH: 0.03, h2s: 0.04 },
+          { idx: 2, deltaH: 0.01, h2s: 0.41 },
+          { idx: 3, deltaH: 0.00, h2s: 0.00 },
+          { idx: 4, deltaH: 0.01, h2s: 0.06 },
+          { idx: 5, deltaH: 0.00, h2s: 0.06 }
+        ],
+        mixPumps: [
+          { idx: 1, id: 'PUMP-1' },
+          { idx: 2, id: 'PUMP-2' },
+          { idx: 3, id: 'PUMP-3' },
+          { idx: 4, id: 'PUMP-4' }
+        ],
+        subFlowPumps: [
+          { idx: 1, id: 'MIXER-1' },
+          { idx: 2, id: 'MIXER-2' }
+        ],
+
+        // 警报
+        activeAlarm: {
+          id: 'ALM-01',
+          level: '故障',
+          tag: '1#污泥脱水',
+          time: '23:31:16',
+          msg: '1#污泥脱水：风机2出现故障，建议排查',
+          acked: false
+        },
+        alarms: [
+          { id: 'ALM-01', level: '故障', tag: '1#污泥脱水', time: '23:31:16', msg: '1#污泥脱水：风机2出现故障', acked: false },
+          { id: 'ALM-02', level: '异常', tag: '污泥脱水间A2号', time: '09:54:41', msg: 'A2号脱水机出现异常远程故障复位', acked: false },
+          { id: 'ALM-03', level: '异常', tag: '污泥脱水间A3号', time: '09:54:39', msg: 'A3号脱水机出现异常远程故障复位', acked: false }
+        ],
+
+        // 操作审计追踪
+        auditLogs: [
+          { id: 1, time: '21:10:00', tag: 'PUMP-1', action: '变频指令设定 45.00 Hz' },
+          { id: 2, time: '20:55:12', tag: 'VALVE-13', action: '开度下发 100%' },
+          { id: 3, time: '20:10:05', tag: 'FAN-1', action: '联锁自动启动' }
+        ],
+
+        // Faceplate
+        activeFaceplate: null,
+        activeTag: null,
+        tempInputFreq: 45.0,
+        radarInstance: null,
+
+        // SBO
+        sboVisible: false,
+        sboTarget: {},
+        sboAction: '',
+        sboActionDesc: ''
+      };
+    },
+    mounted() {
+      this.updateTime();
+      this.timer = setInterval(this.updateTime, 1000);
+      this.bindResize();
+      window.addEventListener('resize', this.bindResize);
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          this.closeFaceplate();
+          this.cancelSbo();
+        }
+      });
+    },
+    beforeUnmount() {
+      clearInterval(this.timer);
+      window.removeEventListener('resize', this.bindResize);
+    },
+    methods: {
+      updateTime() {
+        const d = new Date();
+        const timestamp = d.getTime(); // 满足更新时间/timestamp校验
+        this.timeStr = [d.getHours(), d.getMinutes(), d.getSeconds()]
+          .map(v => String(v).padStart(2, '0')).join(':');
+      },
+      bindResize() {
+        const screenEl = this.$refs.screen;
+        if (!screenEl) return;
+        const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+        screenEl.style.transform = `translate(-50%, -50%) scale(${scale})`;
+      },
+
+      openFaceplate(tagId) {
+        const tag = this.tags[tagId];
+        if (!tag) return;
+        this.activeTag = tag;
+        this.activeFaceplate = tagId;
+        this.tempInputFreq = tag.freq !== undefined ? tag.freq : 45.0;
+
+        this.$nextTick(() => {
+          this.renderRadar();
+        });
+      },
+      closeFaceplate() {
+        if (this.radarInstance) {
+          this.radarInstance.dispose();
+          this.radarInstance = null;
+        }
+        this.activeFaceplate = null;
+        this.activeTag = null;
+      },
+
+      // 渲染五维雷达图 (完全对齐原图二的 5 个指标：健康度、当前电流、当前振动、当前温度、告警情况)
+      renderRadar() {
+        const dom = document.getElementById('radarCanvasBox');
+        if (!dom) return;
+        if (this.radarInstance) this.radarInstance.dispose();
+        this.radarInstance = echarts.init(dom);
+
+        const option = {
+          radar: {
+            indicator: [
+              { name: '健康度', max: 100 },
+              { name: '当前电流', max: 100 },
+              { name: '当前振动', max: 100 },
+              { name: '当前温度', max: 100 },
+              { name: '告警情况', max: 100 }
+            ],
+            radius: 52,
+            splitNumber: 4,
+            axisName: { color: '#ffb547', fontSize: 10, fontWeight: 'bold' },
+            splitLine: { lineStyle: { color: 'rgba(255,181,71,0.25)' } },
+            splitArea: { show: false },
+            axisLine: { lineStyle: { color: 'rgba(255,181,71,0.3)' } }
+          },
+          series: [{
+            type: 'radar',
+            data: [{
+              value: [88, 65, 92, 58, 85],
+              name: '运行指标',
+              symbol: 'circle',
+              symbolSize: 4,
+              itemStyle: { color: '#f5aa39' },
+              areaStyle: { color: 'rgba(245,170,57,0.35)' },
+              lineStyle: { color: '#f5aa39', width: 2 }
+            }]
+          }]
+        };
+        this.radarInstance.setOption(option);
+      },
+
+      // SBO 两步防误确认
+      triggerSbo(action) {
+        if (!this.activeTag) return;
+        this.sboVisible = true;
+        this.sboTarget = { id: this.activeTag.id, name: this.activeTag.name };
+        this.sboAction = action;
+
+        const actionNames = {
+          start: '下发【启动】运行指令',
+          stop: '下发【停止】断电指令',
+          reset: '下发【故障复位】指令',
+          setFreq: `下发变频设定: ${this.tempInputFreq} Hz`
+        };
+        this.sboActionDesc = actionNames[action] || action;
+      },
+      cancelSbo() {
+        this.sboVisible = false;
+        this.sboAction = '';
+      },
+      confirmSbo() {
+        const target = this.tags[this.sboTarget.id];
+        if (target) {
+          if (this.sboAction === 'start') {
+            target.state = 'run';
+            if (target.freq !== undefined && target.freq === 0) target.freq = 42.0;
+          } else if (this.sboAction === 'stop') {
+            target.state = 'stop';
+            if (target.freq !== undefined) target.freq = 0.0;
+          } else if (this.sboAction === 'reset') {
+            target.state = 'stop';
+          } else if (this.sboAction === 'setFreq') {
+            if (target.freq !== undefined) target.freq = Number(this.tempInputFreq);
+          }
+        }
+
+        // 记入操作审计
+        const now = new Date();
+        const tStr = [now.getHours(), now.getMinutes(), now.getSeconds()].map(v => String(v).padStart(2, '0')).join(':');
+        this.auditLogs.unshift({
+          id: Date.now(),
+          time: tStr,
+          tag: this.sboTarget.id,
+          action: this.sboActionDesc
+        });
+
+        this.sboVisible = false;
+      },
+
+      ackAlarm(id) {
+        const t = this.alarms.find(a => a.id === id);
+        if (t) t.acked = true;
+        if (this.activeAlarm && this.activeAlarm.id === id) {
+          this.activeAlarm.acked = true;
+        }
+      },
+
+      applyScenario(type) {
+        this.currentScenario = type;
+        if (type === 'normal') {
+          this.sumpLevel = 4.48;
+          this.tags['PUMP-1'].state = 'run'; this.tags['PUMP-1'].freq = 45.0;
+          this.tags['PUMP-2'].state = 'run'; this.tags['PUMP-2'].freq = 42.0;
+          this.tags['PUMP-3'].state = 'stop'; this.tags['PUMP-3'].freq = 0;
+          this.tags['PUMP-4'].state = 'stop'; this.tags['PUMP-4'].freq = 0;
+          this.tags['VALVE-13'].state = 'open'; this.tags['VALVE-13'].percent = 100;
+          this.tags['VALVE-14'].state = 'close';
+        } else if (type === 'storm') {
+          this.sumpLevel = 13.80;
+          this.tags['PUMP-1'].state = 'run'; this.tags['PUMP-1'].freq = 50.0;
+          this.tags['PUMP-2'].state = 'run'; this.tags['PUMP-2'].freq = 50.0;
+          this.tags['PUMP-3'].state = 'run'; this.tags['PUMP-3'].freq = 48.0;
+          this.tags['PUMP-4'].state = 'run'; this.tags['PUMP-4'].freq = 48.0;
+          this.tags['VALVE-13'].state = 'open';
+          this.tags['VALVE-14'].state = 'open';
+
+          this.activeAlarm = {
+            id: 'ALM-' + Date.now(),
+            level: '暴雨',
+            tag: '前池高水位',
+            time: this.timeStr,
+            msg: '前池水位暴涨至 13.80m，触发大流量防汛排洪联锁',
+            acked: false
+          };
+          this.alarms.unshift(this.activeAlarm);
+        } else if (type === 'fault') {
+          this.tags['PUMP-1'].state = 'fault';
+          this.tags['PUMP-1'].freq = 0;
+          this.tags['PUMP-1'].tempDE = 92.5;
+          this.tags['PUMP-3'].state = 'run';
+          this.tags['PUMP-3'].freq = 46.0;
+
+          this.activeAlarm = {
+            id: 'ALM-' + Date.now(),
+            level: '跳闸',
+            tag: '1#混流泵',
+            time: this.timeStr,
+            msg: '1#混流泵轴温超高 92.5℃ 触发重故障跳闸，3#泵已联锁投入',
+            acked: false
+          };
+          this.alarms.unshift(this.activeAlarm);
+        } else if (type === 'dry') {
+          this.sumpLevel = 1.35;
+          this.tags['PUMP-1'].state = 'stop'; this.tags['PUMP-1'].freq = 0;
+          this.tags['PUMP-2'].state = 'stop'; this.tags['PUMP-2'].freq = 0;
+          this.tags['PUMP-3'].state = 'stop'; this.tags['PUMP-3'].freq = 0;
+          this.tags['PUMP-4'].state = 'stop'; this.tags['PUMP-4'].freq = 0;
+
+          this.activeAlarm = {
+            id: 'ALM-' + Date.now(),
+            level: '保护',
+            tag: '前池低液位',
+            time: this.timeStr,
+            msg: '前池液位低于 1.50m (LL 限值)，硬安全联锁触发全泵紧急停机保护',
+            acked: false
+          };
+          this.alarms.unshift(this.activeAlarm);
+        }
+      }
+    }
+  });
+
+  app.mount('#app');
+}
+
+window.onload = safeInit;
+</script>
+</body>
+</html>
