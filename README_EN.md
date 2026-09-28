@@ -1,6 +1,6 @@
 # Industrial Dashboard Studio
 
-> Offline-first productization workspace for industrial dashboards · 23 ready-to-run templates + reusable runtime + SCADA designer + 5 deliverable Skills
+> Offline-first productization workspace for industrial dashboards · 24 ready-to-run templates + reusable runtime + SCADA designer + 5 deliverable Skills
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -36,16 +36,17 @@
 
 | Entry | Preview |
 |------|------|
-| **Showcase landscape entry (All 23 Scenarios)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
+| **Showcase landscape entry (All 24 Scenarios)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
 | **SCADA scenario designer** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
 <details open>
-<summary><b>Expand: All 23 scenario categories & screenshots</b></summary>
+<summary><b>Expand: All 24 scenario categories & screenshots</b></summary>
 
-### Field DCS · Local Control Panel (Weintek HMI Style) (Latest New)
+### Field Local Touchscreen Panels · DCS & Clean Flat HMI (Latest New)
 
 | Scenario | File | Preview |
 |------|------|------|
+| 24 A²O Biochemical Basin On-Site Clean Local Control Panel | `scenarios/water-treatment/24-A2O生化反应池现场就地控制屏.html` | ![24](docs/screenshots/24-biochemical-local-hmi.png) |
 | 23 Smelting & Water Circulation Pump Station Local DCS Control Panel | `scenarios/process-control/23-冶炼与水务循环水泵站现场DCS就地控制屏.html` | ![23](docs/screenshots/23-weintek-dcs-local-hmi.png) |
 
 ### Building Automation · Spatial & Environmental Digital Twin
@@ -285,6 +286,31 @@ open apps/scada-designer/index.html
 
 </details>
 
+### 24 A²O Biochemical Basin On-Site Clean Local Control Panel (Clean Flat Touch HMI)
+- **Role**: designed for explosion-proof walk-side local touch boxes (e.g. Siemens Comfort / Advantech industrial flat panels) along wastewater biochemical basins, tailored for field inspection workers. Unlike the 3D skeuomorphic Weintek style of Scenario 23, Scenario 24 adheres to "single-screen panoramic direct-touch, zero nested popup dialogs, 58px extra-large touch targets, and full glove-friendly operation".
+- **Core Process & Dynamic Simulation**:
+  - **Large Cross-Sectional Process View**: 1100×480 dynamic elevation cut of the biochemical basin clearly reveals anoxic denitrification and aerobic micro-porous aeration zones;
+  - **Dynamic Propeller Flow & Aeration Bubbling**: anoxic submersed mixers feature triple-blade rotation and circulation flow-lines; aerobic bottom aeration discs emit bubbling columns proportional to the valve opening;
+  - **Large Telemetry Readouts**: dedicated 44px KPI cards for Aerobic DO (with 1.80~2.50 mg/L color-coded dynamic gauge bar), Anoxic ORP (-148 mV), MLSS, and real-time blower airflow.
+- **Big Touch Console**:
+  - **Direct Starter Panels**: 1#/2# submersed mixers and 200% internal recirculation pump feature 58px high-contrast [RUN / STOP] buttons with tactile visual feedback;
+  - **Blower Air Valve Stepper**: centralized `[-5%] [-1%] [42%] [+1%] [+5%]` step buttons with center readout, allowing rapid step trimming;
+  - **Automatic DO Closed-Loop**: one-tap toggle into auto DO mode; the front-end simulation autonomously optimizes air valve positioning towards 2.0 mg/L target;
+  - **Rotary Permission & E-Stop**: sleek rotary knob to toggle Local/Remote modes (Remote mode overlays a safety lockout mask across control circuits); large red mushroom E-Stop button for emergency cutoff.
+- **Comms & Telemetry Baseline**: bottom status bar explicitly displays `Modbus-TCP Normal (28ms)`, `Quality: GOOD (100.0%)`, and millisecond `lastSeen` timestamps.
+- **File**: `scenarios/water-treatment/24-A2O生化反应池现场就地控制屏.html`
+
+<details open>
+<summary><b>View Scenario 24 Biochemical Basin Local Panel & States Gallery</b></summary>
+
+| Clean Local HMI Baseline (1920×1080) | Air Valve Stepper & Auto DO Closed-Loop | Remote Mode Safety Lockout Mask |
+|---|---|---|
+| ![24-main](docs/screenshots/24-biochemical-local-hmi.png) | ![24-valve](docs/screenshots/states/24-state-valve-step.png) | ![24-lock](docs/screenshots/states/24-state-remote-locked.png) |
+
+> Clean flat color-blocks, extra-large touch targets, and zero popup obstructions perfectly cater to harsh on-site industrial human-machine interaction.
+
+</details>
+
 ---
 
 ## App entries
@@ -337,7 +363,7 @@ apps/
   scada-designer/      # SCADA scenario designer
 scenarios/
   building-automation/ # 22 Intelligent building automation & spatial microclimate twin
-  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21 (full water chain)
+  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21,24 (full water chain, including Scenario 24 Local Clean Panel)
   predictive-maintenance/ # 02 Critical-unit predictive maintenance
   reactor-safety/      # 03 Reactor safety interlock
   process-control/     # 15 Continuous separation process, 23 Local DCS panel
@@ -352,8 +378,8 @@ assets/models/         # 3D models
 docs/
   architecture.md      # architecture baseline
   offline-delivery.md  # offline delivery notes
-  screenshots/         # 28 screenshots (states/ multi-condition + responsive/ multi-resolution)
-    states/            # 01/04 drills + 08 Faceplate
+  screenshots/         # 31 screenshots (states/ multi-condition + responsive/ multi-resolution)
+    states/            # 01/04 drills + 08 Faceplate + 23/24 local panel states
     responsive/        # 1366/3840 fit for showcase/08/09
   works/               # 11 design-iteration drafts (referenced in gallery)
 tests/interaction_check.py

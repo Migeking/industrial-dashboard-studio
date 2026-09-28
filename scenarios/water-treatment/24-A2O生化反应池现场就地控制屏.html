@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>A2O 生化反应池现场就地控制屏 (现代工业极简扁平触控风格)</title>
+<style>
+/* ==========================================================================
+   现代工业极简扁平触控样式系统 (Clean Industrial Flat HMI)
+   特点：大触控热区、高对比度、单屏全景直控、适合现场戴手套单手盲操
+   ========================================================================== */
+:root {
+  --bg-bezel: #0b111a;
+  --bg-screen: #131c28;
+  --bg-card: #1c2736;
+  --bg-card-sub: #16202c;
+  --border-subtle: #2b3a4e;
+  --border-strong: #3d516d;
+
+  /* 工业核心状态色彩 */
+  --green-run: #10b981;
+  --green-run-glow: rgba(16, 185, 129, 0.35);
+  --red-stop: #ef4444;
+  --red-stop-glow: rgba(239, 68, 68, 0.35);
+  --amber-warn: #f59e0b;
+  --cyan-accent: #06b6d4;
+  --blue-brand: #3b82f6;
+
+  /* 文字系统 */
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-dim: #64748b;
+
+  /* 触控按键尺寸 */
+  --btn-radius: 8px;
+  --btn-height-lg: 58px;
+  --btn-height-md: 46px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-bezel);
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+  user-select: none;
+}
+
+#viewport {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: #070b10;
+}
+
+#screen {
+  width: 1920px;
+  height: 1080px;
+  min-width: 1920px;
+  min-height: 1080px;
+  position: relative;
+  background: var(--bg-screen);
+  border: 10px solid #1a2533;
+  border-radius: 6px;
+  box-shadow: 0 0 60px rgba(0,0,0,0.85);
+  display: flex;
+  flex-direction: column;
+  transform-origin: center center;
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+/* 顶部超简现场状态条 */
+.top-nav {
+  height: 60px;
+  background: #101722;
+  border-bottom: 2px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+.unit-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.unit-code {
+  background: #0284c7;
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+.unit-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+.unit-sub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-left: 2px solid #334155;
+  padding-left: 12px;
+}
+
+.top-right-meta {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.mode-rotary-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #1a2536;
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  cursor: pointer;
+}
+.rotary-knob {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #475569 0%, #1e293b 80%);
+  border: 2px solid #64748b;
+  position: relative;
+  transition: transform 0.25s ease;
+}
+.rotary-knob.pos-local { transform: rotate(-30deg); }
+.rotary-knob.pos-remote { transform: rotate(30deg); }
+.rotary-knob::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 11px;
+  background: #38bdf8;
+  border-radius: 2px;
+}
+.mode-text {
+  font-size: 14px;
+  font-weight: 700;
+}
+.mode-text.local { color: var(--green-run); }
+.mode-text.remote { color: var(--amber-warn); }
+
+.time-telemetry {
+  font-family: "Consolas", monospace;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+/* 主工作台：上下布局 (上部大型剖切工艺图 + 右侧水质卡片，下部大号就地操作台) */
+.main-stage {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  grid-template-rows: 1fr 340px;
+  gap: 16px;
+  padding: 16px 20px;
+  min-height: 0;
+}
+
+/* 中央左侧：大型生化反应池侧立面剖切动态视图 */
+.basin-view-panel {
+  grid-column: 1 / 2;
+  grid-row: 1 / 2;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+.basin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+.basin-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.status-chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--green-run);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* 动态 SVG 生化反应池切面图 */
+.basin-svg-wrap {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  position: relative;
+  background: #111a24;
+  border-radius: 8px;
+  border: 1px solid #1a2736;
+  overflow: hidden;
+}
+.basin-svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* 右侧：关键水质大字号卡片栏 */
+.kpi-side-panel {
+  grid-column: 2 / 3;
+  grid-row: 1 / 2;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card.hero-do {
+  flex: 1.2;
+  background: linear-gradient(145deg, #1b2838 0%, #17212e 100%);
+  border: 1px solid #0284c7;
+  box-shadow: 0 4px 15px rgba(2, 132, 199, 0.15);
+}
+.kpi-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.kpi-target-tag {
+  font-size: 11px;
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--cyan-accent);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.kpi-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 6px 0;
+}
+.kpi-val-huge {
+  font-size: 44px;
+  font-weight: 800;
+  font-family: "Consolas", monospace;
+  color: #fff;
+  letter-spacing: -1px;
+}
+.kpi-val-huge.do-color { color: #38bdf8; }
+.kpi-val-huge.orp-color { color: #a78bfa; }
+.kpi-unit {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+.kpi-meter-bar {
+  width: 100%;
+  height: 8px;
+  background: #334155;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  margin-top: 4px;
+}
+.kpi-meter-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* 底部全宽大号就地操作台 (Big Touch Console) */
+.touch-console-panel {
+  grid-column: 1 / -1;
+  grid-row: 2 / 3;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: 280px 280px 1fr 280px 220px;
+  gap: 16px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+  position: relative;
+}
+
+/* 模块单元卡片 */
+.ctrl-module-box {
+  background: var(--bg-card-sub);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.module-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #283749;
+  padding-bottom: 6px;
+}
+.module-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+.state-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+.state-pill.running { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.state-pill.stopped { background: rgba(100, 116, 139, 0.25); color: #94a3b8; }
+
+/* 超大触控按键 (适合戴手套单手直戳) */
+.touch-btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+.big-btn {
+  flex: 1;
+  height: var(--btn-height-lg);
+  border-radius: var(--btn-radius);
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: all 0.08s ease;
+}
+.big-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+.big-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+  filter: grayscale(80%);
+}
+
+.btn-run {
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+}
+.btn-stop {
+  background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+}
+.btn-neutral {
+  background: linear-gradient(180deg, #475569 0%, #334155 100%);
+}
+.btn-action {
+  background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
+}
+
+/* 好氧曝气风阀大号步进微调区 (核心高频操作) */
+.valve-stepper-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.valve-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.toggle-mode-btn {
+  background: #1e293b;
+  border: 1px solid #38bdf8;
+  color: #38bdf8;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.toggle-mode-btn.auto-active {
+  background: #0284c7;
+  color: #fff;
+}
+
+.stepper-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.step-btn {
+  width: 58px;
+  height: var(--btn-height-lg);
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: var(--btn-radius);
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+.step-btn:hover { background: #3e4f66; }
+.step-btn:active { transform: translateY(2px); }
+.step-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.valve-display-box {
+  flex: 1;
+  height: var(--btn-height-lg);
+  background: #0b121b;
+  border: 2px solid #0284c7;
+  border-radius: var(--btn-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.valve-current-val {
+  font-family: "Consolas", monospace;
+  font-size: 32px;
+  font-weight: 800;
+  color: #38bdf8;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+.valve-current-unit {
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+/* 远程模式防误闭锁遮罩 (极简工业版) */
+.console-lock-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(3px);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 10;
+  border: 2px dashed #f59e0b;
+}
+.lock-banner-box {
+  text-align: center;
+}
+.lock-icon-lg {
+  font-size: 36px;
+  margin-bottom: 6px;
+}
+.lock-headline {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fde047;
+  letter-spacing: 1px;
+}
+.lock-subline {
+  font-size: 14px;
+  color: #cbd5e1;
+  margin-top: 4px;
+}
+
+/* 右下角：急停大按键与报警消音 */
+.emergency-module {
+  background: #25181e;
+  border: 2px solid #7f1d1d;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.estop-huge-btn {
+  height: 64px;
+  background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+  border: 2px solid #7f1d1d;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+.estop-huge-btn.active-latched {
+  background: #7f1d1d;
+  border-color: #f87171;
+  color: #fca5a5;
+  box-shadow: inset 0 4px 8px rgba(0,0,0,0.8);
+  animation: pulse-red 1s infinite alternate;
+}
+@keyframes pulse-red {
+  from { opacity: 0.7; }
+  to { opacity: 1; }
+}
+
+/* 底部状态信息条 */
+.bottom-footer {
+  height: 38px;
+  background: #0d141e;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div id="screen">
+    <!-- 顶部状态栏 -->
+    <header class="top-nav">
+      <div class="unit-badge">
+        <span class="unit-code">BIO-01</span>
+        <span class="unit-name">A²/O 生化反应池现场就地控制屏</span>
+        <span class="unit-sub">缺氧推流搅拌 · 好氧微孔曝气 · 硝化液内回流</span>
+      </div>
+
+      <div class="top-right-meta">
+        <!-- 就地/远程 极简旋钮切换 -->
+        <div class="mode-rotary-box" @click="toggleControlAuth" title="点击切换就地/远程控制权限">
+          <div class="rotary-knob" :class="controlAuth === 'local' ? 'pos-local' : 'pos-remote'"></div>
+          <span class="mode-text" :class="controlAuth">{{ controlAuth === 'local' ? '就地控制 (LOCAL)' : '远程中控锁定 (REMOTE)' }}</span>
+        </div>
+        <div class="time-telemetry">{{ currentTime }}</div>
+      </div>
+    </header>
+
+    <!-- 主工作区 -->
+    <main class="main-stage">
+      <!-- 中央左侧：大型生化反应池剖切立面动态图 -->
+      <section class="basin-view-panel">
+        <div class="basin-header">
+          <div class="basin-title">
+            <span>反应池体剖切运行态势</span>
+            <span class="status-chip">{{ basinStatusText }}</span>
+          </div>
+          <div style="font-size: 12px; color: #94a3b8;">
+            池体容积: 12,500 m³ | 有效水深: 6.20 m
+          </div>
+        </div>
+
+        <div class="basin-svg-wrap">
+          <svg class="basin-svg" viewBox="0 0 1100 480" preserveAspectRatio="none">
+            <defs>
+              <!-- 缺氧区水体渐变 -->
+              <linearGradient id="anoxicWater" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#142c38" stop-opacity="0.8" />
+                <stop offset="100%" stop-color="#0b1b24" stop-opacity="0.95" />
+              </linearGradient>
+              <!-- 好氧区水体渐变 (含气泡流动) -->
+              <linearGradient id="aerobicWater" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#19415c" stop-opacity="0.85" />
+                <stop offset="100%" stop-color="#0f2636" stop-opacity="0.95" />
+              </linearGradient>
+              <linearGradient id="airPipeGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#94a3b8" />
+                <stop offset="100%" stop-color="#64748b" />
+              </linearGradient>
+            </defs>
+
+            <!-- 混凝土池底与导流墙 -->
+            <rect x="0" y="440" width="1100" height="40" fill="#253342" />
+            <line x1="0" y1="440" x2="1100" y2="440" stroke="#486581" stroke-width="3" />
+
+            <!-- 中间分隔导流隔墙 (缺氧与好氧分隔) -->
+            <rect x="420" y="80" width="24" height="360" fill="#2d3f52" stroke="#486581" stroke-width="2" />
+            <text x="432" y="270" fill="#94a3b8" font-size="12" text-anchor="middle" writing-mode="vertical-rl" letter-spacing="4px">混凝土隔墙</text>
+
+            <!-- 1. 缺氧反硝化区水体 (左侧 0 ~ 420) -->
+            <rect x="20" y="100" width="400" height="340" fill="url(#anoxicWater)" />
+            <text x="35" y="130" fill="#67e8f9" font-size="14" font-weight="bold">【缺氧反硝化区】厌氧脱氮 / 硝态氮还原</text>
+
+            <!-- 缺氧搅拌流线与旋转搅拌器 1# / 2# -->
+            <!-- 1# 搅拌机 -->
+            <g transform="translate(140, 220)">
+              <rect x="-10" y="-80" width="6" height="80" fill="#64748b" /> <!-- 导杆 -->
+              <circle cx="-7" cy="0" r="16" fill="#334155" stroke="#38bdf8" stroke-width="2" />
+              <g :style="m1.running ? { transform: `rotate(${m1.angle}deg)` } : {}">
+                <ellipse cx="0" cy="0" rx="14" ry="4" fill="#38bdf8" />
+                <ellipse cx="0" cy="0" rx="4" ry="14" fill="#38bdf8" />
+              </g>
+              <text x="25" y="5" fill="#f8fafc" font-size="13" font-weight="bold">1# 潜水推流机</text>
+              <text x="25" y="22" :fill="m1.running ? '#34d399' : '#94a3b8'" font-size="11">{{ m1.running ? '运行中 · 18.5kW' : '已停机' }}</text>
+            </g>
+
+            <!-- 2# 搅拌机 -->
+            <g transform="translate(140, 360)">
+              <rect x="-10" y="-80" width="6" height="80" fill="#64748b" />
+              <circle cx="-7" cy="0" r="16" fill="#334155" stroke="#38bdf8" stroke-width="2" />
+              <g :style="m2.running ? { transform: `rotate(${m2.angle}deg)` } : {}">
+                <ellipse cx="0" cy="0" rx="14" ry="4" fill="#38bdf8" />
+                <ellipse cx="0" cy="0" rx="4" ry="14" fill="#38bdf8" />
+              </g>
+              <text x="25" y="5" fill="#f8fafc" font-size="13" font-weight="bold">2# 潜水推流机</text>
+              <text x="25" y="22" :fill="m2.running ? '#34d399' : '#94a3b8'" font-size="11">{{ m2.running ? '运行中 · 18.5kW' : '已停机' }}</text>
+            </g>
+
+            <!-- ORP 在线探头 -->
+            <g transform="translate(360, 260)">
+              <line x1="0" y1="-160" x2="0" y2="0" stroke="#f59e0b" stroke-width="3" />
+              <circle cx="0" cy="0" r="8" fill="#f59e0b" />
+              <rect x="-35" y="15" width="70" height="24" rx="3" fill="#1e293b" stroke="#f59e0b" />
+              <text x="0" y="32" fill="#fbbf24" font-size="12" font-weight="bold" text-anchor="middle">ORP -148</text>
+            </g>
+
+            <!-- 2. 好氧微孔曝气区水体 (右侧 444 ~ 1080) -->
+            <rect x="444" y="100" width="636" height="340" fill="url(#aerobicWater)" />
+            <text x="465" y="130" fill="#38bdf8" font-size="14" font-weight="bold">【好氧微孔曝气区】碳氮硝化 / DO 闭环精控</text>
+
+            <!-- 顶部架空曝气供气支管与电动调节蝶阀 -->
+            <rect x="480" y="45" width="560" height="14" fill="url(#airPipeGrad)" />
+            <line x1="480" y1="52" x2="1040" y2="52" stroke="#e2e8f0" stroke-dasharray="8 6" stroke-width="2" />
+            <text x="490" y="38" fill="#cbd5e1" font-size="11">DN250 曝气风管 · 压力 62.5 kPa</text>
+
+            <!-- 垂直下落配气立管 (3组) -->
+            <rect x="560" y="59" width="10" height="360" fill="#64748b" />
+            <rect x="740" y="59" width="10" height="360" fill="#64748b" />
+            <rect x="920" y="59" width="10" height="360" fill="#64748b" />
+
+            <!-- 电动曝气蝶阀图元 -->
+            <g transform="translate(640, 36)">
+              <polygon points="0,0 24,16 24,0 0,16" fill="#f59e0b" stroke="#d97706" />
+              <rect x="8" y="-14" width="8" height="14" fill="#e2e8f0" />
+              <circle cx="12" cy="-18" r="6" fill="#0284c7" />
+              <text x="32" y="15" fill="#fde047" font-size="13" font-weight="bold">风阀: {{ valvePos }}%</text>
+            </g>
+
+            <!-- 底部微孔曝气盘矩阵与气泡动态涌动 -->
+            <g transform="translate(480, 420)">
+              <!-- 曝气管支路 -->
+              <rect x="0" y="0" width="560" height="8" fill="#475569" />
+              <!-- 曝气头小圆盘 -->
+              <circle cx="40" cy="4" r="7" fill="#94a3b8" />
+              <circle cx="120" cy="4" r="7" fill="#94a3b8" />
+              <circle cx="200" cy="4" r="7" fill="#94a3b8" />
+              <circle cx="280" cy="4" r="7" fill="#94a3b8" />
+              <circle cx="360" cy="4" r="7" fill="#94a3b8" />
+              <circle cx="440" cy="4" r="7" fill="#94a3b8" />
+              <circle cx="520" cy="4" r="7" fill="#94a3b8" />
+
+              <!-- 气泡动态列 (随风阀开度数量与起伏动态变化) -->
+              <g v-if="valvePos > 5">
+                <circle v-for="b in bubbles" :key="b.id" :cx="b.x" :cy="b.y" :r="b.r" fill="#e0f2fe" opacity="0.65" />
+              </g>
+            </g>
+
+            <!-- 溶解氧在线探头 (DO) -->
+            <g transform="translate(860, 240)">
+              <line x1="0" y1="-140" x2="0" y2="0" stroke="#38bdf8" stroke-width="3" />
+              <circle cx="0" cy="0" r="10" fill="#0284c7" stroke="#38bdf8" stroke-width="2" />
+              <rect x="-45" y="15" width="90" height="26" rx="4" fill="#0f172a" stroke="#38bdf8" stroke-width="2" />
+              <text x="0" y="33" fill="#38bdf8" font-size="13" font-weight="bold" text-anchor="middle">DO {{ doVal.toFixed(2) }} mg/L</text>
+            </g>
+
+            <!-- 穿墙内回流泵 (好氧回流至缺氧) -->
+            <g transform="translate(420, 390)">
+              <rect x="-40" y="-12" width="100" height="24" fill="#0369a1" stroke="#38bdf8" />
+              <circle cx="12" cy="0" r="16" fill="#1e293b" stroke="#38bdf8" stroke-width="2" />
+              <text x="12" y="32" fill="#7dd3fc" font-size="11" text-anchor="middle" font-weight="bold">内回流泵 (200%)</text>
+            </g>
+          </svg>
+        </div>
+      </section>
+
+      <!-- 右侧：关键水质与综合指标大字号卡片栏 -->
+      <aside class="kpi-side-panel">
+        <!-- DO 核心卡片 -->
+        <div class="kpi-card hero-do">
+          <div class="kpi-head">
+            <span style="font-weight: 700; color: #fff;">好氧区溶解氧 (DO)</span>
+            <span class="kpi-target-tag">目标: {{ targetDo.toFixed(1) }} mg/L</span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-val-huge do-color">{{ doVal.toFixed(2) }}</span>
+            <span class="kpi-unit">mg/L</span>
+          </div>
+          <div style="font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between;">
+            <span>达标范围: 1.80 ~ 2.50</span>
+            <span :style="{ color: doVal >= 1.8 && doVal <= 2.5 ? '#10b981' : '#f59e0b', fontWeight: 'bold' }">
+              {{ doVal >= 1.8 && doVal <= 2.5 ? '● 溶氧工况稳定' : '▲ 溶氧偏离设定' }}
+            </span>
+          </div>
+          <div class="kpi-meter-bar">
+            <div class="kpi-meter-fill" :style="{ width: `${Math.min(100, (doVal / 4.0) * 100)}%`, background: doVal >= 1.8 && doVal <= 2.5 ? '#10b981' : '#f59e0b' }"></div>
+          </div>
+        </div>
+
+        <!-- ORP 卡片 -->
+        <div class="kpi-card">
+          <div class="kpi-head">
+            <span>缺氧区还原电位 (ORP)</span>
+            <span style="color: #a78bfa; font-size: 11px;">脱氮充分</span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-val-huge orp-color">{{ orpVal }}</span>
+            <span class="kpi-unit">mV</span>
+          </div>
+          <div style="font-size: 11px; color: #64748b;">反硝化基准值: -120 ~ -160 mV</div>
+        </div>
+
+        <!-- MLSS 污泥浓度卡片 -->
+        <div class="kpi-card">
+          <div class="kpi-head">
+            <span>混合液污泥浓度 (MLSS)</span>
+            <span style="color: #34d399; font-size: 11px;">沉降比良好</span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-val-huge" style="color: #34d399;">{{ mlssVal }}</span>
+            <span class="kpi-unit">mg/L</span>
+          </div>
+          <div style="font-size: 11px; color: #64748b;">水温: 19.8 ℃ | SV30: 28%</div>
+        </div>
+
+        <!-- 曝气风量卡片 -->
+        <div class="kpi-card">
+          <div class="kpi-head">
+            <span>好氧段实时供气流量</span>
+            <span style="color: #f59e0b; font-size: 11px;">风压 62kPa</span>
+          </div>
+          <div class="kpi-value-row">
+            <span class="kpi-val-huge" style="color: #f59e0b;">{{ airFlow }}</span>
+            <span class="kpi-unit">Nm³/h</span>
+          </div>
+          <div style="font-size: 11px; color: #64748b;">鼓风机组总电耗: 88.5 kW</div>
+        </div>
+      </aside>
+
+      <!-- 底部全宽大号就地操作台 (Big Touch Console) -->
+      <footer class="touch-console-panel">
+        <!-- 远程闭锁遮罩 -->
+        <div v-if="controlAuth === 'remote'" class="console-lock-mask">
+          <div class="lock-banner-box">
+            <div class="lock-icon-lg">🔒</div>
+            <div class="lock-headline">现场就地控制回路已锁定</div>
+            <div class="lock-subline">当前处于【远程中控模式】，就地控制按键已禁用，防止现场人员误操作</div>
+          </div>
+          <button class="big-btn btn-neutral" style="max-width: 180px;" @click="controlAuth = 'local'">切回就地控制</button>
+        </div>
+
+        <!-- 模块 1：1# 潜水推流机 -->
+        <div class="ctrl-module-box">
+          <div class="module-head">
+            <span class="module-name">1# 潜水推流机</span>
+            <span class="state-pill" :class="m1.running ? 'running' : 'stopped'">{{ m1.running ? '运行中' : '已停机' }}</span>
+          </div>
+          <div style="font-size: 11px; color: #94a3b8; margin-top: 6px;">
+            负荷: {{ m1.running ? '14.2 kW' : '0 kW' }} | 振动: 正常
+          </div>
+          <div class="touch-btn-row">
+            <button class="big-btn btn-run" :disabled="controlAuth === 'remote' || estopActive || m1.running" @click="m1.running = true">
+              启动
+            </button>
+            <button class="big-btn btn-stop" :disabled="controlAuth === 'remote' || estopActive || !m1.running" @click="m1.running = false">
+              停止
+            </button>
+          </div>
+        </div>
+
+        <!-- 模块 2：2# 潜水推流机 -->
+        <div class="ctrl-module-box">
+          <div class="module-head">
+            <span class="module-name">2# 潜水推流机</span>
+            <span class="state-pill" :class="m2.running ? 'running' : 'stopped'">{{ m2.running ? '运行中' : '已停机' }}</span>
+          </div>
+          <div style="font-size: 11px; color: #94a3b8; margin-top: 6px;">
+            负荷: {{ m2.running ? '14.1 kW' : '0 kW' }} | 振动: 正常
+          </div>
+          <div class="touch-btn-row">
+            <button class="big-btn btn-run" :disabled="controlAuth === 'remote' || estopActive || m2.running" @click="m2.running = true">
+              启动
+            </button>
+            <button class="big-btn btn-stop" :disabled="controlAuth === 'remote' || estopActive || !m2.running" @click="m2.running = false">
+              停止
+            </button>
+          </div>
+        </div>
+
+        <!-- 模块 3：好氧曝气风阀大号步进微调区 (核心大模块) -->
+        <div class="ctrl-module-box valve-stepper-box">
+          <div class="valve-mode-bar">
+            <div>
+              <span class="module-name">好氧曝气电动风阀调控</span>
+              <span style="font-size: 12px; color: #94a3b8; margin-left: 8px;">(步进范围: 0 ~ 100%)</span>
+            </div>
+            <button class="toggle-mode-btn" :class="{ 'auto-active': doControlMode === 'auto' }" @click="toggleDoMode">
+              {{ doControlMode === 'auto' ? '模式: DO 自动闭环中' : '模式: 手动步进微调' }}
+            </button>
+          </div>
+
+          <div class="stepper-row">
+            <button class="step-btn" :disabled="controlAuth === 'remote' || estopActive || doControlMode === 'auto'" @click="stepValve(-5)">-5%</button>
+            <button class="step-btn" :disabled="controlAuth === 'remote' || estopActive || doControlMode === 'auto'" @click="stepValve(-1)">-1%</button>
+
+            <!-- 居中开度直读大框 -->
+            <div class="valve-display-box">
+              <span class="valve-current-val">{{ valvePos }}</span>
+              <span class="valve-current-unit">%</span>
+            </div>
+
+            <button class="step-btn" :disabled="controlAuth === 'remote' || estopActive || doControlMode === 'auto'" @click="stepValve(1)">+1%</button>
+            <button class="step-btn" :disabled="controlAuth === 'remote' || estopActive || doControlMode === 'auto'" @click="stepValve(5)">+5%</button>
+          </div>
+
+          <div style="font-size: 11px; color: #64748b; margin-top: 4px; display: flex; justify-content: space-between;">
+            <span>微调动作: 点击大号步进键直接开大/关小阀门</span>
+            <span>DO 自动闭环中将根据 2.0mg/L 偏差自主寻优</span>
+          </div>
+        </div>
+
+        <!-- 模块 4：硝化液内回流泵 -->
+        <div class="ctrl-module-box">
+          <div class="module-head">
+            <span class="module-name">硝化液内回流泵</span>
+            <span class="state-pill" :class="recyclePump.running ? 'running' : 'stopped'">{{ recyclePump.running ? '回流 200%' : '停运' }}</span>
+          </div>
+          <div style="font-size: 11px; color: #94a3b8; margin-top: 6px;">
+            流量: {{ recyclePump.running ? '680 m³/h' : '0' }} | 频率: 38.0Hz
+          </div>
+          <div class="touch-btn-row">
+            <button class="big-btn btn-run" :disabled="controlAuth === 'remote' || estopActive || recyclePump.running" @click="recyclePump.running = true">
+              启动
+            </button>
+            <button class="big-btn btn-stop" :disabled="controlAuth === 'remote' || estopActive || !recyclePump.running" @click="recyclePump.running = false">
+              停止
+            </button>
+          </div>
+        </div>
+
+        <!-- 模块 5：就地急停安全区 -->
+        <div class="emergency-module">
+          <div style="font-size: 13px; font-weight: 700; color: #f87171; text-align: center;">现场安全联锁</div>
+          <button class="estop-huge-btn" :class="{ 'active-latched': estopActive }" @click="toggleEstop">
+            {{ estopActive ? '急停已锁死' : '就地急停' }}
+          </button>
+          <button class="big-btn btn-neutral" style="height: 38px; font-size: 12px;" @click="resetAllFaults">
+            故障复位 RESET
+          </button>
+        </div>
+      </footer>
+    </main>
+
+    <!-- 底部状态条 -->
+    <footer class="bottom-footer">
+      <div>
+        <span>PLC 通信状态: <b style="color: #10b981;">Modbus-TCP 正常 (28ms)</b></span>
+        <span style="margin-left: 20px;">数据质量: <b style="color: #10b981;">GOOD (100.0%)</b></span>
+      </div>
+      <div>
+        <span>最后更新时间: {{ lastSeen }}</span>
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- 本地固化依赖：Vue 3 与 ECharts 5 -->
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+
+<script>
+/**
+ * A2O 生化反应池现场就地控制屏 (现代工业极简扁平触控风格)
+ * 严格遵从 industrial-dashboard 验证规范
+ */
+(function() {
+  'use strict';
+
+  // 1920×1080 自适应缩放
+  function initScaling() {
+    const screen = document.getElementById('screen');
+    if (!screen) return;
+    function resize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const scale = Math.min(w / 1920, h / 1080);
+      screen.style.transform = `scale(${scale})`;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+  }
+
+  // ECharts 安全初始化辅助函数
+  function safeInit(el, theme) {
+    if (!el) return null;
+    try {
+      if (typeof echarts !== 'undefined' && echarts.init) {
+        return echarts.init(el, theme);
+      }
+    } catch (e) {
+      console.warn('ECharts 初始化异常:', e);
+    }
+    return null;
+  }
+
+  initScaling();
+
+  const { createApp, ref, reactive, onMounted, onUnmounted } = Vue;
+
+  createApp({
+    setup() {
+      const currentTime = ref('');
+      const lastSeen = ref('');
+      const controlAuth = ref('local'); // 'local' | 'remote'
+      const doControlMode = ref('manual'); // 'manual' | 'auto'
+      const estopActive = ref(false);
+      const basinStatusText = ref('好氧微孔曝气均匀 · 硝化脱氮反应良好');
+
+      // 1# 搅拌机
+      const m1 = reactive({
+        running: true,
+        angle: 0
+      });
+
+      // 2# 搅拌机
+      const m2 = reactive({
+        running: true,
+        angle: 0
+      });
+
+      // 回流泵
+      const recyclePump = reactive({
+        running: true
+      });
+
+      // 水质指标
+      const doVal = ref(2.15);
+      const targetDo = ref(2.00);
+      const orpVal = ref(-148);
+      const mlssVal = ref(3820);
+      const airFlow = ref(1420);
+
+      // 电动曝气蝶阀开度 (0 ~ 100)
+      const valvePos = ref(42);
+
+      // 动态气泡粒子群
+      const bubbles = ref([]);
+      for (let i = 0; i < 45; i++) {
+        bubbles.value.push({
+          id: i,
+          x: 20 + Math.random() * 520,
+          y: -10 - Math.random() * 280,
+          r: 2 + Math.random() * 4,
+          speed: 1.5 + Math.random() * 2.5
+        });
+      }
+
+      function updateClock() {
+        const now = new Date();
+        currentTime.value = now.toLocaleDateString() + ' ' + now.toTimeString().split(' ')[0];
+        lastSeen.value = now.toTimeString().split(' ')[0];
+      }
+
+      // 切换就地/远程控制权限
+      function toggleControlAuth() {
+        controlAuth.value = controlAuth.value === 'local' ? 'remote' : 'local';
+      }
+
+      // 切换 DO 自动/手动模式
+      function toggleDoMode() {
+        doControlMode.value = doControlMode.value === 'manual' ? 'auto' : 'manual';
+      }
+
+      // 风阀步进微调
+      function stepValve(delta) {
+        if (controlAuth.value === 'remote' || estopActive.value) return;
+        const next = Math.max(0, Math.min(100, valvePos.value + delta));
+        valvePos.value = next;
+      }
+
+      // 急停切换
+      function toggleEstop() {
+        estopActive.value = !estopActive.value;
+        if (estopActive.value) {
+          m1.running = false;
+          m2.running = false;
+          recyclePump.running = false;
+          valvePos.value = 0;
+          basinStatusText.value = '【紧急联锁】就地急停已按下！动力设备强切断开！';
+        } else {
+          basinStatusText.value = '急停已解锁，请重新按需启动推流与曝气设备';
+        }
+      }
+
+      // 故障复位
+      function resetAllFaults() {
+        basinStatusText.value = '设备故障已就地复位，系统处于准备就绪状态';
+      }
+
+      // 动力学仿真计时器
+      let timer = null;
+      onMounted(() => {
+        updateClock();
+        timer = setInterval(() => {
+          updateClock();
+
+          // 搅拌机旋转
+          if (m1.running) m1.angle = (m1.angle + 12) % 360;
+          if (m2.running) m2.angle = (m2.angle + 12) % 360;
+
+          // 气泡上升动画
+          if (valvePos.value > 5) {
+            bubbles.value.forEach(b => {
+              b.y -= b.speed * (valvePos.value / 40);
+              if (b.y < -300) {
+                b.y = -10;
+                b.x = 20 + Math.random() * 520;
+              }
+            });
+          }
+
+          // DO 自动闭环调节模拟
+          if (doControlMode.value === 'auto') {
+            const error = targetDo.value - doVal.value;
+            // 如果 DO 低于目标，自动开大风阀；如果高于目标，微关风阀
+            if (Math.abs(error) > 0.05) {
+              valvePos.value = Math.max(10, Math.min(95, Math.round(valvePos.value + error * 3)));
+            }
+          }
+
+          // 曝气风量与 DO 仿真联动
+          airFlow.value = Math.round(valvePos.value * 32.5 + (Math.random() - 0.5) * 15);
+          const targetDoRef = 0.5 + (valvePos.value / 100) * 3.5;
+          doVal.value = parseFloat((doVal.value + (targetDoRef - doVal.value) * 0.08 + (Math.random() - 0.5) * 0.02).toFixed(2));
+          orpVal.value = Math.round(-145 + (Math.random() - 0.5) * 4);
+        }, 300);
+      });
+
+      onUnmounted(() => {
+        if (timer) clearInterval(timer);
+      });
+
+      return {
+        currentTime,
+        lastSeen,
+        controlAuth,
+        doControlMode,
+        estopActive,
+        basinStatusText,
+        m1,
+        m2,
+        recyclePump,
+        doVal,
+        targetDo,
+        orpVal,
+        mlssVal,
+        airFlow,
+        valvePos,
+        bubbles,
+        toggleControlAuth,
+        toggleDoMode,
+        stepValve,
+        toggleEstop,
+        resetAllFaults
+      };
+    }
+  }).mount('#screen');
+})();
+</script>
+</body>
+</html>

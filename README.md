@@ -1,6 +1,6 @@
 # Industrial Dashboard Studio
 
-> 工业大屏产品化工作区 · 23 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 5 个可交付 Skill
+> 工业大屏产品化工作区 · 24 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 5 个可交付 Skill
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -36,16 +36,17 @@
 
 | 入口 | 预览 |
 |------|------|
-| **Showcase 横屏互动入口 (23 套全量)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
+| **Showcase 横屏互动入口 (24 套全量)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
 | **SCADA 场景设计器** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
 <details open>
-<summary><b>展开查看 23 套场景全量分类与截图</b></summary>
+<summary><b>展开查看 24 套场景全量分类与截图</b></summary>
 
-### 现场 DCS · 就地控制屏 (威纶通 HMI 风格)（最新上线）
+### 现场就地控制屏 · DCS 与极简扁平触控（最新上线）
 
 | 场景 | 文件 | 预览 |
 |------|------|------|
+| 24 A²O 生化反应池现场极简就地控制屏 | `scenarios/water-treatment/24-A2O生化反应池现场就地控制屏.html` | ![24](docs/screenshots/24-biochemical-local-hmi.png) |
 | 23 冶炼与水务循环水泵站现场 DCS 就地控制屏 | `scenarios/process-control/23-冶炼与水务循环水泵站现场DCS就地控制屏.html` | ![23](docs/screenshots/23-weintek-dcs-local-hmi.png) |
 
 ### 楼宇自控 · 空间与动环数字孪生
@@ -285,6 +286,31 @@ open apps/scada-designer/index.html
 
 </details>
 
+### 24 A²O 生化反应池现场极简就地控制屏（现代工业扁平触控风格）
+- **定位**：污水处理厂生化池走道旁现场防爆触控箱（如 Siemens Comfort / Advantech 工业平板），专为现场巡检值班员打造的“极简就地控制台”。不同于 23 号威纶通冷灰蓝拟真硬件与复杂键盘，24 号遵循“单屏全景直控、零多层菜单嵌套、58px 超大触控热区、支持戴绝缘手套直接单手盲操”。
+- **核心工艺与动态仿真**：
+  - **大型立面剖切动态视图**：生化反应池 1100×480 立体切面，清晰呈现缺氧反硝化区与好氧硝化曝气区水体；
+  - **动态推流与微孔曝气涌动**：缺氧区推流搅拌机带三叶桨叶旋转动画与回旋流线；好氧区底部微孔曝气头根据电动风阀实时开度动态涌动升腾气泡列，直观反馈气量；
+  - **大字号水质与能耗直读**：右侧专设 44px 超大字号核心指标卡片，包含好氧区 DO 溶解氧（带 1.80~2.50mg/L 安全色标动态进度条）、缺氧区 ORP 氧化还原电位（-148mV）、MLSS 污泥浓度与曝气风量。
+- **极简大触控操作台 (Big Touch Console)**：
+  - **推流机/内回流泵直控**：1# / 2# 潜水推流机与 200% 硝化液内回流泵配备 58px 高度高饱和【启动 / 停止】大按键，触控反馈灵敏清晰；
+  - **好氧风阀大号步进微调**：中央核心区设置 `[-5%] [-1%] [42%] [+1%] [+5%]` 大号微调按键，开度直读大框居中，巡检人员按动即可高频微调曝气；
+  - **DO 自动闭环恒定模式**：一键切换“DO 自动闭环”，系统根据 2.0mg/L 目标值自主寻优动态微调风阀开度；
+  - **旋钮权限与物理急停**：右上角极简旋钮切换就地/远程模式（远程时全屏下部浮现半透明锁定遮罩，杜绝现场误动作）；右下角红色安全蘑菇头支持一键物理级急停切断。
+- **通信与状态标准**：底部状态栏明确 `Modbus-TCP 正常 (28ms)`、`数据质量: GOOD (100.0%)`、毫秒级 `lastSeen` 刷新。
+- **文件**：`scenarios/water-treatment/24-A2O生化反应池现场就地控制屏.html`
+
+<details open>
+<summary><b>查看 24 号生化池就地控制屏与工况特写画廊</b></summary>
+
+| 极简就地控制屏全屏 (1920×1080) | 曝气风阀微调与 DO 自动闭环工况 | 远程中控模式就地回路安全锁定 |
+|---|---|---|
+| ![24-main](docs/screenshots/24-biochemical-local-hmi.png) | ![24-valve](docs/screenshots/states/24-state-valve-step.png) | ![24-lock](docs/screenshots/states/24-state-remote-locked.png) |
+
+> 扁平大色块、超大触控热区、零弹窗干扰，完美契合恶劣工况下戴绝缘手套直接操作的工业人机交互需求。
+
+</details>
+
 ---
 
 ## 应用入口
@@ -337,7 +363,7 @@ apps/
   scada-designer/      # SCADA 场景设计器
 scenarios/
   building-automation/ # 22 智能楼宇自控与空间微气候数字孪生
-  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21 (水务全流程)
+  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21,24 (水务全流程，含24号现场极简就地控制屏)
   predictive-maintenance/ # 02 关键机组预测性维护
   reactor-safety/      # 03 反应釜热失控安全联锁
   process-control/     # 15 连续分离工艺驾驶舱, 23 现场DCS就地控制屏
@@ -352,8 +378,8 @@ assets/models/         # 三维模型
 docs/
   architecture.md      # 架构基线
   offline-delivery.md  # 离线交付说明
-  screenshots/         # 28 张截图（含 states/ 多工况 + responsive/ 多分辨率）
-    states/            # 01/04 多工况演练 + 08 Faceplate
+  screenshots/         # 31 张截图（含 states/ 多工况 + responsive/ 多分辨率）
+    states/            # 01/04 多工况演练 + 08 Faceplate + 23/24 就地控制特写
     responsive/        # showcase/08/09 的 1366/3840 适配
   works/               # 11 张设计过程稿（本 README 画廊引用）
 tests/interaction_check.py

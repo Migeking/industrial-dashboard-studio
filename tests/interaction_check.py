@@ -416,23 +416,71 @@ with sync_playwright() as playwright:
         p.locator(".estop-btn-wrap").click()
         p.locator(".estop-label").filter(has_text="就地急停").wait_for()
 
+    def assert_biochemical_local_hmi_24_interaction(p):
+        assert p.locator("#screen").count() == 1
+        p.locator(".top-nav .unit-name").filter(has_text="生化反应池现场就地控制屏").wait_for()
+
+        # 1. 测试推流机启停控制
+        stop_btn = p.locator(".ctrl-module-box").first.locator(".btn-stop")
+        start_btn = p.locator(".ctrl-module-box").first.locator(".btn-run")
+        state_pill = p.locator(".ctrl-module-box").first.locator(".state-pill")
+
+        # 点击停止
+        stop_btn.click()
+        state_pill.filter(has_text="已停机").wait_for()
+        # 点击启动
+        start_btn.click()
+        state_pill.filter(has_text="运行中").wait_for()
+
+        # 2. 测试曝气风阀大号步进微调 (+1% 与 +5%)
+        valve_val = p.locator(".valve-current-val")
+        orig_val = int(valve_val.inner_text())
+        p.locator(".step-btn").filter(has_text="+5%").click()
+        valve_val.filter(has_text=str(orig_val + 5)).wait_for()
+        p.locator(".step-btn").filter(has_text="+1%").click()
+        valve_val.filter(has_text=str(orig_val + 6)).wait_for()
+
+        # 3. 测试好氧 DO 自动闭环恒定模式切换
+        mode_btn = p.locator(".toggle-mode-btn")
+        mode_btn.click()
+        mode_btn.filter(has_text="模式: DO 自动闭环中").wait_for()
+        # 自动模式下步进按钮禁用
+        assert p.locator(".step-btn").first.is_disabled()
+        # 再次点击切回手动步进
+        mode_btn.click()
+        mode_btn.filter(has_text="模式: 手动步进微调").wait_for()
+
+        # 4. 测试现场就地/远程旋钮切换与回路闭锁
+        p.locator(".mode-rotary-box").click()
+        p.locator(".console-lock-mask").wait_for()
+        assert "现场就地控制回路已锁定" in p.locator(".lock-headline").inner_text()
+        p.locator(".console-lock-mask button").click()
+        p.locator(".console-lock-mask").wait_for(state="detached")
+
+        # 5. 测试物理级急停大按键拍下与复位
+        estop_btn = p.locator(".estop-huge-btn")
+        estop_btn.click()
+        estop_btn.filter(has_text="急停已锁死").wait_for()
+        estop_btn.click()
+        estop_btn.filter(has_text="就地急停").wait_for()
+
     run_case(
         page,
-        "process-control/23-冶炼与水务循环水泵站现场DCS就地控制屏.html",
+        "water-treatment/24-A2O生化反应池现场就地控制屏.html",
         lambda p: None,
-        assert_dcs_local_hmi_23_interaction,
+        assert_biochemical_local_hmi_24_interaction,
     )
 
     showcase = browser.new_page(viewport={"width": 1440, "height": 900})
     showcase.route("http://**/*", lambda route: route.abort())
     showcase.route("https://**/*", lambda route: route.abort())
     showcase.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="networkidle")
-    assert showcase.locator(".card").count() == 23
-    latest_card = showcase.locator('.card[data-src*="23-"]')
+    assert showcase.locator(".card").count() == 24
+    latest_card = showcase.locator('.card[data-src*="24-"]')
     latest_card.scroll_into_view_if_needed()
     assert latest_card.is_visible()
     latest_card.click()
-    assert "现场 DCS 就地控制屏" in showcase.locator("#stageTitle").inner_text()
+    assert "生化池极简就地控制" in showcase.locator("#stageTitle").inner_text() or "A²O 生化反应池" in showcase.locator("#stageTitle").inner_text()
     portrait = browser.new_page(viewport={"width": 390, "height": 844})
     portrait.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="domcontentloaded")
     assert portrait.locator(".rotate").is_visible()
