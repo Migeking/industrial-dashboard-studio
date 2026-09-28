@@ -468,37 +468,44 @@ with sync_playwright() as playwright:
         assert p.locator("#screen").count() == 1
         p.locator(".brand-text h1").filter(has_text="智慧水务宏观地球与多级厂区穿透数字驾驶舱").wait_for()
 
-        # 1. 验证 Level 1 默认状态
-        p.locator(".crumb-item.active").filter(has_text="全球水务大盘").wait_for()
+        # 1. 验证 Level 1 默认状态与画布存在
+        p.locator(".step-item.active").filter(has_text="宏观地球全景").wait_for()
         assert p.locator(".kpi-stat-num").first.is_visible()
+        assert p.locator("#webgl-container canvas").count() == 1
 
-        # 2. 依次测试面包屑四级下钻与回跳
+        # 2. 依次测试四级视界下钻与回跳
         # 下钻 Level 2
-        p.locator(".crumb-item").nth(1).click()
-        p.locator(".crumb-item.active").filter(has_text="华东水厂集群").wait_for()
+        p.locator(".step-item").nth(1).click()
+        p.locator(".step-item.active").filter(has_text="华东水厂集群").wait_for()
         p.locator(".plant-item-card").first.wait_for()
 
         # 下钻 Level 3
-        p.locator(".crumb-item").nth(2).click()
-        p.locator(".crumb-item.active").filter(has_text="白龙港示范厂").wait_for()
+        p.locator(".step-item").nth(2).click()
+        p.locator(".step-item.active").filter(has_text="厂区空间孪生").wait_for()
         p.locator(".l3-top-banner").wait_for()
 
         # 下钻 Level 4
-        p.locator(".crumb-item").nth(3).click()
-        p.locator(".crumb-item.active").filter(has_text="核心工艺中枢").wait_for()
+        p.locator(".step-item").nth(3).click()
+        p.locator(".step-item.active").filter(has_text="核心工艺中枢").wait_for()
         p.locator(".water-metric-table").wait_for()
         assert "CODcr" in p.locator(".water-metric-table").inner_text()
 
-        # 回跳 Level 1
-        p.locator(".crumb-item").first.click()
-        p.locator(".crumb-item.active").filter(has_text="全球水务大盘").wait_for()
+        # 3. 测试底栏半自动推进步进按钮回退
+        prev_btn = p.locator(".nav-prev-btn")
+        prev_btn.click() # 4 -> 3
+        p.locator(".step-item.active").filter(has_text="厂区空间孪生").wait_for()
 
-        # 3. 测试自动巡游按钮开关
-        tour_btn = p.locator(".tour-btn").first
-        tour_btn.click()
-        tour_btn.filter(has_text="停止自动巡游演示").wait_for()
-        tour_btn.click()
-        tour_btn.filter(has_text="启动全景穿透自动巡游").wait_for()
+        # 回跳 Level 1
+        p.locator(".step-item").first.click()
+        p.locator(".step-item.active").filter(has_text="宏观地球全景").wait_for()
+
+        # 4. 测试双推进模式切换 (自动推进 / 半自动步进)
+        semi_btn = p.locator(".mode-btn").filter(has_text="半自动步进模式")
+        semi_btn.click()
+        p.locator(".mode-btn.active").filter(has_text="半自动步进模式").wait_for()
+        auto_btn = p.locator(".mode-btn").filter(has_text="自动推进模式")
+        auto_btn.click()
+        p.locator(".mode-btn.active").filter(has_text="自动推进模式").wait_for()
 
     run_case(
         page,

@@ -22,21 +22,21 @@ def run():
         print(f"[截图完成] Level 1 主图 -> {main_img}")
         
         # 截图 Level 2: 华东水厂集群
-        page.locator(".crumb-item").nth(1).click()
+        page.locator(".step-item").nth(1).click()
         page.wait_for_timeout(800)
         state_l2_img = ROOT / "docs" / "screenshots" / "states" / "25-state-regional-grid.png"
         page.screenshot(path=str(state_l2_img), full_page=False)
         print(f"[截图完成] Level 2 特写 -> {state_l2_img}")
         
         # 截图 Level 3: 厂区空间孪生全景
-        page.locator(".crumb-item").nth(2).click()
+        page.locator(".step-item").nth(2).click()
         page.wait_for_timeout(800)
         state_l3_img = ROOT / "docs" / "screenshots" / "states" / "25-state-plant-twin.png"
         page.screenshot(path=str(state_l3_img), full_page=False)
         print(f"[截图完成] Level 3 特写 -> {state_l3_img}")
         
         # 截图 Level 4: 核心工艺数据中枢
-        page.locator(".crumb-item").nth(3).click()
+        page.locator(".step-item").nth(3).click()
         page.wait_for_timeout(800)
         state_l4_img = ROOT / "docs" / "screenshots" / "states" / "25-state-process-detail.png"
         page.screenshot(path=str(state_l4_img), full_page=False)

@@ -319,14 +319,19 @@ open apps/scada-designer/index.html
 
 ### 25 Smart Water Global Digital Earth & Multi-tier Drill-down Digital Cockpit (Panoramic 3D Spatial Twin)
 - **Role**: designed for water authority group headquarters and flagship water plant exhibition halls as a "macro-earth to micro-process four-tier drill-down digital cockpit". Replaces standard flat report portals with cinematic 3D camera travel from "Global Earth → China Regional Water Grid → Plant Spatial Twin → Core Process Telemetry Hub".
-- **Four-Tier Drill-down & Camera Travel Architecture**:
-  1. **Level 1 Macro 3D Digital Earth (Global Water Portfolio)**: deep-space starfield particles, procedurally generated revolving digital earth (algorithmic continent dot-matrix clusters, lat/long dashed grids, radiant atmospheric halo), visualizing 42 nationwide managed wastewater treatment plants with aggregate 12.5M m³/d capacity, 100% compliance rate, and carbon reduction metrics;
-  2. **Level 2 China & Regional Water Grid (East China · Shanghai Demonstration Zone)**: smooth camera zoom-in while the globe revolves and locks onto 121.5°E, 31.2°N (Yangtze Estuary & Shanghai water systems), revealing 4 pulsing water droplet beacons for key municipal facilities: Bailonggang (2.8M m³/d), Zhuyuan #4 (1.2M m³/d), Shidongkou (0.4M m³/d), and Wumin (0.5M m³/d);
-  3. **Level 3 Flagship Water Treatment Plant Spatial Twin (Bailonggang Demonstration Plant)**: cinematic camera penetration through the geographic veil into the facility's 3D architectural clay model (raw screens, vortex grit chambers, A²O bioreactor basins, secondary clarifier matrix, densadeg units, UV channels, and sludge dewatering buildings) with floating 3D telemetry badges;
+- **Visual Design & Realistic Sci-Fi Digital Globe**:
+  - **Eliminated Artificial Outer Ring**: completely discarded artificial glowing halos and harsh outer ring meshes, ensuring the globe naturally integrates into deep-space starfields;
+  - **High-Precision Geography & Fluorescent Dot Matrix**: procedural algorithm maps accurate continental shorelines filled with organized fluorescent dot matrix grids (cyan-blue for global land, vivid cyan-green for China), complete with the Yangtze and Yellow River arterial lifelines;
+  - **Global 3D Cyber Arcs**: graceful 3D quadratic parabolic arcs arc across continents from Europe, North America, South America, and Australia into the Shanghai East China Dispatch Hub, carrying dynamic flowing light particles;
+  - **3D Energy Beacon & Surface Sonar**: vertical cyan light beacon and concentric ripple waves centered at 121.5°E, 31.2°N.
+- **Four-Tier Progressive Drill-down & Camera Trajectory**:
+  1. **Level 1 Macro 3D Digital Earth (Global Water Portfolio)**: deep-space starfield, slow-spinning dot-matrix digital globe, visualizing 42 nationwide managed wastewater treatment plants with aggregate 12.5M m³/d capacity, 100% compliance rate, and carbon reduction metrics;
+  2. **Level 2 China & Regional Water Grid (East China · Shanghai Demonstration Zone)**: camera dives into regional airspace while the globe locks onto East China, revealing key municipal facilities: Bailonggang (2.8M m³/d), Zhuyuan #4 (1.2M m³/d), Shidongkou (0.4M m³/d), and Wumin (0.5M m³/d);
+  3. **Level 3 Flagship Water Treatment Plant Spatial Twin (Bailonggang Demonstration Plant)**: cinematic camera penetration through the geographic veil into the facility's 3D architectural model (raw screens, grit chambers, A²O bioreactor basins, secondary clarifier matrix, UV channels, sludge buildings) with floating 3D telemetry badges;
   4. **Level 4 Core Process Telemetry Hub (Bioreactor Micro-Control Center)**: camera dollys close to the bioreactor basin while professional process telemetry panels smoothly expand on both wings: influent/effluent quality benchmarks (COD: 285 → 22.4 mg/L, NH₃-N: 29.2 → 0.95 mg/L, TP: 3.85 → 0.18 mg/L with Grade 1A+ green badges), bioreactor flow vector micro-view, blower drive frequencies, and 24-hour compliance trend curves.
-- **Interactive & Demo Innovations**:
-  - **Top Four-tier Breadcrumb Trail**: `[ Global Portfolio ] > [ Regional Grid ] > [ Bailonggang Plant ] > [ Process Hub ]` with instant smooth camera interpolation rollback to any tier;
-  - **One-tap Autonomous Tour Demo (Auto Tour)**: automatically loops through the four-tier cinematic voyage at optimal presentation pacing, built specifically for executive briefings and show-floor walls;
+- **Dual Progression Modes System**:
+  - **Auto-Progression Mode**: 8-second smooth automatic transition per level accompanied by a bottom countdown progress bar, ideal for unattended executive exhibition displays;
+  - **Semi-Auto Guided Progression Mode**: built for live technical briefings and keynote presentations, offering a bottom control cockpit (`[◀ Previous View]`, tier telemetry status, `[Next Progression ➔]`) with keyboard Spacebar step-forward and ESC/Backspace step-back support;
   - **100% Offline Zero-CDN Architecture**: powered entirely by vendored `vendor/three.min.js` + `vendor/OrbitControls.js`; all globe geometry and plant structures are procedurally synthesized in code with zero external tile/map dependencies, guaranteeing instant loading and zero lag.
 - **File**: `scenarios/water-treatment/25-智慧水务宏观地球与多级厂区穿透数字驾驶舱.html`
 
@@ -341,7 +346,7 @@ open apps/scada-designer/index.html
 |---|---|
 | ![25-plant](docs/screenshots/states/25-state-plant-twin.png) | ![25-process](docs/screenshots/states/25-state-process-detail.png) |
 
-> Cinematic smooth camera penetration, zero external tile dependencies, four-tier breadcrumb rollback, and auto-tour demos deliver the definitive visual frontier of industrial digital twins.
+> Cinematic smooth camera penetration, ring-free pure dot-matrix tech globe, global cyber arc convergence, dual progression modes, and four-tier drill-down deliver the definitive visual frontier of industrial digital twins.
 
 </details>
 

@@ -6,9 +6,9 @@
 <title>智慧水务宏观地球与多级厂区穿透数字驾驶舱</title>
 <style>
 :root {
-  --bg-deep: #050b14;
-  --bg-panel: rgba(10, 22, 38, 0.88);
-  --bg-panel-sub: rgba(15, 30, 52, 0.75);
+  --bg-deep: #030812;
+  --bg-panel: rgba(8, 18, 32, 0.88);
+  --bg-panel-sub: rgba(12, 26, 46, 0.78);
   --border-cyan: rgba(56, 189, 248, 0.35);
   --border-glow: rgba(56, 189, 248, 0.6);
   --cyan: #38bdf8;
@@ -37,14 +37,14 @@ html, body {
   overflow: hidden;
 }
 
-/* 1920x1080 等比缩放容器 */
+/* 1920x1080 基准画布容器 */
 #viewport {
   width: 100vw;
   height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #02060d;
+  background: #010409;
 }
 
 #screen {
@@ -53,7 +53,7 @@ html, body {
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 50%, #0d1b2e 0%, #050b14 70%, #02050a 100%);
+  background: radial-gradient(circle at 50% 50%, #071526 0%, #030812 75%, #010409 100%);
   transform-origin: center center;
 }
 
@@ -66,7 +66,7 @@ html, body {
   z-index: 1;
 }
 
-/* 顶层 UI 容器 */
+/* 顶层 UI 交互层 */
 .ui-layer {
   position: absolute;
   inset: 0;
@@ -76,7 +76,6 @@ html, body {
   flex-direction: column;
 }
 
-/* 所有交互面板启用鼠标事件 */
 .interactive {
   pointer-events: auto;
 }
@@ -88,7 +87,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(180deg, rgba(6, 15, 27, 0.95) 0%, rgba(6, 15, 27, 0.7) 70%, transparent 100%);
+  background: linear-gradient(180deg, rgba(3, 8, 18, 0.96) 0%, rgba(3, 8, 18, 0.75) 75%, transparent 100%);
   border-bottom: 1px solid rgba(56, 189, 248, 0.2);
   backdrop-filter: blur(10px);
   position: relative;
@@ -101,15 +100,15 @@ html, body {
   gap: 16px;
 }
 .brand-icon {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 8px;
   background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
   border: 1px solid var(--border-glow);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.45);
 }
 .brand-icon svg {
   width: 24px;
@@ -117,7 +116,7 @@ html, body {
   fill: #fff;
 }
 .brand-text h1 {
-  font-size: 24px;
+  font-size: 23px;
   font-weight: 700;
   letter-spacing: 2px;
   background: linear-gradient(180deg, #ffffff 0%, #bae6fd 100%);
@@ -130,18 +129,18 @@ html, body {
   letter-spacing: 1px;
 }
 
-/* 中央四级穿透面包屑导航 (核心下钻与回跳控制) */
-.breadcrumbs-nav {
+/* 中央四级推进视界指示器 */
+.stage-stepper-nav {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(13, 29, 49, 0.7);
-  padding: 8px 18px;
+  background: rgba(10, 22, 38, 0.85);
+  padding: 6px 16px;
   border-radius: 30px;
   border: 1px solid var(--border-cyan);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
 }
-.crumb-item {
+.step-item {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -153,83 +152,61 @@ html, body {
   cursor: pointer;
   transition: all 0.25s ease;
 }
-.crumb-item:hover {
+.step-item:hover {
   color: #fff;
   background: rgba(56, 189, 248, 0.15);
 }
-.crumb-item.active {
+.step-item.active {
   color: #fff;
   background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.55);
 }
-.crumb-sep {
+.step-sep {
   color: #475569;
-  font-size: 12px;
+  font-size: 11px;
 }
 
-/* 顶部右侧控制台 */
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.tour-btn {
+/* 顶部右侧推进模式切换 (自动推进 / 半自动导引) */
+.mode-toggle-group {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
-  border: 1px solid #2dd4bf;
-  color: #fff;
-  padding: 9px 18px;
+  background: rgba(10, 22, 38, 0.8);
+  border: 1px solid var(--border-cyan);
+  border-radius: 8px;
+  padding: 4px;
+}
+.mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
   border-radius: 6px;
-  font-size: 13px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 0 14px rgba(45, 212, 191, 0.35);
   transition: all 0.2s ease;
 }
-.tour-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 20px rgba(45, 212, 191, 0.6);
-}
-.tour-btn.touring {
-  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
-  border-color: #f87171;
-  box-shadow: 0 0 14px rgba(248, 113, 113, 0.4);
-}
-.tour-pulse-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #fff;
-  animation: pulseDot 1.2s infinite;
-}
-@keyframes pulseDot {
-  0% { transform: scale(0.8); opacity: 0.6; }
-  50% { transform: scale(1.3); opacity: 1; }
-  100% { transform: scale(0.8); opacity: 0.6; }
-}
-
-.view-reset-btn {
-  background: rgba(30, 41, 59, 0.7);
-  border: 1px solid #475569;
-  color: #cbd5e1;
-  padding: 8px 14px;
-  border-radius: 6px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.view-reset-btn:hover {
-  border-color: var(--cyan);
+.mode-btn.active {
+  background: #0284c7;
   color: #fff;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+.mode-indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #38bdf8;
 }
 
 /* 主展示视界与面板布局 */
 .main-stage {
   flex: 1;
   position: relative;
-  padding: 20px 32px 32px;
+  padding: 18px 32px 24px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -242,7 +219,7 @@ html, body {
   border: 1px solid var(--border-cyan);
   border-radius: 10px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   position: relative;
   overflow: hidden;
 }
@@ -251,7 +228,7 @@ html, body {
   position: absolute;
   top: 0;
   left: 0;
-  width: 40px;
+  width: 36px;
   height: 2px;
   background: var(--cyan);
   box-shadow: 0 0 8px var(--cyan);
@@ -283,18 +260,16 @@ html, body {
 /* ================= Level 1 宏观地球视界面板 ================= */
 .level-1-container {
   position: absolute;
-  inset: 20px 32px 32px;
+  inset: 16px 32px 90px;
   display: grid;
   grid-template-columns: 360px 1fr 360px;
-  grid-template-rows: 1fr;
   gap: 24px;
   pointer-events: none;
-  transition: opacity 0.5s ease;
 }
 .l1-left, .l1-right {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   pointer-events: auto;
 }
 .kpi-stat-card {
@@ -308,7 +283,7 @@ html, body {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin: 8px 0 4px;
+  margin: 6px 0 2px;
 }
 .kpi-stat-num {
   font-family: var(--font-mono);
@@ -325,12 +300,11 @@ html, body {
 /* ================= Level 2 省级水厂集群面板 ================= */
 .level-2-container {
   position: absolute;
-  inset: 20px 32px 32px;
+  inset: 16px 32px 90px;
   display: grid;
   grid-template-columns: 380px 1fr 380px;
   gap: 24px;
   pointer-events: none;
-  transition: opacity 0.5s ease;
 }
 .plant-list-box {
   display: flex;
@@ -349,9 +323,9 @@ html, body {
 }
 .plant-item-card:hover, .plant-item-card.selected {
   border-color: var(--cyan);
-  background: rgba(14, 165, 233, 0.18);
+  background: rgba(14, 165, 233, 0.2);
   transform: translateX(4px);
-  box-shadow: 0 4px 12px rgba(56, 189, 248, 0.25);
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.25);
 }
 .plant-item-head {
   display: flex;
@@ -382,24 +356,23 @@ html, body {
 /* ================= Level 3 水厂空间孪生全景面板 ================= */
 .level-3-container {
   position: absolute;
-  inset: 20px 32px 32px;
+  inset: 16px 32px 90px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   pointer-events: none;
-  transition: opacity 0.5s ease;
 }
 .l3-top-banner {
   pointer-events: auto;
   align-self: center;
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(10, 22, 38, 0.88);
   border: 1px solid var(--border-cyan);
   border-radius: 30px;
   padding: 8px 24px;
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 .l3-bottom-bar {
   pointer-events: auto;
@@ -420,13 +393,12 @@ html, body {
 /* ================= Level 4 厂内微观工艺数据中枢 ================= */
 .level-4-container {
   position: absolute;
-  inset: 20px 32px 32px;
+  inset: 16px 32px 90px;
   display: grid;
   grid-template-columns: 420px 1fr 420px;
-  grid-template-rows: 1fr 280px;
+  grid-template-rows: 1fr 270px;
   gap: 18px;
   pointer-events: none;
-  transition: opacity 0.5s ease;
 }
 .l4-left-panel {
   grid-column: 1 / 2;
@@ -434,7 +406,7 @@ html, body {
   pointer-events: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 .l4-center-top {
   grid-column: 2 / 3;
@@ -449,7 +421,7 @@ html, body {
   pointer-events: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 .l4-bottom-center {
   grid-column: 2 / 3;
@@ -462,7 +434,7 @@ html, body {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .water-metric-table th {
   text-align: left;
@@ -472,7 +444,7 @@ html, body {
   font-weight: normal;
 }
 .water-metric-table td {
-  padding: 10px 8px;
+  padding: 9px 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 .val-in {
@@ -493,6 +465,82 @@ html, body {
   color: #34d399;
 }
 
+/* ================= 核心：底部半自动与自动渐进式推进控制器 ================= */
+.progression-controller-bar {
+  position: absolute;
+  bottom: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(8, 18, 32, 0.92);
+  border: 1px solid var(--border-glow);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(56, 189, 248, 0.25);
+  border-radius: 40px;
+  padding: 8px 24px;
+  pointer-events: auto;
+}
+.nav-prev-btn, .nav-next-btn {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  border: 1px solid var(--cyan);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+}
+.nav-prev-btn:hover, .nav-next-btn:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.6);
+}
+.nav-prev-btn:disabled, .nav-next-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+.nav-info-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 280px;
+}
+.nav-stage-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-stage-desc {
+  font-size: 11px;
+  color: var(--cyan);
+  margin-top: 2px;
+}
+.auto-progress-bar-wrap {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.auto-progress-fill {
+  height: 100%;
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan);
+  transition: width 0.1s linear;
+}
+
 /* 底部状态条 (合规必须项) */
 .bottom-telemetry-bar {
   position: absolute;
@@ -500,7 +548,7 @@ html, body {
   left: 0;
   width: 100%;
   height: 28px;
-  background: rgba(2, 6, 13, 0.95);
+  background: rgba(2, 6, 13, 0.98);
   border-top: 1px solid rgba(56, 189, 248, 0.2);
   padding: 0 24px;
   display: flex;
@@ -518,10 +566,9 @@ html, body {
 .chart-box {
   width: 100%;
   height: 100%;
-  min-height: 160px;
+  min-height: 150px;
 }
 
-/* 提示悬浮浮牌样式 */
 .hint-tip {
   font-size: 11px;
   color: var(--cyan);
@@ -552,31 +599,34 @@ html, body {
         </div>
 
         <!-- 中央四级穿透面包屑 (随时回跳) -->
-        <nav class="breadcrumbs-nav">
-          <div class="crumb-item" :class="{ active: currentLevel === 1 }" @click="goToLevel(1)">
-            <span>① 全球水务大盘</span>
+        <nav class="stage-stepper-nav">
+          <div class="step-item" :class="{ active: currentLevel === 1 }" @click="goToLevel(1)">
+            <span>① 宏观地球全景</span>
           </div>
-          <span class="crumb-sep">›</span>
-          <div class="crumb-item" :class="{ active: currentLevel === 2 }" @click="goToLevel(2)">
+          <span class="step-sep">›</span>
+          <div class="step-item" :class="{ active: currentLevel === 2 }" @click="goToLevel(2)">
             <span>② 华东水厂集群</span>
           </div>
-          <span class="crumb-sep">›</span>
-          <div class="crumb-item" :class="{ active: currentLevel === 3 }" @click="goToLevel(3)">
-            <span>③ 白龙港示范厂</span>
+          <span class="step-sep">›</span>
+          <div class="step-item" :class="{ active: currentLevel === 3 }" @click="goToLevel(3)">
+            <span>③ 厂区空间孪生</span>
           </div>
-          <span class="crumb-sep">›</span>
-          <div class="crumb-item" :class="{ active: currentLevel === 4 }" @click="goToLevel(4)">
+          <span class="step-sep">›</span>
+          <div class="step-item" :class="{ active: currentLevel === 4 }" @click="goToLevel(4)">
             <span>④ 核心工艺中枢</span>
           </div>
         </nav>
 
-        <!-- 顶部右侧：自动巡游与视角重置 -->
-        <div class="top-actions">
-          <button class="tour-btn" :class="{ touring: isAutoTouring }" @click="toggleAutoTour">
-            <span class="tour-pulse-dot"></span>
-            <span>{{ isAutoTouring ? '停止自动巡游演示' : '启动全景穿透自动巡游' }}</span>
+        <!-- 顶部右侧：自动/半自动模式切换器 -->
+        <div class="mode-toggle-group">
+          <button class="mode-btn" :class="{ active: progressionMode === 'auto' }" @click="setProgressionMode('auto')">
+            <span class="mode-indicator-dot" v-if="progressionMode === 'auto'"></span>
+            <span>自动推进模式</span>
           </button>
-          <button class="view-reset-btn" @click="resetCurrentCameraView">重置当前视界</button>
+          <button class="mode-btn" :class="{ active: progressionMode === 'semi' }" @click="setProgressionMode('semi')">
+            <span class="mode-indicator-dot" v-if="progressionMode === 'semi'"></span>
+            <span>半自动步进模式</span>
+          </button>
         </div>
       </header>
 
@@ -609,7 +659,7 @@ html, body {
             </div>
           </aside>
 
-          <div></div> <!-- 中央保持 3D 旋转地球通透 -->
+          <div></div>
 
           <aside class="l1-right">
             <div class="glass-panel kpi-stat-card">
@@ -632,14 +682,14 @@ html, body {
 
             <div class="glass-panel" style="flex: 1; padding: 14px; display: flex; flex-direction: column; justify-content: space-between;">
               <div>
-                <div class="panel-title">快捷穿透引导</div>
+                <div class="panel-title">宏观视界概览</div>
                 <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.6;">
-                  当前处于宏观地球视角，您可以拖拽 3D 地球旋转，或点击下方按钮直接下潜至中国华东核心示范区：
+                  深空全息数字地球正处于全景态势感知。点击底栏推进键或开启自动模式，镜头将渐进俯冲下潜至中国华东核心水网示范区。
                 </p>
               </div>
-              <button class="tour-btn" style="width: 100%; justify-content: center;" @click="goToLevel(2)">
-                聚焦中国·华东省域水务网格 ➔
-              </button>
+              <div style="font-size: 11px; color: #94a3b8; border-top: 1px dashed rgba(56,189,248,0.2); padding-top: 8px;">
+                提示：支持鼠标拖拽旋转地球，滚轮调整微距。
+              </div>
             </div>
           </aside>
         </section>
@@ -650,7 +700,7 @@ html, body {
             <div class="glass-panel plant-list-box">
               <div class="panel-header" style="padding: 4px 4px 8px;">
                 <span class="panel-title">上海及周边骨干净水厂点位</span>
-                <span style="font-size: 11px; color: var(--cyan);">点击聚焦厂区</span>
+                <span style="font-size: 11px; color: var(--cyan);">点击切换目标</span>
               </div>
 
               <div 
@@ -681,23 +731,20 @@ html, body {
 
           <aside class="l1-right">
             <div class="glass-panel" style="padding: 16px;">
-              <div class="panel-title">选中水厂：{{ currentPlant.name }}</div>
+              <div class="panel-title">目标厂区：{{ currentPlant.name }}</div>
               <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.6;">
                 {{ currentPlant.desc }}
               </p>
               <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">
-                  <div style="font-size: 11px; color: #94a3b8;">出水标准</div>
+                  <div style="font-size: 11px; color: #94a3b8;">出水执行标准</div>
                   <div style="font-size: 13px; font-weight: bold; color: #10b981; margin-top: 4px;">国家一级 A+</div>
                 </div>
                 <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">
-                  <div style="font-size: 11px; color: #94a3b8;">在线水质合规</div>
+                  <div style="font-size: 11px; color: #94a3b8;">在线达标保证</div>
                   <div style="font-size: 13px; font-weight: bold; color: #38bdf8; margin-top: 4px;">100% 达标</div>
                 </div>
               </div>
-              <button class="tour-btn" style="width: 100%; justify-content: center; margin-top: 16px;" @click="goToLevel(3)">
-                穿透进入厂区 3D 空间孪生 ➔
-              </button>
             </div>
 
             <div class="glass-panel" style="flex: 1; padding: 14px;">
@@ -711,7 +758,7 @@ html, body {
         <section v-show="currentLevel === 3" class="level-3-container">
           <div class="l3-top-banner">
             <span style="font-size: 14px; font-weight: 700; color: #fff;">上海白龙港水质净化厂 · 3D 微缩空间数字孪生全景</span>
-            <span style="font-size: 12px; color: var(--cyan);">点击下方核心工艺工段或点击 3D 生化池即可深入微观工艺数据</span>
+            <span style="font-size: 12px; color: var(--cyan);">点击下方生化池或点击推进键即可深入微观工艺数据</span>
           </div>
 
           <div class="l3-bottom-bar">
@@ -795,7 +842,7 @@ html, body {
               </tbody>
             </table>
 
-            <div style="flex: 1; margin-top: 10px; display: flex; flex-direction: column;">
+            <div style="flex: 1; margin-top: 8px; display: flex; flex-direction: column;">
               <div class="panel-title" style="font-size: 13px;">主要污染物去除率环比 (%)</div>
               <div id="chartL4Left" class="chart-box" style="flex: 1;"></div>
             </div>
@@ -803,12 +850,12 @@ html, body {
 
           <!-- 中央顶部：生化反应池工艺态势微视图 -->
           <div class="glass-panel l4-center-top" style="padding: 16px;">
-            <div class="panel-header" style="padding: 0 0 10px;">
+            <div class="panel-header" style="padding: 0 0 8px;">
               <span class="panel-title">A²O 生化反应池实时工艺流程态势</span>
               <span style="font-size: 11px; color: #10b981;">● 缺氧推流正常 | 好氧微孔曝气 2.15 mg/L | 内回流 200%</span>
             </div>
             <!-- 矢量工艺流程微缩图 -->
-            <svg style="width: 100%; height: 160px; margin-top: 8px;" viewBox="0 0 800 160">
+            <svg style="width: 100%; height: 155px; margin-top: 6px;" viewBox="0 0 800 155">
               <defs>
                 <linearGradient id="gAnoxic" x1="0" y1="0" x2="1" y2="0">
                   <stop offset="0%" stop-color="#0f2636" />
@@ -820,90 +867,109 @@ html, body {
                 </linearGradient>
               </defs>
 
-              <!-- 缺氧反硝化段 -->
-              <rect x="20" y="30" width="220" height="90" rx="6" fill="url(#gAnoxic)" stroke="#38bdf8" stroke-width="1.5" />
-              <text x="130" y="55" fill="#bae6fd" font-size="13" font-weight="bold" text-anchor="middle">【缺氧反硝化区】</text>
-              <text x="130" y="80" fill="#94a3b8" font-size="11" text-anchor="middle">潜水推流机 2台运行中</text>
-              <text x="130" y="102" fill="#fbbf24" font-size="12" font-weight="bold" text-anchor="middle">ORP: -148 mV</text>
+              <rect x="20" y="25" width="220" height="90" rx="6" fill="url(#gAnoxic)" stroke="#38bdf8" stroke-width="1.5" />
+              <text x="130" y="50" fill="#bae6fd" font-size="13" font-weight="bold" text-anchor="middle">【缺氧反硝化区】</text>
+              <text x="130" y="75" fill="#94a3b8" font-size="11" text-anchor="middle">潜水推流机 2台运行中</text>
+              <text x="130" y="97" fill="#fbbf24" font-size="12" font-weight="bold" text-anchor="middle">ORP: -148 mV</text>
 
-              <!-- 隔墙与导流流线 -->
-              <line x1="240" y1="75" x2="280" y2="75" stroke="#38bdf8" stroke-width="3" stroke-dasharray="6 4" />
-              <polygon points="285,75 275,70 275,80" fill="#38bdf8" />
+              <line x1="240" y1="70" x2="280" y2="70" stroke="#38bdf8" stroke-width="3" stroke-dasharray="6 4" />
+              <polygon points="285,70 275,65 275,75" fill="#38bdf8" />
 
-              <!-- 好氧硝化微孔曝气段 -->
-              <rect x="290" y="30" width="320" height="90" rx="6" fill="url(#gAerobic)" stroke="#38bdf8" stroke-width="1.5" />
-              <text x="450" y="55" fill="#38bdf8" font-size="13" font-weight="bold" text-anchor="middle">【好氧微孔曝气区】DO 闭环精控</text>
-              <text x="450" y="80" fill="#cbd5e1" font-size="11" text-anchor="middle">微孔曝气风阀: 42% · 风量 1,365 Nm³/h</text>
-              <text x="450" y="102" fill="#34d399" font-size="13" font-weight="bold" text-anchor="middle">DO 实测: 2.15 mg/L (目标 2.0)</text>
+              <rect x="290" y="25" width="320" height="90" rx="6" fill="url(#gAerobic)" stroke="#38bdf8" stroke-width="1.5" />
+              <text x="450" y="50" fill="#38bdf8" font-size="13" font-weight="bold" text-anchor="middle">【好氧微孔曝气区】DO 闭环精控</text>
+              <text x="450" y="75" fill="#cbd5e1" font-size="11" text-anchor="middle">微孔曝气风阀: 42% · 风量 1,365 Nm³/h</text>
+              <text x="450" y="97" fill="#34d399" font-size="13" font-weight="bold" text-anchor="middle">DO 实测: 2.15 mg/L (目标 2.0)</text>
 
-              <!-- 二沉池出水导流 -->
-              <line x1="610" y1="75" x2="650" y2="75" stroke="#38bdf8" stroke-width="3" stroke-dasharray="6 4" />
-              <polygon points="655,75 645,70 645,80" fill="#38bdf8" />
-              <rect x="660" y="30" width="120" height="90" rx="6" fill="#0b1b24" stroke="#475569" />
-              <text x="720" y="65" fill="#e2e8f0" font-size="12" font-weight="bold" text-anchor="middle">去二沉池</text>
-              <text x="720" y="90" fill="#10b981" font-size="11" text-anchor="middle">泥水分离</text>
+              <line x1="610" y1="70" x2="650" y2="70" stroke="#38bdf8" stroke-width="3" stroke-dasharray="6 4" />
+              <polygon points="655,70 645,65 645,75" fill="#38bdf8" />
+              <rect x="660" y="25" width="120" height="90" rx="6" fill="#0b1b24" stroke="#475569" />
+              <text x="720" y="60" fill="#e2e8f0" font-size="12" font-weight="bold" text-anchor="middle">去二沉池</text>
+              <text x="720" y="85" fill="#10b981" font-size="11" text-anchor="middle">泥水分离</text>
 
-              <!-- 硝化液内回流管线 (好氧回到缺氧) -->
-              <path d="M 520 120 L 520 145 L 100 145 L 100 120" fill="none" stroke="#0ea5e9" stroke-width="2.5" stroke-dasharray="6 4" />
-              <text x="310" y="140" fill="#38bdf8" font-size="11" text-anchor="middle">硝化液内回流管线 (回流比 200%)</text>
+              <path d="M 520 115 L 520 138 L 100 138 L 100 115" fill="none" stroke="#0ea5e9" stroke-width="2.5" stroke-dasharray="6 4" />
+              <text x="310" y="133" fill="#38bdf8" font-size="11" text-anchor="middle">硝化液内回流管线 (回流比 200%)</text>
             </svg>
           </div>
 
           <!-- 右侧：鼓风机与回流动力设备监控 -->
           <aside class="glass-panel l4-right-panel" style="padding: 16px;">
             <div class="panel-title">曝气鼓风与回流动力机组</div>
-            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
-              <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; border-left: 3px solid #10b981;">
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+              <div style="background: rgba(0,0,0,0.3); padding: 9px; border-radius: 6px; border-left: 3px solid #10b981;">
                 <div style="display: flex; justify-content: space-between; font-size: 12px;">
                   <b>1# 空气悬浮离心鼓风机</b>
                   <span style="color: #10b981;">● 变频运行中</span>
                 </div>
-                <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+                <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">
                   频率: 48.5 Hz | 功率: 88.5 kW | 出风压: 62.5 kPa
                 </div>
               </div>
 
-              <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; border-left: 3px solid #10b981;">
+              <div style="background: rgba(0,0,0,0.3); padding: 9px; border-radius: 6px; border-left: 3px solid #10b981;">
                 <div style="display: flex; justify-content: space-between; font-size: 12px;">
                   <b>2# 空气悬浮离心鼓风机</b>
                   <span style="color: #10b981;">● 变频运行中</span>
                 </div>
-                <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+                <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">
                   频率: 47.2 Hz | 功率: 86.2 kW | 轴温: 46.5 ℃
                 </div>
               </div>
 
-              <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; border-left: 3px solid #64748b;">
+              <div style="background: rgba(0,0,0,0.3); padding: 9px; border-radius: 6px; border-left: 3px solid #64748b;">
                 <div style="display: flex; justify-content: space-between; font-size: 12px;">
                   <b>3# 备用鼓风机</b>
                   <span style="color: #94a3b8;">○ 自动热备中</span>
                 </div>
-                <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+                <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">
                   就绪状态良好 | 联锁启泵阈值 < 1.6 mg/L
                 </div>
               </div>
             </div>
 
-            <div style="flex: 1; margin-top: 10px; display: flex; flex-direction: column;">
+            <div style="flex: 1; margin-top: 8px; display: flex; flex-direction: column;">
               <div class="panel-title" style="font-size: 13px;">曝气支管压力与风量瞬时遥测</div>
               <div id="chartL4Right" class="chart-box" style="flex: 1;"></div>
             </div>
           </aside>
 
           <!-- 中央底部：24h 出水达标趋势图 -->
-          <div class="glass-panel l4-bottom-center" style="padding: 14px 18px;">
+          <div class="glass-panel l4-bottom-center" style="padding: 12px 18px;">
             <div class="panel-title">近 24 小时生化出水 COD / 氨氮连续在线达标趋势</div>
-            <div id="chartL4Bottom" class="chart-box" style="height: 220px;"></div>
+            <div id="chartL4Bottom" class="chart-box" style="height: 210px;"></div>
           </div>
         </section>
       </main>
+
+      <!-- 核心：底部半自动与自动渐进式推进控制器 -->
+      <section class="progression-controller-bar">
+        <button class="nav-prev-btn" :disabled="currentLevel <= 1" @click="stepLevel(-1)">
+          <span>◀ 上一步视角</span>
+        </button>
+
+        <div class="nav-info-center">
+          <div class="nav-stage-title">
+            <span>当前所处视界：{{ levelShortTitles[currentLevel] }}</span>
+            <span style="font-size: 11px; color: #38bdf8;">[{{ currentLevel }}/4]</span>
+          </div>
+          <div class="nav-stage-desc">
+            {{ levelDescriptions[currentLevel] }}
+          </div>
+          <div class="auto-progress-bar-wrap" v-if="progressionMode === 'auto'">
+            <div class="auto-progress-fill" :style="{ width: `${autoProgressPercent}%` }"></div>
+          </div>
+        </div>
+
+        <button class="nav-next-btn" :disabled="currentLevel >= 4" @click="stepLevel(1)">
+          <span>下一步推进 ➔</span>
+        </button>
+      </section>
 
       <!-- 底部标准合规状态条 -->
       <footer class="bottom-telemetry-bar">
         <div>
           <span>系统遥测通信: <b>SCADA / Modbus-TCP 正常 (26ms)</b></span>
           <span style="margin-left: 20px;">数据质量 (quality): <b>GOOD (100.0%)</b></span>
-          <span style="margin-left: 20px;">当前层级: <b style="color: #38bdf8;">{{ levelNames[currentLevel] }}</b></span>
+          <span style="margin-left: 20px;">推进模式: <b style="color: #38bdf8;">{{ progressionMode === 'auto' ? '全自动巡游演示' : '半自动步进导引' }}</b></span>
         </div>
         <div>
           <span>最后更新时间: {{ lastSeen }}</span>
@@ -922,7 +988,7 @@ html, body {
 <script>
 /**
  * 25 号：智慧水务宏观地球与多级厂区穿透数字驾驶舱
- * 严格遵循 1920x1080、Three.js 算法生成地球、四级镜头平滑穿透、ECharts 与 Vue 3 驱动
+ * 遵循真实地理科技感地球仪（无生硬外圈）、四级渐进式平滑推进、自动推进与半自动推进双模式
  */
 (() => {
   const { createApp, ref, reactive, onMounted, onUnmounted, nextTick } = Vue;
@@ -930,18 +996,25 @@ html, body {
   const app = createApp({
     setup() {
       const currentLevel = ref(1);
-      const isAutoTouring = ref(false);
+      const progressionMode = ref('auto'); // 'auto' | 'semi'
+      const autoProgressPercent = ref(0);
       const lastSeen = ref('--:--:--');
       const selectedPlantId = ref('blg');
 
-      const levelNames = {
-        1: '① 宏观全球水务大盘 (Global Earth)',
-        2: '② 中国及省域水厂集群 (Regional Grid)',
-        3: '③ 白龙港示范厂区空间孪生 (Plant Twin)',
-        4: '④ 核心工艺数据信息中枢 (Process Detail)'
+      const levelShortTitles = {
+        1: '① 宏观全球地球大盘',
+        2: '② 中国·华东水厂集群',
+        3: '③ 白龙港示范厂区孪生',
+        4: '④ 核心生化工艺数据中枢'
       };
 
-      // 水厂列表数据
+      const levelDescriptions = {
+        1: '深空全息数字地球：监视全球及全国 42 座水厂综合处理大盘',
+        2: '渐进聚焦长三角与上海水系：展现 4 座主力水厂点位与负荷分布',
+        3: '平滑穿透地理层入园：展示白龙港标杆厂区 3D 建筑与工艺微缩孪生',
+        4: '深入核心生化反应池：监控进出水对照表、曝气风量及 24h 达标曲线'
+      };
+
       const plantList = [
         { id: 'blg', name: '上海白龙港水质净化厂', capacity: '280.0', loadRate: 92, status: '运行正常', desc: '亚洲规模最大的标杆水质净化厂，日处理能力 280 万吨，承担上海中心城区三分之一的污水净化重任。' },
         { id: 'zy', name: '竹园第四污水处理厂', capacity: '120.0', loadRate: 88, status: '运行正常', desc: '采用地下箱体与智慧水务高度集成的现代化大型水质净化工程。' },
@@ -956,45 +1029,41 @@ html, body {
         Object.assign(currentPlant, p);
       }
 
-      // 切换层级并执行摄像机平滑穿透运镜
+      // 切换层级并执行摄像机渐进平滑运镜
       function goToLevel(lvl) {
-        currentLevel.value = lvl;
+        currentLevel.value = Math.max(1, Math.min(4, lvl));
+        autoProgressPercent.value = 0;
         if (window.__threeController) {
-          window.__threeController.moveToLevel(lvl);
+          window.__threeController.moveToLevel(currentLevel.value);
         }
         nextTick(() => {
-          renderChartsForCurrentLevel(lvl);
+          renderChartsForCurrentLevel(currentLevel.value);
         });
       }
 
-      function resetCurrentCameraView() {
-        if (window.__threeController) {
-          window.__threeController.resetView(currentLevel.value);
-        }
+      // 半自动推进：前进一步 / 后退一步
+      function stepLevel(delta) {
+        goToLevel(currentLevel.value + delta);
       }
 
-      // 自动巡游导览控制
-      let tourTimer = null;
-      function toggleAutoTour() {
-        isAutoTouring.value = !isAutoTouring.value;
-        if (isAutoTouring.value) {
-          startAutoTourLoop();
-        } else {
-          if (tourTimer) clearTimeout(tourTimer);
-        }
+      // 模式切换
+      function setProgressionMode(mode) {
+        progressionMode.value = mode;
+        autoProgressPercent.value = 0;
       }
 
-      function startAutoTourLoop() {
-        if (!isAutoTouring.value) return;
-        // 步骤循环：1 -> 2 -> 3 -> 4 -> 1
-        const nextLvl = currentLevel.value >= 4 ? 1 : currentLevel.value + 1;
-        goToLevel(nextLvl);
-        // 每级停留 8 秒以供全屏演示
-        tourTimer = setTimeout(() => {
-          if (isAutoTouring.value) {
-            startAutoTourLoop();
+      // 自动推进计时循环
+      let autoTimer = null;
+      function runAutoProgressionTick() {
+        if (progressionMode.value === 'auto') {
+          // 每 100ms 增加进度，总时长约 8 秒推进一级
+          autoProgressPercent.value += 1.25;
+          if (autoProgressPercent.value >= 100) {
+            autoProgressPercent.value = 0;
+            const next = currentLevel.value >= 4 ? 1 : currentLevel.value + 1;
+            goToLevel(next);
           }
-        }, 8500);
+        }
       }
 
       // 时钟刷新
@@ -1215,37 +1284,51 @@ html, body {
         }
       }
 
+      // 键盘快捷键监听：空格键前进，Backspace/ESC 返回
+      function handleKeydown(e) {
+        if (e.code === 'Space') {
+          stepLevel(1);
+        } else if (e.code === 'Escape' || e.code === 'Backspace') {
+          stepLevel(-1);
+        }
+      }
+
       onMounted(() => {
         updateClock();
-        const t = setInterval(updateClock, 1000);
+        const t1 = setInterval(updateClock, 1000);
+        autoTimer = setInterval(runAutoProgressionTick, 100);
+
+        window.addEventListener('keydown', handleKeydown);
 
         nextTick(() => {
           renderChartsForCurrentLevel(1);
         });
 
-        // 视口变化自动调整 ECharts
         window.addEventListener('resize', () => {
           Object.values(chartInstances).forEach(c => c && c.resize && c.resize());
         });
 
         onUnmounted(() => {
-          clearInterval(t);
-          if (tourTimer) clearTimeout(tourTimer);
+          clearInterval(t1);
+          if (autoTimer) clearInterval(autoTimer);
+          window.removeEventListener('keydown', handleKeydown);
         });
       });
 
       return {
         currentLevel,
-        isAutoTouring,
+        progressionMode,
+        autoProgressPercent,
         lastSeen,
         plantList,
         selectedPlantId,
         currentPlant,
-        levelNames,
+        levelShortTitles,
+        levelDescriptions,
         goToLevel,
-        selectPlant,
-        resetCurrentCameraView,
-        toggleAutoTour
+        stepLevel,
+        setProgressionMode,
+        selectPlant
       };
     }
   });
@@ -1268,198 +1351,378 @@ html, body {
   }
   initScreenScale();
 
-  // ================= Three.js 3D 宏观地球与水厂穿透引擎 =================
+  // ================= Three.js 3D 宏观真实感科技地球与渐进式穿透引擎 =================
   function initThreeEngine() {
     const container = document.getElementById('webgl-container');
     const width = 1920;
     const height = 1080;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x050b14, 0.00035);
+    scene.fog = new THREE.FogExp2(0x020814, 0.00028);
 
     const camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000);
-    // 初始位置为 Level 1
-    camera.position.set(0, 320, 1650);
+    camera.position.set(0, 180, 1380);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
+    renderer.toneMappingExposure = 1.05;
     container.appendChild(renderer.domElement);
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.maxDistance = 2200;
+    controls.maxDistance = 2000;
     controls.minDistance = 80;
 
-    // 灯光体系
-    const ambientLight = new THREE.AmbientLight(0x1e293b, 1.5);
+    // 灯光布局：柔和的环境深蓝光 + 主冷蓝漫射光 (去除刺眼白斑与高光过曝)
+    const ambientLight = new THREE.AmbientLight(0x0a1e38, 2.2);
     scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0x38bdf8, 2.5);
-    sunLight.position.set(800, 600, 1000);
-    scene.add(sunLight);
+    const keyLight = new THREE.DirectionalLight(0x38bdf8, 1.8);
+    keyLight.position.set(600, 300, 800);
+    scene.add(keyLight);
 
-    const blueBackLight = new THREE.DirectionalLight(0x0284c7, 1.8);
-    blueBackLight.position.set(-800, -300, -600);
-    scene.add(blueBackLight);
+    const fillLight = new THREE.DirectionalLight(0x0369a1, 1.2);
+    fillLight.position.set(-600, -200, -600);
+    scene.add(fillLight);
 
-    // ----------------- 1. 星空背景粒子群 -----------------
+    // ----------------- 1. 深空星河粒子背景 -----------------
     const starGeo = new THREE.BufferGeometry();
-    const starCount = 900;
+    const starCount = 650;
     const starPos = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount * 3; i += 3) {
-      starPos[i] = (Math.random() - 0.5) * 4500;
-      starPos[i + 1] = (Math.random() - 0.5) * 4500;
-      starPos[i + 2] = (Math.random() - 0.5) * 4500;
+      starPos[i] = (Math.random() - 0.5) * 3800;
+      starPos[i + 1] = (Math.random() - 0.5) * 3800;
+      starPos[i + 2] = (Math.random() - 0.5) * 3800;
     }
     starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-    const starMat = new THREE.PointsMaterial({ color: 0x94a3b8, size: 2.2, transparent: true, opacity: 0.6 });
+    const starMat = new THREE.PointsMaterial({ color: 0x64748b, size: 1.8, transparent: true, opacity: 0.45 });
     const starField = new THREE.Points(starGeo, starMat);
     scene.add(starField);
 
-    // ----------------- 2. 程序化矢量 3D 数字地球仪 -----------------
+    // ----------------- 2. 真实地理形态 + 高精科技点阵 3D 地球仪 (彻底无外圈) -----------------
     const earthGroup = new THREE.Group();
     scene.add(earthGroup);
 
-    // 纯算法离线生成地球纹理 Canvas (各大洲发光点阵与经纬线)
-    function createProceduralEarthCanvas() {
+    // 经纬度转换到三维球面坐标辅助函数 (R = 320)
+    const GLOBE_RADIUS = 320;
+    function latLonToVector3(lat, lon, r = GLOBE_RADIUS) {
+      const phi = (90 - lat) * (Math.PI / 180);
+      const theta = (lon + 180) * (Math.PI / 180);
+      const x = -(r * Math.sin(phi) * Math.cos(theta));
+      const z = (r * Math.sin(phi) * Math.sin(theta));
+      const y = (r * Math.cos(phi));
+      return new THREE.Vector3(x, y, z);
+    }
+
+    // 纯算法绘制超清科技点阵地球贴图 (2048x1024)
+    function createHighPrecisionTechEarthCanvas() {
       const c = document.createElement('canvas');
       c.width = 2048;
       c.height = 1024;
       const ctx = c.getContext('2d');
 
-      // 深邃夜空海洋基底
-      ctx.fillStyle = '#061320';
+      // 1. 深邃海洋暗底 (无刺眼高光，纯净深海科技质感)
+      const oceanGrad = ctx.createLinearGradient(0, 0, 0, c.height);
+      oceanGrad.addColorStop(0, '#020713');
+      oceanGrad.addColorStop(0.5, '#041124');
+      oceanGrad.addColorStop(1, '#020610');
+      ctx.fillStyle = oceanGrad;
       ctx.fillRect(0, 0, c.width, c.height);
 
-      // 绘制经纬发光虚线网格
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+      // 2. 细微经纬网格线 (0.8px 优雅虚线)
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
       ctx.lineWidth = 1;
-      for (let x = 0; x <= c.width; x += 128) {
+      ctx.setLineDash([2, 5]);
+      for (let lon = -180; lon <= 180; lon += 30) {
+        const x = ((lon + 180) / 360) * c.width;
         ctx.beginPath();
-        ctx.setLineDash([4, 4]);
         ctx.moveTo(x, 0);
         ctx.lineTo(x, c.height);
         ctx.stroke();
       }
-      for (let y = 0; y <= c.height; y += 64) {
+      for (let lat = -60; lat <= 60; lat += 30) {
+        const y = ((90 - lat) / 180) * c.height;
         ctx.beginPath();
-        ctx.setLineDash([4, 4]);
         ctx.moveTo(0, y);
         ctx.lineTo(c.width, y);
         ctx.stroke();
       }
-
-      // 算法生成高亮各大洲板块点阵 (欧亚、非洲、美洲、大洋洲)
       ctx.setLineDash([]);
-      ctx.fillStyle = '#38bdf8';
-      function drawContinentCluster(cx, cy, rx, ry, density, color) {
-        ctx.fillStyle = color || '#38bdf8';
-        for (let i = 0; i < density; i++) {
-          const ang = Math.random() * Math.PI * 2;
-          const rad = Math.sqrt(Math.random());
-          const px = cx + Math.cos(ang) * rx * rad + (Math.random() - 0.5) * 15;
-          const py = cy + Math.sin(ang) * ry * rad + (Math.random() - 0.5) * 15;
-          ctx.beginPath();
-          ctx.arc(px, py, 1.6 + Math.random() * 1.4, 0, Math.PI * 2);
-          ctx.fill();
+
+      // 3. 详尽真实世界大陆多边形路径库
+      const continentPaths = [];
+
+      // 欧亚大陆主轮廓
+      const eurasia = [
+        [-9, 36], [-9, 43], [-1, 44], [-4, 48], [2, 51], [5, 54], [8, 58], [12, 56], 
+        [22, 60], [28, 70], [45, 68], [60, 72], [75, 73], [105, 77], [130, 72], [170, 66], 
+        [180, 65], [170, 60], [160, 56], [142, 53], [135, 46], [130, 42], [125, 40], 
+        [121.5, 38.5], [118, 38.8], [119.5, 35], [121.8, 31.5], [120, 27], [117, 23.5], 
+        [110, 20], [108, 21.5], [105, 10], [100, 7], [98, 12], [90, 22], [80, 16], 
+        [77, 8], [73, 19], [68, 24], [57, 25], [54, 27], [50, 30], [44, 12], [35, 27], 
+        [35, 32], [26, 37], [22, 40], [15, 40], [12, 44], [3, 43], [-2, 37], [-9, 36]
+      ];
+      continentPaths.push(eurasia);
+
+      // 中国核心版图 (高精细化轮廓)
+      const china = [
+        [75, 37], [74, 39], [78, 42], [81, 45], [87, 49], [96, 44], [106, 52], [116, 53], 
+        [121, 53.5], [131, 48], [135, 48], [131, 43], [129, 42], [124, 40], [121.5, 38.8], 
+        [118, 38.8], [119.5, 35], [121.8, 31.5], [121.5, 28], [117, 23.5], [110, 20], 
+        [108, 21.5], [104, 22], [98, 28], [92, 27], [88, 28], [80, 31], [78, 35], [75, 37]
+      ];
+      continentPaths.push(china);
+
+      // 非洲大陆
+      const africa = [
+        [-17, 15], [-16, 21], [-12, 27], [-6, 35], [10, 37], [12, 33], [25, 32], [32, 31], 
+        [34, 27], [43, 12], [51, 11], [44, -5], [40, -11], [35, -23], [32, -28], [28, -34], 
+        [18, -34], [15, -23], [12, -15], [8, -4], [0, 5], [-5, 5], [-13, 8], [-17, 15]
+      ];
+      continentPaths.push(africa);
+
+      // 北美洲
+      const northAmerica = [
+        [-168, 65], [-165, 60], [-152, 58], [-135, 55], [-125, 48], [-120, 35], [-115, 32], 
+        [-110, 24], [-105, 20], [-97, 18], [-90, 16], [-84, 9], [-77, 8], [-80, 25], 
+        [-81, 25], [-80, 32], [-75, 35], [-70, 42], [-65, 45], [-60, 47], [-64, 58], 
+        [-80, 62], [-95, 68], [-120, 70], [-140, 70], [-168, 65]
+      ];
+      continentPaths.push(northAmerica);
+
+      // 南美洲
+      const southAmerica = [
+        [-77, 8], [-72, 11], [-60, 10], [-50, 0], [-35, -5], [-35, -9], [-38, -13], 
+        [-42, -23], [-50, -30], [-53, -33], [-58, -38], [-65, -54], [-75, -52], [-73, -42], 
+        [-71, -30], [-76, -14], [-81, -5], [-77, 8]
+      ];
+      continentPaths.push(southAmerica);
+
+      // 澳大利亚
+      const australia = [
+        [114, -22], [119, -20], [124, -16], [130, -13], [136, -12], [142, -11], [145, -15], 
+        [153, -28], [150, -36], [144, -38], [138, -35], [133, -32], [125, -33], [115, -34], 
+        [113, -26], [114, -22]
+      ];
+      continentPaths.push(australia);
+
+      // 格陵兰岛
+      const greenland = [
+        [-50, 60], [-40, 65], [-20, 70], [-18, 77], [-30, 83], [-55, 82], [-60, 76], [-52, 70], [-50, 60]
+      ];
+      continentPaths.push(greenland);
+
+      // 日本列岛
+      const japan = [
+        [130, 32], [133, 34], [137, 35], [141, 38], [145, 44], [141, 41], [138, 37], [132, 33], [130, 32]
+      ];
+      continentPaths.push(japan);
+
+      // 4. 将多边形填充为高科技陆地，并绘制发光霓虹海岸线
+      continentPaths.forEach((poly, pIdx) => {
+        ctx.beginPath();
+        poly.forEach(([lon, lat], idx) => {
+          const x = ((lon + 180) / 360) * c.width;
+          const y = ((90 - lat) / 180) * c.height;
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+
+        const isChina = (pIdx === 1);
+        ctx.fillStyle = isChina ? 'rgba(14, 60, 98, 0.98)' : 'rgba(10, 36, 62, 0.95)';
+        ctx.fill();
+
+        ctx.shadowColor = isChina ? '#38bdf8' : '#0284c7';
+        ctx.shadowBlur = isChina ? 16 : 8;
+        ctx.strokeStyle = isChina ? '#38bdf8' : 'rgba(56, 189, 248, 0.75)';
+        ctx.lineWidth = isChina ? 3.0 : 1.8;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      });
+
+      // 5. 科技荧光点阵 (Dot Matrix)：在全大陆区域散布清晰可见的发光微点阵
+      function fillDotGrid(poly, isChina) {
+        ctx.save();
+        ctx.beginPath();
+        poly.forEach(([lon, lat], idx) => {
+          const x = ((lon + 180) / 360) * c.width;
+          const y = ((90 - lat) / 180) * c.height;
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.closePath();
+        ctx.clip(); // 仅在当前大陆内部填充点阵
+
+        ctx.fillStyle = isChina ? 'rgba(103, 232, 249, 0.85)' : 'rgba(56, 189, 248, 0.45)';
+        const step = isChina ? 12 : 14;
+        const rad = isChina ? 2.6 : 2.0;
+        for (let y = 0; y < c.height; y += step) {
+          for (let x = 0; x < c.width; x += step) {
+            ctx.beginPath();
+            ctx.arc(x, y, rad, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
+        ctx.restore();
       }
 
-      // 欧亚大陆主体
-      drawContinentCluster(1350, 360, 240, 140, 480, '#38bdf8');
-      // 中国版图区域强化高亮
-      drawContinentCluster(1420, 380, 110, 80, 420, '#67e8f9');
-      // 欧洲板块
-      drawContinentCluster(1080, 320, 100, 70, 260, '#38bdf8');
-      // 非洲板块
-      drawContinentCluster(1090, 560, 120, 140, 340, '#0284c7');
-      // 北美洲板块
-      drawContinentCluster(480, 340, 160, 110, 360, '#38bdf8');
-      // 南美洲板块
-      drawContinentCluster(640, 650, 110, 150, 300, '#0284c7');
-      // 大洋洲澳大利亚
-      drawContinentCluster(1580, 720, 90, 70, 220, '#38bdf8');
+      continentPaths.forEach((poly, pIdx) => {
+        fillDotGrid(poly, pIdx === 1);
+      });
 
-      // 上海及长三角重点水务标杆光圈 (东经 121.5, 北纬 31.2 对应 Canvas 坐标)
-      // x: (121.5 + 180)/360 * 2048 ≈ 1715, y: (90 - 31.2)/180 * 1024 ≈ 334
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 4;
+      // 6. 绘制中国主要水系 (长江与黄河象征线)
+      // 长江
       ctx.beginPath();
-      ctx.arc(1715, 334, 18, 0, Math.PI * 2);
+      const yangtze = [[92, 33], [98, 30], [104, 29], [112, 30.5], [117, 31.5], [121.5, 31.3]];
+      yangtze.forEach(([lon, lat], idx) => {
+        const x = ((lon + 180) / 360) * c.width;
+        const y = ((90 - lat) / 180) * c.height;
+        if (idx === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = '#00f0ff';
+      ctx.lineWidth = 2.5;
       ctx.stroke();
 
-      ctx.fillStyle = '#f59e0b';
+      // 黄河
       ctx.beginPath();
-      ctx.arc(1715, 334, 6, 0, Math.PI * 2);
-      ctx.fill();
+      const yellowRiver = [[96, 35], [102, 37], [108, 40], [111, 35], [115, 35], [118.5, 37.5]];
+      yellowRiver.forEach(([lon, lat], idx) => {
+        const x = ((lon + 180) / 360) * c.width;
+        const y = ((90 - lat) / 180) * c.height;
+        if (idx === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      // 7. 城市群夜间星火微光 (上海/华东, 京津冀, 大湾区, 欧洲, 北美)
+      function drawCityGlow(lon, lat, r, color) {
+        const x = ((lon + 180) / 360) * c.width;
+        const y = ((90 - lat) / 180) * c.height;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, color || '#38bdf8');
+        g.addColorStop(1, 'rgba(56, 189, 248, 0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      drawCityGlow(121.5, 31.2, 18, '#38bdf8'); // 上海华东水务调度中心
+      drawCityGlow(116.4, 39.9, 14, '#67e8f9'); // 北京
+      drawCityGlow(113.2, 23.1, 12, '#38bdf8');  // 广州/深圳
+      drawCityGlow(2.3, 48.8, 12, '#38bdf8');   // 巴黎
+      drawCityGlow(-74.0, 40.7, 14, '#38bdf8'); // 纽约
 
       return c;
     }
 
-    const earthTex = new THREE.CanvasTexture(createProceduralEarthCanvas());
-    const earthGeo = new THREE.SphereGeometry(320, 64, 64);
-    const earthMat = new THREE.MeshPhongMaterial({
+    const earthTex = new THREE.CanvasTexture(createHighPrecisionTechEarthCanvas());
+    const earthGeo = new THREE.SphereGeometry(GLOBE_RADIUS, 64, 64);
+    // 使用纯正 Standard 材质：不产生刺眼反光大圈，呈现沉稳哑光工业质感
+    const earthMat = new THREE.MeshStandardMaterial({
       map: earthTex,
-      bumpScale: 0.05,
-      specular: new THREE.Color(0x0284c7),
-      shininess: 15,
-      transparent: true,
-      opacity: 1.0
+      roughness: 0.6,
+      metalness: 0.2,
+      color: 0xffffff
     });
     const earthMesh = new THREE.Mesh(earthGeo, earthMat);
     earthGroup.add(earthMesh);
 
-    // 发光外层大气层
-    const atmoGeo = new THREE.SphereGeometry(338, 48, 48);
-    const atmoMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.16,
-      side: THREE.BackSide,
-      blending: THREE.AdditiveBlending
+    // 初始朝向对准中国华东 (根据精确球面映射：2.45 弧度居中微偏右)
+    earthGroup.rotation.y = 2.45;
+
+    // ----------------- 3. 全球 3D 数据汇聚飞线系统 (Cyber Arcs) -----------------
+    const flyGroup = new THREE.Group();
+    earthGroup.add(flyGroup);
+
+    const centerCoord = { lat: 31.2, lon: 121.5 }; // 中国·上海核心汇聚点
+    const centerPos = latLonToVector3(centerCoord.lat, centerCoord.lon);
+
+    // 汇聚来源：欧洲、北美、南美、澳洲、华北、华南等
+    const arcSources = [
+      { name: '西欧水网', lat: 51.0, lon: 7.0 },
+      { name: '北美五大湖', lat: 44.0, lon: -84.0 },
+      { name: '南美亚马逊', lat: -3.0, lon: -60.0 },
+      { name: '澳洲墨尔本', lat: -37.0, lon: 145.0 },
+      { name: '华北调蓄中枢', lat: 39.9, lon: 116.4 },
+      { name: '华南珠江水系', lat: 23.1, lon: 113.2 }
+    ];
+
+    const flyingCurves = [];
+    const arcParticles = [];
+
+    arcSources.forEach((src) => {
+      const srcPos = latLonToVector3(src.lat, src.lon);
+      // 计算贝塞尔控制点：取起点终点中点，并向法线方向外凸 70~120 单位
+      const mid = new THREE.Vector3().addVectors(srcPos, centerPos).multiplyScalar(0.5);
+      const dist = srcPos.distanceTo(centerPos);
+      const lift = Math.min(130, Math.max(50, dist * 0.22));
+      mid.normalize().multiplyScalar(GLOBE_RADIUS + lift);
+
+      const curve = new THREE.QuadraticBezierCurve3(srcPos, mid, centerPos);
+      flyingCurves.push(curve);
+
+      // 绘制飞线轨迹
+      const points = curve.getPoints(50);
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+      const lineMat = new THREE.LineBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.38
+      });
+      const arcLine = new THREE.Line(lineGeo, lineMat);
+      flyGroup.add(arcLine);
+
+      // 飞线上的流动发光粒子
+      const pGeo = new THREE.SphereGeometry(3.0, 8, 8);
+      const pMat = new THREE.MeshBasicMaterial({ color: 0x67e8f9 });
+      const pMesh = new THREE.Mesh(pGeo, pMat);
+      flyGroup.add(pMesh);
+
+      arcParticles.push({
+        mesh: pMesh,
+        curve: curve,
+        progress: Math.random() // 初始随机进度
+      });
     });
-    const atmoMesh = new THREE.Mesh(atmoGeo, atmoMat);
-    earthGroup.add(atmoMesh);
 
-    // 中国及上海地标水务光柱与脉冲圈 (挂在地球表面)
-    const markerGroup = new THREE.Group();
-    // 经纬度转换到球体坐标：上海 (121.5°E, 31.2°N)
-    const phi = (90 - 31.2) * (Math.PI / 180);
-    const theta = (121.5 + 180) * (Math.PI / 180);
-    const rad = 322;
-    const markerX = -(rad * Math.sin(phi) * Math.cos(theta));
-    const markerY = rad * Math.cos(phi);
-    const markerZ = rad * Math.sin(phi) * Math.sin(theta);
+    // ----------------- 4. 华东水网焦点：立体信标光柱与同心脉冲波 -----------------
+    const beaconGroup = new THREE.Group();
+    beaconGroup.position.copy(centerPos);
+    // 让信标朝向球心向外的法线方向
+    beaconGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), centerPos.clone().normalize());
+    earthGroup.add(beaconGroup);
 
-    // 垂直发光光柱
-    const beamGeo = new THREE.CylinderGeometry(2, 4, 90, 16);
-    const beamMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 });
-    const beamMesh = new THREE.Mesh(beamGeo, beamMat);
-    beamMesh.position.set(markerX, markerY + 45, markerZ);
-    earthGroup.add(beamMesh);
+    // 垂直微光柱
+    const colGeo = new THREE.CylinderGeometry(1.5, 3.5, 45, 16);
+    const colMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 });
+    const colMesh = new THREE.Mesh(colGeo, colMat);
+    colMesh.position.y = 22.5;
+    beaconGroup.add(colMesh);
 
-    // 光圈环
-    const ringGeo = new THREE.RingGeometry(8, 16, 32);
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
-    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-    ringMesh.position.set(markerX, markerY, markerZ);
-    ringMesh.lookAt(markerX * 2, markerY * 2, markerZ * 2);
-    earthGroup.add(ringMesh);
+    // 顶端闪烁星核
+    const tipGeo = new THREE.SphereGeometry(3.8, 16, 16);
+    const tipMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const tipMesh = new THREE.Mesh(tipGeo, tipMat);
+    tipMesh.position.y = 45;
+    beaconGroup.add(tipMesh);
 
-    // ----------------- 3. 白龙港示范水厂微缩 3D 空间模型 (Level 3 & 4) -----------------
+    // ----------------- 5. 白龙港示范水厂微缩 3D 空间模型 (Level 3 & 4) -----------------
     const plantGroup = new THREE.Group();
     plantGroup.position.set(0, 0, 0);
     plantGroup.visible = false;
     scene.add(plantGroup);
 
-    // 厂区地面科技网格板 (1200x800)
-    const groundGeo = new THREE.PlaneGeometry(1200, 800, 32, 24);
+    // 厂区深蓝科技基座
+    const groundGeo = new THREE.PlaneGeometry(1200, 800, 24, 16);
     const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x091624,
+      color: 0x071526,
       roughness: 0.8,
       metalness: 0.2
     });
@@ -1468,62 +1731,53 @@ html, body {
     groundMesh.position.y = -10;
     plantGroup.add(groundMesh);
 
-    // 地面发光网格辅助线
-    const gridHelper = new THREE.GridHelper(1200, 30, 0x0284c7, 0x1e293b);
+    // 发光辅助网格
+    const gridHelper = new THREE.GridHelper(1200, 24, 0x0284c7, 0x0f2744);
     gridHelper.position.y = -9;
     plantGroup.add(gridHelper);
 
-    // 构筑物辅助创建函数
-    function createBuilding(w, h, d, x, z, color, labelText) {
+    // 构筑物辅助创建
+    function createBuilding(w, h, d, x, z, color) {
       const geo = new THREE.BoxGeometry(w, h, d);
       const mat = new THREE.MeshStandardMaterial({
-        color: color || 0x1e293b,
-        metalness: 0.4,
-        roughness: 0.5,
-        wireframe: false
+        color: color || 0x132a42,
+        metalness: 0.35,
+        roughness: 0.55
       });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(x, h / 2 - 9, z);
       plantGroup.add(mesh);
 
-      // 外边缘发光线框
       const edges = new THREE.EdgesGeometry(geo);
-      const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.6 }));
+      const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.55 }));
       mesh.add(line);
-
       return mesh;
     }
 
-    // 圆形沉淀池创建
     function createClarifier(radius, height, x, z) {
       const geo = new THREE.CylinderGeometry(radius, radius, height, 32);
-      const mat = new THREE.MeshStandardMaterial({ color: 0x142838, roughness: 0.4, metalness: 0.3 });
+      const mat = new THREE.MeshStandardMaterial({ color: 0x112338, roughness: 0.45, metalness: 0.3 });
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(x, height / 2 - 9, z);
       plantGroup.add(mesh);
 
-      // 池内发光水体
       const waterGeo = new THREE.CircleGeometry(radius - 3, 32);
-      const waterMat = new THREE.MeshBasicMaterial({ color: 0x0284c7, transparent: true, opacity: 0.75 });
+      const waterMat = new THREE.MeshBasicMaterial({ color: 0x0284c7, transparent: true, opacity: 0.7 });
       const waterMesh = new THREE.Mesh(waterGeo, waterMat);
       waterMesh.rotation.x = -Math.PI / 2;
       waterMesh.position.y = height / 2 + 0.5;
       mesh.add(waterMesh);
 
-      // 中心旋转刮泥桁车桥
       const bridgeGeo = new THREE.BoxGeometry(radius * 2 - 6, 2, 3);
       const bridgeMat = new THREE.MeshBasicMaterial({ color: 0x94a3b8 });
       const bridge = new THREE.Mesh(bridgeGeo, bridgeMat);
       bridge.position.y = height / 2 + 2;
       mesh.add(bridge);
-
       return mesh;
     }
 
-    // 搭建白龙港水质净化厂核心构筑物群：
-    // 1. 核心 A2O 生化反应池组 (大号双联矩形池体，位于中央)
-    const bioTank = createBuilding(380, 24, 200, 0, -30, 0x10283c, 'A2O生化反应池组');
-    // 生化池内发光水体 (左缺氧深蓝，右好氧亮蓝)
+    // 搭建白龙港水厂核心构筑物：
+    const bioTank = createBuilding(380, 24, 200, 0, -30, 0x0f283e);
     const bioWaterGeo = new THREE.PlaneGeometry(370, 190);
     const bioWaterMat = new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.65 });
     const bioWater = new THREE.Mesh(bioWaterGeo, bioWaterMat);
@@ -1531,30 +1785,22 @@ html, body {
     bioWater.position.y = 12.5;
     bioTank.add(bioWater);
 
-    // 2. 4 座大型周边传动二次沉淀池
     createClarifier(55, 18, -320, -120);
     createClarifier(55, 18, -320, 40);
     createClarifier(55, 18, -180, -120);
     createClarifier(55, 18, -180, 40);
 
-    // 3. 进水粗细格栅与进水泵房
-    createBuilding(160, 36, 120, 340, -140, 0x1e293b, '进水泵房');
+    createBuilding(160, 36, 120, 340, -140, 0x162c44);
+    createBuilding(140, 30, 90, 280, 70, 0x1a334e);
+    createBuilding(180, 20, 80, -220, 180, 0x123654);
+    createBuilding(180, 42, 110, 100, 210, 0x183048);
 
-    // 4. 曝气鼓风机房与变电所
-    createBuilding(140, 30, 90, 280, 70, 0x22354a, '鼓风机房');
-
-    // 5. 加砂高效沉淀池与紫外消毒出水渠
-    createBuilding(180, 20, 80, -220, 180, 0x133e5c, '紫外消毒出水渠');
-
-    // 6. 污泥浓缩脱水与干化综合车间
-    createBuilding(180, 42, 110, 100, 210, 0x1a2e40, '污泥脱水车间');
-
-    // ----------------- 4. 摄像机平滑运镜系统 (Camera Interpolation) -----------------
+    // ----------------- 6. 渐进式多级运镜插值系统 (Camera Progressive Dive) -----------------
     const cameraTargets = {
-      1: { pos: new THREE.Vector3(0, 320, 1650), look: new THREE.Vector3(0, 0, 0) },
-      2: { pos: new THREE.Vector3(120, 160, 720), look: new THREE.Vector3(0, 20, 0) },
-      3: { pos: new THREE.Vector3(0, 340, 460), look: new THREE.Vector3(0, -10, 0) },
-      4: { pos: new THREE.Vector3(0, 170, 220), look: new THREE.Vector3(0, 15, -30) }
+      1: { pos: new THREE.Vector3(0, 180, 1380), look: new THREE.Vector3(0, 0, 0) },
+      2: { pos: new THREE.Vector3(0, 100, 620), look: new THREE.Vector3(0, 10, 0) },
+      3: { pos: new THREE.Vector3(0, 320, 460), look: new THREE.Vector3(0, -10, 0) },
+      4: { pos: new THREE.Vector3(0, 160, 220), look: new THREE.Vector3(0, 15, -30) }
     };
 
     let currentTarget = cameraTargets[1];
@@ -1564,7 +1810,6 @@ html, body {
       currentTarget = cameraTargets[lvl] || cameraTargets[1];
       isTransitioning = true;
 
-      // 在进入 Level 3 或 4 时切换地球与厂区可见性
       if (lvl >= 3) {
         earthGroup.visible = false;
         plantGroup.visible = true;
@@ -1579,35 +1824,38 @@ html, body {
       controls.target.copy(currentTarget.look);
     }
 
-    // 动画循环
-    let ringScale = 1.0;
     function animate() {
       requestAnimationFrame(animate);
 
-      // 地球微弱旋转 (仅在 Level 1 自转，Level 2 定向聚焦)
+      // 地球自转与朝向调节
       if (earthGroup.visible) {
         if (currentTarget === cameraTargets[1]) {
-          earthGroup.rotation.y += 0.0018;
+          earthGroup.rotation.y += 0.0008; // 宏观慢速自转
         } else if (currentTarget === cameraTargets[2]) {
-          // 平滑旋转到中国朝向
-          earthGroup.rotation.y += (0.85 - earthGroup.rotation.y) * 0.04;
+          // 渐进锁向华东水网中枢 (rotation.y 渐进对准 2.45)
+          earthGroup.rotation.y += (2.45 - earthGroup.rotation.y) * 0.05;
         }
+
+        // 飞线粒子循环流动更新
+        arcParticles.forEach((p) => {
+          p.progress += 0.0085;
+          if (p.progress > 1.0) p.progress = 0;
+          const pos = p.curve.getPoint(p.progress);
+          p.mesh.position.copy(pos);
+        });
+
+        // 信标呼吸轻微脉动
+        const s = 1.0 + 0.15 * Math.sin(Date.now() * 0.005);
+        tipMesh.scale.set(s, s, s);
       }
 
-      // 星空自旋
-      starField.rotation.y += 0.0003;
+      starField.rotation.y += 0.00015;
 
-      // 脉冲光环呼吸放大
-      ringScale += 0.02;
-      if (ringScale > 2.2) ringScale = 1.0;
-      ringMesh.scale.set(ringScale, ringScale, ringScale);
-      ringMat.opacity = Math.max(0, 1 - (ringScale - 1.0) / 1.2);
-
-      // 摄像机向目标平滑插值缓动 (Lerp)
+      // 摄像机向目标平滑渐进插值 (电影级 Lerp 缓动)
       if (isTransitioning) {
         camera.position.lerp(currentTarget.pos, 0.065);
         controls.target.lerp(currentTarget.look, 0.065);
-        if (camera.position.distanceTo(currentTarget.pos) < 3.0) {
+        if (camera.position.distanceTo(currentTarget.pos) < 2.0) {
           isTransitioning = false;
         }
       }
@@ -1623,7 +1871,6 @@ html, body {
     };
   }
 
-  // 页面加载完成后启动 3D 引擎
   window.addEventListener('load', () => {
     initThreeEngine();
   });
