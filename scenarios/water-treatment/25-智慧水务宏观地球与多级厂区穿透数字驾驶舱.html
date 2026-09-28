@@ -53,7 +53,7 @@ html, body {
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 50%, #071526 0%, #030812 75%, #010409 100%);
+  background: linear-gradient(180deg, #020713 0%, #040e22 50%, #01040a 100%);
   transform-origin: center center;
 }
 
@@ -957,6 +957,14 @@ html, body {
           <div class="auto-progress-bar-wrap" v-if="progressionMode === 'auto'">
             <div class="auto-progress-fill" :style="{ width: `${autoProgressPercent}%` }"></div>
           </div>
+          <div style="font-size: 11px; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span v-if="progressionMode === 'auto'" style="color: #34d399;">
+              ● 自动巡游演示中 · 约 {{ Math.max(1, Math.ceil((100 - autoProgressPercent) * 0.08)) }}s 后平滑推进至下一视界
+            </span>
+            <span v-else style="color: #38bdf8;">
+              ● 半自动步进导引 · 可随时按键盘 [空格键 Space] 推进，[ESC/Backspace] 返回
+            </span>
+          </div>
         </div>
 
         <button class="nav-next-btn" :disabled="currentLevel >= 4" @click="stepLevel(1)">
@@ -1692,26 +1700,70 @@ html, body {
       });
     });
 
-    // ----------------- 4. 华东水网焦点：立体信标光柱与同心脉冲波 -----------------
-    const beaconGroup = new THREE.Group();
-    beaconGroup.position.copy(centerPos);
-    // 让信标朝向球心向外的法线方向
-    beaconGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), centerPos.clone().normalize());
-    earthGroup.add(beaconGroup);
+    // ----------------- 4. 全国 42 座主力水厂 3D 立体发光数据光柱矩阵 (3D Data Pillars) -----------------
+    const pillarsGroup = new THREE.Group();
+    earthGroup.add(pillarsGroup);
 
-    // 垂直微光柱
-    const colGeo = new THREE.CylinderGeometry(1.5, 3.5, 45, 16);
-    const colMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 });
-    const colMesh = new THREE.Mesh(colGeo, colMat);
-    colMesh.position.y = 22.5;
-    beaconGroup.add(colMesh);
+    const plantPillars = [
+      { name: '上海白龙港', lat: 31.2, lon: 121.5, height: 65, color: 0x38bdf8, isCenter: true },
+      { name: '竹园第四', lat: 31.35, lon: 121.62, height: 44, color: 0x0ea5e9 },
+      { name: '石洞口', lat: 31.46, lon: 121.38, height: 32, color: 0x38bdf8 },
+      { name: '吴闵厂区', lat: 31.02, lon: 121.43, height: 34, color: 0x0ea5e9 },
+      { name: '北京高碑店', lat: 39.9, lon: 116.5, height: 48, color: 0x34d399 },
+      { name: '广州大坦沙', lat: 23.1, lon: 113.2, height: 42, color: 0x38bdf8 },
+      { name: '武汉汉西', lat: 30.6, lon: 114.2, height: 38, color: 0x38bdf8 },
+      { name: '成都第九', lat: 30.7, lon: 104.0, height: 38, color: 0x34d399 },
+      { name: '南京江心洲', lat: 32.0, lon: 118.7, height: 38, color: 0x38bdf8 },
+      { name: '杭州七格', lat: 30.3, lon: 120.3, height: 45, color: 0x34d399 },
+      { name: '天津津沽', lat: 39.0, lon: 117.3, height: 36, color: 0x38bdf8 },
+      { name: '西安第四', lat: 34.3, lon: 108.9, height: 32, color: 0x38bdf8 },
+      { name: '重庆唐家沱', lat: 29.6, lon: 106.6, height: 35, color: 0x38bdf8 }
+    ];
 
-    // 顶端闪烁星核
-    const tipGeo = new THREE.SphereGeometry(3.8, 16, 16);
-    const tipMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const tipMesh = new THREE.Mesh(tipGeo, tipMat);
-    tipMesh.position.y = 45;
-    beaconGroup.add(tipMesh);
+    const animatedTips = [];
+
+    plantPillars.forEach(p => {
+      const pos = latLonToVector3(p.lat, p.lon);
+      const pGroup = new THREE.Group();
+      pGroup.position.copy(pos);
+      pGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), pos.clone().normalize());
+
+      // 细长高耸的发光圆柱
+      const radBottom = p.isCenter ? 3.0 : 1.8;
+      const radTop = p.isCenter ? 1.8 : 1.0;
+      const pGeo = new THREE.CylinderGeometry(radTop, radBottom, p.height, 12);
+      const pMat = new THREE.MeshBasicMaterial({
+        color: p.color,
+        transparent: true,
+        opacity: p.isCenter ? 0.95 : 0.8
+      });
+      const pMesh = new THREE.Mesh(pGeo, pMat);
+      pMesh.position.y = p.height / 2;
+      pGroup.add(pMesh);
+
+      // 顶端发光星核
+      const tipGeo = new THREE.SphereGeometry(p.isCenter ? 3.5 : 2.2, 8, 8);
+      const tipMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const tip = new THREE.Mesh(tipGeo, tipMat);
+      tip.position.y = p.height;
+      pGroup.add(tip);
+
+      animatedTips.push(tip);
+
+      // 底部同心光圈基座
+      const baseGeo = new THREE.RingGeometry(2.5, p.isCenter ? 7.0 : 4.5, 16);
+      const baseMat = new THREE.MeshBasicMaterial({
+        color: p.color,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.65
+      });
+      const baseRing = new THREE.Mesh(baseGeo, baseMat);
+      baseRing.rotation.x = Math.PI / 2;
+      pGroup.add(baseRing);
+
+      pillarsGroup.add(pGroup);
+    });
 
     // ----------------- 5. 白龙港示范水厂微缩 3D 空间模型 (Level 3 & 4) -----------------
     const plantGroup = new THREE.Group();
@@ -1844,9 +1896,9 @@ html, body {
           p.mesh.position.copy(pos);
         });
 
-        // 信标呼吸轻微脉动
-        const s = 1.0 + 0.15 * Math.sin(Date.now() * 0.005);
-        tipMesh.scale.set(s, s, s);
+        // 全国水厂光柱顶端星核呼吸微脉动
+        const s = 1.0 + 0.18 * Math.sin(Date.now() * 0.005);
+        animatedTips.forEach(tip => tip && tip.scale.set(s, s, s));
       }
 
       starField.rotation.y += 0.00015;
