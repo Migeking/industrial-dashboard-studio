@@ -1,6 +1,6 @@
 # Industrial Dashboard Studio
 
-> Offline-first productization workspace for industrial dashboards · 24 ready-to-run templates + reusable runtime + SCADA designer + 5 deliverable Skills
+> Offline-first productization workspace for industrial dashboards · 25 ready-to-run templates + reusable runtime + SCADA designer + 5 deliverable Skills
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -36,13 +36,19 @@
 
 | Entry | Preview |
 |------|------|
-| **Showcase landscape entry (All 24 Scenarios)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
+| **Showcase landscape entry (All 25 Scenarios)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
 | **SCADA scenario designer** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
 <details open>
-<summary><b>Expand: All 24 scenario categories & screenshots</b></summary>
+<summary><b>Expand: All 25 scenario categories & screenshots</b></summary>
 
-### Field Local Touchscreen Panels · DCS & Clean Flat HMI (Latest New)
+### Global Digital Earth & Spatial Digital Twin Cockpit (Latest New)
+
+| Scenario | File | Preview |
+|------|------|------|
+| 25 Smart Water Global Digital Earth & Multi-tier Drill-down Digital Cockpit | `scenarios/water-treatment/25-智慧水务宏观地球与多级厂区穿透数字驾驶舱.html` | ![25](docs/screenshots/25-global-water-twin.png) |
+
+### Field Local Touchscreen Panels · DCS & Clean Flat HMI
 
 | Scenario | File | Preview |
 |------|------|------|
@@ -311,6 +317,34 @@ open apps/scada-designer/index.html
 
 </details>
 
+### 25 Smart Water Global Digital Earth & Multi-tier Drill-down Digital Cockpit (Panoramic 3D Spatial Twin)
+- **Role**: designed for water authority group headquarters and flagship water plant exhibition halls as a "macro-earth to micro-process four-tier drill-down digital cockpit". Replaces standard flat report portals with cinematic 3D camera travel from "Global Earth → China Regional Water Grid → Plant Spatial Twin → Core Process Telemetry Hub".
+- **Four-Tier Drill-down & Camera Travel Architecture**:
+  1. **Level 1 Macro 3D Digital Earth (Global Water Portfolio)**: deep-space starfield particles, procedurally generated revolving digital earth (algorithmic continent dot-matrix clusters, lat/long dashed grids, radiant atmospheric halo), visualizing 42 nationwide managed wastewater treatment plants with aggregate 12.5M m³/d capacity, 100% compliance rate, and carbon reduction metrics;
+  2. **Level 2 China & Regional Water Grid (East China · Shanghai Demonstration Zone)**: smooth camera zoom-in while the globe revolves and locks onto 121.5°E, 31.2°N (Yangtze Estuary & Shanghai water systems), revealing 4 pulsing water droplet beacons for key municipal facilities: Bailonggang (2.8M m³/d), Zhuyuan #4 (1.2M m³/d), Shidongkou (0.4M m³/d), and Wumin (0.5M m³/d);
+  3. **Level 3 Flagship Water Treatment Plant Spatial Twin (Bailonggang Demonstration Plant)**: cinematic camera penetration through the geographic veil into the facility's 3D architectural clay model (raw screens, vortex grit chambers, A²O bioreactor basins, secondary clarifier matrix, densadeg units, UV channels, and sludge dewatering buildings) with floating 3D telemetry badges;
+  4. **Level 4 Core Process Telemetry Hub (Bioreactor Micro-Control Center)**: camera dollys close to the bioreactor basin while professional process telemetry panels smoothly expand on both wings: influent/effluent quality benchmarks (COD: 285 → 22.4 mg/L, NH₃-N: 29.2 → 0.95 mg/L, TP: 3.85 → 0.18 mg/L with Grade 1A+ green badges), bioreactor flow vector micro-view, blower drive frequencies, and 24-hour compliance trend curves.
+- **Interactive & Demo Innovations**:
+  - **Top Four-tier Breadcrumb Trail**: `[ Global Portfolio ] > [ Regional Grid ] > [ Bailonggang Plant ] > [ Process Hub ]` with instant smooth camera interpolation rollback to any tier;
+  - **One-tap Autonomous Tour Demo (Auto Tour)**: automatically loops through the four-tier cinematic voyage at optimal presentation pacing, built specifically for executive briefings and show-floor walls;
+  - **100% Offline Zero-CDN Architecture**: powered entirely by vendored `vendor/three.min.js` + `vendor/OrbitControls.js`; all globe geometry and plant structures are procedurally synthesized in code with zero external tile/map dependencies, guaranteeing instant loading and zero lag.
+- **File**: `scenarios/water-treatment/25-智慧水务宏观地球与多级厂区穿透数字驾驶舱.html`
+
+<details open>
+<summary><b>View Scenario 25 Global Digital Earth & Drill-down Gallery</b></summary>
+
+| Level 1: Global 3D Digital Earth | Level 2: East China Regional Water Grid |
+|---|---|
+| ![25-earth](docs/screenshots/25-global-water-twin.png) | ![25-regional](docs/screenshots/states/25-state-regional-grid.png) |
+
+| Level 3: Plant Spatial Digital Twin | Level 4: Core Process Telemetry Hub |
+|---|---|
+| ![25-plant](docs/screenshots/states/25-state-plant-twin.png) | ![25-process](docs/screenshots/states/25-state-process-detail.png) |
+
+> Cinematic smooth camera penetration, zero external tile dependencies, four-tier breadcrumb rollback, and auto-tour demos deliver the definitive visual frontier of industrial digital twins.
+
+</details>
+
 ---
 
 ## App entries
@@ -363,7 +397,7 @@ apps/
   scada-designer/      # SCADA scenario designer
 scenarios/
   building-automation/ # 22 Intelligent building automation & spatial microclimate twin
-  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21,24 (full water chain, including Scenario 24 Local Clean Panel)
+  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21,24,25 (full water chain, including Scenario 25 Global Earth & Plant Penetration)
   predictive-maintenance/ # 02 Critical-unit predictive maintenance
   reactor-safety/      # 03 Reactor safety interlock
   process-control/     # 15 Continuous separation process, 23 Local DCS panel
@@ -378,8 +412,8 @@ assets/models/         # 3D models
 docs/
   architecture.md      # architecture baseline
   offline-delivery.md  # offline delivery notes
-  screenshots/         # 31 screenshots (states/ multi-condition + responsive/ multi-resolution)
-    states/            # 01/04 drills + 08 Faceplate + 23/24 local panel states
+  screenshots/         # 35 screenshots (states/ multi-condition + responsive/ multi-resolution)
+    states/            # 01/04 drills + 08 Faceplate + 23/24/25 penetration states
     responsive/        # 1366/3840 fit for showcase/08/09
   works/               # 11 design-iteration drafts (referenced in gallery)
 tests/interaction_check.py

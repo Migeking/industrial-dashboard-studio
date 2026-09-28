@@ -464,23 +464,59 @@ with sync_playwright() as playwright:
         estop_btn.click()
         estop_btn.filter(has_text="就地急停").wait_for()
 
+    def assert_global_twin_25_interaction(p):
+        assert p.locator("#screen").count() == 1
+        p.locator(".brand-text h1").filter(has_text="智慧水务宏观地球与多级厂区穿透数字驾驶舱").wait_for()
+
+        # 1. 验证 Level 1 默认状态
+        p.locator(".crumb-item.active").filter(has_text="全球水务大盘").wait_for()
+        assert p.locator(".kpi-stat-num").first.is_visible()
+
+        # 2. 依次测试面包屑四级下钻与回跳
+        # 下钻 Level 2
+        p.locator(".crumb-item").nth(1).click()
+        p.locator(".crumb-item.active").filter(has_text="华东水厂集群").wait_for()
+        p.locator(".plant-item-card").first.wait_for()
+
+        # 下钻 Level 3
+        p.locator(".crumb-item").nth(2).click()
+        p.locator(".crumb-item.active").filter(has_text="白龙港示范厂").wait_for()
+        p.locator(".l3-top-banner").wait_for()
+
+        # 下钻 Level 4
+        p.locator(".crumb-item").nth(3).click()
+        p.locator(".crumb-item.active").filter(has_text="核心工艺中枢").wait_for()
+        p.locator(".water-metric-table").wait_for()
+        assert "CODcr" in p.locator(".water-metric-table").inner_text()
+
+        # 回跳 Level 1
+        p.locator(".crumb-item").first.click()
+        p.locator(".crumb-item.active").filter(has_text="全球水务大盘").wait_for()
+
+        # 3. 测试自动巡游按钮开关
+        tour_btn = p.locator(".tour-btn").first
+        tour_btn.click()
+        tour_btn.filter(has_text="停止自动巡游演示").wait_for()
+        tour_btn.click()
+        tour_btn.filter(has_text="启动全景穿透自动巡游").wait_for()
+
     run_case(
         page,
-        "water-treatment/24-A2O生化反应池现场就地控制屏.html",
+        "water-treatment/25-智慧水务宏观地球与多级厂区穿透数字驾驶舱.html",
         lambda p: None,
-        assert_biochemical_local_hmi_24_interaction,
+        assert_global_twin_25_interaction,
     )
 
     showcase = browser.new_page(viewport={"width": 1440, "height": 900})
     showcase.route("http://**/*", lambda route: route.abort())
     showcase.route("https://**/*", lambda route: route.abort())
     showcase.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="networkidle")
-    assert showcase.locator(".card").count() == 24
-    latest_card = showcase.locator('.card[data-src*="24-"]')
+    assert showcase.locator(".card").count() == 25
+    latest_card = showcase.locator('.card[data-src*="25-"]')
     latest_card.scroll_into_view_if_needed()
     assert latest_card.is_visible()
     latest_card.click()
-    assert "生化池极简就地控制" in showcase.locator("#stageTitle").inner_text() or "A²O 生化反应池" in showcase.locator("#stageTitle").inner_text()
+    assert "宏观地球与厂区穿透" in showcase.locator("#stageTitle").inner_text() or "智慧水务宏观地球" in showcase.locator("#stageTitle").inner_text()
     portrait = browser.new_page(viewport={"width": 390, "height": 844})
     portrait.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="domcontentloaded")
     assert portrait.locator(".rotate").is_visible()

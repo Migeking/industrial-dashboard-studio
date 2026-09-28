@@ -1,6 +1,6 @@
 # Industrial Dashboard Studio
 
-> 工业大屏产品化工作区 · 24 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 5 个可交付 Skill
+> 工业大屏产品化工作区 · 25 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 5 个可交付 Skill
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -36,13 +36,19 @@
 
 | 入口 | 预览 |
 |------|------|
-| **Showcase 横屏互动入口 (24 套全量)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
+| **Showcase 横屏互动入口 (25 套全量)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
 | **SCADA 场景设计器** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
 <details open>
-<summary><b>展开查看 24 套场景全量分类与截图</b></summary>
+<summary><b>展开查看 25 套场景全量分类与截图</b></summary>
 
-### 现场就地控制屏 · DCS 与极简扁平触控（最新上线）
+### 宏观地球与数字孪生 · 空间穿透驾驶舱（最新上线）
+
+| 场景 | 文件 | 预览 |
+|------|------|------|
+| 25 智慧水务宏观地球与多级厂区穿透数字驾驶舱 | `scenarios/water-treatment/25-智慧水务宏观地球与多级厂区穿透数字驾驶舱.html` | ![25](docs/screenshots/25-global-water-twin.png) |
+
+### 现场就地控制屏 · DCS 与极简扁平触控
 
 | 场景 | 文件 | 预览 |
 |------|------|------|
@@ -311,6 +317,34 @@ open apps/scada-designer/index.html
 
 </details>
 
+### 25 智慧水务宏观地球与多级厂区穿透数字驾驶舱（全景 3D 空间孪生）
+- **定位**：面向水务水务集团总部与标杆水厂展厅的“宏观地球到微观工艺四级穿透式数字驾驶舱”。打破常规扁平报表界面，通过纯程序化 3D 运镜，实现从“地球 → 中国省域水网 → 水厂微缩空间孪生 → 核心工艺数据信息中枢”的无缝下钻。
+- **四级层级穿透与运镜架构**：
+  1. **Level 1 宏观 3D 数字地球仪（全球水务大盘）**：深空星空粒子环境、程序化生成的旋转数字地球（算法生成各大洲发光板块点阵、经纬虚线网格、发光大气层 Halo），直观展示全国在管 42 座水厂综合处理能力（1,250 万 m³/d）、100% 达标率与碳减排指标；
+  2. **Level 2 中国及省域水务集群（华东·上海示范区）**：摄像机平滑下潜（Zoom In），地球旋转锁定至东经 121.5°、北纬 31.2°，展示上海及长三角水系，浮现白龙港（280万吨）、竹园第四（120万吨）、石洞口（40万吨）和吴闵（50万吨）4 座主力水厂发光脉冲水滴标签与负荷状态；
+  3. **Level 3 标杆水处理厂微缩空间孪生（白龙港示范厂全景）**：镜头穿透地理视界飞入水厂园区，呈现完整 3D 建筑与构筑物白模（进水格栅间、旋流沉砂池、A²O 生化反应池组、二沉池矩阵、加砂高效沉淀间、紫外线消毒渠与污泥脱水车间），各工段上方漂浮 3D 实时徽标；
+  4. **Level 4 厂内核心工艺数据信息中枢（生化微观工艺中控）**：镜头推近核心生化反应池，界面平滑展开专业水务工艺看板，包含进出水指标对比（COD: 285 → 22.4 mg/L、氨氮: 29.2 → 0.95 mg/L、TP: 3.85 → 0.18 mg/L 全部国标一级 A+ 达标绿标）、生化流程微视图、鼓风机变频负荷及 24h 出水连续在线达标趋势。
+- **交互与演示创新**：
+  - **顶部四级面包屑导航**：`[ 全球水务大盘 ] > [ 华东水厂集群 ] > [ 白龙港净水厂 ] > [ 核心工艺中枢 ]`，支持随时点击任意一级丝滑插值回跳；
+  - **一键全景自动巡游导览 (Auto Tour Demo)**：自动以电影级运镜巡游四级视界并循环演练，专为高管汇报和展厅大屏设计；
+  - **100% 纯本地零 CDN 依赖**：基于本地 `vendor/three.min.js` + `vendor/OrbitControls.js`，全部地球经纬网格与园区模型由算法程序化生成，秒级响应，永不卡顿。
+- **文件**：`scenarios/water-treatment/25-智慧水务宏观地球与多级厂区穿透数字驾驶舱.html`
+
+<details open>
+<summary><b>查看 25 号宏观地球与多级穿透四级画廊</b></summary>
+
+| Level 1: 宏观 3D 数字地球大盘 | Level 2: 华东省域水厂集群点位 |
+|---|---|
+| ![25-earth](docs/screenshots/25-global-water-twin.png) | ![25-regional](docs/screenshots/states/25-state-regional-grid.png) |
+
+| Level 3: 厂区空间孪生微缩全景 | Level 4: 厂内核心工艺数据中枢 |
+|---|---|
+| ![25-plant](docs/screenshots/states/25-state-plant-twin.png) | ![25-process](docs/screenshots/states/25-state-process-detail.png) |
+
+> 电影级平滑运镜穿透、零外部瓦片依赖、四级面包屑自由回跳与一键巡游演示，实现工业水务数字孪生的极致视界。
+
+</details>
+
 ---
 
 ## 应用入口
@@ -363,7 +397,7 @@ apps/
   scada-designer/      # SCADA 场景设计器
 scenarios/
   building-automation/ # 22 智能楼宇自控与空间微气候数字孪生
-  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21,24 (水务全流程，含24号现场极简就地控制屏)
+  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21,24,25 (水务全流程，含25号宏观地球与空间穿透)
   predictive-maintenance/ # 02 关键机组预测性维护
   reactor-safety/      # 03 反应釜热失控安全联锁
   process-control/     # 15 连续分离工艺驾驶舱, 23 现场DCS就地控制屏
@@ -378,8 +412,8 @@ assets/models/         # 三维模型
 docs/
   architecture.md      # 架构基线
   offline-delivery.md  # 离线交付说明
-  screenshots/         # 31 张截图（含 states/ 多工况 + responsive/ 多分辨率）
-    states/            # 01/04 多工况演练 + 08 Faceplate + 23/24 就地控制特写
+  screenshots/         # 35 张截图（含 states/ 多工况 + responsive/ 多分辨率）
+    states/            # 01/04 多工况演练 + 08 Faceplate + 23/24/25 穿透特写
     responsive/        # showcase/08/09 的 1366/3840 适配
   works/               # 11 张设计过程稿（本 README 画廊引用）
 tests/interaction_check.py
