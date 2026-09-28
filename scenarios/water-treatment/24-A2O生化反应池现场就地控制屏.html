@@ -621,27 +621,63 @@ html, body {
 
             <!-- 缺氧搅拌流线与旋转搅拌器 1# / 2# -->
             <!-- 1# 搅拌机 -->
-            <g transform="translate(140, 220)">
-              <rect x="-10" y="-80" width="6" height="80" fill="#64748b" /> <!-- 导杆 -->
-              <circle cx="-7" cy="0" r="16" fill="#334155" stroke="#38bdf8" stroke-width="2" />
-              <g :style="m1.running ? { transform: `rotate(${m1.angle}deg)` } : {}">
-                <ellipse cx="0" cy="0" rx="14" ry="4" fill="#38bdf8" />
-                <ellipse cx="0" cy="0" rx="4" ry="14" fill="#38bdf8" />
+            <g transform="translate(130, 220)">
+              <!-- 升降不锈钢导杆与就地固定支架 -->
+              <rect x="-30" y="-80" width="6" height="90" fill="#64748b" />
+              <!-- 水下定位抱箍滑块与横向连杆 -->
+              <rect x="-32" y="-10" width="10" height="20" rx="2" fill="#475569" stroke="#334155" />
+              <line x1="-22" y1="0" x2="-10" y2="0" stroke="#64748b" stroke-width="4" />
+              
+              <!-- 潜水推流机导流环 (大号外圆圈 r=24，圆心严格为 0,0) -->
+              <circle cx="0" cy="0" r="24" :fill="m1.running ? 'rgba(30, 41, 59, 0.9)' : '#1e293b'" :stroke="m1.running ? '#38bdf8' : '#64748b'" stroke-width="2.5" />
+              <!-- 内部导流细圈 -->
+              <circle cx="0" cy="0" r="20" fill="none" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1" stroke-dasharray="3 3" />
+              
+              <!-- 旋转叶片组：SVG 原生 rotate(angle 0 0) 绝对绕圆心旋转，绝无偏差 -->
+              <g :transform="m1.running ? `rotate(${m1.angle} 0 0)` : ''" style="transform-origin: 0px 0px;">
+                <!-- 3 片水力流线型推进桨叶 (半径 17px，完全在 r=24 圈内旋转) -->
+                <path d="M 0 0 C 4 -6, 14 -12, 17 -6 C 18 -1, 10 3, 0 0 Z" fill="#38bdf8" opacity="0.9" />
+                <path d="M 0 0 C 4 -6, 14 -12, 17 -6 C 18 -1, 10 3, 0 0 Z" transform="rotate(120 0 0)" fill="#38bdf8" opacity="0.9" />
+                <path d="M 0 0 C 4 -6, 14 -12, 17 -6 C 18 -1, 10 3, 0 0 Z" transform="rotate(240 0 0)" fill="#38bdf8" opacity="0.9" />
               </g>
-              <text x="25" y="5" fill="#f8fafc" font-size="13" font-weight="bold">1# 潜水推流机</text>
-              <text x="25" y="22" :fill="m1.running ? '#34d399' : '#94a3b8'" font-size="11">{{ m1.running ? '运行中 · 18.5kW' : '已停机' }}</text>
+
+              <!-- 中心机头轮毂轴承 (居中不动) -->
+              <circle cx="0" cy="0" r="6" fill="#0284c7" stroke="#e0f2fe" stroke-width="1.5" />
+              <circle cx="0" cy="0" r="2" fill="#fff" />
+
+              <!-- 文字标签 -->
+              <text x="36" y="2" fill="#f8fafc" font-size="14" font-weight="bold">1# 潜水推流机</text>
+              <text x="36" y="20" :fill="m1.running ? '#34d399' : '#94a3b8'" font-size="12">{{ m1.running ? '运行中 · 18.5kW' : '已停机' }}</text>
             </g>
 
             <!-- 2# 搅拌机 -->
-            <g transform="translate(140, 360)">
-              <rect x="-10" y="-80" width="6" height="80" fill="#64748b" />
-              <circle cx="-7" cy="0" r="16" fill="#334155" stroke="#38bdf8" stroke-width="2" />
-              <g :style="m2.running ? { transform: `rotate(${m2.angle}deg)` } : {}">
-                <ellipse cx="0" cy="0" rx="14" ry="4" fill="#38bdf8" />
-                <ellipse cx="0" cy="0" rx="4" ry="14" fill="#38bdf8" />
+            <g transform="translate(130, 360)">
+              <!-- 升降不锈钢导杆与就地固定支架 -->
+              <rect x="-30" y="-80" width="6" height="90" fill="#64748b" />
+              <!-- 水下定位抱箍滑块与横向连杆 -->
+              <rect x="-32" y="-10" width="10" height="20" rx="2" fill="#475569" stroke="#334155" />
+              <line x1="-22" y1="0" x2="-10" y2="0" stroke="#64748b" stroke-width="4" />
+              
+              <!-- 潜水推流机导流环 (大号外圆圈 r=24，圆心严格为 0,0) -->
+              <circle cx="0" cy="0" r="24" :fill="m2.running ? 'rgba(30, 41, 59, 0.9)' : '#1e293b'" :stroke="m2.running ? '#38bdf8' : '#64748b'" stroke-width="2.5" />
+              <!-- 内部导流细圈 -->
+              <circle cx="0" cy="0" r="20" fill="none" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1" stroke-dasharray="3 3" />
+              
+              <!-- 旋转叶片组：SVG 原生 rotate(angle 0 0) 绝对绕圆心旋转，绝无偏差 -->
+              <g :transform="m2.running ? `rotate(${m2.angle} 0 0)` : ''" style="transform-origin: 0px 0px;">
+                <!-- 3 片水力流线型推进桨叶 (半径 17px，完全在 r=24 圈内旋转) -->
+                <path d="M 0 0 C 4 -6, 14 -12, 17 -6 C 18 -1, 10 3, 0 0 Z" fill="#38bdf8" opacity="0.9" />
+                <path d="M 0 0 C 4 -6, 14 -12, 17 -6 C 18 -1, 10 3, 0 0 Z" transform="rotate(120 0 0)" fill="#38bdf8" opacity="0.9" />
+                <path d="M 0 0 C 4 -6, 14 -12, 17 -6 C 18 -1, 10 3, 0 0 Z" transform="rotate(240 0 0)" fill="#38bdf8" opacity="0.9" />
               </g>
-              <text x="25" y="5" fill="#f8fafc" font-size="13" font-weight="bold">2# 潜水推流机</text>
-              <text x="25" y="22" :fill="m2.running ? '#34d399' : '#94a3b8'" font-size="11">{{ m2.running ? '运行中 · 18.5kW' : '已停机' }}</text>
+
+              <!-- 中心机头轮毂轴承 (居中不动) -->
+              <circle cx="0" cy="0" r="6" fill="#0284c7" stroke="#e0f2fe" stroke-width="1.5" />
+              <circle cx="0" cy="0" r="2" fill="#fff" />
+
+              <!-- 文字标签 -->
+              <text x="36" y="2" fill="#f8fafc" font-size="14" font-weight="bold">2# 潜水推流机</text>
+              <text x="36" y="20" :fill="m2.running ? '#34d399' : '#94a3b8'" font-size="12">{{ m2.running ? '运行中 · 18.5kW' : '已停机' }}</text>
             </g>
 
             <!-- ORP 在线探头 -->
