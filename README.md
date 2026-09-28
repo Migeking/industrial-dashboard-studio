@@ -1,6 +1,6 @@
 # Industrial Dashboard Studio
 
-> 工业大屏产品化工作区 · 22 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 5 个可交付 Skill
+> 工业大屏产品化工作区 · 23 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 5 个可交付 Skill
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -19,7 +19,7 @@
 
 ## 简介
 
-`industrial-dashboard-studio` 把水务全流程、设备健康、化工安全、工艺控制与智能楼宇自控多类工业监控样板沉淀为**可复用运行时、场景配置、HMI/SCADA 基础能力**和**可交付 Skill** 的产品化仓库。
+`industrial-dashboard-studio` 把水务全流程、设备健康、化工安全、工艺控制、智能楼宇自控与现场 DCS 就地控制屏多类工业监控样板沉淀为**可复用运行时、场景配置、HMI/SCADA 基础能力**和**可交付 Skill** 的产品化仓库。
 
 - **离线可运行**：零 CDN，`vendor/` 固化全部依赖，`release/industrial-dashboard-offline.zip` 解压即用
 - **信息层级优先**：克制的工业精密视觉，状态色唯一语义（青蓝主数据 / 绿正常 / 琥珀预警 / 红报警 / 灰离线）
@@ -36,13 +36,19 @@
 
 | 入口 | 预览 |
 |------|------|
-| **Showcase 横屏互动入口 (22 套全量)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
+| **Showcase 横屏互动入口 (23 套全量)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
 | **SCADA 场景设计器** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
 <details open>
-<summary><b>展开查看 22 套场景全量分类与截图</b></summary>
+<summary><b>展开查看 23 套场景全量分类与截图</b></summary>
 
-### 楼宇自控 · 空间与动环数字孪生（新增推荐）
+### 现场 DCS · 就地控制屏 (威纶通 HMI 风格)（最新上线）
+
+| 场景 | 文件 | 预览 |
+|------|------|------|
+| 23 冶炼与水务循环水泵站现场 DCS 就地控制屏 | `scenarios/process-control/23-冶炼与水务循环水泵站现场DCS就地控制屏.html` | ![23](docs/screenshots/23-weintek-dcs-local-hmi.png) |
+
+### 楼宇自控 · 空间与动环数字孪生
 
 | 场景 | 文件 | 预览 |
 |------|------|------|
@@ -253,6 +259,32 @@ open apps/scada-designer/index.html
 
 </details>
 
+### 23 冶炼与水务循环水泵站现场 DCS 就地控制屏（威纶通 HMI 风格）
+- **定位**：还原钢铁冶炼（高炉/转炉冷却水）与市政水务加压泵房中，配电柜及现场控制箱普遍使用的**威纶通（Weintek / Weinview cMT / MT 系列）触控屏**。
+- **威纶通拟真硬件设计**：
+  - 经典工业冷灰蓝（`#324154`）基调，搭配铝合金外壳、面板铆钉与内嵌凹槽（Sunken Bevel）GroupBox 框；
+  - 拟真 **3D 凸凹立体按键**（启动 START 绿色微凸、停止 STOP 红色下沉、点动 -0.5Hz/+0.5Hz、复位 RESET）；
+  - 物理级黑胶木旋转旋钮（`就地 LOCAL / 远程 REMOTE`、`手动 MANUAL / 自动 AUTO`）；
+  - 金属镀铬外圈圆型凸面透镜指示灯（运行、停止、故障、就地模式灯）；
+  - 右上角带黄色警示底座的**红色大蘑菇头急停按钮 (Emergency Stop)**，拍下瞬间强切回路并声光告警，旋转顺时针解锁复位。
+- **真实就地控制与安全闭锁**：
+  - **远程闭锁保护**：当旋钮置于【远程 REMOTE】时，就地控制回路硬件级锁死，所有启停调频按键禁用并浮现“受中央 DCS 远程锁定中”，杜绝现场误操作；
+  - **启停水锤联锁**：起泵时延时 3 秒自动开阀，停泵时先关出水电动阀再停泵，保护管网止回阀；
+  - **威纶通触控弹出数字小键盘 (Numeric Keypad)**：点击目标频率、阀门开度、压力阈值时，屏幕居中弹出 1:1 还原的威纶通灰白立体小键盘，支持有效区间校验（Min/Max 限制提示）、清除（CLR）、退格（BS）、确认（ENT）与取消（ESC）。
+- **底栏 F1~F5 多窗口系统**：`[F1 工艺主控]` `[F2 参数整定]` `[F3 报警一览]` `[F4 实时趋势]` `[F5 通信诊断]`。
+- **文件**：`scenarios/process-control/23-冶炼与水务循环水泵站现场DCS就地控制屏.html`
+
+<details open>
+<summary><b>查看 23 号威纶通现场控制屏与交互特写画廊</b></summary>
+
+| 威纶通工艺主控全屏 (F1) | 触控弹出数字小键盘 (Keypad) | 远程模式安全防误闭锁蒙层 |
+|---|---|---|
+| ![23-main](docs/screenshots/23-weintek-dcs-local-hmi.png) | ![23-numpad](docs/screenshots/states/23-state-numpad.png) | ![23-lock](docs/screenshots/states/23-state-remote-lock.png) |
+
+> 纯 CSS 打造拟真物理按键、金属透镜与旋转旋钮，具备完整的启停联锁、急停强切与数字键盘闭环。
+
+</details>
+
 ---
 
 ## 应用入口
@@ -308,7 +340,7 @@ scenarios/
   water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21 (水务全流程)
   predictive-maintenance/ # 02 关键机组预测性维护
   reactor-safety/      # 03 反应釜热失控安全联锁
-  process-control/     # 15 连续分离工艺驾驶舱
+  process-control/     # 15 连续分离工艺驾驶舱, 23 现场DCS就地控制屏
 packages/
   runtime/             # 场景加载、主题、缩放、时钟、全屏、质量标签
   components/          # 工业组件样式 (industrial-components.css)

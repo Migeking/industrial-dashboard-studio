@@ -1,6 +1,6 @@
 # Industrial Dashboard Studio
 
-> Offline-first productization workspace for industrial dashboards · 22 ready-to-run templates + reusable runtime + SCADA designer + 5 deliverable Skills
+> Offline-first productization workspace for industrial dashboards · 23 ready-to-run templates + reusable runtime + SCADA designer + 5 deliverable Skills
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -19,7 +19,7 @@
 
 ## Introduction
 
-`industrial-dashboard-studio` productizes water treatment, asset health, chemical safety, process control, and intelligent building automation monitoring templates into a **reusable runtime, scenario configs, HMI/SCADA foundations**, and **deliverable Skills**.
+`industrial-dashboard-studio` productizes water treatment, asset health, chemical safety, process control, intelligent building automation, and on-site DCS local touch panels into a **reusable runtime, scenario configs, HMI/SCADA foundations**, and **deliverable Skills**.
 
 - **Runs offline**: zero CDN, all dependencies vendored in `vendor/`, `release/industrial-dashboard-offline.zip` works right after unzipping
 - **Information hierarchy first**: restrained industrial-precision visuals, single-meaning status colors (cyan-blue = primary data / green = normal / amber = warning / red = alarm / gray = offline)
@@ -36,13 +36,19 @@
 
 | Entry | Preview |
 |------|------|
-| **Showcase landscape entry (All 22 Scenarios)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
+| **Showcase landscape entry (All 23 Scenarios)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
 | **SCADA scenario designer** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
 <details open>
-<summary><b>Expand: All 22 scenario categories & screenshots</b></summary>
+<summary><b>Expand: All 23 scenario categories & screenshots</b></summary>
 
-### Building Automation · Spatial & Environmental Digital Twin (Featured New)
+### Field DCS · Local Control Panel (Weintek HMI Style) (Latest New)
+
+| Scenario | File | Preview |
+|------|------|------|
+| 23 Smelting & Water Circulation Pump Station Local DCS Control Panel | `scenarios/process-control/23-冶炼与水务循环水泵站现场DCS就地控制屏.html` | ![23](docs/screenshots/23-weintek-dcs-local-hmi.png) |
+
+### Building Automation · Spatial & Environmental Digital Twin
 
 | Scenario | File | Preview |
 |------|------|------|
@@ -253,6 +259,32 @@ open apps/scada-designer/index.html
 
 </details>
 
+### 23 Smelting & Water Circulation Pump Station Local DCS Control Panel (Weintek HMI Style)
+- **Role**: replicates the rugged **Weintek / Weinview (cMT / MT EasyBuilder Pro) touchscreen panels** ubiquitous across metallurgy workshops (blast-furnace & converter cooling) and municipal booster pumping stations.
+- **Physical Hardware Realism**:
+  - Classic industrial cold slate-blue (`#324154`) foundation, aluminum bezel with corner hex bolts, and sunken-bevel GroupBoxes;
+  - **Tactile 3D push buttons** (convex green START, concave red STOP, -0.5Hz/+0.5Hz jog adjustment, blue RESET);
+  - Bakelite rotary selector switches (`LOCAL / REMOTE`, `MANUAL / AUTO`);
+  - Chrome-rimmed domed lens indicator lamps (RUN, STOP, FAULT, LOCAL);
+  - Industrial **Emergency Stop mushroom button** with yellow safety flange; slamming shuts down circuits with audible visual warnings, twist clockwise to reset.
+- **True Local Control & Safety Interlocks**:
+  - **Remote Lockout**: turning the rotary switch to `REMOTE` hard-locks local controls, disallowing field start/stop/jogging to prevent accidental intervention;
+  - **Water-Hammer Protection Interlock**: 3-second delay between pump acceleration and discharge butterfly valve opening; valve pre-closes prior to motor stop;
+  - **Touchscreen Numeric Keypad Modal**: tapping setpoints pops up an authentic Weintek-style numeric keypad with range limits, CLR, BS, ENT, and ESC.
+- **Bottom F1~F5 Window Bar**: `[F1 Main Control]` `[F2 Parameters]` `[F3 Alarm Log]` `[F4 Real-time Trends]` `[F5 Comms Diagnostic]`.
+- **File**: `scenarios/process-control/23-冶炼与水务循环水泵站现场DCS就地控制屏.html`
+
+<details open>
+<summary><b>View Scenario 23 Weintek Local HMI gallery</b></summary>
+
+| Weintek Main Screen (F1) | Touch Numeric Keypad | Remote Safety Lockout Mask |
+|---|---|---|
+| ![23-main](docs/screenshots/23-weintek-dcs-local-hmi.png) | ![23-numpad](docs/screenshots/states/23-state-numpad.png) | ![23-lock](docs/screenshots/states/23-state-remote-lock.png) |
+
+> Pure CSS physical-grade 3D push buttons, metallic lamps, and rotary switches with complete pump-valve sequencing, E-Stop cutoff, and keypad entry.
+
+</details>
+
 ---
 
 ## App entries
@@ -308,7 +340,7 @@ scenarios/
   water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21 (full water chain)
   predictive-maintenance/ # 02 Critical-unit predictive maintenance
   reactor-safety/      # 03 Reactor safety interlock
-  process-control/     # 15 Continuous separation process
+  process-control/     # 15 Continuous separation process, 23 Local DCS panel
 packages/
   runtime/             # loading, theming, scaling, clock, fullscreen, quality labels
   components/          # industrial component styles (industrial-components.css)

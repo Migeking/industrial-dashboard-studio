@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>冶炼与水务循环水泵站现场 DCS 就地控制屏 (威纶通 HMI 风格)</title>
+<style>
+/* ==========================================================================
+   威纶通 (Weintek / Weinview EasyBuilder) 经典工业触控屏工程样式系统
+   ========================================================================== */
+:root {
+  --hmi-bezel-outer: #1f2733;
+  --hmi-bezel-inner: #2d3848;
+  --hmi-bg: #324154;
+  --hmi-panel-bg: #3b4d63;
+  --hmi-panel-dark: #263342;
+  --hmi-border-light: #647d9c;
+  --hmi-border-dark: #1b2531;
+  --hmi-sunken-bg: #111a24;
+
+  /* 工业 LED / 读数高对比度色彩 */
+  --led-green: #00ff66;
+  --led-amber: #ffb300;
+  --led-red: #ff3333;
+  --led-cyan: #00e5ff;
+  --text-main: #f0f4f8;
+  --text-muted: #9bb0c7;
+
+  /* 物理按键与指示灯色调 */
+  --btn-green-top: #43a047;
+  --btn-green-bot: #2e7d32;
+  --btn-red-top: #e53935;
+  --btn-red-bot: #c62828;
+  --btn-blue-top: #1e88e5;
+  --btn-blue-bot: #1565c0;
+  --btn-yellow-top: #fdd835;
+  --btn-yellow-bot: #f57f17;
+  --btn-gray-top: #78909c;
+  --btn-gray-bot: #455a64;
+
+  /* 指示灯辉光 */
+  --lamp-off: #475569;
+  --lamp-green-glow: #00e676;
+  --lamp-red-glow: #ff1744;
+  --lamp-amber-glow: #ffab00;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #0f172a;
+  overflow: hidden;
+  font-family: "Bahnschrift", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  user-select: none;
+}
+
+#viewport {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: #0b0f19;
+}
+
+#screen {
+  width: 1920px;
+  height: 1080px;
+  min-width: 1920px;
+  min-height: 1080px;
+  position: relative;
+  background: var(--hmi-bg);
+  box-shadow: 0 0 50px rgba(0,0,0,0.8);
+  border: 12px solid var(--hmi-bezel-outer);
+  outline: 3px solid #141b24;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  transform-origin: center center;
+  color: var(--text-main);
+  overflow: hidden;
+}
+
+/* 威纶通 HMI 硬件铝合金外框与铆钉装饰 */
+.hmi-bezel-header {
+  position: absolute;
+  top: -10px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 100;
+}
+.hmi-screw {
+  width: 8px;
+  height: 8px;
+  background: #64748b;
+  border-radius: 50%;
+  box-shadow: inset 1px 1px 1px #fff, inset -1px -1px 1px #000;
+}
+.hmi-brand {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #647d9c;
+  pointer-events: none;
+  z-index: 99;
+}
+
+/* 顶部状态栏：PLC 通信、标题与权限 */
+.top-status-bar {
+  height: 52px;
+  background: linear-gradient(180deg, #2d3b4e 0%, #1e2836 100%);
+  border-bottom: 2px solid var(--hmi-border-dark);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  font-size: 14px;
+}
+.title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.screen-tag {
+  background: #1565c0;
+  border: 1px solid #42a5f5;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.main-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.6);
+}
+.sub-title {
+  font-size: 12px;
+  color: var(--text-muted);
+  border-left: 1px solid #486581;
+  padding-left: 10px;
+}
+
+.top-telemetry {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.comm-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #cbd5e1;
+}
+.led-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--lamp-off);
+  border: 1px solid #000;
+}
+.led-dot.active-green {
+  background: var(--lamp-green-glow);
+  box-shadow: 0 0 8px var(--lamp-green-glow);
+}
+.led-dot.active-amber {
+  background: var(--lamp-amber-glow);
+  box-shadow: 0 0 8px var(--lamp-amber-glow);
+}
+.led-dot.blink-red {
+  background: var(--lamp-red-glow);
+  box-shadow: 0 0 10px var(--lamp-red-glow);
+  animation: blink 0.6s infinite alternate;
+}
+@keyframes blink {
+  from { opacity: 0.3; }
+  to { opacity: 1; }
+}
+
+.perm-badge {
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+.perm-badge b { color: #38bdf8; }
+
+/* 主工作区 (4个窗口切换：主控 / 参数 / 报警 / 趋势) */
+.workbench-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 8px;
+  gap: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 威纶通 GroupBox 工业下凹边框容器 */
+.weintek-groupbox {
+  background: var(--hmi-panel-bg);
+  border: 2px solid var(--hmi-border-dark);
+  box-shadow: inset 1px 1px 0 var(--hmi-border-light), inset -1px -1px 0 rgba(0,0,0,0.5), 0 2px 5px rgba(0,0,0,0.3);
+  border-radius: 6px;
+  position: relative;
+  padding: 14px 12px 10px;
+}
+.groupbox-title {
+  position: absolute;
+  top: -10px;
+  left: 14px;
+  background: #253342;
+  border: 1px solid var(--hmi-border-light);
+  border-radius: 3px;
+  padding: 1px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #67e8f9;
+  letter-spacing: 0.5px;
+}
+
+/* 画面1：主监控工艺画面布局 */
+.layout-f1-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* 顶部告警滚动横幅与就地控制总权限指示条 */
+.supervisory-banner {
+  grid-column: 1 / -1;
+  height: 48px;
+  background: linear-gradient(180deg, #1e293b, #111827);
+  border: 1px solid #334155;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.6);
+}
+.alarm-ticker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #f87171;
+  font-weight: 600;
+}
+.alarm-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #dc2626;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: bold;
+}
+.banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 1# 与 2# 泵站就地操作屏大卡片 */
+.pump-station-card {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 10px;
+  background: #2f3e52;
+  border: 2px solid #202b38;
+  box-shadow: inset 1px 1px 0 #566f8f, inset -1px -1px 0 #18202a;
+  border-radius: 6px;
+  padding: 14px 14px 10px;
+  position: relative;
+}
+.card-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #243142;
+  padding-bottom: 8px;
+}
+.pump-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pump-title-wrap h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+.duty-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+.duty-tag.lead { background: #0284c7; color: #fff; border: 1px solid #38bdf8; }
+.duty-tag.standby { background: #475569; color: #cbd5e1; border: 1px solid #64748b; }
+
+/* 威纶通工业指示灯群 */
+.lamp-cluster {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.lamp-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.bit-lamp {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #94a3b8 0%, #334155 70%, #0f172a 100%);
+  border: 2px solid #64748b;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.4), 0 2px 4px rgba(0,0,0,0.5);
+  position: relative;
+  transition: all 0.2s ease;
+}
+.bit-lamp.run-green {
+  background: radial-gradient(circle at 35% 35%, #a7f3d0 0%, #10b981 50%, #047857 100%);
+  border-color: #34d399;
+  box-shadow: 0 0 12px #10b981, inset 0 1px 2px #fff;
+}
+.bit-lamp.stop-red {
+  background: radial-gradient(circle at 35% 35%, #fecaca 0%, #ef4444 50%, #b91c1c 100%);
+  border-color: #f87171;
+  box-shadow: 0 0 10px #ef4444, inset 0 1px 2px #fff;
+}
+.bit-lamp.alarm-yellow {
+  background: radial-gradient(circle at 35% 35%, #fef08a 0%, #eab308 50%, #a16207 100%);
+  border-color: #facc15;
+  box-shadow: 0 0 12px #eab308;
+  animation: blink 0.5s infinite alternate;
+}
+.bit-lamp.local-blue {
+  background: radial-gradient(circle at 35% 35%, #bae6fd 0%, #0284c7 50%, #0369a1 100%);
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px #0284c7;
+}
+.lamp-lbl {
+  font-size: 11px;
+  color: #cbd5e1;
+  letter-spacing: 0.5px;
+}
+
+/* 卡片中央主视界：工艺动画与主要读数 */
+.pump-body-row {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+
+/* 威纶通风格 P&ID 设备简图与水流管线 */
+.pump-pid-view {
+  background: #1e293b;
+  border: 2px solid #141c27;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.8);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  position: relative;
+}
+.pid-svg {
+  width: 100%;
+  height: 180px;
+}
+
+/* 读数仪表区：7段/液晶高亮黑底框 */
+.telemetry-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-content: start;
+}
+.meter-box {
+  background: #111a24;
+  border: 2px solid #1b2633;
+  box-shadow: inset 1px 1px 0 rgba(0,0,0,0.8), inset -1px -1px 0 #2a3c50;
+  border-radius: 4px;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.meter-box:hover {
+  border-color: #38bdf8;
+}
+.meter-box.settable {
+  border: 2px dashed #0284c7;
+  background: #0f1c29;
+}
+.meter-box.settable:hover {
+  background: #14273a;
+  border-color: #38bdf8;
+}
+.meter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94a3b8;
+}
+.meter-set-icon {
+  font-size: 10px;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+.meter-val-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 4px;
+}
+.meter-num {
+  font-family: "Consolas", "Courier New", monospace;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--led-green);
+  text-shadow: 0 0 6px rgba(0, 255, 102, 0.4);
+  letter-spacing: 1px;
+}
+.meter-num.amber {
+  color: var(--led-amber);
+  text-shadow: 0 0 6px rgba(255, 179, 0, 0.4);
+}
+.meter-num.cyan {
+  color: var(--led-cyan);
+  text-shadow: 0 0 6px rgba(0, 229, 255, 0.4);
+}
+.meter-unit {
+  font-size: 12px;
+  color: #94a3b8;
+  font-family: inherit;
+}
+
+/* 威纶通旋转旋钮选择开关与物理按键区 */
+.local-console-footer {
+  background: #253344;
+  border: 1px solid #1c2734;
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  gap: 16px;
+  align-items: center;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+/* 拟真黑胶木旋转旋钮 (Selector Switch) */
+.switch-group {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  border-right: 2px solid #1c2734;
+  padding-right: 14px;
+}
+.rotary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.rotary-labels {
+  display: flex;
+  justify-content: space-between;
+  width: 76px;
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 700;
+}
+.rotary-labels span.active {
+  color: #38bdf8;
+  text-shadow: 0 0 4px #38bdf8;
+}
+.knob-body {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #475569 0%, #1e293b 60%, #0f172a 100%);
+  border: 3px solid #64748b;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.4);
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.knob-indicator-line {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 4px;
+  height: 18px;
+  background: #fff;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 3px #000;
+}
+.knob-body.pos-left {
+  transform: rotate(-35deg);
+}
+.knob-body.pos-right {
+  transform: rotate(35deg);
+}
+.switch-caption {
+  font-size: 11px;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+/* 威纶通 3D 凸凹立体按键群 (3D Push Buttons) */
+.buttons-grid {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.btn-3d {
+  height: 42px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.4), inset -1px -1px 0 rgba(0,0,0,0.5), 0 3px 5px rgba(0,0,0,0.4);
+  transition: all 0.08s ease-in-out;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  position: relative;
+}
+.btn-3d:active {
+  transform: translateY(2px);
+  box-shadow: inset 2px 2px 4px rgba(0,0,0,0.7), inset -1px -1px 0 rgba(255,255,255,0.1);
+}
+.btn-3d:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(80%);
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-start {
+  background: linear-gradient(180deg, var(--btn-green-top) 0%, var(--btn-green-bot) 100%);
+  border: 1px solid #1b5e20;
+}
+.btn-stop {
+  background: linear-gradient(180deg, var(--btn-red-top) 0%, var(--btn-red-bot) 100%);
+  border: 1px solid #b71c1c;
+}
+.btn-reset {
+  background: linear-gradient(180deg, var(--btn-blue-top) 0%, var(--btn-blue-bot) 100%);
+  border: 1px solid #0d47a1;
+}
+.btn-jog {
+  background: linear-gradient(180deg, #546e7a 0%, #37474f 100%);
+  border: 1px solid #263238;
+}
+.btn-valve {
+  background: linear-gradient(180deg, #475569 0%, #334155 100%);
+  border: 1px solid #1e293b;
+  font-size: 12px;
+  height: 38px;
+  padding: 0 10px;
+}
+
+/* 远程模式下的闭锁警告浮标 */
+.remote-lock-mask {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(2px);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  z-index: 10;
+  pointer-events: all;
+  border: 2px dashed #f59e0b;
+}
+.lock-icon-box {
+  width: 52px;
+  height: 52px;
+  background: #f59e0b;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: #1e293b;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+}
+.lock-tip-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fef08a;
+  letter-spacing: 1px;
+}
+.lock-tip-desc {
+  font-size: 13px;
+  color: #e2e8f0;
+}
+
+/* 右上角/顶栏物理级急停按钮 (Emergency Stop Mushroom) */
+.estop-control-station {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #2a3442;
+  border: 2px solid #1a222c;
+  border-radius: 6px;
+  padding: 3px 10px;
+}
+.estop-btn-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+.estop-base {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fde047 0%, #ca8a04 100%);
+  border: 2px solid #854d0e;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.estop-cap {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f87171 0%, #dc2626 50%, #991b1b 100%);
+  border: 2px solid #7f1d1d;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.6), inset 0 2px 2px rgba(255,255,255,0.4);
+  transition: transform 0.15s ease;
+}
+.estop-btn-wrap:active .estop-cap, .estop-btn-wrap.latched .estop-cap {
+  transform: scale(0.9) translateY(2px);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.7), inset 0 2px 4px rgba(0,0,0,0.8);
+}
+.estop-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fca5a5;
+  letter-spacing: 0.5px;
+}
+
+/* 画面2：参数整定页面 */
+.layout-f2-params {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  overflow-y: auto;
+}
+.param-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.param-table th, .param-table td {
+  border: 1px solid #334155;
+  padding: 8px 12px;
+  text-align: left;
+}
+.param-table th {
+  background: #1e293b;
+  color: #94a3b8;
+  font-weight: 600;
+}
+.param-table td {
+  background: #273546;
+}
+.param-table tr:hover td {
+  background: #314257;
+}
+
+/* 画面3：实时报警一览 */
+.layout-f3-alarms {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #1e293b;
+  border: 2px solid #141c27;
+  border-radius: 6px;
+  padding: 10px;
+  overflow: hidden;
+}
+.alarm-table-wrap {
+  flex: 1;
+  overflow-y: auto;
+}
+.alarm-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.alarm-grid-table th {
+  background: #0f172a;
+  color: #94a3b8;
+  padding: 10px;
+  text-align: left;
+  border-bottom: 2px solid #334155;
+  position: sticky;
+  top: 0;
+}
+.alarm-grid-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid #273549;
+}
+.alarm-level-badge {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.alarm-level-badge.critical { background: #991b1b; color: #fecaca; }
+.alarm-level-badge.warning { background: #854d0e; color: #fef08a; }
+.alarm-level-badge.info { background: #1e40af; color: #dbeafe; }
+
+/* 画面4：实时采样趋势 */
+.layout-f4-trends {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #111a24;
+  border: 2px solid #1b2633;
+  border-radius: 6px;
+  padding: 10px;
+}
+.trend-chart-container {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+/* 画面5：通信诊断与系统信息 */
+.layout-f5-diag {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* 威纶通底栏功能键 (Function Keys F1~F5) */
+.bottom-fkey-bar {
+  height: 56px;
+  background: linear-gradient(180deg, #263342 0%, #16202c 100%);
+  border-top: 2px solid #3e5066;
+  box-shadow: 0 -2px 6px rgba(0,0,0,0.4);
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px 10px;
+}
+.fkey-btn {
+  flex: 1;
+  background: linear-gradient(180deg, #475a72 0%, #2e3e52 100%);
+  border: 1px solid #1b2531;
+  border-radius: 4px;
+  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.25), inset -1px -1px 0 rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3);
+  color: #f1f5f9;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  user-select: none;
+}
+.fkey-btn span.fnum {
+  color: #38bdf8;
+  font-size: 12px;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+.fkey-btn:hover {
+  background: linear-gradient(180deg, #536b88 0%, #374b63 100%);
+  color: #fff;
+}
+.fkey-btn.active {
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  border-color: #38bdf8;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.6), 0 0 10px rgba(56, 189, 248, 0.4);
+  color: #fff;
+}
+.fkey-btn.active span.fnum {
+  background: #fff;
+  color: #0284c7;
+  border-color: #fff;
+}
+
+/* ==========================================================================
+   威纶通触控数字小键盘 (Numeric Keypad Modal)
+   ========================================================================== */
+.numpad-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(3px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.numpad-dialog {
+  width: 420px;
+  background: #37474f;
+  border: 3px solid #263238;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 1px 1px 0 #78909c;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.numpad-titlebar {
+  background: linear-gradient(180deg, #455a64, #263238);
+  padding: 10px 14px;
+  border-bottom: 2px solid #1c252b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: #e0f2fe;
+}
+.numpad-display-wrap {
+  padding: 14px 16px 8px;
+  background: #2b373e;
+}
+.numpad-screen {
+  background: #10171d;
+  border: 2px solid #080c10;
+  box-shadow: inset 1px 1px 3px rgba(0,0,0,0.8), inset -1px -1px 0 #455a64;
+  border-radius: 4px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 14px;
+  font-family: "Consolas", monospace;
+  font-size: 30px;
+  color: #00ff66;
+  text-shadow: 0 0 8px rgba(0, 255, 102, 0.4);
+}
+.numpad-range-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+}
+.numpad-keys-grid {
+  padding: 12px 16px 16px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.np-key {
+  height: 54px;
+  font-size: 20px;
+  font-weight: 700;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #eceff1 0%, #cfd8dc 100%);
+  border: 1px solid #90a4ae;
+  box-shadow: inset 1px 1px 0 #fff, inset -1px -1px 0 #78909c, 0 3px 4px rgba(0,0,0,0.3);
+  color: #263238;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+.np-key:active {
+  transform: translateY(2px);
+  box-shadow: inset 2px 2px 3px rgba(0,0,0,0.5);
+}
+.np-key.func {
+  background: linear-gradient(180deg, #78909c 0%, #546e7a 100%);
+  border-color: #37474f;
+  color: #fff;
+  font-size: 14px;
+}
+.np-key.enter {
+  background: linear-gradient(180deg, #43a047 0%, #2e7d32 100%);
+  border-color: #1b5e20;
+  color: #fff;
+  font-size: 16px;
+}
+.np-key.clear {
+  background: linear-gradient(180deg, #e53935 0%, #c62828 100%);
+  border-color: #b71c1c;
+  color: #fff;
+  font-size: 15px;
+}
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div id="screen">
+    <!-- 威纶通硬件外壳铆钉与品牌标饰 -->
+    <div class="hmi-bezel-header">
+      <div class="hmi-screw"></div>
+      <div class="hmi-screw"></div>
+    </div>
+    <div class="hmi-brand">WEINVIEW cMT-X HMI · 现场就地 DCS 控制站</div>
+
+    <!-- 顶部状态栏 -->
+    <header class="top-status-bar">
+      <div class="title-group">
+        <span class="screen-tag">画面 10</span>
+        <span class="main-title">冶炼与水务循环水泵站现场 DCS 就地控制屏</span>
+        <span class="sub-title">1# / 2# 变频加压机组 · 水锤保护与就地微操</span>
+      </div>
+
+      <div class="top-telemetry">
+        <div class="comm-indicator">
+          <span class="led-dot active-green"></span>
+          <span>COM1: Modbus-TCP (192.168.1.50) [正常: 32ms]</span>
+        </div>
+        <div class="perm-badge">
+          操作等级: <b>就地操作员 (Level 2)</b>
+        </div>
+        <div class="estop-control-station">
+          <div class="estop-btn-wrap" :class="{ latched: estopPressed }" @click="toggleEstop" title="点击拍下急停 / 旋转复位">
+            <div class="estop-base">
+              <div class="estop-cap"></div>
+            </div>
+          </div>
+          <span class="estop-label">{{ estopPressed ? '急停已锁死' : '就地急停' }}</span>
+        </div>
+        <div class="time-box" style="font-family: Consolas; font-size: 13px; color: #38bdf8;">
+          {{ currentTime }}
+        </div>
+      </div>
+    </header>
+
+    <!-- 主工作区内容 -->
+    <main class="workbench-content">
+      <!-- 画面 1：F1 工艺主控监控页面 -->
+      <section v-if="activeTab === 'f1'" class="layout-f1-main">
+        <!-- 顶部告警提示条与就地权限指示 -->
+        <div class="supervisory-banner">
+          <div class="alarm-ticker">
+            <span class="alarm-icon">!</span>
+            <span>{{ activeAlarmText }}</span>
+          </div>
+          <div class="banner-actions">
+            <span style="font-size: 12px; color: #94a3b8;">数据质量: <b style="color: #00ff66;">GOOD (99.8%)</b> | 更新时间: {{ lastSeen }}</span>
+            <button class="btn-3d btn-jog" style="height: 32px; padding: 0 10px;" @click="muteAlarm">消音 MUTE</button>
+            <button class="btn-3d btn-jog" style="height: 32px; padding: 0 10px;" @click="ackAlarm">报警确认 ACK</button>
+          </div>
+        </div>
+
+        <!-- 1# 变频循环泵 控制小站 -->
+        <div class="pump-station-card">
+          <!-- 远程闭锁蒙层 -->
+          <div v-if="p1.controlMode === 'remote'" class="remote-lock-mask">
+            <div class="lock-icon-box">🔒</div>
+            <div class="lock-tip-title">受中央 DCS 远程锁定中</div>
+            <div class="lock-tip-desc">旋钮处于【远程 REMOTE】位置，禁止就地手动启停与调频微调</div>
+            <button class="btn-3d btn-jog" style="height: 34px;" @click="p1.controlMode = 'local'">切换至就地操作</button>
+          </div>
+
+          <div class="card-header-bar">
+            <div class="pump-title-wrap">
+              <h2>1# 变频主供循环泵</h2>
+              <span class="duty-tag lead">主用机组</span>
+            </div>
+            <!-- 状态指示灯群 -->
+            <div class="lamp-cluster">
+              <div class="lamp-item">
+                <div class="bit-lamp" :class="{ 'run-green': p1.running }"></div>
+                <span class="lamp-lbl">运行</span>
+              </div>
+              <div class="lamp-item">
+                <div class="bit-lamp" :class="{ 'stop-red': !p1.running }"></div>
+                <span class="lamp-lbl">停止</span>
+              </div>
+              <div class="lamp-item">
+                <div class="bit-lamp" :class="{ 'alarm-yellow': p1.fault }"></div>
+                <span class="lamp-lbl">故障</span>
+              </div>
+              <div class="lamp-item">
+                <div class="bit-lamp" :class="{ 'local-blue': p1.controlMode === 'local' }"></div>
+                <span class="lamp-lbl">就地</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pump-body-row">
+            <!-- P&ID 工业简图 -->
+            <div class="pump-pid-view">
+              <svg class="pid-svg" viewBox="0 0 240 160">
+                <!-- 进水管路 (蓝色) -->
+                <rect x="10" y="85" width="60" height="12" fill="#0284c7" />
+                <polygon points="35,80 50,91 35,102" fill="#38bdf8" opacity="0.8" />
+                <!-- 泵体圆形蜗壳 -->
+                <circle cx="100" cy="91" r="32" fill="#334155" stroke="#64748b" stroke-width="3" />
+                <circle cx="100" cy="91" r="14" fill="#1e293b" stroke="#38bdf8" stroke-width="2" />
+                <!-- 旋转叶轮 (运行带动效) -->
+                <g :style="p1.running ? { transform: `rotate(${p1.fanAngle}deg)`, transformOrigin: '100px 91px' } : {}">
+                  <line x1="100" y1="65" x2="100" y2="117" stroke="#38bdf8" stroke-width="3" />
+                  <line x1="74" y1="91" x2="126" y2="91" stroke="#38bdf8" stroke-width="3" />
+                </g>
+                <!-- 出水垂直管路与电动蝶阀 -->
+                <rect x="94" y="20" width="12" height="40" fill="#0284c7" />
+                <!-- 电动蝶阀 -->
+                <polygon points="90,30 110,45 110,30 90,45" fill="#f59e0b" stroke="#d97706" />
+                <rect x="96" y="20" width="8" height="10" fill="#e2e8f0" />
+                <text x="116" y="42" fill="#cbd5e1" font-size="11" font-weight="bold">阀: {{ p1.valveOpen }}%</text>
+                <!-- 进水压力与出水压力标签 -->
+                <text x="15" y="75" fill="#94a3b8" font-size="10">进水: 0.28MPa</text>
+                <text x="100" y="15" fill="#38bdf8" font-size="10" font-weight="bold">出水: {{ p1.pressOut.toFixed(2) }}MPa</text>
+              </svg>
+              <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+                开机时序: 先起泵 3s → 延时开阀 | 停机: 先关阀 → 停泵
+              </div>
+            </div>
+
+            <!-- 数值显示与设定框 -->
+            <div class="telemetry-col">
+              <div class="meter-box settable" @click="openKeypad('p1Freq', '1# 目标给定频率', p1.targetFreq, 0, 50, 'Hz')">
+                <div class="meter-header">
+                  <span>目标给定频率 [点击设定]</span>
+                  <span class="meter-set-icon">SET</span>
+                </div>
+                <div class="meter-val-row">
+                  <span class="meter-num cyan">{{ p1.targetFreq.toFixed(1) }}</span>
+                  <span class="meter-unit">Hz</span>
+                </div>
+              </div>
+
+              <div class="meter-box">
+                <div class="meter-header"><span>运行实际频率</span></div>
+                <div class="meter-val-row">
+                  <span class="meter-num">{{ p1.currentFreq.toFixed(1) }}</span>
+                  <span class="meter-unit">Hz</span>
+                </div>
+              </div>
+
+              <div class="meter-box">
+                <div class="meter-header"><span>变频器输出电流</span></div>
+                <div class="meter-val-row">
+                  <span class="meter-num">{{ p1.currentAmp.toFixed(1) }}</span>
+                  <span class="meter-unit">A</span>
+                </div>
+              </div>
+
+              <div class="meter-box">
+                <div class="meter-header"><span>电机轴承温度</span></div>
+                <div class="meter-val-row">
+                  <span class="meter-num" :class="{ amber: p1.temp > 65 }">{{ p1.temp.toFixed(1) }}</span>
+                  <span class="meter-unit">℃</span>
+                </div>
+              </div>
+
+              <div class="meter-box settable" @click="openKeypad('p1Valve', '1# 出水阀目标开度', p1.valveOpen, 0, 100, '%')">
+                <div class="meter-header">
+                  <span>电动蝶阀开度 [点击设定]</span>
+                  <span class="meter-set-icon">SET</span>
+                </div>
+                <div class="meter-val-row">
+                  <span class="meter-num cyan">{{ p1.valveOpen }}</span>
+                  <span class="meter-unit">%</span>
+                </div>
+              </div>
+
+              <div class="meter-box">
+                <div class="meter-header"><span>电机累计运行</span></div>
+                <div class="meter-val-row">
+                  <span class="meter-num">{{ p1.runHours }}</span>
+                  <span class="meter-unit">h</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 就地控制操作台：旋钮与按键 -->
+          <div class="local-console-footer">
+            <div class="switch-group">
+              <div class="rotary-item">
+                <div class="rotary-labels">
+                  <span :class="{ active: p1.controlMode === 'local' }">就地</span>
+                  <span :class="{ active: p1.controlMode === 'remote' }">远程</span>
+                </div>
+                <div class="knob-body" :class="p1.controlMode === 'local' ? 'pos-left' : 'pos-right'" @click="toggleMode(p1, 'controlMode')">
+                  <div class="knob-indicator-line"></div>
+                </div>
+                <span class="switch-caption">权限切换</span>
+              </div>
+
+              <div class="rotary-item">
+                <div class="rotary-labels">
+                  <span :class="{ active: p1.runMode === 'manual' }">手动</span>
+                  <span :class="{ active: p1.runMode === 'auto' }">自动</span>
+                </div>
+                <div class="knob-body" :class="p1.runMode === 'manual' ? 'pos-left' : 'pos-right'" @click="toggleMode(p1, 'runMode')">
+                  <div class="knob-indicator-line"></div>
+                </div>
+                <span class="switch-caption">模式选择</span>
+              </div>
+            </div>
+
+            <!-- 物理按键 -->
+            <div class="buttons-grid">
+              <button class="btn-3d btn-start" :disabled="p1.controlMode === 'remote' || estopPressed || p1.running" @click="startPump(p1)">
+                <span>启动 START</span>
+              </button>
+              <button class="btn-3d btn-stop" :disabled="p1.controlMode === 'remote' || estopPressed || !p1.running" @click="stopPump(p1)">
+                <span>停止 STOP</span>
+              </button>
+              <button class="btn-3d btn-jog" :disabled="p1.controlMode === 'remote' || estopPressed" @click="jogFreq(p1, -0.5)">
+                -0.5Hz
+              </button>
+              <button class="btn-3d btn-jog" :disabled="p1.controlMode === 'remote' || estopPressed" @click="jogFreq(p1, 0.5)">
+                +0.5Hz
+              </button>
+              <button class="btn-3d btn-valve" :disabled="p1.controlMode === 'remote' || estopPressed" @click="stepValve(p1, -10)">
+                阀-10%
+              </button>
+              <button class="btn-3d btn-valve" :disabled="p1.controlMode === 'remote' || estopPressed" @click="stepValve(p1, 10)">
+                阀+10%
+              </button>
+              <button class="btn-3d btn-reset" :disabled="p1.controlMode === 'remote'" @click="resetFault(p1)">
+                复位 RESET
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2# 备用循环泵 控制小站 -->
+        <div class="pump-station-card">
+          <!-- 远程闭锁蒙层 -->
+          <div v-if="p2.controlMode === 'remote'" class="remote-lock-mask">
+            <div class="lock-icon-box">🔒</div>
+            <div class="lock-tip-title">受中央 DCS 远程锁定中</div>
+            <div class="lock-tip-desc">旋钮处于【远程 REMOTE】位置，禁止就地手动启停与调频微调</div>
+            <button class="btn-3d btn-jog" style="height: 34px;" @click="p2.controlMode = 'local'">切换至就地操作</button>
+          </div>
+
+          <div class="card-header-bar">
+            <div class="pump-title-wrap">
+              <h2>2# 循环水备用泵</h2>
+              <span class="duty-tag standby">热备待命</span>
+            </div>
+            <!-- 状态指示灯群 -->
+            <div class="lamp-cluster">
+              <div class="lamp-item">
+                <div class="bit-lamp" :class="{ 'run-green': p2.running }"></div>
+                <span class="lamp-lbl">运行</span>
+              </div>
+              <div class="lamp-item">
+                <div class="bit-lamp" :class="{ 'stop-red': !p2.running }"></div>
+                <span class="lamp-lbl">停止</span>
+              </div>
+              <div class="lamp-item">
+                <div class="bit-lamp" :class="{ 'alarm-yellow': p2.fault }"></div>
+                <span class="lamp-lbl">故障</span>
+              </div>
+              <div class="lamp-item">
+                <div class="bit-lamp" :class="{ 'local-blue': p2.controlMode === 'local' }"></div>
+                <span class="lamp-lbl">就地</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pump-body-row">
+            <!-- P&ID 工业简图 -->
+            <div class="pump-pid-view">
+              <svg class="pid-svg" viewBox="0 0 240 160">
+                <rect x="10" y="85" width="60" height="12" fill="#0284c7" />
+                <polygon points="35,80 50,91 35,102" fill="#38bdf8" opacity="0.8" />
+                <circle cx="100" cy="91" r="32" fill="#334155" stroke="#64748b" stroke-width="3" />
+                <circle cx="100" cy="91" r="14" fill="#1e293b" stroke="#38bdf8" stroke-width="2" />
+                <g :style="p2.running ? { transform: `rotate(${p2.fanAngle}deg)`, transformOrigin: '100px 91px' } : {}">
+                  <line x1="100" y1="65" x2="100" y2="117" stroke="#38bdf8" stroke-width="3" />
+                  <line x1="74" y1="91" x2="126" y2="91" stroke="#38bdf8" stroke-width="3" />
+                </g>
+                <rect x="94" y="20" width="12" height="40" fill="#0284c7" />
+                <polygon points="90,30 110,45 110,30 90,45" fill="#f59e0b" stroke="#d97706" />
+                <rect x="96" y="20" width="8" height="10" fill="#e2e8f0" />
+                <text x="116" y="42" fill="#cbd5e1" font-size="11" font-weight="bold">阀: {{ p2.valveOpen }}%</text>
+                <text x="15" y="75" fill="#94a3b8" font-size="10">进水: 0.28MPa</text>
+                <text x="100" y="15" fill="#38bdf8" font-size="10" font-weight="bold">出水: {{ p2.pressOut.toFixed(2) }}MPa</text>
+              </svg>
+              <div style="font-size: 11px; color: #94a3b8; margin-top: 4px;">
+                备用联锁: 1# 泵故障停运时，备用泵自动延时投入
+              </div>
+            </div>
+
+            <!-- 数值显示与设定框 -->
+            <div class="telemetry-col">
+              <div class="meter-box settable" @click="openKeypad('p2Freq', '2# 目标给定频率', p2.targetFreq, 0, 50, 'Hz')">
+                <div class="meter-header">
+                  <span>目标给定频率 [点击设定]</span>
+                  <span class="meter-set-icon">SET</span>
+                </div>
+                <div class="meter-val-row">
+                  <span class="meter-num cyan">{{ p2.targetFreq.toFixed(1) }}</span>
+                  <span class="meter-unit">Hz</span>
+                </div>
+              </div>
+
+              <div class="meter-box">
+                <div class="meter-header"><span>运行实际频率</span></div>
+                <div class="meter-val-row">
+                  <span class="meter-num">{{ p2.currentFreq.toFixed(1) }}</span>
+                  <span class="meter-unit">Hz</span>
+                </div>
+              </div>
+
+              <div class="meter-box">
+                <div class="meter-header"><span>变频器输出电流</span></div>
+                <div class="meter-val-row">
+                  <span class="meter-num">{{ p2.currentAmp.toFixed(1) }}</span>
+                  <span class="meter-unit">A</span>
+                </div>
+              </div>
+
+              <div class="meter-box">
+                <div class="meter-header"><span>电机轴承温度</span></div>
+                <div class="meter-val-row">
+                  <span class="meter-num" :class="{ amber: p2.temp > 65 }">{{ p2.temp.toFixed(1) }}</span>
+                  <span class="meter-unit">℃</span>
+                </div>
+              </div>
+
+              <div class="meter-box settable" @click="openKeypad('p2Valve', '2# 出水阀目标开度', p2.valveOpen, 0, 100, '%')">
+                <div class="meter-header">
+                  <span>电动蝶阀开度 [点击设定]</span>
+                  <span class="meter-set-icon">SET</span>
+                </div>
+                <div class="meter-val-row">
+                  <span class="meter-num cyan">{{ p2.valveOpen }}</span>
+                  <span class="meter-unit">%</span>
+                </div>
+              </div>
+
+              <div class="meter-box">
+                <div class="meter-header"><span>电机累计运行</span></div>
+                <div class="meter-val-row">
+                  <span class="meter-num">{{ p2.runHours }}</span>
+                  <span class="meter-unit">h</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 就地控制操作台：旋钮与按键 -->
+          <div class="local-console-footer">
+            <div class="switch-group">
+              <div class="rotary-item">
+                <div class="rotary-labels">
+                  <span :class="{ active: p2.controlMode === 'local' }">就地</span>
+                  <span :class="{ active: p2.controlMode === 'remote' }">远程</span>
+                </div>
+                <div class="knob-body" :class="p2.controlMode === 'local' ? 'pos-left' : 'pos-right'" @click="toggleMode(p2, 'controlMode')">
+                  <div class="knob-indicator-line"></div>
+                </div>
+                <span class="switch-caption">权限切换</span>
+              </div>
+
+              <div class="rotary-item">
+                <div class="rotary-labels">
+                  <span :class="{ active: p2.runMode === 'manual' }">手动</span>
+                  <span :class="{ active: p2.runMode === 'auto' }">自动</span>
+                </div>
+                <div class="knob-body" :class="p2.runMode === 'manual' ? 'pos-left' : 'pos-right'" @click="toggleMode(p2, 'runMode')">
+                  <div class="knob-indicator-line"></div>
+                </div>
+                <span class="switch-caption">模式选择</span>
+              </div>
+            </div>
+
+            <!-- 物理按键 -->
+            <div class="buttons-grid">
+              <button class="btn-3d btn-start" :disabled="p2.controlMode === 'remote' || estopPressed || p2.running" @click="startPump(p2)">
+                <span>启动 START</span>
+              </button>
+              <button class="btn-3d btn-stop" :disabled="p2.controlMode === 'remote' || estopPressed || !p2.running" @click="stopPump(p2)">
+                <span>停止 STOP</span>
+              </button>
+              <button class="btn-3d btn-jog" :disabled="p2.controlMode === 'remote' || estopPressed" @click="jogFreq(p2, -0.5)">
+                -0.5Hz
+              </button>
+              <button class="btn-3d btn-jog" :disabled="p2.controlMode === 'remote' || estopPressed" @click="jogFreq(p2, 0.5)">
+                +0.5Hz
+              </button>
+              <button class="btn-3d btn-valve" :disabled="p2.controlMode === 'remote' || estopPressed" @click="stepValve(p2, -10)">
+                阀-10%
+              </button>
+              <button class="btn-3d btn-valve" :disabled="p2.controlMode === 'remote' || estopPressed" @click="stepValve(p2, 10)">
+                阀+10%
+              </button>
+              <button class="btn-3d btn-reset" :disabled="p2.controlMode === 'remote'" @click="resetFault(p2)">
+                复位 RESET
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 画面 2：F2 参数整定页面 -->
+      <section v-else-if="activeTab === 'f2'" class="layout-f2-params">
+        <div class="weintek-groupbox">
+          <div class="groupbox-title">变频调速与电机保护参数设定</div>
+          <table class="param-table">
+            <thead>
+              <tr><th>参数名称</th><th>当前值</th><th>设定范围</th><th>单位</th><th>操作</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>变频加速时间 (Acc Time)</td><td>15.0</td><td>5.0 ~ 60.0</td><td>s</td><td><button class="btn-3d btn-jog" style="height:26px;font-size:11px;">修改</button></td></tr>
+              <tr><td>变频减速时间 (Dec Time)</td><td>20.0</td><td>5.0 ~ 60.0</td><td>s</td><td><button class="btn-3d btn-jog" style="height:26px;font-size:11px;">修改</button></td></tr>
+              <tr><td>基准供水压力目标值 (SP)</td><td>0.62</td><td>0.20 ~ 1.00</td><td>MPa</td><td><button class="btn-3d btn-jog" style="height:26px;font-size:11px;">修改</button></td></tr>
+              <tr><td>超压联锁切断阈值 (High Limit)</td><td>0.85</td><td>0.70 ~ 1.20</td><td>MPa</td><td><button class="btn-3d btn-jog" style="height:26px;font-size:11px;">修改</button></td></tr>
+              <tr><td>低压缺水报警阈值 (Low Limit)</td><td>0.15</td><td>0.05 ~ 0.30</td><td>MPa</td><td><button class="btn-3d btn-jog" style="height:26px;font-size:11px;">修改</button></td></tr>
+              <tr><td>轴承过温保护阈值</td><td>75.0</td><td>60.0 ~ 90.0</td><td>℃</td><td><button class="btn-3d btn-jog" style="height:26px;font-size:11px;">修改</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="weintek-groupbox">
+          <div class="groupbox-title">水锤消除与电动阀联动延时</div>
+          <table class="param-table">
+            <thead>
+              <tr><th>联锁环节</th><th>当前设定</th><th>作用说明</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>开泵延时开阀时间</td><td>3.0 秒</td><td>泵转速达到额定 80% 后缓开阀门，消除管网水锤</td></tr>
+              <tr><td>关阀先停延时</td><td>3.5 秒</td><td>阀门关至 10% 后切断电机，防止介质倒流击穿止回阀</td></tr>
+              <tr><td>备用泵自投延时</td><td>5.0 秒</td><td>主泵过载跳闸或断流失压后，备用泵自动投入供水</td></tr>
+              <tr><td>防空转保护延时</td><td>2.0 秒</td><td>进水压力持续低于 0.1MPa 联锁跳闸，保护机械密封</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 画面 3：F3 实时报警记录 -->
+      <section v-else-if="activeTab === 'f3'" class="layout-f3-alarms">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px;">
+          <strong style="color:#f87171;font-size:15px;">实时报警与事件记录簿 (ISA-18.2)</strong>
+          <div style="display:flex;gap:10px;">
+            <button class="btn-3d btn-jog" style="height:32px;" @click="ackAlarm">全部确认</button>
+            <button class="btn-3d btn-stop" style="height:32px;" @click="alarms = []">清空记录</button>
+          </div>
+        </div>
+        <div class="alarm-table-wrap">
+          <table class="alarm-grid-table">
+            <thead>
+              <tr><th>发生时间</th><th>事件源</th><th>报警等级</th><th>详细描述</th><th>状态</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="alm in alarms" :key="alm.id">
+                <td style="font-family:Consolas;">{{ alm.time }}</td>
+                <td>{{ alm.source }}</td>
+                <td><span class="alarm-level-badge" :class="alm.level">{{ alm.levelText }}</span></td>
+                <td>{{ alm.msg }}</td>
+                <td :style="{ color: alm.acked ? '#94a3b8' : '#f87171', fontWeight: 'bold' }">{{ alm.acked ? '已确认' : '未确认' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 画面 4：F4 实时趋势曲线 -->
+      <section v-else-if="activeTab === 'f4'" class="layout-f4-trends">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:0 8px;">
+          <strong style="color:#38bdf8;">1#/2# 泵出水压力与频率实时动态曲线 (1s 采样)</strong>
+          <span style="font-size:12px;color:#94a3b8;">通道1: 压力 (MPa, 绿) | 通道2: 频率 (Hz, 蓝)</span>
+        </div>
+        <div id="trendChart" class="trend-chart-container"></div>
+      </section>
+
+      <!-- 画面 5：F5 系统诊断与信息 -->
+      <section v-else-if="activeTab === 'f5'" class="layout-f5-diag">
+        <div class="weintek-groupbox">
+          <div class="groupbox-title">硬件信息与端口诊断</div>
+          <table class="param-table">
+            <tbody>
+              <tr><td>触控屏硬件型号</td><td>WEINVIEW cMT3152X (15.6" 高清电容屏)</td></tr>
+              <tr><td>固件版本 (OS)</td><td>Build 2026.08.12-SP2</td></tr>
+              <tr><td>以太网端口 (LAN1)</td><td>192.168.1.188 / 255.255.255.0 (1000M Full)</td></tr>
+              <tr><td>串口 COM1 (RS-485)</td><td>19200, 8, N, 1 · Modbus RTU (报文 OK: 128421)</td></tr>
+              <tr><td>CPU 负荷 / 内存</td><td>18% / 1,024 MB (已用 342 MB)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="weintek-groupbox">
+          <div class="groupbox-title">PLC 控制器交互状态</div>
+          <table class="param-table">
+            <tbody>
+              <tr><td>主控制器</td><td>Siemens S7-1500 / 冶炼专用 DCS 网关</td></tr>
+              <tr><td>通讯扫描周期</td><td>32 ms (高可靠无丢包)</td></tr>
+              <tr><td>通信看门狗 (Heartbeat)</td><td>正常计数翻转 (OK)</td></tr>
+              <tr><td>硬件急停硬触点</td><td>常闭回路 (OK)</td></tr>
+              <tr><td>就地箱柜内环境温度</td><td>28.4 ℃ (风扇温控运转中)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- 底部威纶通经典功能键栏 (F1~F5) -->
+    <nav class="bottom-fkey-bar">
+      <button class="fkey-btn" :class="{ active: activeTab === 'f1' }" @click="switchTab('f1')">
+        <span class="fnum">F1</span>
+        <span>工艺主控</span>
+      </button>
+      <button class="fkey-btn" :class="{ active: activeTab === 'f2' }" @click="switchTab('f2')">
+        <span class="fnum">F2</span>
+        <span>参数整定</span>
+      </button>
+      <button class="fkey-btn" :class="{ active: activeTab === 'f3' }" @click="switchTab('f3')">
+        <span class="fnum">F3</span>
+        <span>报警一览 ({{ alarms.length }})</span>
+      </button>
+      <button class="fkey-btn" :class="{ active: activeTab === 'f4' }" @click="switchTab('f4')">
+        <span class="fnum">F4</span>
+        <span>实时趋势</span>
+      </button>
+      <button class="fkey-btn" :class="{ active: activeTab === 'f5' }" @click="switchTab('f5')">
+        <span class="fnum">F5</span>
+        <span>通信诊断</span>
+      </button>
+    </nav>
+
+    <!-- 威纶通触控弹出数字小键盘 Modal -->
+    <div v-if="keypad.visible" class="numpad-backdrop" @click.self="closeKeypad">
+      <div class="numpad-dialog">
+        <div class="numpad-titlebar">
+          <span>数值设定 - [{{ keypad.title }}]</span>
+          <span style="cursor:pointer;" @click="closeKeypad">✕</span>
+        </div>
+        <div class="numpad-display-wrap">
+          <div class="numpad-screen">
+            <span>{{ keypad.inputVal || '0' }}</span>
+            <span style="font-size:16px;color:#94a3b8;margin-left:6px;">{{ keypad.unit }}</span>
+          </div>
+          <div class="numpad-range-hint">
+            <span>下限: {{ keypad.min }} {{ keypad.unit }}</span>
+            <span>上限: {{ keypad.max }} {{ keypad.unit }}</span>
+          </div>
+        </div>
+
+        <div class="numpad-keys-grid">
+          <button class="np-key" @click="appendKey('7')">7</button>
+          <button class="np-key" @click="appendKey('8')">8</button>
+          <button class="np-key" @click="appendKey('9')">9</button>
+          <button class="np-key func clear" @click="clearKey">CLR</button>
+
+          <button class="np-key" @click="appendKey('4')">4</button>
+          <button class="np-key" @click="appendKey('5')">5</button>
+          <button class="np-key" @click="appendKey('6')">6</button>
+          <button class="np-key func" @click="backspaceKey">BS ←</button>
+
+          <button class="np-key" @click="appendKey('1')">1</button>
+          <button class="np-key" @click="appendKey('2')">2</button>
+          <button class="np-key" @click="appendKey('3')">3</button>
+          <button class="np-key func" @click="closeKeypad">ESC</button>
+
+          <button class="np-key" @click="appendKey('0')">0</button>
+          <button class="np-key" @click="appendKey('.')">.</button>
+          <button class="np-key" @click="toggleSign">+/-</button>
+          <button class="np-key enter" @click="confirmKeypad">ENT 确定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 本地固化依赖：Vue 3 与 ECharts 5 -->
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+
+<script>
+/**
+ * 现场 DCS 就地控制屏 (威纶通 HMI 风格)
+ * 严格遵从 industrial-dashboard 验证规范
+ */
+(function() {
+  'use strict';
+
+  // 1920×1080 等比缩放适配器
+  function initScaling() {
+    const screen = document.getElementById('screen');
+    if (!screen) return;
+    function resize() {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const scaleX = w / 1920;
+      const scaleY = h / 1080;
+      const scale = Math.min(scaleX, scaleY);
+      screen.style.transform = `scale(${scale})`;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+  }
+
+  // ECharts 安全初始化辅助函数 (符合 validate-dashboard 规范)
+  function safeInit(el, theme) {
+    if (!el) return null;
+    try {
+      if (typeof echarts !== 'undefined' && echarts.init) {
+        return echarts.init(el, theme);
+      }
+    } catch (e) {
+      console.warn('ECharts 初始化异常:', e);
+    }
+    return null;
+  }
+
+  // 挂载缩放
+  initScaling();
+
+  const { createApp, ref, reactive, onMounted, onUnmounted, nextTick } = Vue;
+
+  createApp({
+    setup() {
+      const activeTab = ref('f1');
+      const currentTime = ref('');
+      const lastSeen = ref('');
+      const estopPressed = ref(false);
+      const activeAlarmText = ref('系统运行平稳，无紧急联锁警报');
+
+      // 1# 泵运行模型
+      const p1 = reactive({
+        controlMode: 'local', // 'local' | 'remote'
+        runMode: 'manual',    // 'manual' | 'auto'
+        running: true,
+        fault: false,
+        targetFreq: 45.0,
+        currentFreq: 45.0,
+        currentAmp: 118.5,
+        temp: 58.4,
+        valveOpen: 85,
+        pressOut: 0.62,
+        runHours: 1420,
+        fanAngle: 0
+      });
+
+      // 2# 泵运行模型
+      const p2 = reactive({
+        controlMode: 'local',
+        runMode: 'auto',
+        running: false,
+        fault: false,
+        targetFreq: 42.0,
+        currentFreq: 0.0,
+        currentAmp: 0.0,
+        temp: 32.1,
+        valveOpen: 0,
+        pressOut: 0.28,
+        runHours: 980,
+        fanAngle: 0
+      });
+
+      // 报警数据列表
+      const alarms = ref([
+        { id: 1, time: '14:22:10', source: '1#循环泵', level: 'warning', levelText: '注意', msg: '电机轴承温度达到 58.4℃，建议补加润滑脂', acked: false },
+        { id: 2, time: '12:05:40', source: '出水母管', level: 'info', levelText: '提示', msg: '水锤消除气压罐完成自检，压力平衡', acked: true }
+      ]);
+
+      // 威纶通触控小键盘状态
+      const keypad = reactive({
+        visible: false,
+        targetKey: '',
+        title: '',
+        inputVal: '',
+        min: 0,
+        max: 100,
+        unit: ''
+      });
+
+      // ECharts 趋势实例
+      let trendChart = null;
+      const trendData = {
+        times: [],
+        pressures: [],
+        freqs: []
+      };
+
+      // 时间刷新
+      function updateTime() {
+        const now = new Date();
+        currentTime.value = now.toTimeString().split(' ')[0] + ' ' + now.toLocaleDateString();
+        lastSeen.value = now.toTimeString().split(' ')[0];
+      }
+
+      // 旋钮模式切换
+      function toggleMode(targetObj, key) {
+        if (key === 'controlMode') {
+          targetObj.controlMode = targetObj.controlMode === 'local' ? 'remote' : 'local';
+        } else if (key === 'runMode') {
+          targetObj.runMode = targetObj.runMode === 'manual' ? 'auto' : 'manual';
+        }
+      }
+
+      // 泵启停控制 (包含阀门联锁)
+      function startPump(targetObj) {
+        if (targetObj.controlMode === 'remote' || estopPressed.value) return;
+        targetObj.running = true;
+        targetObj.fault = false;
+        // 模拟起泵与开阀时序
+        setTimeout(() => {
+          if (targetObj.running) {
+            targetObj.valveOpen = 80;
+          }
+        }, 1500);
+      }
+
+      function stopPump(targetObj) {
+        if (targetObj.controlMode === 'remote' || estopPressed.value) return;
+        // 先关阀后停泵
+        targetObj.valveOpen = 0;
+        setTimeout(() => {
+          targetObj.running = false;
+        }, 1200);
+      }
+
+      // 调频点动微调
+      function jogFreq(targetObj, delta) {
+        if (targetObj.controlMode === 'remote' || estopPressed.value) return;
+        const next = Math.max(0, Math.min(50, targetObj.targetFreq + delta));
+        targetObj.targetFreq = parseFloat(next.toFixed(1));
+      }
+
+      // 阀门开度微调
+      function stepValve(targetObj, delta) {
+        if (targetObj.controlMode === 'remote' || estopPressed.value) return;
+        const next = Math.max(0, Math.min(100, targetObj.valveOpen + delta));
+        targetObj.valveOpen = next;
+      }
+
+      // 复位故障
+      function resetFault(targetObj) {
+        targetObj.fault = false;
+      }
+
+      // 急停大蘑菇头点击
+      function toggleEstop() {
+        estopPressed.value = !estopPressed.value;
+        if (estopPressed.value) {
+          // 硬件联锁切断：强切两台泵
+          p1.running = false;
+          p2.running = false;
+          p1.valveOpen = 0;
+          p2.valveOpen = 0;
+          activeAlarmText.value = '【紧急警报】就地急停已按下！硬件联锁输出强切断开！';
+          alarms.value.unshift({
+            id: Date.now(),
+            time: new Date().toTimeString().split(' ')[0],
+            source: '就地控制箱',
+            level: 'critical',
+            levelText: '紧急',
+            msg: '就地大蘑菇头急停被拍下，系统硬联锁停机',
+            acked: false
+          });
+        } else {
+          activeAlarmText.value = '就地急停已旋转解锁复位，控制回路恢复待命';
+        }
+      }
+
+      // 报警消音与确认
+      function muteAlarm() {
+        activeAlarmText.value = '报警蜂鸣器已消音';
+      }
+      function ackAlarm() {
+        alarms.value.forEach(a => a.acked = true);
+        activeAlarmText.value = '当前活动报警已全部确认';
+      }
+
+      // 威纶通小键盘操作
+      function openKeypad(targetKey, title, currentVal, min, max, unit) {
+        keypad.targetKey = targetKey;
+        keypad.title = title;
+        keypad.inputVal = String(currentVal);
+        keypad.min = min;
+        keypad.max = max;
+        keypad.unit = unit;
+        keypad.visible = true;
+      }
+
+      function closeKeypad() {
+        keypad.visible = false;
+      }
+
+      function appendKey(char) {
+        if (keypad.inputVal === '0' && char !== '.') {
+          keypad.inputVal = char;
+        } else {
+          keypad.inputVal += char;
+        }
+      }
+
+      function clearKey() {
+        keypad.inputVal = '';
+      }
+
+      function backspaceKey() {
+        keypad.inputVal = keypad.inputVal.slice(0, -1);
+      }
+
+      function toggleSign() {
+        if (keypad.inputVal.startsWith('-')) {
+          keypad.inputVal = keypad.inputVal.slice(1);
+        } else if (keypad.inputVal) {
+          keypad.inputVal = '-' + keypad.inputVal;
+        }
+      }
+
+      function confirmKeypad() {
+        const val = parseFloat(keypad.inputVal);
+        if (isNaN(val)) {
+          closeKeypad();
+          return;
+        }
+        if (val < keypad.min || val > keypad.max) {
+          alert(`设定超限！有效区间: ${keypad.min} ~ ${keypad.max} ${keypad.unit}`);
+          return;
+        }
+
+        if (keypad.targetKey === 'p1Freq') p1.targetFreq = val;
+        else if (keypad.targetKey === 'p2Freq') p2.targetFreq = val;
+        else if (keypad.targetKey === 'p1Valve') p1.valveOpen = Math.round(val);
+        else if (keypad.targetKey === 'p2Valve') p2.valveOpen = Math.round(val);
+
+        closeKeypad();
+      }
+
+      // 切换底部 F 键功能页
+      function switchTab(tab) {
+        activeTab.value = tab;
+        if (tab === 'f4') {
+          nextTick(() => {
+            initTrendChart();
+          });
+        }
+      }
+
+      // 初始化趋势曲线
+      function initTrendChart() {
+        const chartEl = document.getElementById('trendChart');
+        if (!chartEl) return;
+        trendChart = safeInit(chartEl);
+        if (!trendChart) return;
+
+        const option = {
+          backgroundColor: 'transparent',
+          tooltip: { trigger: 'axis' },
+          legend: { data: ['出水压力 (MPa)', '1#频率 (Hz)'], textStyle: { color: '#94a3b8' } },
+          grid: { left: '4%', right: '4%', top: '15%', bottom: '10%', containLabel: true },
+          xAxis: {
+            type: 'category',
+            data: trendData.times,
+            axisLine: { lineStyle: { color: '#334155' } },
+            axisLabel: { color: '#94a3b8' }
+          },
+          yAxis: [
+            {
+              type: 'value',
+              name: 'MPa',
+              min: 0,
+              max: 1.0,
+              splitLine: { lineStyle: { color: '#1e293b' } },
+              axisLabel: { color: '#00ff66' }
+            },
+            {
+              type: 'value',
+              name: 'Hz',
+              min: 0,
+              max: 60,
+              splitLine: { show: false },
+              axisLabel: { color: '#38bdf8' }
+            }
+          ],
+          series: [
+            {
+              name: '出水压力 (MPa)',
+              type: 'line',
+              smooth: true,
+              data: trendData.pressures,
+              itemStyle: { color: '#00ff66' },
+              lineStyle: { width: 2 }
+            },
+            {
+              name: '1#频率 (Hz)',
+              type: 'line',
+              yAxisIndex: 1,
+              smooth: true,
+              data: trendData.freqs,
+              itemStyle: { color: '#38bdf8' },
+              lineStyle: { width: 2 }
+            }
+          ]
+        };
+        trendChart.setOption(option);
+      }
+
+      // 动力仿真定时器
+      let timer = null;
+      onMounted(() => {
+        updateTime();
+        // 初始填充一些趋势数据
+        const now = new Date();
+        for (let i = 10; i >= 0; i--) {
+          const t = new Date(now.getTime() - i * 1000);
+          trendData.times.push(t.toTimeString().split(' ')[0]);
+          trendData.pressures.push(0.62 + (Math.random() - 0.5) * 0.02);
+          trendData.freqs.push(45.0);
+        }
+
+        timer = setInterval(() => {
+          updateTime();
+
+          // 1# 泵频率逼近
+          if (p1.running) {
+            const step = (p1.targetFreq - p1.currentFreq) * 0.15;
+            p1.currentFreq += step;
+            p1.fanAngle = (p1.fanAngle + p1.currentFreq * 0.8) % 360;
+            p1.currentAmp = p1.currentFreq * 2.6 + (Math.random() - 0.5) * 1.5;
+            p1.pressOut = 0.28 + (p1.currentFreq / 50) * 0.35 + (Math.random() - 0.5) * 0.01;
+          } else {
+            p1.currentFreq = Math.max(0, p1.currentFreq - 2.5);
+            p1.currentAmp = 0;
+            p1.pressOut = 0.28;
+          }
+
+          // 2# 泵频率逼近
+          if (p2.running) {
+            const step = (p2.targetFreq - p2.currentFreq) * 0.15;
+            p2.currentFreq += step;
+            p2.fanAngle = (p2.fanAngle + p2.currentFreq * 0.8) % 360;
+            p2.currentAmp = p2.currentFreq * 2.6;
+          } else {
+            p2.currentFreq = Math.max(0, p2.currentFreq - 2.5);
+            p2.currentAmp = 0;
+          }
+
+          // 趋势曲线推进
+          const timeStr = new Date().toTimeString().split(' ')[0];
+          trendData.times.push(timeStr);
+          trendData.pressures.push(parseFloat(p1.pressOut.toFixed(3)));
+          trendData.freqs.push(parseFloat(p1.currentFreq.toFixed(1)));
+          if (trendData.times.length > 20) {
+            trendData.times.shift();
+            trendData.pressures.shift();
+            trendData.freqs.shift();
+          }
+
+          if (trendChart && activeTab.value === 'f4') {
+            trendChart.setOption({
+              xAxis: { data: trendData.times },
+              series: [
+                { data: trendData.pressures },
+                { data: trendData.freqs }
+              ]
+            });
+          }
+        }, 1000);
+      });
+
+      onUnmounted(() => {
+        if (timer) clearInterval(timer);
+        if (trendChart) trendChart.dispose();
+      });
+
+      return {
+        activeTab,
+        currentTime,
+        lastSeen,
+        estopPressed,
+        activeAlarmText,
+        p1,
+        p2,
+        alarms,
+        keypad,
+        toggleMode,
+        startPump,
+        stopPump,
+        jogFreq,
+        stepValve,
+        resetFault,
+        toggleEstop,
+        muteAlarm,
+        ackAlarm,
+        openKeypad,
+        closeKeypad,
+        appendKey,
+        clearKey,
+        backspaceKey,
+        toggleSign,
+        confirmKeypad,
+        switchTab
+      };
+    }
+  }).mount('#screen');
+})();
+</script>
+</body>
+</html>

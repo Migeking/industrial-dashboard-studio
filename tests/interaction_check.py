@@ -377,16 +377,62 @@ with sync_playwright() as playwright:
         assert_building_automation_22_interaction,
     )
 
+    def assert_dcs_local_hmi_23_interaction(p):
+        assert p.locator("#screen").count() == 1
+        p.locator(".card-header-bar h2").first.filter(has_text="1# 变频主供循环泵").wait_for()
+        # 1. 测试威纶通触控弹出数字小键盘
+        p.locator(".meter-box.settable").first.click()
+        p.locator(".numpad-dialog").wait_for()
+        p.locator(".np-key.func.clear").click()
+        p.locator(".np-key").filter(has_text="4").first.click()
+        p.locator(".np-key").filter(has_text="8").first.click()
+        p.locator(".np-key").filter(has_text=".").first.click()
+        p.locator(".np-key").filter(has_text="5").first.click()
+        p.locator(".np-key.enter").click()
+        p.locator(".numpad-dialog").wait_for(state="detached")
+        p.locator(".meter-num.cyan").first.filter(has_text="48.5").wait_for()
+
+        # 2. 测试点动微调 -0.5Hz / +0.5Hz
+        p.locator(".btn-3d.btn-jog").filter(has_text="+0.5Hz").first.click()
+        p.locator(".meter-num.cyan").first.filter(has_text="49.0").wait_for()
+
+        # 3. 测试底栏 F 键画面切换 (F1 -> F3 报警 -> F4 趋势 -> F1)
+        p.locator(".fkey-btn").filter(has_text="F3").click()
+        p.locator(".alarm-grid-table").wait_for()
+        p.locator(".fkey-btn").filter(has_text="F4").click()
+        p.locator("#trendChart canvas").wait_for()
+        p.locator(".fkey-btn").filter(has_text="F1").click()
+
+        # 4. 测试旋钮切换至远程并闭锁
+        p.locator(".knob-body").first.click()
+        p.locator(".remote-lock-mask").wait_for()
+        assert "受中央 DCS 远程锁定中" in p.locator(".remote-lock-mask").inner_text()
+        p.locator(".remote-lock-mask button").click()
+        p.locator(".remote-lock-mask").wait_for(state="detached")
+
+        # 5. 测试物理级急停大蘑菇头拍下与释放
+        p.locator(".estop-btn-wrap").click()
+        p.locator(".estop-label").filter(has_text="急停已锁死").wait_for()
+        p.locator(".estop-btn-wrap").click()
+        p.locator(".estop-label").filter(has_text="就地急停").wait_for()
+
+    run_case(
+        page,
+        "process-control/23-冶炼与水务循环水泵站现场DCS就地控制屏.html",
+        lambda p: None,
+        assert_dcs_local_hmi_23_interaction,
+    )
+
     showcase = browser.new_page(viewport={"width": 1440, "height": 900})
     showcase.route("http://**/*", lambda route: route.abort())
     showcase.route("https://**/*", lambda route: route.abort())
     showcase.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="networkidle")
-    assert showcase.locator(".card").count() == 22
-    latest_card = showcase.locator('.card[data-src*="22-"]')
+    assert showcase.locator(".card").count() == 23
+    latest_card = showcase.locator('.card[data-src*="23-"]')
     latest_card.scroll_into_view_if_needed()
     assert latest_card.is_visible()
     latest_card.click()
-    assert "智能楼宇自控" in showcase.locator("#stageTitle").inner_text()
+    assert "现场 DCS 就地控制屏" in showcase.locator("#stageTitle").inner_text()
     portrait = browser.new_page(viewport={"width": 390, "height": 844})
     portrait.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="domcontentloaded")
     assert portrait.locator(".rotate").is_visible()
