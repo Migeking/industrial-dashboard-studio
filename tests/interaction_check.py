@@ -359,16 +359,34 @@ with sync_playwright() as playwright:
         assert_coarse_screen_sump_interaction,
     )
 
+    def assert_building_automation_22_interaction(p):
+        assert p.locator("#threeViewport canvas").count() == 1
+        assert p.locator(".echart-container canvas").count() == 2
+        assert p.locator(".alarm-banner").is_visible()
+        p.locator(".handle-btn").click()
+        p.wait_for_timeout(300)
+        assert "96" in p.locator(".comfort-val").inner_text()
+        p.get_by_role("button", name="2层", exact=True).click()
+        p.wait_for_timeout(300)
+        assert "核心数据机房" in p.locator(".pill-btn.active").inner_text()
+
+    run_case(
+        page,
+        "building-automation/22-智能楼宇自控与空间微气候数字孪生.html",
+        lambda p: None,
+        assert_building_automation_22_interaction,
+    )
+
     showcase = browser.new_page(viewport={"width": 1440, "height": 900})
     showcase.route("http://**/*", lambda route: route.abort())
     showcase.route("https://**/*", lambda route: route.abort())
     showcase.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="networkidle")
-    assert showcase.locator(".card").count() == 21
-    latest_card = showcase.locator('.card[data-src*="21-"]')
+    assert showcase.locator(".card").count() == 22
+    latest_card = showcase.locator('.card[data-src*="22-"]')
     latest_card.scroll_into_view_if_needed()
     assert latest_card.is_visible()
     latest_card.click()
-    assert "粗格栅" in showcase.locator("#stageTitle").inner_text() or "提升泵房" in showcase.locator("#stageTitle").inner_text()
+    assert "智能楼宇自控" in showcase.locator("#stageTitle").inner_text()
     portrait = browser.new_page(viewport={"width": 390, "height": 844})
     portrait.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="domcontentloaded")
     assert portrait.locator(".rotate").is_visible()

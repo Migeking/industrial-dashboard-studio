@@ -1,6 +1,6 @@
 # Industrial Dashboard Studio
 
-> Offline-first productization workspace for industrial dashboards · 11 ready-to-run templates + reusable runtime + SCADA designer + 4 deliverable Skills
+> Offline-first productization workspace for industrial dashboards · 22 ready-to-run templates + reusable runtime + SCADA designer + 5 deliverable Skills
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -19,7 +19,7 @@
 
 ## Introduction
 
-`industrial-dashboard-studio` productizes three families of monitoring templates (water treatment, asset health, chemical safety) into a **reusable runtime, scenario configs, HMI/SCADA foundations**, and **deliverable Skills**.
+`industrial-dashboard-studio` productizes water treatment, asset health, chemical safety, process control, and intelligent building automation monitoring templates into a **reusable runtime, scenario configs, HMI/SCADA foundations**, and **deliverable Skills**.
 
 - **Runs offline**: zero CDN, all dependencies vendored in `vendor/`, `release/industrial-dashboard-offline.zip` works right after unzipping
 - **Information hierarchy first**: restrained industrial-precision visuals, single-meaning status colors (cyan-blue = primary data / green = normal / amber = warning / red = alarm / gray = offline)
@@ -32,32 +32,34 @@
 
 ## Gallery
 
-> Screenshots auto-captured with Playwright at a 1920×1080 viewport (`docs/screenshots/`), covering every locally runnable page. The capture script lived at `scripts/screenshot.js` (history) and needs `playwright-core`.
+> Screenshots auto-captured with Playwright at a 1920×1080 viewport (`docs/screenshots/`), covering every locally runnable page.
 
 | Entry | Preview |
 |------|------|
-| **Showcase landscape entry** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
+| **Showcase landscape entry (All 22 Scenarios)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
 | **SCADA scenario designer** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
-<details>
-<summary><b>Expand: all 11 scenario screenshots</b></summary>
+<details open>
+<summary><b>Expand: All 22 scenario categories & screenshots</b></summary>
 
-### Water treatment · process dashboards
+### Building Automation · Spatial & Environmental Digital Twin (Featured New)
+
+| Scenario | File | Preview |
+|------|------|------|
+| 22 Intelligent Building Automation & Spatial Microclimate Digital Twin | `scenarios/building-automation/22-智能楼宇自控与空间微气候数字孪生.html` | ![22](docs/screenshots/22-building-automation.png) |
+
+### Water Treatment · Process Cockpits & Full-chain SCADA
 
 | Scenario | File | Preview |
 |------|------|------|
 | 01 A2O nutrient-removal control dashboard | `scenarios/water-treatment/01-A2O脱氮除磷精准调控驾驶舱.html` | ![01](docs/screenshots/01-a2o-overview.png) |
 | 04 Sludge-recirculation pump linkage dashboard | `scenarios/water-treatment/04-污泥回流泵联动控制驾驶舱.html` | ![04](docs/screenshots/04-sludge-pump.png) |
-
-### Water treatment · SCADA operation terminals
-
-| Scenario | File | Preview |
-|------|------|------|
 | 05 Sludge-recirculation pump station SCADA terminal | `scenarios/water-treatment/05-污泥回流泵站SCADA操作终端.html` | ![05](docs/screenshots/05-pump-station-scada.png) |
 | 06 A2O SCADA operation terminal | `scenarios/water-treatment/06-A2O脱氮除磷SCADA操作终端.html` | ![06](docs/screenshots/06-a2o-scada.png) |
 | 07 A2O classic upper-level SCADA | `scenarios/water-treatment/07-A2O脱氮除磷经典上位SCADA.html` | ![07](docs/screenshots/07-a2o-classic-scada.png) |
+| 21 Raw screen & intake pumping station SCADA | `scenarios/water-treatment/21-粗格栅及进水提升泵房数字孪生SCADA.html` | Classic SCADA Supervisory |
 
-### Water treatment · 3D digital-twin HMI
+### Water Treatment · 3D / 2.5D Digital Twin & Unit Processes
 
 | Scenario | File | Preview |
 |------|------|------|
@@ -65,15 +67,24 @@
 | 09 Pretreatment inlet-well light 3D twin HMI | `scenarios/water-treatment/09-预处理进水井浅色3D数字孪生HMI.html` | ![09](docs/screenshots/09-pretreatment-light3d.png) |
 | 10 Underground detention-tank flushing twin HMI | `scenarios/water-treatment/10-地下调蓄池水力冲洗数字孪生HMI.html` | ![10](docs/screenshots/10-storage-flush.png) |
 | 11 MBR suction-cleaning twin HMI | `scenarios/water-treatment/11-MBR膜生物反应池抽吸清洗数字孪生HMI.html` | ![11](docs/screenshots/11-mbr-clean.png) |
+| 12 Detention-tank screen pretreatment 3D HMI | `scenarios/water-treatment/12-格栅预处理3D-HMI.html` | Screen Interlock Control |
+| 13 High-density clarifier Densadeg twin HMI | `scenarios/water-treatment/13-高密度絮凝沉淀池Densadeg数字孪生HMI.html` | High-efficiency Clarification |
+| 14 A2O biochemical treatment 2.5D process | `scenarios/water-treatment/14-A2O生化处理2.5D工艺场景.html` | Axonometric Biochemical Process |
+| 16 MBR membrane-tank supervisory screen | `scenarios/water-treatment/16-MBR膜池上位监控画面.html` | Membrane Supervisory HMI |
+| 17 Sedimentation unit 2.5D supervisory screen | `scenarios/water-treatment/17-污水处理沉淀单元2.5D上位画面.html` | Realistic Fixed View |
+| 18 Park water network multi-node balance dashboard | `scenarios/water-treatment/18-园区供水管网多节点平衡监控数字看板.html` | Hydraulic Balance Topology |
+| 19 PAM three-tank automatic dosing micro unit | `scenarios/water-treatment/19-PAM三槽式全自动加药熟化微单元.html` | Precision Dosing Unit |
+| 20 UV channel disinfection & residual chlorine micro unit | `scenarios/water-treatment/20-紫外线渠式消毒与余氯闭环调控微单元.html` | Open Channel UV Disinfection |
 
-### Asset maintenance / reactor safety
+### Asset Maintenance / Safety / Continuous Process
 
 | Scenario | File | Preview |
 |------|------|------|
 | 02 Critical-unit predictive-maintenance dashboard | `scenarios/predictive-maintenance/02-关键机组预测性维护驾驶舱.html` | ![02](docs/screenshots/02-predictive-maintenance.png) |
 | 03 Reactor thermal-runaway safety-interlock dashboard | `scenarios/reactor-safety/03-反应釜热失控安全联锁舱.html` | ![03](docs/screenshots/03-reactor-safety.png) |
+| 15 Continuous separation process cockpit | `scenarios/process-control/15-连续分离工艺驾驶舱.html` | Distillation Separation Cockpit |
 
-### 3D models
+### 3D Models
 
 | Model | Preview |
 |------|------|
@@ -214,6 +225,34 @@ open apps/scada-designer/index.html
 ### 11 MBR suction-cleaning twin HMI
 - MBR suction and backwash process with reclaimed-water production chain, light 3D twin style
 
+### 21 Raw screen & intake pumping station digital twin SCADA
+- **Role**: centralized supervisory control and anti-misoperation SCADA workstation for wastewater plant inlet channels and lift pumps.
+- **Architecture**: 5-channel coarse screen differential level monitoring, 4 mixed-flow pumps, 7 submersible lift pumps, integrated with Siemens/TIA Portal industrial faceplates and SBO (Select-Before-Operate) dual-confirmation safety interlocking.
+- **File**: `scenarios/water-treatment/21-粗格栅及进水提升泵房数字孪生SCADA.html`
+
+### 22 Intelligent Building Automation & Spatial Microclimate Digital Twin (Featured New)
+- **Layout**: `spatial-twin` — top floor and environmental status bar, central 2.5D/3D digital twin viewport, left HVAC & energy metrics panel, right iCooling microclimate command center, bottom-right vertical floor selector, and dual collapsible drawers.
+- **Information problem**: how spatial microclimate is distributed across floors, whether localized hot-spots/overheating occur, how VAV terminal units synchronize with cooling/heating plants, and operational efficiency of IDC data center & chiller plants.
+- **Multi-Level Decoupled 3D Slicing Architecture**:
+  1. **27F Smart Office & Microclimate**: open workstations (dual-monitor stations & ergonomic seating), glass-walled conference rooms, VAV terminal boxes, **3D real-time spatial thermal heatmap surface** (dynamically undulating 36℃ localized heat-island in Zone F), inverted cone warning beacons, and one-click quick cooling override;
+  2. **2F IDC Core Data Center**: 42U high-density server rack arrays, signature glowing blue supercomputer cabinet, **transparent acrylic cold aisle containment (CAC)**, in-row precision CRAC units, PDU cabinets, and spatial rack temperature tags;
+  3. **-1F Underground Chiller Energy Plant**: dual-barrel centrifugal chillers, variable-frequency chilled water circulation pumps, distribution headers, and high-speed dynamic fluid flow particle effects;
+  4. **Whole-Building 32-Floor Overview**: macro-level thermal, humidity, and energy perception across all 32 floors.
+- **Collapsible Industrial Panels**: single-line no-wrap layout (`white-space: nowrap`) engineered for 1920×1080 industrial command displays, with floating drawer handles for one-click ultra-wide panoramic immersion.
+- **Full Linkage System**: floor selector, controlled zones (Grid A~H), mechanical equipment, operating scripts, industrial drawers, and alarm banners 100% synchronized.
+- **File**: `scenarios/building-automation/22-智能楼宇自控与空间微气候数字孪生.html`
+
+<details open>
+<summary><b>View Scenario 22 multi-level spatial digital twin gallery</b></summary>
+
+| 27F Smart Office · 3D Thermal Heatmap | 2F IDC Data Center · Cold Aisle Containment | -1F Chiller Plant · Centrifugal Pumps |
+|---|---|---|
+| ![22-office](docs/screenshots/22-building-automation.png) | ![22-datacenter](docs/screenshots/22-datacenter.png) | ![22-chiller](docs/screenshots/22-chiller-plant.png) |
+
+> Seamlessly switch camera perspectives and dedicated 3D scenes across All-Floor, 32F, 27F (Office), 2F (IDC), and -1F (Chiller) via the vertical floor slider, with instant data telemetry binding.
+
+</details>
+
 ---
 
 ## App entries
@@ -265,15 +304,17 @@ apps/
   showcase/            # landscape interactive entry
   scada-designer/      # SCADA scenario designer
 scenarios/
-  water-treatment/     # 01,04,05,06,07,08,09,10,11 (full water chain)
-  predictive-maintenance/ # 02
-  reactor-safety/      # 03
+  building-automation/ # 22 Intelligent building automation & spatial microclimate twin
+  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21 (full water chain)
+  predictive-maintenance/ # 02 Critical-unit predictive maintenance
+  reactor-safety/      # 03 Reactor safety interlock
+  process-control/     # 15 Continuous separation process
 packages/
   runtime/             # loading, theming, scaling, clock, fullscreen, quality labels
   components/          # industrial component styles (industrial-components.css)
   data-adapters/       # demo / rest / websocket adapters
   design-system/       # tokens (tokens.css)
-skills/                # 4 reusable Skills, see next section
+skills/                # 5 reusable Skills (industrial-dashboard, HMI, SCADA, light-3d, scada-gateway)
 vendor/                # vendored deps: vue.global.prod.js / echarts.min.js / three.min.js / OrbitControls.js
 assets/models/         # 3D models
 docs/

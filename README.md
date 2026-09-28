@@ -1,6 +1,6 @@
 # Industrial Dashboard Studio
 
-> 工业大屏产品化工作区 · 11 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 4 个可交付 Skill
+> 工业大屏产品化工作区 · 22 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 5 个可交付 Skill
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -19,7 +19,7 @@
 
 ## 简介
 
-`industrial-dashboard-studio` 把水务、设备健康、化工安全三类监控样板沉淀为**可复用运行时、场景配置、HMI/SCADA 基础能力**和**可交付 Skill** 的产品化仓库。
+`industrial-dashboard-studio` 把水务全流程、设备健康、化工安全、工艺控制与智能楼宇自控多类工业监控样板沉淀为**可复用运行时、场景配置、HMI/SCADA 基础能力**和**可交付 Skill** 的产品化仓库。
 
 - **离线可运行**：零 CDN，`vendor/` 固化全部依赖，`release/industrial-dashboard-offline.zip` 解压即用
 - **信息层级优先**：克制的工业精密视觉，状态色唯一语义（青蓝主数据 / 绿正常 / 琥珀预警 / 红报警 / 灰离线）
@@ -32,32 +32,34 @@
 
 ## 效果总览
 
-> 以下截图基于 Playwright 在 1920×1080 视口下自动生成（`docs/screenshots/`），覆盖全部本地可运行页面。生成脚本见历史 `scripts/screenshot.js`，需 `playwright-core`。
+> 以下截图基于 Playwright 在 1920×1080 视口下自动生成（`docs/screenshots/`），覆盖全部本地可运行页面。
 
 | 入口 | 预览 |
 |------|------|
-| **Showcase 横屏互动入口** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
+| **Showcase 横屏互动入口 (22 套全量)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
 | **SCADA 场景设计器** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
-<details>
-<summary><b>点击展开 11 套场景全量截图</b></summary>
+<details open>
+<summary><b>展开查看 22 套场景全量分类与截图</b></summary>
 
-### 水处理 · 工艺驾驶舱
+### 楼宇自控 · 空间与动环数字孪生（新增推荐）
+
+| 场景 | 文件 | 预览 |
+|------|------|------|
+| 22 智能楼宇自控与空间微气候数字孪生 | `scenarios/building-automation/22-智能楼宇自控与空间微气候数字孪生.html` | ![22](docs/screenshots/22-building-automation.png) |
+
+### 水处理 · 工艺驾驶舱与全流程 SCADA
 
 | 场景 | 文件 | 预览 |
 |------|------|------|
 | 01 A2O 脱氮除磷精准调控驾驶舱 | `scenarios/water-treatment/01-A2O脱氮除磷精准调控驾驶舱.html` | ![01](docs/screenshots/01-a2o-overview.png) |
 | 04 污泥回流泵联动控制驾驶舱 | `scenarios/water-treatment/04-污泥回流泵联动控制驾驶舱.html` | ![04](docs/screenshots/04-sludge-pump.png) |
-
-### 水处理 · SCADA 操作终端
-
-| 场景 | 文件 | 预览 |
-|------|------|------|
 | 05 污泥回流泵站 SCADA 操作终端 | `scenarios/water-treatment/05-污泥回流泵站SCADA操作终端.html` | ![05](docs/screenshots/05-pump-station-scada.png) |
 | 06 A2O 脱氮除磷 SCADA 操作终端 | `scenarios/water-treatment/06-A2O脱氮除磷SCADA操作终端.html` | ![06](docs/screenshots/06-a2o-scada.png) |
 | 07 A2O 脱氮除磷经典上位 SCADA | `scenarios/water-treatment/07-A2O脱氮除磷经典上位SCADA.html` | ![07](docs/screenshots/07-a2o-classic-scada.png) |
+| 21 粗格栅及进水提升泵房数字孪生SCADA | `scenarios/water-treatment/21-粗格栅及进水提升泵房数字孪生SCADA.html` | 经典 SCADA 集中监控 |
 
-### 水处理 · 3D 数字孪生 HMI
+### 水处理 · 3D / 2.5D 数字孪生与工艺单元
 
 | 场景 | 文件 | 预览 |
 |------|------|------|
@@ -65,13 +67,22 @@
 | 09 预处理进水井浅色 3D 数字孪生 HMI | `scenarios/water-treatment/09-预处理进水井浅色3D数字孪生HMI.html` | ![09](docs/screenshots/09-pretreatment-light3d.png) |
 | 10 地下调蓄池水力冲洗数字孪生 HMI | `scenarios/water-treatment/10-地下调蓄池水力冲洗数字孪生HMI.html` | ![10](docs/screenshots/10-storage-flush.png) |
 | 11 MBR 膜生物反应池抽吸清洗数字孪生 HMI | `scenarios/water-treatment/11-MBR膜生物反应池抽吸清洗数字孪生HMI.html` | ![11](docs/screenshots/11-mbr-clean.png) |
+| 12 调蓄池格栅预处理 3D 数字孪生 HMI | `scenarios/water-treatment/12-格栅预处理3D-HMI.html` | 格栅联动控制 |
+| 13 高密度絮凝沉淀池 Densadeg 数字孪生 HMI | `scenarios/water-treatment/13-高密度絮凝沉淀池Densadeg数字孪生HMI.html` | 高效澄清工艺 |
+| 14 A2O 生化处理 2.5D 工艺场景 | `scenarios/water-treatment/14-A2O生化处理2.5D工艺场景.html` | 轴测生化工艺 |
+| 16 MBR 膜池上位监控画面 | `scenarios/water-treatment/16-MBR膜池上位监控画面.html` | 膜反应器上位 |
+| 17 污水处理沉淀单元 2.5D 上位画面 | `scenarios/water-treatment/17-污水处理沉淀单元2.5D上位画面.html` | 现场写实上位 |
+| 18 园区供水管网多节点平衡监控数字看板 | `scenarios/water-treatment/18-园区供水管网多节点平衡监控数字看板.html` | 水力平衡拓扑 |
+| 19 PAM 三槽式全自动加药熟化微单元 | `scenarios/water-treatment/19-PAM三槽式全自动加药熟化微单元.html` | 精密加药微单元 |
+| 20 紫外线渠式消毒与余氯闭环调控微单元 | `scenarios/water-treatment/20-紫外线渠式消毒与余氯闭环调控微单元.html` | 明渠紫外消毒 |
 
-### 设备维护 / 反应安全
+### 设备维护 / 反应安全 / 连续分离
 
 | 场景 | 文件 | 预览 |
 |------|------|------|
 | 02 关键机组预测性维护驾驶舱 | `scenarios/predictive-maintenance/02-关键机组预测性维护驾驶舱.html` | ![02](docs/screenshots/02-predictive-maintenance.png) |
 | 03 反应釜热失控安全联锁舱 | `scenarios/reactor-safety/03-反应釜热失控安全联锁舱.html` | ![03](docs/screenshots/03-reactor-safety.png) |
+| 15 连续分离工艺驾驶舱 | `scenarios/process-control/15-连续分离工艺驾驶舱.html` | 精馏分离工艺 |
 
 ### 三维模型
 
@@ -214,6 +225,34 @@ open apps/scada-designer/index.html
 ### 11 MBR 膜生物反应池抽吸清洗数字孪生 HMI
 - MBR 膜池抽吸与反洗工艺，高品质再生水产水链路，浅色 3D 数字孪生风格
 
+### 21 粗格栅及进水提升泵房数字孪生 SCADA
+- **定位**：污水厂进水总渠及提升泵房集中监控与防误操作 SCADA 操作站。
+- **架构**：5 路粗格栅渠液位差监视、4 台大流量混流提升泵与 7 台潜污泵群控，集成工业级西门子/博途风格 Faceplate 微操弹窗与 SBO（Select-Before-Operate）双重确认防误闭环。
+- **文件**：`scenarios/water-treatment/21-粗格栅及进水提升泵房数字孪生SCADA.html`
+
+### 22 智能楼宇自控与空间微气候数字孪生（全新新增）
+- **布局**：`spatial-twin` — 顶部楼层与动环状态栏，中央 2.5D/3D 空间孪生视界，左翼能源动力与舒适度面板，右翼 iCooling 智控与空间微气候中枢，右下垂直楼层快速滑块，左右侧栏支持平滑无折行展开/收拢。
+- **信息问题**：高层建筑微气候分布如何、是否存在局部热岛过热、VAV 末端与冷热源系统如何动态匹配、IDC 机房动环与冷源动力机组运行效能如何。
+- **多楼层专属三维切面解耦**：
+  1. **27F 高阶智慧办公与空间微气候**：开放工位矩阵（双屏工作站与人体工学椅）、落地玻璃会议室、VAV 变风量末端箱与镀锌送风主管、**3D 连续空间温度场等温云图**（会议室内局部 36℃ 高温热岛实时起伏渲染）、倒锥形空间警报信标与一键强冷处置；
+  2. **2F IDC 核心数据机房**：42U 刀片服务器机柜群、中心幽蓝发光超算机柜、**透明亚克力冷通道闭式密封顶棚（Cold Aisle Containment）**、列间空调（CRAC）、PDU 配电柜及机柜局部热点浮牌；
+  3. **-1F 地下冷源动力站**：大型双筒离心冷水机组、变频冷冻循环水泵组、分集水器与双色大口径供回水管动态流动脉冲粒子；
+  4. **全楼与标准办公总览**：全楼 32 层恒温恒湿整体态势感知与标准办公层。
+- **双侧面板交互**：专为 1920×1080 工业大屏优化的单行防折行排版（`white-space: nowrap`），配备精致浮动把手，支持一键收拢进入超宽沉浸式三维视野。
+- **联动体系**：楼层切换、受控区域（A~H 网格）、设备联动、工况演练、左右工业面板与顶部告警横幅 100% 严密同步。
+- **文件**：`scenarios/building-automation/22-智能楼宇自控与空间微气候数字孪生.html`
+
+<details open>
+<summary><b>查看 22 号场景多切面与微气候孪生画廊</b></summary>
+
+| 27F 智慧办公 · 3D 温度场等温云图 | 2F IDC 核心数据机房 · 冷通道密封 | -1F 地下冷源动力站 · 离心冷机泵组 |
+|---|---|---|
+| ![22-office](docs/screenshots/22-building-automation.png) | ![22-datacenter](docs/screenshots/22-datacenter.png) | ![22-chiller](docs/screenshots/22-chiller-plant.png) |
+
+> 垂直楼层选择器支持在全景、32F、27F（办公）、2F（IDC）、-1F（冷源）间平滑切换视角与专属三维场景，并无缝联动左侧动环数据与右侧 iCooling 控制中枢。
+
+</details>
+
 ---
 
 ## 应用入口
@@ -265,15 +304,17 @@ apps/
   showcase/            # 横屏互动体验入口
   scada-designer/      # SCADA 场景设计器
 scenarios/
-  water-treatment/     # 01,04,05,06,07,08,09,10,11 (水务全链路)
-  predictive-maintenance/ # 02
-  reactor-safety/      # 03
+  building-automation/ # 22 智能楼宇自控与空间微气候数字孪生
+  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21 (水务全流程)
+  predictive-maintenance/ # 02 关键机组预测性维护
+  reactor-safety/      # 03 反应釜热失控安全联锁
+  process-control/     # 15 连续分离工艺驾驶舱
 packages/
   runtime/             # 场景加载、主题、缩放、时钟、全屏、质量标签
   components/          # 工业组件样式 (industrial-components.css)
   data-adapters/       # demo / rest / websocket 三类适配器
   design-system/       # Token (tokens.css)
-skills/                # 4 个可复用 Skill，见下节
+skills/                # 5 个可复用 Skill（工业大屏、HMI、SCADA、轻量3D、SCADA网关）
 vendor/                # 固化依赖：vue.global.prod.js / echarts.min.js / three.min.js / OrbitControls.js
 assets/models/         # 三维模型
 docs/

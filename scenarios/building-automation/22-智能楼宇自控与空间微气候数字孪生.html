@@ -1,0 +1,1983 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>22 · 智能楼宇自控与空间微气候数字孪生</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<script src="../../vendor/three.min.js"></script>
+<script src="../../vendor/OrbitControls.js"></script>
+<script src="../../packages/runtime/dashboard-runtime.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#050811;color:#e2e8f0;font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+button{font:inherit;color:inherit;cursor:pointer;border:none;outline:none}
+[v-cloak]{display:none}
+
+:root{
+  --bg-deep:#060a14;
+  --panel-bg:rgba(11,20,38,0.86);
+  --panel-border:rgba(56,189,248,0.18);
+  --panel-border-hover:rgba(56,189,248,0.45);
+  --accent-blue:#3b82f6;
+  --accent-cyan:#38bdf8;
+  --accent-mint:#10b981;
+  --accent-purple:#8b5cf6;
+  --warn-amber:#f59e0b;
+  --danger-rose:#f43f5e;
+  --text-main:#f8fafc;
+  --text-muted:#94a3b8;
+  --text-dim:#64748b;
+  --radius-card:10px;
+}
+
+.num{font-family:"Bahnschrift","Segoe UI",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+
+#screen{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:1920px;
+  height:1080px;
+  transform-origin:center center;
+  overflow:hidden;
+  background:radial-gradient(ellipse at 50% 25%,#0d1b33 0%,#070d1a 65%,#04070e 100%);
+  box-shadow:0 24px 80px rgba(0,0,0,0.85);
+  display:grid;
+  grid-template-rows:68px 1fr 50px;
+  user-select:none;
+}
+
+/* 顶部 Header */
+.topbar{
+  position:relative;
+  z-index:20;
+  display:grid;
+  grid-template-columns:460px 1fr 480px;
+  align-items:center;
+  padding:0 28px;
+  background:linear-gradient(180deg,rgba(11,20,38,0.95) 0%,rgba(7,13,26,0.7) 100%);
+  border-bottom:1px solid var(--panel-border);
+  backdrop-filter:blur(10px);
+}
+.brand{display:flex;align-items:center;gap:14px;white-space:nowrap}
+.brand-icon{
+  width:42px;
+  height:42px;
+  border-radius:10px;
+  background:linear-gradient(135deg,#1d4ed8,#0ea5e9);
+  display:grid;
+  place-items:center;
+  box-shadow:0 0 18px rgba(14,165,233,0.5);
+  flex-shrink:0;
+}
+.brand-icon svg{width:24px;height:24px;fill:#fff}
+.brand-text h1{margin:0;font-size:19px;letter-spacing:.05em;color:#fff;font-weight:700;white-space:nowrap}
+.brand-text p{margin:2px 0 0;font-size:11px;color:var(--text-muted);letter-spacing:.04em;white-space:nowrap}
+
+/* 顶部中间药丸导航 */
+.pill-nav{display:flex;justify-content:center;gap:8px;white-space:nowrap}
+.pill-btn{
+  padding:7px 18px;
+  border-radius:999px;
+  background:rgba(22,36,66,0.65);
+  border:1px solid rgba(56,189,248,0.14);
+  color:var(--text-muted);
+  font-size:13px;
+  font-weight:500;
+  transition:all .2s ease;
+  white-space:nowrap;
+}
+.pill-btn:hover{background:rgba(30,58,102,0.85);color:#fff;border-color:var(--accent-cyan)}
+.pill-btn.active{
+  background:linear-gradient(135deg,#2563eb,#3b82f6);
+  color:#fff;
+  border-color:rgba(147,197,253,0.7);
+  box-shadow:0 0 18px rgba(37,99,235,0.6);
+  font-weight:700;
+}
+
+/* 顶部右侧系统信息 */
+.top-meta{display:flex;align-items:center;justify-content:flex-end;gap:14px;font-size:12px;color:var(--text-muted);white-space:nowrap}
+.weather-tag{display:flex;align-items:center;gap:6px;color:var(--text-main);white-space:nowrap}
+.bell-btn{
+  position:relative;
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(244,63,94,0.3) 0%,rgba(244,63,94,0.1) 70%);
+  border:1px solid rgba(244,63,94,0.4);
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  animation:bellPulse 2.4s infinite;
+  flex-shrink:0;
+}
+@keyframes bellPulse{0%,100%{box-shadow:0 0 0 0 rgba(244,63,94,0.4)}50%{box-shadow:0 0 14px 4px rgba(244,63,94,0.3)}}
+.bell-btn svg{width:18px;height:18px;fill:#f43f5e}
+.meta-chip{
+  padding:4px 9px;
+  border-radius:4px;
+  background:rgba(16,185,129,0.1);
+  border:1px solid rgba(16,185,129,0.3);
+  color:var(--accent-mint);
+  font-size:11px;
+  white-space:nowrap;
+}
+.clock-text{font-size:14px;color:#fff;font-weight:700;min-width:70px;text-align:right;white-space:nowrap}
+
+/* 主内容区 */
+.main-stage{
+  position:relative;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+}
+
+#threeViewport{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  z-index:1;
+}
+
+/* 左右浮动 HUD 遮罩面板（支持一键收缩折叠） */
+.hud-wrapper-left{
+  position:absolute;
+  left:24px;
+  top:14px;
+  bottom:14px;
+  width:372px;
+  z-index:10;
+  transition:transform .38s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.hud-wrapper-left.collapsed{
+  transform:translateX(-405px);
+}
+.hud-wrapper-right{
+  position:absolute;
+  right:24px;
+  top:14px;
+  bottom:14px;
+  width:372px;
+  z-index:10;
+  transition:transform .38s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.hud-wrapper-right.collapsed{
+  transform:translateX(405px);
+}
+
+.hud-panel{
+  width:100%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  gap:11px;
+  overflow-y:auto;
+  scrollbar-width:none;
+}
+.hud-panel::-webkit-scrollbar{display:none}
+
+/* 面板折叠/展开把手 */
+.toggle-handle{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:22px;
+  height:76px;
+  background:linear-gradient(180deg,rgba(14,30,56,0.92),rgba(8,17,34,0.95));
+  border:1px solid rgba(56,189,248,0.3);
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  z-index:12;
+  box-shadow:0 4px 16px rgba(0,0,0,0.5);
+  color:var(--accent-cyan);
+  transition:all .2s ease;
+}
+.toggle-handle:hover{
+  background:rgba(30,58,102,0.95);
+  border-color:var(--accent-cyan);
+  color:#fff;
+  box-shadow:0 0 12px rgba(56,189,248,0.5);
+}
+.toggle-handle-left{
+  right:-23px;
+  border-radius:0 8px 8px 0;
+  border-left:none;
+}
+.toggle-handle-right{
+  left:-23px;
+  border-radius:8px 0 0 8px;
+  border-right:none;
+}
+
+/* 统一 HUD 卡片样式（文字防折行规范） */
+.hud-card{
+  background:var(--panel-bg);
+  border:1px solid var(--panel-border);
+  border-radius:var(--radius-card);
+  backdrop-filter:blur(14px);
+  padding:13px 16px;
+  box-shadow:0 12px 36px rgba(0,0,0,0.48);
+  pointer-events:auto;
+  transition:border-color .2s;
+  white-space:nowrap;
+}
+.hud-card:hover{border-color:var(--panel-border-hover)}
+.hud-card *{white-space:nowrap}
+
+/* 告警统计药丸 */
+.alarm-pills{display:flex;gap:8px;white-space:nowrap}
+.alarm-pill{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:8px 12px;
+  border-radius:8px;
+  font-size:12px;
+  background:rgba(18,29,52,0.8);
+  border:1px solid rgba(56,189,248,0.15);
+  white-space:nowrap;
+}
+.alarm-pill.danger{
+  background:linear-gradient(135deg,rgba(244,63,94,0.25),rgba(244,63,94,0.1));
+  border-color:rgba(244,63,94,0.5);
+}
+.alarm-pill.danger .pill-count{
+  background:var(--danger-rose);
+  color:#fff;
+  font-size:11px;
+  font-weight:700;
+  padding:2px 8px;
+  border-radius:999px;
+  box-shadow:0 0 10px rgba(244,63,94,0.6);
+}
+.alarm-pill .pill-count{
+  background:rgba(100,116,139,0.3);
+  color:#94a3b8;
+  font-size:11px;
+  padding:2px 8px;
+  border-radius:999px;
+}
+
+.card-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+  font-size:12px;
+  color:var(--text-muted);
+}
+.card-header strong{color:#fff;font-size:13px;font-weight:700}
+
+/* 数据行与进度条 */
+.equip-total{display:flex;align-items:baseline;justify-content:space-between;margin:2px 0 6px}
+.equip-total .num{font-size:32px;font-weight:700;color:#fff;line-height:1}
+.equip-trend{font-size:12px;color:var(--accent-mint);font-weight:600}
+.equip-progress{
+  height:6px;
+  border-radius:999px;
+  background:#17253d;
+  margin:8px 0 9px;
+  overflow:hidden;
+  display:flex;
+}
+.prog-segment.wireless{background:linear-gradient(90deg,#2563eb,#38bdf8);width:68%}
+.prog-segment.wired{background:var(--accent-mint);width:22%}
+.prog-segment.offline{background:#475569;width:10%}
+.equip-stats{display:flex;flex-direction:column;gap:5px;font-size:11px}
+.equip-stat-row{display:flex;align-items:center;justify-content:space-between;color:var(--text-muted)}
+.stat-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px}
+.stat-dot.wireless{background:#38bdf8;box-shadow:0 0 6px #38bdf8}
+.stat-dot.wired{background:var(--accent-mint);box-shadow:0 0 6px var(--accent-mint)}
+.stat-dot.offline{background:#64748b}
+.stat-val{color:#fff;font-weight:600}
+.stat-pct{color:var(--text-dim);min-width:32px;text-align:right}
+
+/* 动环能效综合参数 */
+.ops-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ops-item{
+  background:rgba(18,30,56,0.65);
+  border:1px solid rgba(56,189,248,0.14);
+  border-radius:8px;
+  padding:8px 10px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.ops-icon{
+  width:34px;
+  height:34px;
+  border-radius:8px;
+  display:grid;
+  place-items:center;
+  flex-shrink:0;
+}
+.ops-icon.green{background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3)}
+.ops-icon.green svg{fill:var(--accent-mint);width:18px;height:18px}
+.ops-icon.purple{background:rgba(139,92,246,0.18);border:1px solid rgba(139,92,246,0.35)}
+.ops-icon.purple svg{fill:#a78bfa;width:18px;height:18px}
+.ops-data strong{display:block;font-size:18px;color:#fff;line-height:1.1}
+.ops-data span{font-size:10px;color:var(--text-dim);display:block;margin-top:2px}
+
+.chiller-subgrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:8px;
+  padding-top:8px;
+  border-top:1px dashed rgba(56,189,248,0.15);
+  font-size:11px;
+}
+.chiller-subitem{display:flex;justify-content:space-between;color:var(--text-muted)}
+.chiller-subitem b{color:#fff}
+
+/* 空间微环境多维监测 (4联小方格) */
+.env-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.env-box{
+  background:rgba(18,30,56,0.65);
+  border:1px solid rgba(56,189,248,0.14);
+  border-radius:7px;
+  padding:8px 6px;
+  text-align:left;
+  position:relative;
+}
+.env-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.env-icon svg{width:14px;height:14px;fill:var(--accent-cyan)}
+.env-led{width:6px;height:6px;border-radius:50%;background:var(--accent-mint);box-shadow:0 0 6px var(--accent-mint)}
+.env-led.warn{background:var(--danger-rose);box-shadow:0 0 6px var(--danger-rose)}
+.env-val{font-size:17px;font-weight:700;color:#fff;line-height:1}
+.env-lbl{font-size:10px;color:var(--text-dim);margin-top:4px}
+
+/* 右侧 iCooling 智能微气候中枢 */
+.comfort-box{margin-bottom:10px}
+.comfort-label{font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between}
+.comfort-val-row{display:flex;align-items:baseline;justify-content:space-between;margin:2px 0 6px}
+.comfort-val{font-size:32px;font-weight:700;color:#fff;line-height:1}
+.comfort-sub{font-size:11px;color:var(--accent-mint)}
+.comfort-bar{
+  height:6px;
+  border-radius:999px;
+  background:#17253d;
+  position:relative;
+  overflow:hidden;
+}
+.comfort-bar-fill{
+  height:100%;
+  background:linear-gradient(90deg,#3b82f6,#10b981);
+  border-radius:999px;
+  box-shadow:0 0 10px rgba(16,185,129,0.5);
+  transition:width .4s ease;
+}
+
+.sensors-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.sensor-card{
+  background:rgba(18,30,56,0.7);
+  border:1px solid rgba(56,189,248,0.12);
+  border-radius:7px;
+  padding:7px 6px;
+}
+.sensor-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.sensor-top svg{width:13px;height:13px;fill:var(--text-muted)}
+.sensor-val{font-size:16px;font-weight:700;color:#fff}
+.sensor-lbl{font-size:10px;color:var(--text-dim);margin-top:2px}
+
+.region-title{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:6px}
+.region-tags{display:flex;gap:5px}
+.region-tag{font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(56,189,248,0.12);color:var(--accent-cyan)}
+.region-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  grid-template-rows:repeat(2,30px);
+  gap:5px;
+  margin-bottom:10px;
+}
+.region-cell{
+  background:rgba(22,36,66,0.65);
+  border:1px solid rgba(56,189,248,0.18);
+  border-radius:5px;
+  display:grid;
+  place-items:center;
+  font-size:12px;
+  font-weight:700;
+  color:var(--text-muted);
+  cursor:pointer;
+  transition:all .2s;
+}
+.region-cell:hover{border-color:var(--accent-cyan);color:#fff}
+.region-cell.alarm{
+  background:repeating-linear-gradient(45deg,rgba(244,63,94,0.2),rgba(244,63,94,0.2) 6px,rgba(244,63,94,0.06) 6px,rgba(244,63,94,0.06) 12px);
+  border-color:var(--danger-rose);
+  color:#f43f5e;
+  box-shadow:0 0 10px rgba(244,63,94,0.3);
+  animation:regionFlash 1.6s infinite;
+}
+@keyframes regionFlash{0%,100%{opacity:1}50%{opacity:.75}}
+
+.vav-group-card{
+  background:rgba(18,30,56,0.65);
+  border:1px solid rgba(56,189,248,0.14);
+  border-radius:8px;
+  padding:8px 10px;
+  margin-bottom:10px;
+}
+.vav-rows{display:flex;flex-direction:column;gap:5px;font-size:11px}
+.vav-row{display:flex;justify-content:space-between;color:var(--text-muted)}
+.vav-row b{color:#fff}
+
+.mini-charts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mini-chart-card{
+  background:rgba(18,30,56,0.65);
+  border:1px solid rgba(56,189,248,0.14);
+  border-radius:8px;
+  padding:8px 10px;
+}
+.mini-chart-head{display:flex;flex-direction:column;margin-bottom:2px}
+.mini-chart-lbl{font-size:10px;color:var(--text-dim)}
+.mini-chart-num{font-size:15px;font-weight:700;color:#fff}
+.echart-container{width:100%;height:58px}
+
+/* 右侧垂直楼层选择条 */
+.floor-selector{
+  position:absolute;
+  right:412px;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:15;
+  background:rgba(11,20,38,0.88);
+  border:1px solid rgba(56,189,248,0.24);
+  border-radius:999px;
+  padding:8px 6px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  backdrop-filter:blur(10px);
+  box-shadow:0 8px 30px rgba(0,0,0,0.5);
+  transition:right .38s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.floor-selector.shifted{
+  right:26px;
+}
+.floor-btn{
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  background:transparent;
+  color:var(--text-muted);
+  font-size:11px;
+  font-weight:600;
+  display:grid;
+  place-items:center;
+  transition:all .2s ease;
+  white-space:nowrap;
+}
+.floor-btn:hover{background:rgba(56,189,248,0.15);color:#fff}
+.floor-btn.active{
+  background:linear-gradient(135deg,#2563eb,#38bdf8);
+  color:#fff;
+  font-weight:700;
+  box-shadow:0 0 14px rgba(37,99,235,0.7);
+}
+
+/* 顶部告警即时处置条 */
+.alarm-banner{
+  position:absolute;
+  right:412px;
+  top:18px;
+  z-index:15;
+  background:rgba(20,15,26,0.92);
+  border:1px solid rgba(244,63,94,0.5);
+  border-radius:10px;
+  padding:8px 14px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  backdrop-filter:blur(12px);
+  box-shadow:0 8px 24px rgba(244,63,94,0.3);
+  animation:slideIn 0.4s ease;
+  white-space:nowrap;
+  transition:right .38s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.alarm-banner.shifted{
+  right:26px;
+}
+@keyframes slideIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.alarm-banner-icon{
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  background:rgba(244,63,94,0.2);
+  display:grid;
+  place-items:center;
+  flex-shrink:0;
+}
+.alarm-banner-icon svg{width:16px;height:16px;fill:var(--danger-rose)}
+.alarm-banner-text strong{display:block;font-size:12px;color:#fff;white-space:nowrap}
+.alarm-banner-text span{display:block;font-size:10px;color:var(--text-muted);margin-top:2px;white-space:nowrap}
+.handle-btn{
+  padding:5px 12px;
+  border-radius:6px;
+  background:linear-gradient(135deg,#e11d48,#f43f5e);
+  color:#fff;
+  font-size:11px;
+  font-weight:700;
+  box-shadow:0 0 10px rgba(244,63,94,0.4);
+  transition:transform .2s;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.handle-btn:hover{transform:scale(1.05)}
+
+/* 3D 浮空空间标签 */
+.pin-label{
+  position:absolute;
+  z-index:8;
+  transform:translate(-50%,-100%);
+  pointer-events:auto;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  transition:opacity .2s;
+}
+.pin-bubble{
+  background:rgba(11,20,38,0.92);
+  border:1px solid rgba(56,189,248,0.3);
+  border-radius:6px;
+  padding:5px 10px;
+  font-size:11px;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  backdrop-filter:blur(8px);
+  box-shadow:0 4px 16px rgba(0,0,0,0.6);
+  white-space:nowrap;
+}
+.pin-bubble.danger{
+  border-color:rgba(244,63,94,0.7);
+  background:rgba(30,12,20,0.92);
+  box-shadow:0 0 16px rgba(244,63,94,0.4);
+}
+.pin-bubble.warn{
+  border-color:rgba(245,158,11,0.7);
+  background:rgba(35,22,10,0.92);
+  box-shadow:0 0 16px rgba(245,158,11,0.4);
+}
+.pin-beacon{
+  width:16px;
+  height:16px;
+  margin-top:4px;
+  position:relative;
+  display:grid;
+  place-items:center;
+}
+.pin-beacon-cone{
+  width:0;
+  height:0;
+  border-left:5px solid transparent;
+  border-right:5px solid transparent;
+  border-top:9px solid var(--danger-rose);
+  filter:drop-shadow(0 0 6px var(--danger-rose));
+  animation:coneBounce 1.2s ease-in-out infinite alternate;
+}
+@keyframes coneBounce{from{transform:translateY(0)}to{transform:translateY(-4px)}}
+.pin-beacon-ripple{
+  position:absolute;
+  bottom:0;
+  width:14px;
+  height:6px;
+  border-radius:50%;
+  border:1px solid var(--danger-rose);
+  animation:beaconRipple 1.6s infinite ease-out;
+}
+@keyframes beaconRipple{0%{transform:scale(0.4);opacity:1}100%{transform:scale(2);opacity:0}}
+
+/* 底部状态与图例控制栏 */
+.bottombar{
+  position:relative;
+  z-index:20;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 28px;
+  background:linear-gradient(0deg,rgba(11,20,38,0.95) 0%,rgba(7,13,26,0.7) 100%);
+  border-top:1px solid var(--panel-border);
+  backdrop-filter:blur(10px);
+  font-size:11px;
+  color:var(--text-muted);
+  white-space:nowrap;
+}
+.heat-scale{display:flex;align-items:center;gap:8px;white-space:nowrap}
+.heat-bar{
+  width:130px;
+  height:7px;
+  border-radius:999px;
+  background:linear-gradient(90deg,#f43f5e 0%,#f59e0b 45%,#10b981 75%,#38bdf8 100%);
+  box-shadow:0 0 8px rgba(56,189,248,0.3);
+}
+.pipe-legends{display:flex;align-items:center;gap:16px;white-space:nowrap}
+.pipe-legend{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.pipe-line{width:20px;height:4px;border-radius:2px}
+.pipe-line.chilled{background:linear-gradient(90deg,#0ea5e9,#10b981)}
+.pipe-line.cooling{background:linear-gradient(90deg,#f59e0b,#ea580c)}
+.pipe-line.supply{background:#38bdf8}
+.pipe-line.return{background:#94a3b8}
+
+.view-tools{display:flex;gap:6px;align-items:center;white-space:nowrap}
+.view-btn{
+  padding:4px 9px;
+  border-radius:4px;
+  background:rgba(18,30,56,0.7);
+  border:1px solid rgba(56,189,248,0.18);
+  color:var(--text-muted);
+  font-size:10px;
+  transition:all .2s;
+  white-space:nowrap;
+}
+.view-btn:hover,.view-btn.active{
+  background:rgba(37,99,235,0.75);
+  color:#fff;
+  border-color:var(--accent-cyan);
+}
+</style>
+</head>
+<body>
+<div id="screen" v-cloak>
+  <!-- 顶部状态栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>BAS-22 · 智能楼宇自控与空间微气候数字孪生</h1>
+        <p>楼层场景解耦 · 变风量末端 · 机房冷通道 · 冷源动力泵房 · 1920×1080 工业基准</p>
+      </div>
+    </div>
+
+    <!-- 顶部药丸导航（切换四大专属解耦场景） -->
+    <nav class="pill-nav">
+      <button v-for="tab in navTabs" :key="tab.id" class="pill-btn" :class="{active: currentTab === tab.id}" @click="switchTab(tab.id)">
+        {{ tab.name }}
+      </button>
+    </nav>
+
+    <!-- 顶部右侧系统信息 -->
+    <div class="top-meta">
+      <div class="bell-btn" title="查看当前区域告警" @click="focusCurrentAlarm">
+        <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+      </div>
+      <div class="weather-tag">
+        <svg style="width:16px;height:16px;fill:#f59e0b" viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1z"/></svg>
+        <span>室外气象 28℃ 晴朗 · 东南风2级</span>
+      </div>
+      <span class="meta-chip">BACnet/IP 在线</span>
+      <span class="meta-chip">{{ runtimeQuality }}</span>
+      <span class="clock-text num">{{ clockTime }}</span>
+    </div>
+  </header>
+
+  <!-- 主内容区 -->
+  <main class="main-stage">
+    <!-- Three.js 视口容器 -->
+    <div id="threeViewport"></div>
+
+    <!-- 左侧可伸缩 HUD 抽屉面板 -->
+    <div class="hud-wrapper-left" :class="{collapsed: !leftPanelOpen}">
+      <button class="toggle-handle toggle-handle-left" :title="leftPanelOpen ? '收起左侧面板' : '展开左侧面板'" @click="leftPanelOpen = !leftPanelOpen">
+        {{ leftPanelOpen ? '◀' : '▶' }}
+      </button>
+
+      <aside class="hud-panel">
+        <!-- 告警统计药丸 -->
+        <div class="alarm-pills">
+          <div class="alarm-pill" :class="{danger: activeAlarmCount > 0}">
+            <span>{{ leftPanelData.alarmLabel }}</span>
+            <span class="pill-count num">{{ activeAlarmCount }} 条</span>
+          </div>
+          <div class="alarm-pill">
+            <span>安全事件记录</span>
+            <span class="pill-count num">0 条</span>
+          </div>
+        </div>
+
+        <!-- 场景专属模块 A: 设备规模与通信 -->
+        <section class="hud-card">
+          <div class="card-header">
+            <strong>{{ leftPanelData.sec1Title }}</strong>
+            <span class="equip-trend num">{{ leftPanelData.sec1Sub }}</span>
+          </div>
+          <div class="equip-total">
+            <span class="num">{{ leftPanelData.sec1Total }}<small style="font-size:12px;font-weight:400;margin-left:4px">{{ leftPanelData.sec1Unit }}</small></span>
+            <span style="font-size:11px;color:var(--text-dim)">{{ leftPanelData.sec1Rate }}</span>
+          </div>
+          <div class="equip-progress">
+            <div class="prog-segment wireless" :style="{width: leftPanelData.p1}"></div>
+            <div class="prog-segment wired" :style="{width: leftPanelData.p2}"></div>
+            <div class="prog-segment offline" :style="{width: leftPanelData.p3}"></div>
+          </div>
+          <div class="equip-stats">
+            <div class="equip-stat-row" v-for="item in leftPanelData.statRows" :key="item.name">
+              <span><i class="stat-dot" :class="item.dot"></i>{{ item.name }}</span>
+              <span class="stat-val num">{{ item.val }}</span>
+              <span class="stat-pct num">{{ item.pct }}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 场景专属模块 B: 能耗与动力负荷 -->
+        <section class="hud-card">
+          <div class="card-header">
+            <strong>{{ leftPanelData.sec2Title }}</strong>
+            <span style="font-size:11px;color:var(--accent-mint)">{{ leftPanelData.sec2Tag }}</span>
+          </div>
+          <div class="ops-grid">
+            <div class="ops-item">
+              <div class="ops-icon green">
+                <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+              </div>
+              <div class="ops-data">
+                <strong class="num">{{ leftPanelData.kpi1Val }}</strong>
+                <span>{{ leftPanelData.kpi1Lbl }}</span>
+              </div>
+            </div>
+            <div class="ops-item">
+              <div class="ops-icon purple">
+                <svg viewBox="0 0 24 24"><path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C12.97 17.55 11 21 11 21z"/></svg>
+              </div>
+              <div class="ops-data">
+                <strong class="num">{{ leftPanelData.kpi2Val }}<small style="font-size:11px;font-weight:400"> {{ leftPanelData.kpi2Unit }}</small></strong>
+                <span>{{ leftPanelData.kpi2Lbl }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="chiller-subgrid">
+            <div class="chiller-subitem" v-for="c in leftPanelData.subKpis" :key="c.name">
+              <span>{{ c.name }}:</span>
+              <b class="num">{{ c.val }}</b>
+            </div>
+          </div>
+        </section>
+
+        <!-- 场景专属模块 C: 空间微环境与运行参数 -->
+        <section class="hud-card">
+          <div class="card-header">
+            <strong>{{ leftPanelData.sec3Title }}</strong>
+            <span style="font-size:11px;color:var(--text-dim)">测点同步 1s</span>
+          </div>
+          <div class="env-grid">
+            <div class="env-box" v-for="env in leftPanelData.envBoxes" :key="env.lbl">
+              <div class="env-top">
+                <span class="env-icon"><svg viewBox="0 0 24 24"><path d="M15 13V5c0-1.66-1.34-3-3-3S9 3.34 9 5v8c-1.21.91-2 2.37-2 4 0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.63-.79-3.09-2-4zm-4-8c0-.55.45-1 1-1s1 .45 1 1h-1v1h1v2h-1v1h1v2h-2V5z"/></svg></span>
+                <span class="env-led" :class="{warn: env.isWarn}"></span>
+              </div>
+              <div class="env-val num">{{ env.val }}<small style="font-size:10px">{{ env.unit }}</small></div>
+              <div class="env-lbl">{{ env.lbl }}</div>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <!-- 空间 3D 浮空标签 (随场景切换动态绑定) -->
+    <!-- 27层办公室高温气泡 -->
+    <div id="pinAbnormal" class="pin-label" :style="pinAbnormalPos" v-show="currentTab === 'office' && alarmActive">
+      <div class="pin-bubble danger">
+        <svg style="width:14px;height:14px;fill:#f43f5e" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        <span>会议室局部过温 36.0 ℃</span>
+      </div>
+      <div class="pin-beacon">
+        <div class="pin-beacon-cone"></div>
+        <div class="pin-beacon-ripple"></div>
+      </div>
+    </div>
+
+    <div id="pinVav1" class="pin-label" :style="pinVav1Pos" v-show="currentTab === 'office'">
+      <div class="pin-bubble">
+        <svg style="width:12px;height:12px;fill:#38bdf8" viewBox="0 0 24 24"><path d="M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm0-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+        <span>变风量末端 VAV-01 · 开度 {{ vav1Opening }}%</span>
+      </div>
+    </div>
+
+    <!-- 2层机房机柜测点气泡 -->
+    <div id="pinRack" class="pin-label" :style="pinRackPos" v-show="currentTab === 'engine'">
+      <div class="pin-bubble warn">
+        <svg style="width:14px;height:14px;fill:#f59e0b" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+        <span>机柜 Rack-B04 · 出风 31.8 ℃</span>
+      </div>
+      <div class="pin-beacon">
+        <div class="pin-beacon-cone" style="border-top-color:#f59e0b"></div>
+      </div>
+    </div>
+
+    <!-- 负1层冷机测点气泡 -->
+    <div id="pinChiller" class="pin-label" :style="pinChillerPos" v-show="currentTab === 'chiller'">
+      <div class="pin-bubble">
+        <svg style="width:12px;height:12px;fill:#10b981" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <span>1#离心冷水机组 · 供水 7.0 ℃ (COP 5.65)</span>
+      </div>
+    </div>
+
+    <!-- 右侧垂直楼层选择条（严格对应专属场景） -->
+    <aside class="floor-selector" :class="{shifted: !rightPanelOpen}">
+      <button v-for="f in floors" :key="f.id" class="floor-btn" :class="{active: currentFloor === f.id}" @click="selectFloor(f.id)">
+        {{ f.name }}
+      </button>
+    </aside>
+
+    <!-- 顶部告警即时处置条 (动态绑定专属告警信息) -->
+    <div class="alarm-banner" :class="{shifted: !rightPanelOpen}" v-if="currentBanner.show">
+      <div class="alarm-banner-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+      </div>
+      <div class="alarm-banner-text">
+        <strong>{{ currentBanner.title }}</strong>
+        <span>{{ currentBanner.location }}</span>
+        <span>触发时间：{{ alarmTime }}</span>
+      </div>
+      <button class="handle-btn" @click="handleAlarm">
+        {{ handled ? '调控指令执行中' : currentBanner.btnText }}
+      </button>
+    </div>
+
+    <!-- 右侧可伸缩 iCooling 智控抽屉面板 -->
+    <div class="hud-wrapper-right" :class="{collapsed: !rightPanelOpen}">
+      <button class="toggle-handle toggle-handle-right" :title="rightPanelOpen ? '收起右侧面板' : '展开右侧面板'" @click="rightPanelOpen = !rightPanelOpen">
+        {{ rightPanelOpen ? '▶' : '◀' }}
+      </button>
+
+      <aside class="hud-panel">
+        <section class="hud-card">
+          <div class="card-header">
+            <strong>{{ rightPanelData.title }}</strong>
+            <span style="font-size:11px;color:var(--accent-mint)">{{ rightPanelData.tag }}</span>
+          </div>
+
+          <!-- 人体热舒适度 / 机房温差指数 -->
+          <div class="comfort-box">
+            <div class="comfort-label">
+              <span>{{ rightPanelData.indexTitle }}</span>
+              <span class="comfort-sub">{{ rightPanelData.indexSub }}</span>
+            </div>
+            <div class="comfort-val-row">
+              <span class="comfort-val num">{{ rightPanelData.indexVal }}<small style="font-size:12px;font-weight:400;margin-left:4px">{{ rightPanelData.indexUnit }}</small></span>
+              <span style="font-size:11px;color:var(--text-dim)">{{ rightPanelData.indexDesc }}</span>
+            </div>
+            <div class="comfort-bar">
+              <div class="comfort-bar-fill" :style="{width: rightPanelData.barWidth + '%'}"></div>
+            </div>
+          </div>
+
+          <!-- 四联微气候/工况状态传感器 -->
+          <div class="sensors-row">
+            <div class="sensor-card" v-for="s in rightPanelData.sensors" :key="s.lbl">
+              <div class="sensor-top">
+                <svg viewBox="0 0 24 24"><path d="M15 13V5c0-1.66-1.34-3-3-3S9 3.34 9 5v8c-1.21.91-2 2.37-2 4 0 2.76 2.24 5 5 5s5-2.24 5-5c0-1.63-.79-3.09-2-4zm-4-8c0-.55.45-1 1-1s1 .45 1 1h-1v1h1v2h-1v1h1v2h-2V5z"/></svg>
+                <span class="env-led" :class="{warn: s.isWarn}"></span>
+              </div>
+              <div class="sensor-val num">{{ s.val }}<small style="font-size:10px">{{ s.unit }}</small></div>
+              <div class="sensor-lbl">{{ s.lbl }}</div>
+            </div>
+          </div>
+
+          <!-- 场景专属空间区域网格温区分布 -->
+          <div class="region-title">
+            <span>{{ rightPanelData.gridTitle }}</span>
+            <div class="region-tags">
+              <span class="region-tag">{{ rightPanelData.gridTag1 }}</span>
+              <span class="region-tag">{{ rightPanelData.gridTag2 }}</span>
+            </div>
+          </div>
+          <div class="region-grid">
+            <div v-for="r in rightPanelData.regions" :key="r.name" class="region-cell" :class="{alarm: r.isAlarm}" @click="focusRegion(r.name)">
+              {{ r.name }}
+            </div>
+          </div>
+
+          <!-- 变风量末端 / 冷水机组群控微操参数 -->
+          <div class="vav-group-card">
+            <div class="card-header" style="margin-bottom:5px">
+              <span style="font-weight:600;color:#fff">{{ rightPanelData.subCardTitle }}</span>
+              <span style="font-size:10px;color:var(--accent-mint)">{{ rightPanelData.subCardTag }}</span>
+            </div>
+            <div class="vav-rows">
+              <div class="vav-row" v-for="row in rightPanelData.subCardRows" :key="row.k">
+                <span>{{ row.k }}:</span>
+                <b class="num">{{ row.v }}</b>
+              </div>
+            </div>
+          </div>
+
+          <!-- 24小时微型运行走势图 (ECharts) -->
+          <div class="mini-charts">
+            <div class="mini-chart-card">
+              <div class="mini-chart-head">
+                <span class="mini-chart-lbl">{{ rightPanelData.chart1Title }}</span>
+                <span class="mini-chart-num num">{{ rightPanelData.chart1Val }}<small style="font-size:10px;font-weight:400"> {{ rightPanelData.chart1Unit }}</small></span>
+              </div>
+              <div id="chartEnergy" class="echart-container"></div>
+            </div>
+
+            <div class="mini-chart-card">
+              <div class="mini-chart-head">
+                <span class="mini-chart-lbl">{{ rightPanelData.chart2Title }}</span>
+                <span class="mini-chart-num num">{{ rightPanelData.chart2Val }}<small style="font-size:10px;font-weight:400"> {{ rightPanelData.chart2Unit }}</small></span>
+              </div>
+              <div id="chartTraffic" class="echart-container"></div>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <!-- 底部图例与状态控制条 -->
+  <footer class="bottombar">
+    <div class="heat-scale">
+      <span>空间热力标尺 36℃ 高温</span>
+      <div class="heat-bar"></div>
+      <span>10℃ 强冷</span>
+    </div>
+
+    <div class="pipe-legends">
+      <div class="pipe-legend">
+        <div class="pipe-line chilled"></div>
+        <span>冷冻水供水干管 (供水 7℃)</span>
+      </div>
+      <div class="pipe-legend">
+        <div class="pipe-line cooling"></div>
+        <span>冷却水回水干管 (回水 32℃)</span>
+      </div>
+      <div class="pipe-legend">
+        <div class="pipe-line supply"></div>
+        <span>VAV集中送风支管</span>
+      </div>
+      <div class="pipe-legend">
+        <div class="pipe-line return"></div>
+        <span>空间负压回风主管</span>
+      </div>
+    </div>
+
+    <div class="view-tools">
+      <button class="view-btn" :class="{active: currentTab === 'office'}" @click="switchTab('office')">智慧办公切面</button>
+      <button class="view-btn" :class="{active: currentTab === 'engine'}" @click="switchTab('engine')">数据机房切面</button>
+      <button class="view-btn" :class="{active: currentTab === 'chiller'}" @click="switchTab('chiller')">冷源动力切面</button>
+      <button class="view-btn" :class="{active: currentTab === 'overview'}" @click="switchTab('overview')">全楼总览切面</button>
+      <button class="view-btn" @click="resetCamera">视角复位</button>
+      <span style="margin-left:10px;color:var(--text-dim)">更新时间: {{ lastSeen }}</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  function safeInit(domId) {
+    var el = document.getElementById(domId);
+    if (!el) return null;
+    try {
+      return echarts.init(el);
+    } catch (e) {
+      console.error('ECharts init failed on #' + domId, e);
+      return null;
+    }
+  }
+
+  function handleResize() {
+    var screen = document.getElementById('screen');
+    if (!screen) return;
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    var scale = Math.min(w / 1920, h / 1080);
+    screen.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
+  }
+  window.addEventListener('resize', handleResize);
+  window.addEventListener('DOMContentLoaded', handleResize);
+
+  var app = Vue.createApp({
+    data: function() {
+      return {
+        clockTime: '11:25:00',
+        alarmTime: '2026-09-28 11:20:00',
+        runtimeQuality: '数据质量 优良 (GOOD)',
+        lastSeen: new Date().toLocaleTimeString('zh-CN'),
+        leftPanelOpen: true,
+        rightPanelOpen: true,
+        currentTab: 'office',
+        currentFloor: '27F',
+        alarmActive: true,
+        handled: false,
+        vav1Opening: 45,
+        comfortScore: 92,
+        navTabs: [
+          { id: 'overview', name: '全楼综合总览' },
+          { id: 'office', name: '智慧办公空间 (27F)' },
+          { id: 'engine', name: '核心数据机房 (2F)' },
+          { id: 'chiller', name: '冷源动力泵房 (-1F)' }
+        ],
+        floors: [
+          { id: 'All', name: '整栋' },
+          { id: '32F', name: '32层' },
+          { id: '30F', name: '30层' },
+          { id: '27F', name: '27层' },
+          { id: '24F', name: '24层' },
+          { id: '18F', name: '18层' },
+          { id: '2F', name: '2层' },
+          { id: '-1F', name: '负1层' }
+        ],
+        pinAbnormalPos: { left: '56%', top: '48%' },
+        pinVav1Pos: { left: '52%', top: '38%' },
+        pinRackPos: { left: '50%', top: '46%' },
+        pinChillerPos: { left: '48%', top: '42%' }
+      };
+    },
+    computed: {
+      activeAlarmCount: function() {
+        if (this.currentTab === 'office') return this.alarmActive ? 3 : 0;
+        if (this.currentTab === 'engine') return 1;
+        return 0;
+      },
+      currentBanner: function() {
+        if (this.currentTab === 'office' && this.alarmActive) {
+          return {
+            show: true,
+            title: '区域过温超标告警 (三级响应)',
+            location: '发生位置：A座27层高阶会议室 (F区) · 36℃',
+            btnText: '快速协同处置'
+          };
+        }
+        if (this.currentTab === 'engine') {
+          return {
+            show: true,
+            title: '机房列间微环境局部热点预警',
+            location: '发生位置：2层 IDC 机房 B04 列机柜 · 31.8℃',
+            btnText: '增强列间送风'
+          };
+        }
+        return { show: false, title: '', location: '', btnText: '' };
+      },
+      leftPanelData: function() {
+        if (this.currentTab === 'engine') {
+          return {
+            alarmLabel: '机房动环预警',
+            sec1Title: '机房在网计算与动环设备',
+            sec1Sub: '在线率 99.99%',
+            sec1Total: '486',
+            sec1Unit: '台',
+            sec1Rate: '双路配电正常',
+            p1: '78%', p2: '20%', p3: '2%',
+            statRows: [
+              { name: '42U 标准计算刀片机柜', val: '24 列', pct: '50%', dot: 'wireless' },
+              { name: '精密列间空调与列头柜', val: '12 台', pct: '25%', dot: 'wired' },
+              { name: '动环物联网传感器探针', val: '450 点', pct: '25%', dot: 'offline' }
+            ],
+            sec2Title: 'IDC 机房动力负荷与电能利用率',
+            sec2Tag: '微模块绿色机房',
+            kpi1Val: '1.21', kpi1Lbl: 'PUE 电能利用效率',
+            kpi2Val: '1,247', kpi2Unit: 'kW', kpi2Lbl: 'IT 与制冷实时总负荷',
+            subKpis: [
+              { name: 'UPS主路负载率', val: '64.5 %' },
+              { name: '冷通道送风静压', val: '32 Pa' },
+              { name: '列间冷冻循环流量', val: '86 m³/h' },
+              { name: '电池巡检健康度', val: '99.8 %' }
+            ],
+            sec3Title: '机房精密微环境实时监测',
+            envBoxes: [
+              { lbl: '冷通道温度', val: '24.2', unit: '℃', isWarn: false },
+              { lbl: '相对湿度', val: '45', unit: '%', isWarn: false },
+              { lbl: '热通道温度', val: '31.8', unit: '℃', isWarn: true },
+              { lbl: '微颗粒物', val: '0.02', unit: 'mg', isWarn: false }
+            ]
+          };
+        } else if (this.currentTab === 'chiller') {
+          return {
+            alarmLabel: '动力系统状态',
+            sec1Title: '地下冷源管网动力设备',
+            sec1Sub: '全部设备在线',
+            sec1Total: '38',
+            sec1Unit: '台套',
+            sec1Rate: '变频联动就绪',
+            p1: '60%', p2: '35%', p3: '5%',
+            statRows: [
+              { name: '变频离心冷水机组', val: '2 台', pct: '30%', dot: 'wireless' },
+              { name: '冷冻与冷却循环水泵组', val: '6 台', pct: '40%', dot: 'wired' },
+              { name: '电动两通调节蝶阀', val: '30 台', pct: '30%', dot: 'offline' }
+            ],
+            sec2Title: '离心冷水机组运行能效',
+            sec2Tag: '国标一级能效',
+            kpi1Val: '5.65', kpi1Lbl: 'COP 综合能效比',
+            kpi2Val: '2,400', kpi2Unit: 'RT', kpi2Lbl: '总制冷额定负荷',
+            subKpis: [
+              { name: '冷冻水供水温度', val: '7.0 ℃' },
+              { name: '冷冻水回水温度', val: '12.2 ℃' },
+              { name: '冷冻循环总流量', val: '420 m³/h' },
+              { name: '水泵变频平均频率', val: '43.5 Hz' }
+            ],
+            sec3Title: '动力水力平衡动态参数',
+            envBoxes: [
+              { lbl: '冷水供水', val: '7.0', unit: '℃', isWarn: false },
+              { lbl: '冷水回水', val: '12.2', unit: '℃', isWarn: false },
+              { lbl: '供回水压差', val: '0.28', unit: 'MPa', isWarn: false },
+              { lbl: '循环流速', val: '2.1', unit: 'm/s', isWarn: false }
+            ]
+          };
+        } else {
+          return {
+            alarmLabel: '区域设备告警',
+            sec1Title: '在网自控设备总数',
+            sec1Sub: '▼ 较昨日 -145 台',
+            sec1Total: '1,208',
+            sec1Unit: '台',
+            sec1Rate: '总线通信率 99.8%',
+            p1: '68%', p2: '22%', p3: '10%',
+            statRows: [
+              { name: '无线微物联传感器', val: '7,924 点', pct: '68%', dot: 'wireless' },
+              { name: '有线现场总线设备', val: '21 台', pct: '2%', dot: 'wired' },
+              { name: '通信离线休眠设备', val: '2,302 点', pct: '10%', dot: 'offline' }
+            ],
+            sec2Title: '楼宇动力与综合能效',
+            sec2Tag: '一级节能标杆',
+            kpi1Val: '1.21', kpi1Lbl: 'PUE 电能利用效率',
+            kpi2Val: '1,247', kpi2Unit: 'kW', kpi2Lbl: '实时制冷总负荷',
+            subKpis: [
+              { name: '离心冷机 COP', val: '5.42' },
+              { name: '冷冻水供回温差', val: '5.2 ℃' },
+              { name: '冷冻循环总流量', val: '340 m³/h' },
+              { name: '动环网关在线率', val: '100 %' }
+            ],
+            sec3Title: '空间微环境多维监测',
+            envBoxes: [
+              { lbl: '干球温度', val: '31.0', unit: '℃', isWarn: this.alarmActive },
+              { lbl: '相对湿度', val: '45', unit: '%', isWarn: false },
+              { lbl: '二氧化碳', val: '460', unit: 'ppm', isWarn: false },
+              { lbl: '细颗粒物', val: '12', unit: 'μg', isWarn: false }
+            ]
+          };
+        }
+      },
+      rightPanelData: function() {
+        if (this.currentTab === 'engine') {
+          return {
+            title: '机房精密列间智控 (CRAC)',
+            tag: '恒温恒湿闭环',
+            indexTitle: '机房冷热温差指标',
+            indexSub: '✅ 温度受控',
+            indexVal: '7.6',
+            indexUnit: '℃',
+            indexDesc: '冷通道 24.2℃ / 热通道 31.8℃',
+            barWidth: 76,
+            sensors: [
+              { lbl: '冷通道送温', val: '24.2', unit: '℃', isWarn: false },
+              { lbl: '回风湿度', val: '45.0', unit: '%', isWarn: false },
+              { lbl: '洁净度', val: 'CLASS-8', unit: '', isWarn: false },
+              { lbl: '列间风速', val: '2.40', unit: 'm/s', isWarn: false }
+            ],
+            gridTitle: 'IDC 机房高密列组矩阵',
+            gridTag1: '冷通道 22~25℃',
+            gridTag2: '热通道 30~34℃',
+            regions: [
+              { name: 'A列冷通道', isAlarm: false },
+              { name: 'A列热通道', isAlarm: false },
+              { name: 'B列冷通道', isAlarm: false },
+              { name: 'B列热通道', isAlarm: true },
+              { name: 'C列冷通道', isAlarm: false },
+              { name: 'C列热通道', isAlarm: false },
+              { name: '精密空调组', isAlarm: false },
+              { name: 'PDU配电区', isAlarm: false }
+            ],
+            subCardTitle: '列间精密空调 CRAC-02# 状态',
+            subCardTag: 'EC风机变频',
+            subCardRows: [
+              { k: '离心风机当前转速', v: '2,650 rpm' },
+              { k: '水阀当前开度反馈', v: '68 %' },
+              { k: '除湿加湿运行工况', v: '智能恒湿中' }
+            ],
+            chart1Title: '机房空调用电量',
+            chart1Val: '2,840', chart1Unit: 'kWh',
+            chart2Title: 'IT 算力运行负荷',
+            chart2Val: '920', chart2Unit: 'kW'
+          };
+        } else if (this.currentTab === 'chiller') {
+          return {
+            title: '冷源群控与水力平衡中心',
+            tag: '自适应能效寻优',
+            indexTitle: '冷源系统综合能效系数',
+            indexSub: '🌟 超高能效',
+            indexVal: '5.65',
+            indexUnit: 'COP',
+            indexDesc: '额定 2,400 RT / 运行 1,960 RT',
+            barWidth: 94,
+            sensors: [
+              { lbl: '冷冻供温', val: '7.0', unit: '℃', isWarn: false },
+              { lbl: '冷冻回温', val: '12.2', unit: '℃', isWarn: false },
+              { lbl: '冷却进温', val: '32.0', unit: '℃', isWarn: false },
+              { lbl: '主泵扬程', val: '38.5', unit: 'm', isWarn: false }
+            ],
+            gridTitle: '动力站设备群控分区',
+            gridTag1: '1用1备自动倒泵',
+            gridTag2: '压差旁通闭环',
+            regions: [
+              { name: '1#冷机', isAlarm: false },
+              { name: '2#冷机', isAlarm: false },
+              { name: '1#冷水泵', isAlarm: false },
+              { name: '2#冷水泵', isAlarm: false },
+              { name: '3#冷水泵', isAlarm: false },
+              { name: '分水器', isAlarm: false },
+              { name: '集水器', isAlarm: false },
+              { name: '冷却塔组', isAlarm: false }
+            ],
+            subCardTitle: '1# 离心冷水机组核心参数',
+            subCardTag: '全负荷变频',
+            subCardRows: [
+              { k: '冷机实时负荷率', v: '81.6 %' },
+              { k: '蒸发器冷媒压力', v: '0.34 MPa' },
+              { k: '压缩机轴承温度', v: '48.2 ℃' }
+            ],
+            chart1Title: '动力站当日电耗',
+            chart1Val: '4,620', chart1Unit: 'kWh',
+            chart2Title: '供冷总瞬时流量',
+            chart2Val: '420', chart2Unit: 'm³/h'
+          };
+        } else {
+          return {
+            title: '智能微气候自控系统 (iCooling)',
+            tag: '自适应节能',
+            indexTitle: '人体热舒适度指数 (PMV/PPD)',
+            indexSub: '😊 体感极佳',
+            indexVal: this.comfortScore,
+            indexUnit: '分',
+            indexDesc: 'PMV标度: +0.2 · PPD: 6%',
+            barWidth: this.comfortScore,
+            sensors: [
+              { lbl: '实测室温', val: '32.0', unit: '℃', isWarn: this.alarmActive },
+              { lbl: '实测湿度', val: '46.0', unit: '%', isWarn: false },
+              { lbl: '空气质量', val: '优良', unit: '', isWarn: false },
+              { lbl: '送风风速', val: '0.35', unit: 'm/s', isWarn: false }
+            ],
+            gridTitle: '楼层空间网格温区分布',
+            gridTag1: '标准温区 20~26℃',
+            gridTag2: '适宜湿度 45~70%',
+            regions: [
+              { name: 'A区', isAlarm: false },
+              { name: 'B区', isAlarm: false },
+              { name: 'C区', isAlarm: false },
+              { name: 'D区', isAlarm: false },
+              { name: 'E区', isAlarm: false },
+              { name: 'F区', isAlarm: this.alarmActive },
+              { name: 'G区', isAlarm: false },
+              { name: 'H区', isAlarm: false }
+            ],
+            subCardTitle: '变风量末端 VAV-01# 实时状态',
+            subCardTag: '自动定静压控制',
+            subCardRows: [
+              { k: '电动风阀开度反馈', v: this.vav1Opening + ' %' },
+              { k: '末端静压箱实测压差', v: '182 Pa' },
+              { k: '一次送风风机转速', v: '1,240 rpm' }
+            ],
+            chart1Title: '空调当日耗电量',
+            chart1Val: '1,620', chart1Unit: 'kWh',
+            chart2Title: '空间在场人流负荷',
+            chart2Val: '212', chart2Unit: '人'
+          };
+        }
+      }
+    },
+    mounted: function() {
+      var self = this;
+      handleResize();
+
+      setInterval(function() {
+        var d = new Date();
+        self.clockTime = d.toTimeString().split(' ')[0];
+        self.lastSeen = d.toLocaleTimeString('zh-CN');
+      }, 1000);
+
+      this.initCharts();
+
+      this.$nextTick(function() {
+        self.initThreeScene();
+      });
+    },
+    methods: {
+      initCharts: function() {
+        var cEnergy = safeInit('chartEnergy');
+        if (cEnergy) {
+          cEnergy.setOption({
+            grid: { left: 0, right: 0, top: 4, bottom: 0 },
+            xAxis: { type: 'category', show: false, data: ['00','04','08','12','16','20','24'] },
+            yAxis: { type: 'value', show: false, min: 800 },
+            series: [{
+              type: 'line',
+              smooth: true,
+              showSymbol: false,
+              data: [920, 880, 1100, 1540, 1620, 1480, 1200],
+              lineStyle: { color: '#3b82f6', width: 2.2 },
+              areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: 'rgba(59, 130, 246, 0.45)' },
+                  { offset: 1, color: 'rgba(59, 130, 246, 0.0)' }
+                ])
+              }
+            }]
+          });
+        }
+
+        var cTraffic = safeInit('chartTraffic');
+        if (cTraffic) {
+          cTraffic.setOption({
+            grid: { left: 0, right: 0, top: 4, bottom: 0 },
+            xAxis: { type: 'category', show: false, data: ['00','04','08','12','16','20','24'] },
+            yAxis: { type: 'value', show: false, min: 0 },
+            series: [{
+              type: 'line',
+              smooth: true,
+              showSymbol: false,
+              data: [12, 10, 45, 180, 212, 195, 60],
+              lineStyle: { color: '#10b981', width: 2.2 },
+              areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: 'rgba(16, 185, 129, 0.45)' },
+                  { offset: 1, color: 'rgba(16, 185, 129, 0.0)' }
+                ])
+              }
+            }]
+          });
+        }
+      },
+      switchTab: function(tabId) {
+        this.currentTab = tabId;
+        if (tabId === 'engine') {
+          this.currentFloor = '2F';
+        } else if (tabId === 'chiller') {
+          this.currentFloor = '-1F';
+        } else if (tabId === 'overview') {
+          this.currentFloor = 'All';
+        } else {
+          this.currentFloor = '27F';
+        }
+        if (window.switchSceneMode) window.switchSceneMode(tabId);
+      },
+      selectFloor: function(fId) {
+        this.currentFloor = fId;
+        if (fId === '2F') {
+          this.currentTab = 'engine';
+        } else if (fId === '-1F') {
+          this.currentTab = 'chiller';
+        } else if (fId === 'All' || fId === '32F' || fId === '30F' || fId === '24F' || fId === '18F') {
+          this.currentTab = 'overview';
+        } else {
+          this.currentTab = 'office';
+        }
+        if (window.switchSceneMode) window.switchSceneMode(this.currentTab);
+      },
+      focusCurrentAlarm: function() {
+        if (this.currentTab === 'office') {
+          this.focusAlarm();
+        } else if (this.currentTab === 'engine') {
+          if (window.focusRackAlarm) window.focusRackAlarm();
+        }
+      },
+      focusAlarm: function() {
+        this.selectFloor('27F');
+        if (window.switchSceneMode) window.switchSceneMode('alarm');
+      },
+      focusRegion: function(rName) {
+        if (rName === 'F区') {
+          this.focusAlarm();
+        } else if (rName === 'B列热通道') {
+          this.switchTab('engine');
+        }
+      },
+      handleAlarm: function() {
+        var self = this;
+        this.handled = true;
+        this.vav1Opening = 95;
+        this.comfortScore = 96;
+        if (window.coolDownHeatmap) window.coolDownHeatmap();
+        setTimeout(function() {
+          self.alarmActive = false;
+        }, 2500);
+      },
+      resetCamera: function() {
+        if (window.resetCameraView) window.resetCameraView();
+      },
+      initThreeScene: function() {
+        var self = this;
+        var container = document.getElementById('threeViewport');
+        if (!container) return;
+
+        var width = container.clientWidth || 1920;
+        var height = container.clientHeight || 1080;
+
+        var scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x060a14, 0.015);
+
+        var camera = new THREE.PerspectiveCamera(36, width / height, 1, 1000);
+        camera.position.set(45, 42, 55);
+
+        var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        var controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(0, 0, 0);
+        controls.maxPolarAngle = Math.PI / 2 - 0.05;
+        controls.minDistance = 20;
+        controls.maxDistance = 160;
+
+        // 灯光系统
+        var ambientLight = new THREE.AmbientLight(0x223656, 1.4);
+        scene.add(ambientLight);
+
+        var dirLight = new THREE.DirectionalLight(0x93c5fd, 2.2);
+        dirLight.position.set(30, 60, 40);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        var blueSpot = new THREE.SpotLight(0x38bdf8, 3.5, 90, Math.PI / 4, 0.4);
+        blueSpot.position.set(-15, 45, 10);
+        scene.add(blueSpot);
+
+        var redSpot = new THREE.PointLight(0xf43f5e, 2.5, 30);
+        redSpot.position.set(4, 8, -4);
+        scene.add(redSpot);
+
+        // 共享基底底板
+        var floorGeo = new THREE.PlaneGeometry(160, 160);
+        var floorMat = new THREE.MeshStandardMaterial({ color: 0x070e1c, roughness: 0.35, metalness: 0.65 });
+        var floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -0.5;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        var grid = new THREE.GridHelper(160, 40, 0x1e3a5f, 0x0f2138);
+        grid.position.y = -0.48;
+        scene.add(grid);
+
+        // ==========================================
+        // 场景一：【27层 高阶智慧办公与空间微气候专属切面】
+        // ==========================================
+        var officeGroup = new THREE.Group();
+        scene.add(officeGroup);
+
+        var slabGeo = new THREE.BoxGeometry(62, 1.2, 42);
+        var slabMat = new THREE.MeshStandardMaterial({ color: 0x0d1b30, roughness: 0.4, metalness: 0.5 });
+        var officeSlab = new THREE.Mesh(slabGeo, slabMat);
+        officeSlab.receiveShadow = true;
+        officeGroup.add(officeSlab);
+
+        var officeSlabEdges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(slabGeo),
+          new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45 })
+        );
+        officeGroup.add(officeSlabEdges);
+
+        // 落地玻璃会议室 (Zone F)
+        var roomGeo = new THREE.BoxGeometry(16, 5.5, 14);
+        var glassMat = new THREE.MeshPhysicalMaterial({
+          color: 0x22d3ee,
+          transparent: true,
+          opacity: 0.22,
+          roughness: 0.1,
+          metalness: 0.9,
+          transmission: 0.6
+        });
+        var glassRoom = new THREE.Mesh(roomGeo, glassMat);
+        glassRoom.position.set(4, 3.3, -4);
+        officeGroup.add(glassRoom);
+
+        var roomEdges = new THREE.LineSegments(
+          new THREE.EdgesGeometry(roomGeo),
+          new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 })
+        );
+        roomEdges.position.copy(glassRoom.position);
+        officeGroup.add(roomEdges);
+
+        var meetingScreen = new THREE.Mesh(new THREE.PlaneGeometry(7.5, 3.2), new THREE.MeshBasicMaterial({ color: 0x1e3a8a }));
+        meetingScreen.position.set(4, 3.8, -10.9);
+        officeGroup.add(meetingScreen);
+
+        var table = new THREE.Mesh(new THREE.BoxGeometry(9, 1.1, 4.5), new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 }));
+        table.position.set(4, 1.2, -4);
+        table.castShadow = true;
+        officeGroup.add(table);
+
+        var personMat = new THREE.MeshBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.65 });
+        var p1Head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 12), personMat);
+        p1Head.position.set(2, 3.6, -4);
+        var p1Body = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 1.5, 12), personMat);
+        p1Body.position.set(2, 2.7, -4);
+        officeGroup.add(p1Head);
+        officeGroup.add(p1Body);
+
+        var p2Head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 12), personMat);
+        p2Head.position.set(6, 3.6, -3.5);
+        var p2Body = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 1.5, 12), personMat);
+        p2Body.position.set(6, 2.7, -3.5);
+        officeGroup.add(p2Head);
+        officeGroup.add(p2Body);
+
+        // 开放工位矩阵（纯办公，无任何机柜干扰）
+        var deskMat = new THREE.MeshStandardMaterial({ color: 0x152338, roughness: 0.5 });
+        var partitionMat = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.2 });
+        var monitorMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa });
+        var chairMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.7 });
+
+        for (var row = 0; row < 3; row++) {
+          for (var col = 0; col < 3; col++) {
+            var px = -20 + col * 10;
+            var pz = -12 + row * 11;
+
+            var deskGroup = new THREE.Group();
+            deskGroup.position.set(px, 1.1, pz);
+
+            var deskMesh = new THREE.Mesh(new THREE.BoxGeometry(8, 0.3, 5), deskMat);
+            deskMesh.castShadow = true;
+            deskMesh.receiveShadow = true;
+            deskGroup.add(deskMesh);
+
+            var partMesh = new THREE.Mesh(new THREE.BoxGeometry(8.1, 1.2, 0.15), partitionMat);
+            partMesh.position.set(0, 0.7, 0);
+            deskGroup.add(partMesh);
+
+            for (var m = -2.2; m <= 2.2; m += 4.4) {
+              var mon1 = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.08), monitorMat);
+              mon1.position.set(m - 0.8, 1.0, 0.6);
+              deskGroup.add(mon1);
+
+              var mon2 = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.08), monitorMat);
+              mon2.position.set(m + 0.8, 1.0, 0.6);
+              deskGroup.add(mon2);
+            }
+
+            for (var k = -2.2; k <= 2.2; k += 4.4) {
+              var chairGroup = new THREE.Group();
+              chairGroup.position.set(k, 0, 2.0);
+
+              var seat = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.2, 1.4), chairMat);
+              seat.position.y = 0.5;
+              chairGroup.add(seat);
+
+              var back = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.2, 0.15), chairMat);
+              back.position.set(0, 1.1, 0.65);
+              chairGroup.add(back);
+
+              deskGroup.add(chairGroup);
+            }
+            officeGroup.add(deskGroup);
+          }
+        }
+
+        // 3D 空间温度场热力等温云图
+        var heatGeo = new THREE.PlaneGeometry(15, 13, 36, 32);
+        heatGeo.rotateX(-Math.PI / 2);
+
+        var colors = [];
+        var pos = heatGeo.attributes.position;
+        for (var i = 0; i < pos.count; i++) colors.push(0.2, 0.5, 0.9);
+        heatGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+        var heatMat = new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.82,
+          side: THREE.DoubleSide,
+          roughness: 0.2,
+          metalness: 0.1
+        });
+        var heatMesh = new THREE.Mesh(heatGeo, heatMat);
+        heatMesh.position.set(4, 5.8, -4);
+        officeGroup.add(heatMesh);
+
+        var heatEdges = new THREE.LineSegments(
+          new THREE.WireframeGeometry(heatGeo),
+          new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.18 })
+        );
+        heatEdges.position.copy(heatMesh.position);
+        officeGroup.add(heatEdges);
+
+        // 暖通立体管道
+        var chilledCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(-26, 7.8, -14),
+          new THREE.Vector3(-6, 7.8, -14),
+          new THREE.Vector3(4, 7.8, -14),
+          new THREE.Vector3(4, 7.8, -4),
+          new THREE.Vector3(12, 7.8, -4)
+        ]);
+        var chilledGeo = new THREE.TubeGeometry(chilledCurve, 45, 0.35, 8, false);
+        var chilledMat = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.2, metalness: 0.8 });
+        var chilledPipe = new THREE.Mesh(chilledGeo, chilledMat);
+        officeGroup.add(chilledPipe);
+
+        var coolingCurve = new THREE.CatmullRomCurve3([
+          new THREE.Vector3(12, 8.4, -2),
+          new THREE.Vector3(4, 8.4, -2),
+          new THREE.Vector3(4, 8.4, -12),
+          new THREE.Vector3(-6, 8.4, -12),
+          new THREE.Vector3(-26, 8.4, -12)
+        ]);
+        var coolingGeo = new THREE.TubeGeometry(coolingCurve, 45, 0.35, 8, false);
+        var coolingMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.2, metalness: 0.8 });
+        var coolingPipe = new THREE.Mesh(coolingGeo, coolingMat);
+        officeGroup.add(coolingPipe);
+
+        var ductGeo = new THREE.BoxGeometry(32, 0.8, 1.2);
+        var ductMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.85, roughness: 0.3 });
+        var mainDuct = new THREE.Mesh(ductGeo, ductMat);
+        mainDuct.position.set(-4, 8.8, 0);
+        officeGroup.add(mainDuct);
+
+        var vavMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.3 });
+        var actMat = new THREE.MeshStandardMaterial({ color: 0x0284c7 });
+        var vav1 = new THREE.Group();
+        vav1.position.set(4, 7.2, 3);
+        vav1.add(new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.4, 2.6), vavMat));
+        var act1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.5), actMat);
+        act1.position.set(1.4, 0.2, 0);
+        vav1.add(act1);
+        officeGroup.add(vav1);
+
+        // 粒子流动
+        var particleCount = 45;
+        var particleGeo = new THREE.BufferGeometry();
+        var particlePos = new Float32Array(particleCount * 3);
+        for (var p = 0; p < particleCount; p++) {
+          var pt = chilledCurve.getPoint(p / particleCount);
+          particlePos[p * 3] = pt.x;
+          particlePos[p * 3 + 1] = pt.y;
+          particlePos[p * 3 + 2] = pt.z;
+        }
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+        var flowPoints = new THREE.Points(particleGeo, new THREE.PointsMaterial({ color: 0x10b981, size: 0.85, transparent: true, opacity: 0.95 }));
+        officeGroup.add(flowPoints);
+
+
+        // ==========================================
+        // 场景二：【2层 IDC 核心数据机房专属切面】
+        // ==========================================
+        var engineGroup = new THREE.Group();
+        scene.add(engineGroup);
+        engineGroup.visible = false;
+
+        // 防静电高架地板基板
+        var idcSlabGeo = new THREE.BoxGeometry(56, 1.0, 44);
+        var idcSlabMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.7 });
+        var idcSlab = new THREE.Mesh(idcSlabGeo, idcSlabMat);
+        engineGroup.add(idcSlab);
+        engineGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(idcSlabGeo), new THREE.LineBasicMaterial({ color: 0x0284c7 })));
+
+        var rackMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.35, metalness: 0.85 });
+        var bladeMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.5 });
+        var glowRackMat = new THREE.MeshStandardMaterial({
+          color: 0x2563eb,
+          emissive: 0x1d4ed8,
+          emissiveIntensity: 0.95,
+          transparent: true,
+          opacity: 0.88
+        });
+
+        // 4 列大型服务器机柜群 (A列、B列、C列、D列)
+        for (var cCol = 0; cCol < 4; cCol++) {
+          for (var cRow = 0; cRow < 6; cRow++) {
+            var rx = -16 + cCol * 10;
+            var rz = -15 + cRow * 5.5;
+            var isCenterSuperGlow = (cCol === 1 && cRow === 3);
+
+            var rackMesh = new THREE.Mesh(
+              new THREE.BoxGeometry(3.0, 6.4, 2.6),
+              isCenterSuperGlow ? glowRackMat : rackMat
+            );
+            rackMesh.position.set(rx, 3.7, rz);
+            rackMesh.castShadow = true;
+            engineGroup.add(rackMesh);
+
+            // 内部刀片插箱与点阵
+            if (!isCenterSuperGlow) {
+              for (var s = 0; s < 5; s++) {
+                var blade = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.9, 0.1), bladeMat);
+                blade.position.set(rx, 1.4 + s * 1.1, rz + 1.32);
+                engineGroup.add(blade);
+
+                var isHotPoint = (cCol === 1 && cRow === 1 && s === 2);
+                var ledDot = new THREE.Mesh(
+                  new THREE.BoxGeometry(0.3, 0.12, 0.05),
+                  new THREE.MeshBasicMaterial({ color: isHotPoint ? 0xf59e0b : 0x10b981 })
+                );
+                ledDot.position.set(rx + 0.9, 1.4 + s * 1.1, rz + 1.38);
+                engineGroup.add(ledDot);
+              }
+            }
+          }
+        }
+
+        // 冷通道透明亚克力封闭顶棚与电缆桥架
+        for (var aisle = 0; aisle < 2; aisle++) {
+          var roofGeo = new THREE.BoxGeometry(10, 0.2, 32);
+          var roofMat = new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.22, roughness: 0.1 });
+          var roof = new THREE.Mesh(roofGeo, roofMat);
+          roof.position.set(-11 + aisle * 10, 7.0, -1.5);
+          engineGroup.add(roof);
+        }
+
+        // 4 台精密列间空调 (In-Row CRAC)
+        var cracMat = new THREE.MeshStandardMaterial({ color: 0x0369a1, metalness: 0.7, roughness: 0.3 });
+        for (var cr = 0; cr < 4; cr++) {
+          var crac = new THREE.Mesh(new THREE.BoxGeometry(2.2, 6.2, 2.2), cracMat);
+          crac.position.set(-21 + cr * 14, 3.6, -1.5);
+          engineGroup.add(crac);
+        }
+
+
+        // ==========================================
+        // 场景三：【负1层 地下能源中心与冷源动力泵房专属设备间切面】
+        // ==========================================
+        var chillerGroup = new THREE.Group();
+        scene.add(chillerGroup);
+        chillerGroup.visible = false;
+
+        var plantSlabGeo = new THREE.BoxGeometry(58, 1.4, 46);
+        var plantSlab = new THREE.Mesh(plantSlabGeo, new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 }));
+        chillerGroup.add(plantSlab);
+        chillerGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(plantSlabGeo), new THREE.LineBasicMaterial({ color: 0x0284c7 })));
+
+        // 2 台大型双筒离心冷水机组 (Chiller 1# & 2#)
+        var chillerBodyMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.8, roughness: 0.3 });
+        var compMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.9, roughness: 0.2 });
+
+        for (var ch = 0; ch < 2; ch++) {
+          var chGroup = new THREE.Group();
+          chGroup.position.set(-10 + ch * 20, 0.7, -6);
+
+          // 蒸发器筒身 (下部大圆柱)
+          var evap = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 16, 24), chillerBodyMat);
+          evap.rotation.x = Math.PI / 2;
+          evap.position.set(0, 2.4, 0);
+          chGroup.add(evap);
+
+          // 冷凝器筒身 (上部圆柱)
+          var cond = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.0, 16, 24), chillerBodyMat);
+          cond.rotation.x = Math.PI / 2;
+          cond.position.set(0, 6.0, 0);
+          chGroup.add(cond);
+
+          // 中间离心压缩机与变频电控柜
+          var comp = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 3.5, 16), compMat);
+          comp.position.set(0, 8.2, 0);
+          chGroup.add(comp);
+
+          var panel = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.8, 1.2), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+          panel.position.set(2.4, 3.5, 2.5);
+          chGroup.add(panel);
+
+          chillerGroup.add(chGroup);
+        }
+
+        // 3 台变频冷冻循环泵组 (Pumps 1#~3#，带蜗壳与蓝色电机)
+        var pumpMotorMat = new THREE.MeshStandardMaterial({ color: 0x2563eb, metalness: 0.7, roughness: 0.3 });
+        var pumpBodyMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.3 });
+
+        for (var pmp = 0; pmp < 3; pmp++) {
+          var pmpGroup = new THREE.Group();
+          pmpGroup.position.set(-16 + pmp * 16, 0.7, 12);
+
+          // 蜗壳基座
+          var volute = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.0, 1.8, 16), pumpBodyMat);
+          volute.position.y = 1.0;
+          pmpGroup.add(volute);
+
+          // 立式电机
+          var motor = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 2.8, 16), pumpMotorMat);
+          motor.position.y = 3.3;
+          pmpGroup.add(motor);
+
+          chillerGroup.add(pmpGroup);
+        }
+
+        // 粗大口径供回水管网与集水器
+        var supplyMain = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 36, 16), new THREE.MeshStandardMaterial({ color: 0x0ea5e9 }));
+        supplyMain.rotation.z = Math.PI / 2;
+        supplyMain.position.set(0, 3.2, 5);
+        chillerGroup.add(supplyMain);
+
+        var returnMain = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 36, 16), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
+        returnMain.rotation.z = Math.PI / 2;
+        returnMain.position.set(0, 5.0, 5);
+        chillerGroup.add(returnMain);
+
+
+        // ==========================================
+        // 场景四：【全楼总览与通用标准办公层专属切面】
+        // ==========================================
+        var generalOfficeGroup = new THREE.Group();
+        scene.add(generalOfficeGroup);
+        generalOfficeGroup.visible = false;
+
+        var genSlab = new THREE.Mesh(slabGeo, slabMat);
+        generalOfficeGroup.add(genSlab);
+        generalOfficeGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(slabGeo), new THREE.LineBasicMaterial({ color: 0x10b981 })));
+
+        for (var gr = 0; gr < 3; gr++) {
+          for (var gc = 0; gc < 3; gc++) {
+            var gDesk = new THREE.Group();
+            gDesk.position.set(-18 + gc * 14, 1.1, -12 + gr * 12);
+            gDesk.add(new THREE.Mesh(new THREE.BoxGeometry(9, 0.3, 5), deskMat));
+            gDesk.add(new THREE.Mesh(new THREE.BoxGeometry(9.1, 1.0, 0.15), partitionMat));
+            generalOfficeGroup.add(gDesk);
+          }
+        }
+
+
+        // 动态热力与水流更新
+        var heatPhase = 0;
+        var isCoolingState = false;
+
+        function updateHeatmap() {
+          if (!officeGroup.visible) return;
+          heatPhase += 0.035;
+          var positions = heatGeo.attributes.position;
+          var colAttr = heatGeo.attributes.color;
+
+          for (var idx = 0; idx < positions.count; idx++) {
+            var vx = positions.getX(idx);
+            var vz = positions.getZ(idx);
+
+            var d1 = Math.exp(-((vx - 1) * (vx - 1) + (vz + 1) * (vz + 1)) / 14);
+            var d2 = Math.exp(-((vx + 3) * (vx + 3) + (vz - 2) * (vz - 2)) / 18);
+            var amp = isCoolingState ? 0.35 : 2.4;
+            var wave = Math.sin(heatPhase + vx * 0.4 + vz * 0.4) * 0.35;
+            var h = (d1 * 1.5 + d2 * 0.9) * amp + wave;
+
+            positions.setY(idx, h);
+
+            var ratio = Math.max(0, Math.min(1, h / 3.0));
+            if (isCoolingState) {
+              colAttr.setXYZ(idx, 0.1 + ratio * 0.1, 0.6 + ratio * 0.3, 0.9);
+            } else {
+              if (ratio < 0.4) colAttr.setXYZ(idx, 0.1, 0.6, 0.9);
+              else if (ratio < 0.7) colAttr.setXYZ(idx, 0.1 + (ratio - 0.4) * 2.8, 0.8, 0.2);
+              else colAttr.setXYZ(idx, 0.95, 0.25, 0.35);
+            }
+          }
+          positions.needsUpdate = true;
+          colAttr.needsUpdate = true;
+          heatEdges.geometry.dispose();
+          heatEdges.geometry = new THREE.WireframeGeometry(heatGeo);
+        }
+
+        var tempV = new THREE.Vector3();
+        function updateScreenPins() {
+          var sw = 1920;
+          var sh = 1080;
+
+          if (officeGroup.visible) {
+            tempV.set(4, 7.8, -4);
+            tempV.project(camera);
+            self.pinAbnormalPos = { left: (tempV.x * 0.5 + 0.5) * sw + 'px', top: (-tempV.y * 0.5 + 0.5) * sh + 'px' };
+
+            tempV.set(4, 8.4, 3);
+            tempV.project(camera);
+            self.pinVav1Pos = { left: (tempV.x * 0.5 + 0.5) * sw + 'px', top: (-tempV.y * 0.5 + 0.5) * sh + 'px' };
+          }
+
+          if (engineGroup.visible) {
+            tempV.set(-6, 7.2, -9);
+            tempV.project(camera);
+            self.pinRackPos = { left: (tempV.x * 0.5 + 0.5) * sw + 'px', top: (-tempV.y * 0.5 + 0.5) * sh + 'px' };
+          }
+
+          if (chillerGroup.visible) {
+            tempV.set(-10, 9.5, -6);
+            tempV.project(camera);
+            self.pinChillerPos = { left: (tempV.x * 0.5 + 0.5) * sw + 'px', top: (-tempV.y * 0.5 + 0.5) * sh + 'px' };
+          }
+        }
+
+        var particleProgress = 0;
+        function animate() {
+          requestAnimationFrame(animate);
+
+          updateHeatmap();
+
+          if (officeGroup.visible) {
+            particleProgress = (particleProgress + 0.003) % 1;
+            var pPositions = flowPoints.geometry.attributes.position.array;
+            for (var ptIdx = 0; ptIdx < particleCount; ptIdx++) {
+              var prog = (particleProgress + ptIdx / particleCount) % 1;
+              var posAtCurve = chilledCurve.getPoint(prog);
+              pPositions[ptIdx * 3] = posAtCurve.x;
+              pPositions[ptIdx * 3 + 1] = posAtCurve.y;
+              pPositions[ptIdx * 3 + 2] = posAtCurve.z;
+            }
+            flowPoints.geometry.attributes.position.needsUpdate = true;
+          }
+
+          updateScreenPins();
+
+          controls.update();
+          renderer.render(scene, camera);
+        }
+        animate();
+
+        // 楼层与多场景切换控制器
+        window.switchSceneMode = function(modeKey) {
+          officeGroup.visible = (modeKey === 'office' || modeKey === 'alarm');
+          engineGroup.visible = (modeKey === 'engine');
+          chillerGroup.visible = (modeKey === 'chiller');
+          generalOfficeGroup.visible = (modeKey === 'overview');
+
+          if (modeKey === 'engine') {
+            controls.target.set(0, 3, 0);
+            camera.position.set(38, 30, 42);
+            blueSpot.position.set(0, 45, 10);
+          } else if (modeKey === 'chiller') {
+            controls.target.set(0, 3.5, 0);
+            camera.position.set(42, 34, 46);
+            blueSpot.position.set(-10, 45, 0);
+          } else if (modeKey === 'overview') {
+            controls.target.set(0, 0, 0);
+            camera.position.set(48, 44, 58);
+            blueSpot.position.set(-15, 45, 10);
+          } else {
+            // office / alarm
+            controls.target.set(0, 0, 0);
+            camera.position.set(45, 42, 55);
+            blueSpot.position.set(-15, 45, 10);
+          }
+        };
+
+        window.focusRackAlarm = function() {
+          window.switchSceneMode('engine');
+          controls.target.set(-6, 4, -9);
+          camera.position.set(16, 18, 16);
+        };
+
+        window.resetCameraView = function() {
+          window.switchSceneMode(self.currentTab);
+        };
+
+        window.coolDownHeatmap = function() {
+          isCoolingState = true;
+          redSpot.color.setHex(0x10b981);
+        };
+      }
+    }
+  });
+
+  app.mount('#screen');
+})();
+</script>
+</body>
+</html>
