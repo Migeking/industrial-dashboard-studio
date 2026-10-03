@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>曝气鼓风机房智能供风能效驾驶舱</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<style>
+/* ==========================================================================
+   工业标准深色玄武岩与精工钢蓝体系 (ISA-101 Industrial Dark Slate Theme)
+   去除AI刺眼青光，采用低眩光、高对比度、工业人机工程配色
+   ========================================================================== */
+:root {
+  --bg-deep: #070c16;
+  --bg-main: #0a111f;
+  --surface-panel: rgba(14, 23, 40, 0.88);
+  --surface-panel-sub: rgba(18, 30, 52, 0.72);
+  --surface-sunken: rgba(6, 11, 20, 0.82);
+  --surface-hover: rgba(30, 48, 80, 0.6);
+  
+  --border-subtle: rgba(70, 100, 140, 0.28);
+  --border-medium: rgba(90, 130, 180, 0.45);
+  --border-hi: rgba(56, 189, 248, 0.75);
+
+  /* ISA-101 工业标准工况色 */
+  --status-run: #10b981;        /* 稳重翡翠绿：运行中 */
+  --status-run-glow: rgba(16, 185, 129, 0.25);
+  --status-standby: #64748b;    /* 冷静工控灰：热备/就绪 */
+  --status-warn: #f59e0b;       /* 警戒琥珀橙：防喘振/偏高 */
+  --status-alarm: #ef4444;      /* 紧急警戒红：超限/故障 */
+  --status-optimal: #0284c7;    /* 能效最优色：工业电工蓝 */
+
+  /* 工业文本与金属高光 */
+  --t-heading: #f8fafc;
+  --t-body: #cbd5e1;
+  --t-muted: #8294ab;
+  --t-dim: #4e6178;
+
+  --accent-blue: #38bdf8;
+  --accent-cyan: #0ea5e9;
+  --mono: "Bahnschrift", "DIN Alternate", "Consolas", monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-deep);
+  color: var(--t-body);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
+}
+
+#viewport {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #02050b;
+}
+
+#screen {
+  width: 1920px;
+  height: 1080px;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  background: 
+    radial-gradient(circle at 50% 15%, rgba(14, 165, 233, 0.05), transparent 60%),
+    linear-gradient(180deg, #09101d 0%, #060b14 100%);
+  transform-origin: center center;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.95);
+}
+
+/* ==========================================================================
+   1. 顶栏区域 (Master Banner, 72px)
+   ========================================================================== */
+.top-header {
+  height: 72px;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: 530px 1fr 430px;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(16, 26, 45, 0.98) 0%, rgba(9, 16, 29, 0.94) 100%);
+  border-bottom: 1px solid var(--border-medium);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  white-space: nowrap;
+}
+
+.brand-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.3), rgba(8, 20, 36, 0.9));
+  border: 1px solid var(--border-medium);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+
+.brand-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: #38bdf8;
+}
+
+.brand-title {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.brand-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.brand-sub {
+  font-size: 10px;
+  color: var(--t-muted);
+  letter-spacing: 1px;
+  margin-top: 3px;
+  font-family: var(--mono);
+  white-space: nowrap;
+}
+
+/* ISA-18.2 告警动态简报栏 */
+.alarm-ticker-bar {
+  margin: 0 16px;
+  height: 38px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.alarm-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.alarm-badge-pill.warn {
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fcd34d;
+}
+.alarm-badge-pill.normal {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+}
+
+.ticker-text {
+  flex: 1;
+  font-size: 11.5px;
+  color: var(--t-body);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+}
+
+.scenario-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface-sunken);
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+}
+
+.scenario-tabs button {
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--t-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.scenario-tabs button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.scenario-tabs button.active {
+  color: #ffffff;
+  background: linear-gradient(180deg, #0284c7, #0369a1);
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
+}
+
+.clock-box {
+  text-align: right;
+  min-width: 140px;
+}
+
+.clock-time {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 1px;
+}
+
+.clock-date {
+  font-size: 10.5px;
+  color: var(--t-muted);
+  margin-top: 1px;
+  font-family: var(--mono);
+}
+
+/* ==========================================================================
+   2. 主工作区布局 (Main Dashboard Body)
+   左翼 360px | 中央 1110px | 右翼 400px
+   ========================================================================== */
+.main {
+  position: absolute;
+  top: 72px;
+  bottom: 34px;
+  left: 0;
+  right: 0;
+  padding: 14px 20px;
+  display: grid;
+  grid-template-columns: 360px 1fr 400px;
+  gap: 16px;
+}
+
+.wing {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* 工业精工卡片容器（去除一切 AI 科技折角） */
+.panel {
+  background: var(--surface-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-head {
+  height: 38px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(18, 28, 48, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.panel-head h2 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--t-heading);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.5px;
+}
+
+.panel-head h2::before {
+  content: "";
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--accent-blue);
+}
+
+.panel-head .more {
+  font-size: 11px;
+  color: var(--t-muted);
+  font-family: var(--mono);
+}
+
+/* ==========================================================================
+   3. 左翼：供风能效指标与对标域
+   ========================================================================== */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.kpi {
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-top: 2px solid var(--accent-blue);
+  border-radius: 5px;
+  padding: 10px 12px;
+  position: relative;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.kpi:hover {
+  border-color: var(--border-medium);
+  background: rgba(10, 18, 32, 0.95);
+}
+
+.kpi.g { border-top-color: var(--status-run); }
+.kpi.y { border-top-color: var(--status-warn); }
+.kpi.o { border-top-color: #38bdf8; }
+
+.kpi .k-label {
+  font-size: 11px;
+  color: var(--t-muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kpi .k-value {
+  font-family: var(--mono);
+  font-size: 24px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-top: 4px;
+  line-height: 1.1;
+}
+
+.kpi.g .k-value { color: #6ee7b7; }
+.kpi.y .k-value { color: #fde047; }
+.kpi.o .k-value { color: #7dd3fc; }
+
+.kpi .k-unit {
+  font-size: 11px;
+  color: var(--t-muted);
+  font-weight: 400;
+  margin-left: 4px;
+  font-family: -apple-system, sans-serif;
+}
+
+.kpi .k-sub {
+  font-size: 10px;
+  color: var(--t-dim);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chart-box {
+  width: 100%;
+}
+
+/* ==========================================================================
+   4. 中央：高保真 P&ID 工业工艺流程拓扑图 (SVG)
+   ========================================================================== */
+.center-stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.svg-wrap {
+  flex: 1;
+  min-height: 0;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.stage-header-bar {
+  padding: 8px 16px 4px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px dashed rgba(70, 100, 140, 0.2);
+}
+
+.stage-title-wrap h3 {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 0.5px;
+}
+
+.stage-title-wrap p {
+  font-size: 11px;
+  color: var(--t-muted);
+  margin-top: 2px;
+}
+
+.stage-tags {
+  display: flex;
+  gap: 8px;
+}
+
+.stage-tag {
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  color: var(--t-muted);
+}
+.stage-tag b {
+  color: #38bdf8;
+  font-family: var(--mono);
+}
+
+.svg-wrap svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* SVG 工业图元样式 */
+.blower-unit {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.blower-unit .blower-bg {
+  fill: rgba(14, 24, 42, 0.85);
+  stroke: var(--border-subtle);
+  stroke-width: 1.2;
+  transition: all 0.2s ease;
+}
+
+.blower-unit:hover .blower-bg {
+  stroke: var(--border-medium);
+  fill: rgba(20, 34, 60, 0.95);
+}
+
+.blower-unit.selected .blower-bg {
+  stroke: var(--accent-blue);
+  stroke-width: 2;
+  fill: rgba(18, 36, 66, 0.98);
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.35));
+}
+
+.blower-unit.standby {
+  opacity: 0.65;
+}
+
+.fan-rotor {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: spin 2.0s linear infinite;
+}
+
+.standby .fan-rotor {
+  animation-play-state: paused;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 工艺管道与流向 */
+.flow {
+  fill: none;
+  stroke: #0284c7;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 10 10;
+  animation: dashmove 1.1s linear infinite;
+  opacity: 0.9;
+}
+
+.flow.active-air {
+  stroke: #38bdf8;
+}
+
+.flow.water {
+  stroke: #0284c7;
+}
+
+.flow.thin {
+  stroke-width: 3.5;
+}
+
+.no-flow {
+  opacity: 0.15;
+  stroke: #475569;
+  animation: none;
+}
+
+@keyframes dashmove {
+  to { stroke-dashoffset: -40; }
+}
+
+/* 好氧生化池与水下气泡 */
+.bubble {
+  fill: rgba(224, 242, 254, 0.85);
+  animation: rise 3.2s ease-in infinite;
+  opacity: 0;
+}
+
+@keyframes rise {
+  0% { transform: translateY(0); opacity: 0; }
+  15% { opacity: 0.85; }
+  85% { opacity: 0.7; }
+  100% { transform: translateY(-160px); opacity: 0; }
+}
+
+.water-shimmer {
+  animation: waterGlow 4s ease-in-out infinite;
+}
+
+@keyframes waterGlow {
+  0%, 100% { opacity: 0.65; }
+  50% { opacity: 0.82; }
+}
+
+.svg-label {
+  fill: #f1f5f9;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.svg-sub {
+  fill: var(--t-muted);
+  font-size: 10.5px;
+  font-family: var(--mono);
+}
+
+.svg-val {
+  fill: #7dd3fc;
+  font-size: 11px;
+  font-family: var(--mono);
+  font-weight: 700;
+}
+
+.status-run { fill: var(--status-run); }
+.status-standby { fill: var(--status-standby); }
+
+/* ==========================================================================
+   5. 右翼：机组 Faceplate、安全仪表与闭环调控
+   ========================================================================== */
+.faceplate {
+  border-top: 2px solid var(--accent-blue);
+  background: var(--surface-panel);
+}
+
+.fp-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.fp-cell {
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: 5px;
+  padding: 8px 10px;
+}
+
+.fp-cell .l {
+  font-size: 10.5px;
+  color: var(--t-muted);
+}
+
+.fp-cell .v {
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-top: 3px;
+  line-height: 1.1;
+}
+
+.fp-cell .v small {
+  font-size: 10px;
+  color: var(--t-muted);
+  font-weight: 400;
+  margin-left: 2px;
+  font-family: -apple-system, sans-serif;
+}
+
+/* 好氧池 DO 闭环设定器 */
+.do-ctl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--surface-sunken);
+  border-radius: 6px;
+  margin: 10px 14px;
+  border: 1px solid var(--border-subtle);
+}
+
+.do-ctl button {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid var(--border-medium);
+  background: rgba(30, 48, 80, 0.6);
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.do-ctl button:hover {
+  background: var(--accent-cyan);
+  border-color: #38bdf8;
+  box-shadow: 0 2px 8px rgba(14, 165, 233, 0.4);
+}
+
+.do-target {
+  font-family: var(--mono);
+  font-size: 24px;
+  font-weight: 700;
+  color: #6ee7b7;
+  letter-spacing: 0.5px;
+}
+
+/* 报警响应表格 */
+.alarm-table-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px 8px 8px;
+}
+
+.alarm-table-wrap::-webkit-scrollbar {
+  width: 5px;
+}
+.alarm-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+.alarm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.alarm-table th {
+  text-align: left;
+  padding: 6px 8px;
+  color: var(--t-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(18, 28, 48, 0.4);
+}
+
+.alarm-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--t-body);
+}
+
+.alarm-table tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.lv-warn {
+  color: #fcd34d;
+  font-weight: 700;
+}
+
+.lv-info {
+  color: #7dd3fc;
+}
+
+.ack-btn {
+  font-size: 10.5px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ack-btn:hover:not(:disabled) {
+  background: rgba(245, 158, 11, 0.28);
+}
+
+.ack-btn:disabled {
+  border-color: rgba(148, 163, 184, 0.2);
+  background: transparent;
+  color: var(--t-dim);
+  cursor: default;
+}
+
+/* ==========================================================================
+   6. 底栏状态条 (Master Status Bar, 34px)
+   ========================================================================== */
+.bottom-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background: #050a14;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+  color: var(--t-muted);
+}
+
+.bottom-left-status {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--status-run);
+  box-shadow: 0 0 6px var(--status-run);
+}
+
+.bottom-bar b {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.telemetry {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.telemetry span b {
+  color: #6ee7b7;
+  font-family: var(--mono);
+}
+</style>
+</head>
+<body>
+<div id="viewport">
+<div id="screen">
+<div id="app" style="position:absolute;inset:0;display:flex;flex-direction:column;">
+
+  <!-- 1. 顶栏区域 -->
+  <header class="top-header">
+    <div class="brand-row">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm0-13a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a3 3 0 1 1 3-3 3 3 0 0 1-3 3z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">
+          <span>曝气鼓风机房智能供风能效驾驶舱</span>
+          <span class="brand-badge">Level 2 能效优化</span>
+        </div>
+        <div class="brand-sub">AERATION BLOWER HOUSE · INTELLIGENT AIR SUPPLY &amp; EFFICIENCY COCKPIT</div>
+      </div>
+    </div>
+
+    <!-- ISA-18.2 工控报警简报栏 -->
+    <div class="alarm-ticker-bar">
+      <span class="alarm-badge-pill" :class="unacked > 0 ? 'warn' : 'normal'">
+        {{ unacked > 0 ? '● 报警响应' : '✓ 运行正常' }}
+      </span>
+      <div class="ticker-text" v-html="tickerHtml"></div>
+    </div>
+
+    <div class="header-right">
+      <nav class="scenario-tabs">
+        <button v-for="m in modes" :key="m.id" :class="{ active: modeId === m.id }" @click="switchMode(m.id)">{{ m.name }}</button>
+      </nav>
+      <div class="clock-box">
+        <div class="clock-time">{{ clock }}</div>
+        <div class="clock-date">最后更新时间: {{ lastSeen }}</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. 主体三栏布局 -->
+  <div class="main">
+    
+    <!-- 左翼：能效 KPI 与深度趋势分析 -->
+    <div class="wing">
+      <div class="kpi-grid">
+        <div class="kpi">
+          <div class="k-label"><span>总供气量</span><span style="font-size:10px;color:var(--t-dim);">FIT-201</span></div>
+          <div class="k-value">{{ totals.flow }}<span class="k-unit">万Nm³/h</span></div>
+          <div class="k-sub"><span>3台机组实时总和</span><span style="color:#38bdf8;">{{ modeId === 'peak' ? '高负荷' : '正常' }}</span></div>
+        </div>
+        <div class="kpi o">
+          <div class="k-label"><span>总运行功率</span><span style="font-size:10px;color:var(--t-dim);">POW-SUM</span></div>
+          <div class="k-value">{{ totals.power }}<span class="k-unit">kW</span></div>
+          <div class="k-sub"><span>含辅助系统 {{ auxPower }} kW</span><span style="color:#7dd3fc;">cosφ 0.98</span></div>
+        </div>
+        <div class="kpi y">
+          <div class="k-label"><span>吨水电耗</span><span style="font-size:10px;color:var(--t-dim);">SEC-01</span></div>
+          <div class="k-value">{{ totals.unit }}<span class="k-unit">kWh/m³</span></div>
+          <div class="k-sub"><span>行业对标 ≤ 0.260</span><span :style="{ color: parseFloat(totals.unit) <= 0.26 ? '#6ee7b7' : '#fde047' }">{{ parseFloat(totals.unit) <= 0.26 ? '优级' : '偏高' }}</span></div>
+        </div>
+        <div class="kpi g">
+          <div class="k-label"><span>综合供风效率</span><span style="font-size:10px;color:var(--t-dim);">EFF-ISO</span></div>
+          <div class="k-value">{{ totals.eff }}<span class="k-unit">%</span></div>
+          <div class="k-sub"><span>等熵绝热效率加权</span><span style="color:#6ee7b7;">国标1级</span></div>
+        </div>
+      </div>
+
+      <div class="panel" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+        <div class="panel-head">
+          <h2>24h 智能供气量与 DO 闭环耦合趋势</h2>
+          <span class="more">万Nm³/h ｜ mg/L</span>
+        </div>
+        <div id="chartTrend" class="chart-box" style="flex:1;min-height:220px;"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>三台机组单机比功率对标</h2>
+          <span class="more">kW / kNm³/h (越低越好)</span>
+        </div>
+        <div id="chartCompare" class="chart-box" style="height:190px;"></div>
+      </div>
+    </div>
+
+    <!-- 中央：高保真 P&ID 曝气供风工艺拓扑流程图 (SVG) -->
+    <div class="wing center-stage">
+      <div class="panel svg-wrap">
+        <div class="stage-header-bar">
+          <div class="stage-title-wrap">
+            <h3>供风全流程 SCADA 拓扑图 (P&amp;ID 工艺仿真)</h3>
+            <p>3 × 空气悬浮离心鼓风机（2用1备）→ 变压变频总管 → 4路好氧曝气支管 → 微孔曝气盘阵列</p>
+          </div>
+          <div class="stage-tags">
+            <span class="stage-tag">最不利点压损: <b>6.2 kPa</b></span>
+            <span class="stage-tag">防喘振安全裕度: <b>92.5%</b></span>
+          </div>
+        </div>
+
+        <svg viewBox="0 0 1020 620" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <!-- 沉浸式好氧生化池渐变 -->
+            <linearGradient id="tankWaterGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#0f2b48" stop-opacity="0.95"/>
+              <stop offset="25%" stop-color="#0e3a5d" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="#071a2e" stop-opacity="0.98"/>
+            </linearGradient>
+
+            <!-- 金属立体管道渐变 -->
+            <linearGradient id="pipeMetalGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#334d6e"/>
+              <stop offset="35%" stop-color="#64748b"/>
+              <stop offset="65%" stop-color="#334d6e"/>
+              <stop offset="100%" stop-color="#1e293b"/>
+            </linearGradient>
+
+            <!-- 垂直集气总管渐变 -->
+            <linearGradient id="vertPipeGrad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#1e293b"/>
+              <stop offset="30%" stop-color="#475569"/>
+              <stop offset="70%" stop-color="#64748b"/>
+              <stop offset="100%" stop-color="#1e293b"/>
+            </linearGradient>
+
+            <!-- 鼓风机外壳金属渐变 -->
+            <linearGradient id="blowerCaseGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#1e2d42"/>
+              <stop offset="50%" stop-color="#162234"/>
+              <stop offset="100%" stop-color="#0f1724"/>
+            </linearGradient>
+          </defs>
+
+          <!-- 1. 鼓风机组 1# ~ 3# -->
+          <g v-for="(b, i) in blowers" :key="b.id" class="blower-unit" :class="{ selected: selectedId === b.id, standby: !b.running }" @click="selectBlower(b.id)">
+            <!-- 背景卡槽与机组底座 -->
+            <rect class="blower-bg" :x="20" :y="36 + i * 184" width="280" height="156" rx="8"/>
+            
+            <!-- 进风过滤消音静压箱 (吸气口) -->
+            <rect :x="32" :y="64 + i * 184" width="36" height="74" rx="4" fill="#141e2e" stroke="#334d6e" stroke-width="1.2"/>
+            <line v-for="l in 5" :key="'l'+l" :x1="38" :y1="72 + i * 184 + l * 10" :x2="62" :y2="72 + i * 184 + l * 10" stroke="#475569" stroke-width="1.2" stroke-linecap="round"/>
+            <text :x="50" :y="152 + i * 184" class="svg-sub" text-anchor="middle" font-size="9">进风过滤</text>
+
+            <!-- 变频高速永磁电机与蜗壳机身 -->
+            <rect :x="76" :y="58 + i * 184" width="86" height="86" rx="6" fill="url(#blowerCaseGrad)" stroke="#38bdf8" :stroke-opacity="b.running ? 0.6 : 0.2" stroke-width="1.2"/>
+            <!-- 电机散热鳍片 -->
+            <line v-for="f in 7" :key="'f'+f" :x1="84 + f * 9" :y1="64 + i * 184" :x2="84 + f * 9" :y2="76 + i * 184" stroke="#475569" stroke-width="1.2"/>
+
+            <!-- 离心涡轮叶轮与高速空气轴承视窗 -->
+            <circle :cx="119" :cy="114 + i * 184" r="28" fill="#09121f" stroke="#334d6e" stroke-width="1.5"/>
+            <g class="fan-rotor">
+              <path :d="fanBlade(119, 114 + i * 184)" :fill="b.running ? '#38bdf8' : '#64748b'" opacity="0.9"/>
+              <path :d="fanBlade(119, 114 + i * 184)" :fill="b.running ? '#38bdf8' : '#64748b'" opacity="0.9" :transform="`rotate(120 119 ${114 + i * 184})`"/>
+              <path :d="fanBlade(119, 114 + i * 184)" :fill="b.running ? '#38bdf8' : '#64748b'" opacity="0.9" :transform="`rotate(240 119 ${114 + i * 184})`"/>
+              <circle :cx="119" :cy="114 + i * 184" r="6" fill="#e2e8f0"/>
+            </g>
+
+            <!-- 出口止回阀与电动隔离阀 -->
+            <rect :x="170" :y="96 + i * 184" width="16" height="36" rx="2" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+            <polygon :points="`174,${106+i*184} 182,${114+i*184} 174,${122+i*184}`" fill="#94a3b8"/>
+
+            <!-- 运行状态指示灯与机组标牌 -->
+            <circle :cx="284" :cy="52 + i * 184" r="5" :class="b.running ? 'status-run' : 'status-standby'"/>
+            <text :x="196" :y="64 + i * 184" class="svg-label">{{ b.id }}# 空悬浮离心式</text>
+            <text :x="196" :y="84 + i * 184" class="svg-sub">{{ b.running ? '变频优化运行' : '联锁热备就绪' }}</text>
+            <text :x="196" :y="108 + i * 184" class="svg-val">{{ b.running ? b.freq.toFixed(1) + ' Hz · ' + b.power.toFixed(1) + ' kW' : '待命中 (就绪)' }}</text>
+            <text :x="196" :y="130 + i * 184" class="svg-sub">风量 {{ b.running ? (b.flow / 10000).toFixed(2) + '万' : '--' }} Nm³/h</text>
+            <text :x="196" :y="150 + i * 184" class="svg-sub" font-size="9.5">轴温 {{ b.running ? b.temp.toFixed(1) + '℃' : '--' }} ｜ 振动 {{ b.running ? b.vib.toFixed(1) + 'mm/s' : '--' }}</text>
+
+            <!-- 出口支管 → 汇流至主管 (动态流体) -->
+            <path :d="`M 186 ${114 + i * 184} H 330 V ${240 + i * 50} H 380`"
+                  class="flow active-air" :class="{ 'no-flow': !b.running }" />
+          </g>
+
+          <!-- 2. 金属立体集气总管 (DN800 母管) 与防喘振回路 -->
+          <!-- 防喘振快速放空旁通阀 (Surge Protection Bypass Valve) -->
+          <path d="M 391 210 V 170 H 430" stroke="#f59e0b" stroke-width="2" stroke-dasharray="3 3" fill="none"/>
+          <rect x="430" y="162" width="22" height="16" rx="2" fill="#0f172a" stroke="#f59e0b" stroke-width="1.2"/>
+          <polygon points="434,166 448,174 434,174 448,166" fill="#f59e0b"/>
+          <text x="441" y="155" text-anchor="middle" class="svg-sub" font-size="8.5" fill="#fcd34d">防喘振放空阀</text>
+
+          <rect x="380" y="210" width="22" height="190" rx="4" fill="url(#vertPipeGrad)" stroke="#64748b" stroke-width="1.2"/>
+          <text x="391" y="424" text-anchor="middle" class="svg-sub">集气主管 DN800</text>
+          
+          <!-- 干管压力变送器 (PT-201) -->
+          <circle cx="391" cy="305" r="16" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5"/>
+          <text x="391" y="309" text-anchor="middle" class="svg-val" font-size="10">{{ mainPressure.toFixed(1) }}</text>
+          <text x="391" y="335" text-anchor="middle" class="svg-sub" font-size="9">kPa</text>
+
+          <!-- 主管输送至好氧生化池 -->
+          <path d="M 402 305 H 520" class="flow active-air" stroke-width="6"/>
+
+          <!-- 3. 好氧生化池与微孔曝气系统 -->
+          <!-- 反应池水泥池壁与外框 -->
+          <rect x="520" y="36" width="480" height="520" rx="10" fill="#091322" stroke="#334d6e" stroke-width="1.5"/>
+          <!-- 池内水体渐变 -->
+          <rect class="water-shimmer" x="532" y="100" width="456" height="440" rx="6" fill="url(#tankWaterGrad)"/>
+          
+          <!-- 好氧池信息抬头 -->
+          <text x="542" y="64" class="svg-label">好氧生化反应池 · 微孔曝气深化处理工段</text>
+          <text x="542" y="84" class="svg-val">DO 实时: {{ doActual.toFixed(2) }} mg/L ｜ 目标: {{ doTarget.toFixed(1) }} mg/L</text>
+          <text x="820" y="84" class="svg-sub">MLSS: 3820 mg/L ｜ 水温: 19.8℃</text>
+
+          <!-- 4 路配气立管、电动调节蝶阀与微孔曝气盘阵列 -->
+          <g v-for="(br, bi) in branches" :key="'br' + bi">
+            <!-- 配风立管 -->
+            <path :d="`M ${570 + bi * 110} 305 V 450`" class="flow thin active-air" :class="{ 'no-flow': br.open < 5 }" />
+            
+            <!-- 电动蝶阀机构 -->
+            <rect :x="556 + bi * 110" :y="288" width="28" height="18" rx="3" fill="#0f172a" stroke="#f59e0b" stroke-width="1.5"/>
+            <polygon :points="`${562 + bi * 110},292 ${578 + bi * 110},302 ${562 + bi * 110},302 ${578 + bi * 110},292`" fill="#f59e0b"/>
+            <!-- 开度文本 -->
+            <text :x="570 + bi * 110" :y="278" text-anchor="middle" class="svg-sub" font-weight="700">{{ br.open }}%</text>
+            <text :x="570 + bi * 110" :y="262" text-anchor="middle" class="svg-sub" font-size="9.5">阀{{ bi + 1 }}#</text>
+
+            <!-- 底部微孔曝气盘主管与曝气头 -->
+            <rect :x="540 + bi * 110" :y="450" width="60" height="8" rx="2" fill="#1e293b" stroke="#38bdf8" stroke-width="1"/>
+            <circle v-for="d in 5" :key="'d'+d" :cx="544 + bi * 110 + d * 9" cy="454" r="2.5" fill="#67e8f9"/>
+          </g>
+
+          <!-- 物理微气泡群升腾动画 (模拟真实曝气池高密度微孔充氧) -->
+          <circle v-for="(bb, k) in 22" :key="'bb' + k" class="bubble"
+                  :cx="550 + ((k * 41) % 410)"
+                  cy="460"
+                  :r="1.8 + (k % 4) * 0.9"
+                  :style="`animation-duration:${2.6 + (k % 5) * 0.5}s;animation-delay:${(k % 7) * 0.4}s;`" />
+
+          <!-- 水质在线监测探头浸入 -->
+          <g transform="translate(940, 110)">
+            <rect x="0" y="0" width="38" height="90" rx="3" fill="rgba(15, 23, 42, 0.9)" stroke="#38bdf8" stroke-width="1.2"/>
+            <line x1="19" y1="90" x2="19" y2="170" stroke="#38bdf8" stroke-width="2"/>
+            <circle cx="19" cy="172" r="5" fill="#10b981"/>
+            <text x="19" y="32" text-anchor="middle" class="svg-sub" font-size="9">在线</text>
+            <text x="19" y="48" text-anchor="middle" class="svg-sub" font-size="9">探头</text>
+            <text x="19" y="66" text-anchor="middle" class="svg-val" font-size="9.5">DO</text>
+          </g>
+
+          <!-- 池底工艺标注 -->
+          <text x="542" y="525" class="svg-sub">4区独立好氧格室 ｜ 变风量平衡调控 ｜ 阻力损失自动寻优 ｜ 污泥沉降比(SV30) 24%</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 右翼：Faceplate、安全表与调控操作 -->
+    <div class="wing">
+      
+      <!-- 鼓风机 Faceplate 操作面板 -->
+      <div class="panel faceplate">
+        <div class="panel-head">
+          <span class="fp-title">
+            <svg style="width:14px;height:14px;fill:#38bdf8;" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.5h-2v-2h2zm0-4h-2V7h2z"/></svg>
+            {{ selBlower.id }}# 鼓风机 · 运行 Faceplate
+          </span>
+          <span class="more" :style="{ color: selBlower.running ? '#6ee7b7' : '#94a3b8' }">
+            {{ selBlower.running ? '● 变频运行' : '○ 联锁热备' }}
+          </span>
+        </div>
+        <div class="fp-grid">
+          <div class="fp-cell">
+            <div class="l">变频工作频率</div>
+            <div class="v">{{ selBlower.running ? selBlower.freq.toFixed(1) : '--' }} <small>Hz</small></div>
+          </div>
+          <div class="fp-cell">
+            <div class="l">机组实测轴功率</div>
+            <div class="v">{{ selBlower.running ? selBlower.power.toFixed(1) : '--' }} <small>kW</small></div>
+          </div>
+          <div class="fp-cell">
+            <div class="l">出口风压</div>
+            <div class="v">{{ selBlower.running ? selBlower.press.toFixed(1) : '--' }} <small>kPa</small></div>
+          </div>
+          <div class="fp-cell">
+            <div class="l">供气瞬时流量</div>
+            <div class="v">{{ selBlower.running ? (selBlower.flow / 1000).toFixed(1) : '--' }} <small>kNm³/h</small></div>
+          </div>
+          <div class="fp-cell">
+            <div class="l">电机轴承温度</div>
+            <div class="v">{{ selBlower.running ? selBlower.temp.toFixed(1) : '--' }} <small>℃</small></div>
+          </div>
+          <div class="fp-cell">
+            <div class="l">机身水平振动</div>
+            <div class="v">{{ selBlower.running ? selBlower.vib.toFixed(1) : '--' }} <small>mm/s</small></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 干管压力安全仪表 (集成喘振警戒) -->
+      <div class="panel">
+        <div class="panel-head">
+          <h2>干管压力安全工况表</h2>
+          <span class="more">kPa · 喘振极限 78.0</span>
+        </div>
+        <div id="chartGauge" class="chart-box" style="height:190px;"></div>
+      </div>
+
+      <!-- 好氧池 DO 闭环设定器 -->
+      <div class="panel">
+        <div class="panel-head">
+          <h2>好氧池 DO 溶解氧智能闭环</h2>
+          <span class="more">内回流比 200%</span>
+        </div>
+        <div class="do-ctl">
+          <button class="do-minus" @click="doAdj(-0.1)" title="下调 0.1 mg/L">−</button>
+          <div style="text-align:center;">
+            <div class="do-target">{{ doTarget.toFixed(1) }} <span style="font-size:11px;color:var(--t-muted);font-weight:normal;">mg/L</span></div>
+            <div style="font-size:10.5px;color:var(--t-muted);margin-top:2px;">
+              实测 {{ doActual.toFixed(2) }} mg/L · 风阀总开度 {{ valveAvg }}%
+            </div>
+          </div>
+          <button class="do-plus" @click="doAdj(0.1)" title="上调 0.1 mg/L">＋</button>
+        </div>
+      </div>
+
+      <!-- 实时工控报警与确认处理 -->
+      <div class="panel" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+        <div class="panel-head">
+          <h2>现场实时告警与联锁</h2>
+          <span class="more">{{ unacked }} 条未确认</span>
+        </div>
+        <div class="alarm-table-wrap">
+          <table class="alarm-table">
+            <thead>
+              <tr><th>时间</th><th>设备</th><th>告警详情</th><th>等级</th><th>确认</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="(a, i) in alarms" :key="i">
+                <td style="font-family:var(--mono);">{{ a.time }}</td>
+                <td>{{ a.dev }}</td>
+                <td>{{ a.msg }}</td>
+                <td :class="a.level === '预警' ? 'lv-warn' : 'lv-info'">{{ a.level }}</td>
+                <td><button class="ack-btn" :disabled="a.ack" @click="ackAlarm(i)">{{ a.ack ? '已确认' : '确认' }}</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 3. 底栏状态条 -->
+  <footer class="bottom-bar">
+    <div class="bottom-left-status">
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        <span>控制模式: <b>APC 多变量前馈闭环自控中</b></span>
+      </div>
+      <span>最不利点寻优: <b>激活 (节电率 8.6%)</b></span>
+      <span>防喘振联锁: <b>正常就绪 (裕度安全)</b></span>
+    </div>
+    <div class="telemetry">
+      <span>现场总线: <b>Modbus-TCP / Profinet (24ms)</b></span>
+      <span>数据质量 (quality): <b>GOOD (100.0%)</b></span>
+      <span>最后更新时间: {{ lastSeen }}</span>
+    </div>
+  </footer>
+
+</div>
+</div>
+</div>
+
+<script>
+/* 27号：曝气鼓风机房智能供风能效驾驶舱（去AI化专业工业SCADA版） */
+(() => {
+  const { createApp, ref, reactive, computed, onMounted, onUnmounted, nextTick } = Vue;
+
+  const MODES = {
+    normal: {
+      name: '常规运行',
+      totals: { flow: '3.86', power: '268.5', unit: '0.245', eff: '96.2' },
+      auxPower: '93.8',
+      blowers: [
+        { id: 1, running: true, freq: 48.5, power: 88.5, flow: 19800, press: 62.5, temp: 46.5, vib: 1.8 },
+        { id: 2, running: true, freq: 47.2, power: 86.2, flow: 18800, press: 62.1, temp: 45.9, vib: 1.6 },
+        { id: 3, running: false, freq: 0, power: 0, flow: 0, press: 0, temp: 28.4, vib: 0.2 }
+      ],
+      branches: [42, 42, 40, 38],
+      mainPressure: 62.5,
+      doTarget: 2.0,
+      alarms: [
+        { time: '09:42:11', dev: '2# 鼓风机', msg: '轴温偏高微幅跟踪', level: '提示', ack: true }
+      ]
+    },
+    peak: {
+      name: '高峰负荷',
+      totals: { flow: '4.62', power: '342.8', unit: '0.268', eff: '94.1' },
+      auxPower: '21.0',
+      blowers: [
+        { id: 1, running: true, freq: 55.0, power: 112.4, flow: 23100, press: 68.4, temp: 52.3, vib: 2.4 },
+        { id: 2, running: true, freq: 54.2, power: 110.8, flow: 22800, press: 68.0, temp: 51.7, vib: 2.3 },
+        { id: 3, running: true, freq: 50.1, power: 98.6, flow: 20300, press: 67.2, temp: 49.5, vib: 2.1 }
+      ],
+      branches: [68, 66, 64, 62],
+      mainPressure: 68.2,
+      doTarget: 2.2,
+      alarms: [
+        { time: '11:03:47', dev: '3# 鼓风机', msg: '接近喘振安全裕度线', level: '预警', ack: false },
+        { time: '10:58:02', dev: '干管', msg: '管网阻力轻微波动', level: '提示', ack: true }
+      ]
+    },
+    night: {
+      name: '夜间低峰',
+      totals: { flow: '2.45', power: '168.3', unit: '0.218', eff: '97.4' },
+      auxPower: '33.0',
+      blowers: [
+        { id: 1, running: true, freq: 40.5, power: 68.4, flow: 12800, press: 55.6, temp: 41.2, vib: 1.2 },
+        { id: 2, running: true, freq: 39.8, power: 66.9, flow: 11700, press: 55.1, temp: 40.8, vib: 1.1 },
+        { id: 3, running: false, freq: 0, power: 0, flow: 0, press: 0, temp: 27.9, vib: 0.2 }
+      ],
+      branches: [30, 30, 28, 26],
+      mainPressure: 55.4,
+      doTarget: 1.8,
+      alarms: [
+        { time: '02:15:33', dev: '全站能效', msg: '夜间变频低能耗自控中', level: '提示', ack: true }
+      ]
+    }
+  };
+
+  const app = createApp({
+    setup() {
+      const modes = [
+        { id: 'normal', name: '常规运行' },
+        { id: 'peak', name: '高峰负荷' },
+        { id: 'night', name: '夜间低峰' }
+      ];
+      const modeId = ref('normal');
+      const totals = reactive({ ...MODES.normal.totals });
+      const blowers = reactive(MODES.normal.blowers.map(b => ({ ...b })));
+      const branches = reactive(MODES.normal.branches.map(o => ({ open: o })));
+      const alarms = reactive(MODES.normal.alarms.map(a => ({ ...a })));
+      const mainPressure = ref(MODES.normal.mainPressure);
+      const doTarget = ref(MODES.normal.doTarget);
+      const doActual = ref(MODES.normal.doTarget - 0.06);
+      const auxPower = ref(MODES.normal.auxPower);
+      const selectedId = ref(1);
+      const clock = ref('--:--:--');
+      const lastSeen = ref('--:--:--');
+
+      const selBlower = computed(() => blowers.find(b => b.id === selectedId.value) || blowers[0]);
+      const valveAvg = computed(() => Math.round(branches.reduce((s, b) => s + b.open, 0) / branches.length));
+      const unacked = computed(() => alarms.filter(a => !a.ack).length);
+
+      const tickerHtml = computed(() => {
+        if (!alarms.length) return '全系统工况受控，无未确认报警';
+        return alarms.map(a => `【${a.time}】<b>${a.dev}</b>: ${a.msg}（${a.ack ? '已确认' : '<span style="color:#fcd34d;">未确认</span>'}）`).join('&nbsp;&nbsp;◆&nbsp;&nbsp;');
+      });
+
+      function fanBlade(cx, cy) {
+        return `M ${cx} ${cy - 22} Q ${cx + 10} ${cy - 8} ${cx + 4} ${cy} Q ${cx - 4} ${cy - 8} ${cx} ${cy - 22} Z`;
+      }
+
+      function switchMode(id) {
+        modeId.value = id;
+        const m = MODES[id];
+        Object.assign(totals, m.totals);
+        auxPower.value = m.auxPower;
+        blowers.splice(0, blowers.length, ...m.blowers.map(b => ({ ...b })));
+        branches.splice(0, branches.length, ...m.branches.map(o => ({ open: o })));
+        alarms.splice(0, alarms.length, ...m.alarms.map(a => ({ ...a })));
+        mainPressure.value = m.mainPressure;
+        doTarget.value = m.doTarget;
+        doActual.value = m.doTarget - 0.06;
+
+        if (!blowers.find(b => b.id === selectedId.value && b.running)) {
+          const first = blowers.find(b => b.running);
+          if (first) selectedId.value = first.id;
+        }
+        nextTick(() => renderCharts());
+      }
+
+      function selectBlower(id) {
+        selectedId.value = id;
+      }
+
+      function doAdj(d) {
+        doTarget.value = Math.min(3.0, Math.max(1.0, Math.round((doTarget.value + d) * 10) / 10));
+      }
+
+      function ackAlarm(i) {
+        if (alarms[i]) alarms[i].ack = true;
+      }
+
+      function updateClock() {
+        const n = new Date();
+        const p = v => String(v).padStart(2, '0');
+        clock.value = `${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`;
+        lastSeen.value = clock.value;
+      }
+
+      const chartInstances = {};
+
+      function safeInit(domId, opt) {
+        const el = document.getElementById(domId);
+        if (!el) return null;
+        try {
+          if (chartInstances[domId]) chartInstances[domId].dispose();
+          const c = echarts.init(el);
+          c.setOption(opt);
+          chartInstances[domId] = c;
+          return c;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function renderCharts() {
+        const hours = [];
+        for (let h = 0; h < 24; h++) hours.push(`${String(h).padStart(2, '0')}:00`);
+        const baseF = parseFloat(totals.flow), baseD = doTarget.value;
+        const flow = hours.map((_, i) => +(baseF * (0.84 + 0.22 * Math.exp(-Math.pow(i - 11, 2) / 38)) + (Math.random() - 0.5) * 0.05).toFixed(2));
+        const dov = hours.map((_, i) => +(baseD + Math.sin(i / 3.4) * 0.14 + (Math.random() - 0.5) * 0.04).toFixed(2));
+
+        // 1. 24h 智能供气量与 DO 闭环趋势图 (去AI刺眼化，柔和工业风)
+        safeInit('chartTrend', {
+          tooltip: {
+            trigger: 'axis',
+            backgroundColor: 'rgba(10, 18, 32, 0.95)',
+            borderColor: '#334d6e',
+            textStyle: { color: '#f1f5f9', fontSize: 11 }
+          },
+          grid: { top: 32, right: 38, bottom: 24, left: 38 },
+          legend: {
+            textStyle: { color: '#8294ab', fontSize: 10 },
+            top: 0,
+            icon: 'rect',
+            itemWidth: 10,
+            itemHeight: 8,
+            data: ['供气量(万Nm³/h)', '好氧池DO(mg/L)']
+          },
+          xAxis: {
+            type: 'category',
+            data: hours,
+            axisLine: { lineStyle: { color: 'rgba(70, 100, 140, 0.3)' } },
+            axisTick: { show: false },
+            axisLabel: { color: '#8294ab', fontSize: 9.5 }
+          },
+          yAxis: [
+            {
+              type: 'value',
+              name: '万Nm³/h',
+              nameTextStyle: { color: '#8294ab', fontSize: 9 },
+              splitLine: { lineStyle: { color: 'rgba(70, 100, 140, 0.15)' } },
+              axisLabel: { color: '#8294ab', fontSize: 9 }
+            },
+            {
+              type: 'value',
+              name: 'mg/L',
+              min: 0,
+              max: 4,
+              nameTextStyle: { color: '#8294ab', fontSize: 9 },
+              splitLine: { show: false },
+              axisLabel: { color: '#8294ab', fontSize: 9 }
+            }
+          ],
+          series: [
+            {
+              name: '供气量(万Nm³/h)',
+              type: 'line',
+              smooth: true,
+              symbol: 'none',
+              data: flow,
+              lineStyle: { color: '#0ea5e9', width: 2 },
+              areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: 'rgba(14, 165, 233, 0.28)' },
+                  { offset: 1, color: 'rgba(14, 165, 233, 0.01)' }
+                ])
+              }
+            },
+            {
+              name: '好氧池DO(mg/L)',
+              type: 'line',
+              yAxisIndex: 1,
+              smooth: true,
+              symbol: 'none',
+              data: dov,
+              lineStyle: { color: '#10b981', width: 2 },
+              markLine: {
+                symbol: 'none',
+                data: [
+                  { yAxis: 2.4, lineStyle: { color: 'rgba(239, 68, 68, 0.5)', type: 'dashed' }, label: { formatter: '上限 2.4', position: 'insideEndTop', color: '#f87171', fontSize: 8.5 } },
+                  { yAxis: 1.6, lineStyle: { color: 'rgba(245, 158, 11, 0.5)', type: 'dashed' }, label: { formatter: '下限 1.6', position: 'insideEndBottom', color: '#fbbf24', fontSize: 8.5 } }
+                ]
+              }
+            }
+          ]
+        });
+
+        // 2. 三台机组单机比功率柱状图 (带国标能效基线)
+        const spec = blowers.map(b => b.running ? +((b.power / Math.max(1, b.flow)) * 1000).toFixed(1) : 0);
+        safeInit('chartCompare', {
+          tooltip: {
+            trigger: 'axis',
+            backgroundColor: 'rgba(10, 18, 32, 0.95)',
+            borderColor: '#334d6e',
+            textStyle: { color: '#f1f5f9', fontSize: 11 },
+            formatter: params => `${params[0].name}机组比功率: <b>${params[0].value}</b> kW/(kNm³/h)`
+          },
+          grid: { top: 20, right: 14, bottom: 24, left: 38 },
+          xAxis: {
+            type: 'category',
+            data: ['1# 机组', '2# 机组', '3# 机组'],
+            axisLine: { lineStyle: { color: 'rgba(70, 100, 140, 0.3)' } },
+            axisTick: { show: false },
+            axisLabel: { color: '#8294ab', fontSize: 10.5 }
+          },
+          yAxis: {
+            type: 'value',
+            splitLine: { lineStyle: { color: 'rgba(70, 100, 140, 0.15)' } },
+            axisLabel: { color: '#8294ab', fontSize: 9 }
+          },
+          series: [{
+            type: 'bar',
+            barWidth: 26,
+            data: spec,
+            itemStyle: {
+              color: (params) => {
+                if (params.value === 0) return '#334155';
+                return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: '#38bdf8' },
+                  { offset: 1, color: '#0369a1' }
+                ]);
+              },
+              borderRadius: [4, 4, 0, 0]
+            },
+            label: {
+              show: true,
+              position: 'top',
+              color: '#cbd5e1',
+              fontSize: 10,
+              fontFamily: 'Consolas, monospace',
+              formatter: v => v.value > 0 ? `${v.value}` : '停机'
+            },
+            markLine: {
+              symbol: 'none',
+              data: [
+                { yAxis: 4.8, lineStyle: { color: 'rgba(16, 185, 129, 0.6)', type: 'dashed' }, label: { formatter: '国标一级基线 4.8', position: 'insideEndTop', color: '#6ee7b7', fontSize: 8.5 } }
+              ]
+            }
+          }]
+        });
+
+        // 3. 干管压力表 (集成喘振红线与经济运行安全区)
+        safeInit('chartGauge', {
+          series: [{
+            type: 'gauge',
+            min: 0,
+            max: 100,
+            startAngle: 210,
+            endAngle: -30,
+            radius: '88%',
+            axisLine: {
+              lineStyle: {
+                width: 9,
+                color: [
+                  [0.55, '#1e3a5f'],
+                  [0.72, '#10b981'],
+                  [0.78, '#f59e0b'],
+                  [1.0, '#ef4444']
+                ]
+              }
+            },
+            progress: {
+              show: true,
+              width: 9,
+              itemStyle: {
+                color: '#38bdf8'
+              }
+            },
+            axisTick: { show: false },
+            splitLine: {
+              length: 10,
+              lineStyle: { color: 'rgba(255, 255, 255, 0.4)', width: 1.2 }
+            },
+            axisLabel: {
+              color: '#8294ab',
+              fontSize: 9,
+              distance: -30
+            },
+            anchor: {
+              show: true,
+              size: 10,
+              itemStyle: { color: '#e2e8f0', borderWidth: 2, borderColor: '#0284c7' }
+            },
+            pointer: {
+              width: 3.5,
+              length: '65%',
+              itemStyle: { color: '#38bdf8' }
+            },
+            title: { show: false },
+            detail: {
+              valueAnimation: true,
+              fontSize: 22,
+              fontFamily: 'Bahnschrift, Consolas, monospace',
+              color: '#38bdf8',
+              formatter: '{value}',
+              offsetCenter: [0, '48%']
+            },
+            data: [{ value: +mainPressure.value.toFixed(1) }]
+          }]
+        });
+      }
+
+      let tickTimer = null, clockTimer = null;
+
+      onMounted(() => {
+        updateClock();
+        clockTimer = setInterval(updateClock, 1000);
+        tickTimer = setInterval(() => {
+          try {
+            doActual.value = Math.min(3.5, Math.max(0.5, doActual.value + (doTarget.value - doActual.value) * 0.25 + (Math.random() - 0.5) * 0.03));
+            mainPressure.value = Math.max(40, Math.min(80, mainPressure.value + (Math.random() - 0.5) * 0.35));
+            blowers.forEach(b => {
+              if (b.running) {
+                b.freq = Math.max(30, Math.min(60, b.freq + (Math.random() - 0.5) * 0.2));
+                b.power = Math.max(40, b.power + (Math.random() - 0.5) * 0.7);
+                b.temp = Math.max(30, Math.min(70, b.temp + (Math.random() - 0.5) * 0.15));
+              }
+            });
+          } catch (e) {}
+        }, 2000);
+
+        nextTick(() => renderCharts());
+
+        window.addEventListener('resize', () => {
+          try {
+            Object.values(chartInstances).forEach(c => c && c.resize && c.resize());
+          } catch (e) {}
+        });
+
+        onUnmounted(() => {
+          if (tickTimer) clearInterval(tickTimer);
+          if (clockTimer) clearInterval(clockTimer);
+        });
+      });
+
+      return {
+        modes, modeId, totals, auxPower, blowers, branches, alarms, mainPressure, doTarget, doActual,
+        selectedId, selBlower, valveAvg, unacked, tickerHtml, clock, lastSeen,
+        switchMode, selectBlower, doAdj, ackAlarm, fanBlade
+      };
+    }
+  });
+
+  app.mount('#app');
+
+  function initScreenScale() {
+    const screen = document.getElementById('screen');
+    function resize() {
+      const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      screen.style.transform = `scale(${scale})`;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+  }
+  initScreenScale();
+})();
+</script>
+</body>
+</html>

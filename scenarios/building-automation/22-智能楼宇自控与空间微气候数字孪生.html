@@ -177,9 +177,13 @@ button{font:inherit;color:inherit;cursor:pointer;border:none;outline:none}
   flex-direction:column;
   gap:11px;
   overflow-y:auto;
-  scrollbar-width:none;
-}
 .hud-panel::-webkit-scrollbar{display:none}
+
+/* 全局极简优雅工业细滚动条 */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(56,189,248,0.25);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:rgba(56,189,248,0.55)}
 
 /* 面板折叠/展开把手 */
 .toggle-handle{

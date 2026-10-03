@@ -1,0 +1,5011 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>东湖智慧水质时序预测与Aqua-Agent数字驾驶舱</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>" />
+
+
+    <!-- 本地依赖库: Vue 3 与 ECharts 5 -->
+  <script src="../../vendor/vue.global.prod.js"></script>
+  <script src="../../vendor/echarts.min.js"></script>
+<style>
+    /* ============================================================
+       东湖水质预测驾驶舱 · 核心样式 (完全继承 Vue 原生驾驶舱设计体系)
+       ============================================================ */
+    :root {
+      --bg-0: #050b1a;
+      --bg-1: #080f22;
+      --bg-2: #0a1428;
+      --bg-3: #0d1b33;
+      --panel: rgba(13, 27, 51, 0.78);
+      --panel-2: rgba(8, 15, 34, 0.85);
+      --border: rgba(64, 158, 255, 0.18);
+      --border-hi: rgba(56, 189, 248, 0.5);
+      --blue: #38bdf8;
+      --cyan: #22d3ee;
+      --teal: #2dd4bf;
+      --green: #34d399;
+      --green2: #22c55e;
+      --yellow: #fbbf24;
+      --orange: #fb923c;
+      --red: #f87171;
+      --rose: #fb7185;
+      --t1: #f1f5f9;
+      --t2: #94a3b8;
+      --t3: #64748b;
+      --t4: #475569;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-0);
+      color: var(--t1);
+      font-family: 'Rajdhani', 'JetBrains Mono', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
+      letter-spacing: 0.02em;
+    }
+
+    #app {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    /* 驾驶舱全屏视口自适应根容器 */
+    .cockpit-root {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-0);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 背景装饰层 */
+    .cockpit-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .bg-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(64, 158, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(64, 158, 255, 0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+      mask-image: radial-gradient(ellipse 80% 70% at center, #000 20%, transparent 85%);
+    }
+
+    .bg-glow {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(130px);
+      opacity: 0.16;
+    }
+
+    .bg-glow.a {
+      width: 1000px;
+      height: 1000px;
+      top: -500px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--blue);
+    }
+
+    .bg-glow.b {
+      width: 800px;
+      height: 800px;
+      bottom: -400px;
+      left: -200px;
+      background: var(--green);
+      opacity: 0.11;
+    }
+
+    .bg-glow.c {
+      width: 800px;
+      height: 800px;
+      bottom: -400px;
+      right: -200px;
+      background: var(--cyan);
+      opacity: 0.11;
+    }
+
+    .bg-glow.d {
+      width: 600px;
+      height: 600px;
+      top: 30%;
+      left: 20%;
+      background: var(--teal);
+      opacity: 0.06;
+    }
+
+    .bg-wave {
+      position: absolute;
+      inset: 0;
+      opacity: 0.03;
+      background: repeating-linear-gradient(45deg, transparent 0, transparent 100px, rgba(56, 189, 248, 0.4) 100px, rgba(56, 189, 248, 0.4) 101px);
+      animation: wave-shift 40s linear infinite;
+    }
+
+    .particle {
+      position: absolute;
+      bottom: -10px;
+      border-radius: 50%;
+      opacity: 0;
+      animation: rise linear infinite;
+      pointer-events: none;
+    }
+
+    /* 1920x1080 栅格容器 */
+    
+    /* 规范 1920x1080 基准画布容器 */
+    #screen {
+      width: 1920px;
+      height: 1080px;
+      flex-shrink: 0;
+      position: relative;
+      margin: 0 auto;
+      transform-origin: center center;
+    }
+
+    .cockpit {
+      position: relative;
+      z-index: 1;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: center center;
+      display: grid;
+      grid-template-rows: 76px 1fr 86px;
+      grid-template-columns: 380px 1fr 380px;
+      grid-template-areas:
+        'header header header'
+        'left main right'
+        'footer footer footer';
+      gap: 14px;
+      padding: 14px;
+      opacity: 0;
+      transition: opacity 0.6s ease-out;
+    }
+
+    .cockpit.cockpit-enter {
+      opacity: 1;
+    }
+
+    .cockpit.cockpit-enter .header {
+      animation: enterHeader 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .cockpit.cockpit-enter .left {
+      animation: enterLeft 1s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+    }
+
+    .cockpit.cockpit-enter .right {
+      animation: enterRight 1s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+    }
+
+    .cockpit.cockpit-enter .main {
+      animation: enterMain 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+    }
+
+    .cockpit.cockpit-enter .footer {
+      animation: enterFooter 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
+    }
+
+    /* 通用玻璃面板 */
+    .panel {
+      position: relative;
+      background: linear-gradient(135deg, rgba(13, 27, 51, 0.78), rgba(8, 15, 34, 0.65));
+      border: 1px solid var(--border);
+      backdrop-filter: blur(12px) saturate(1.2);
+      transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      overflow: hidden;
+    }
+
+    .panel::before,
+    .panel::after,
+    .panel>.c1,
+    .panel>.c2 {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--blue);
+      pointer-events: none;
+      z-index: 5;
+      filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.6));
+    }
+
+    .panel::before {
+      top: -1px;
+      left: -1px;
+      border-right: 0;
+      border-bottom: 0;
+    }
+
+    .panel::after {
+      top: -1px;
+      right: -1px;
+      border-left: 0;
+      border-bottom: 0;
+    }
+
+    .panel>.c1 {
+      bottom: -1px;
+      left: -1px;
+      border-right: 0;
+      border-top: 0;
+    }
+
+    .panel>.c2 {
+      bottom: -1px;
+      right: -1px;
+      border-left: 0;
+      border-top: 0;
+    }
+
+    .panel .edge-glow {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .panel .edge-glow::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--blue), var(--cyan), var(--blue), transparent);
+      animation: edge-flow 4s linear infinite;
+    }
+
+    .panel:hover {
+      border-color: var(--border-hi);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.1), 0 8px 30px rgba(56, 189, 248, 0.15), inset 0 0 30px rgba(56, 189, 248, 0.04);
+      transform: translateY(-1px);
+    }
+
+    /* 面板标题栏 */
+    .ptitle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    .ptitle::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      width: 30%;
+      height: 1px;
+      background: linear-gradient(90deg, var(--blue), transparent);
+    }
+
+    .ptitle-l {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ptitle-bar {
+      width: 4px;
+      height: 16px;
+      background: linear-gradient(180deg, var(--cyan), var(--blue));
+      box-shadow: 0 0 8px var(--blue);
+      border-radius: 1px;
+      position: relative;
+    }
+
+    .ptitle-bar::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: -3px;
+      width: 10px;
+      height: 10px;
+      border: 1px solid var(--blue);
+      transform: translateY(-50%) rotate(45deg);
+      background: var(--bg-1);
+      box-shadow: 0 0 6px rgba(56, 189, 248, 0.4);
+    }
+
+    .ptitle-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--t1);
+      letter-spacing: 0.18em;
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    .ptitle-en {
+      font-size: 9px;
+      color: var(--t3);
+      letter-spacing: 0.12em;
+      margin-top: 1px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .ptitle-tag {
+      font-size: 10px;
+      color: var(--cyan);
+      padding: 3px 10px;
+      border: 1px solid rgba(34, 211, 238, 0.35);
+      background: rgba(34, 211, 238, 0.06);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.08em;
+      position: relative;
+    }
+
+    /* 扫描线效果 */
+    .scan-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent 10%, rgba(56, 189, 248, 0.5) 50%, transparent 90%);
+      pointer-events: none;
+      animation: scan 5s linear infinite;
+      opacity: 0.6;
+      z-index: 3;
+      filter: blur(1px);
+    }
+
+    /* ==================== 顶部 Header ==================== */
+    .header {
+      grid-area: header;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      background: linear-gradient(180deg, rgba(8, 15, 34, 0.95), rgba(8, 15, 34, 0.65));
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(16px);
+    }
+
+    .header-light {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      overflow: hidden;
+    }
+
+    .header-light::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -30%;
+      width: 30%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      animation: light-sweep 6s linear infinite;
+    }
+
+    .header-left,
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex: 1;
+      z-index: 2;
+    }
+
+    .header-right {
+      justify-content: flex-end;
+    }
+
+    .header-center {
+      flex: 0 0 auto;
+      text-align: center;
+      position: relative;
+    }
+
+    .health-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--t2);
+      padding: 5px 10px;
+      background: rgba(10, 24, 48, 0.5);
+      border: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .health-item b {
+      color: var(--t1);
+      font-weight: 500;
+      font-size: 11px;
+    }
+
+    .health-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green), 0 0 16px rgba(52, 211, 153, 0.3);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    .health-dot.err {
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red);
+    }
+
+    /* 天气组件 */
+    .weather.fc3 {
+      display: flex;
+      align-items: center;
+      padding: 4px 6px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.08), rgba(34, 211, 238, 0.04));
+      border: 1px solid var(--border);
+    }
+
+    .wf3-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      min-width: 56px;
+      padding: 2px 8px;
+      border-right: 1px solid rgba(56, 189, 248, 0.12);
+      transition: all 0.3s;
+    }
+
+    .wf3-item:last-child {
+      border-right: 0;
+    }
+
+    .wf3-item.today {
+      background: linear-gradient(180deg, rgba(56, 189, 248, 0.12), transparent);
+    }
+
+    .wf3-day {
+      font-size: 9px;
+      color: var(--cyan);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .wf3-icon {
+      font-size: 16px;
+      filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.5));
+    }
+
+    .wf3-temp {
+      font-family: 'Orbitron', monospace;
+      font-size: 10.5px;
+      color: var(--t1);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* 标题 */
+    .title-wrap {
+      position: relative;
+      display: inline-block;
+    }
+
+    .title {
+      font-family: 'Orbitron', 'Rajdhani', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: 0.32em;
+      padding-left: 0.32em;
+      color: #fff;
+      filter: drop-shadow(0 0 24px rgba(56, 189, 248, 0.4));
+    }
+
+    .title-char {
+      display: inline-block;
+      background: linear-gradient(180deg, #fff 0%, #bae6fd 40%, var(--blue) 70%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: title-glow 4s ease-in-out infinite;
+    }
+
+    .subtitle {
+      font-size: 10px;
+      color: var(--t3);
+      letter-spacing: 0.5em;
+      padding-left: 0.5em;
+      margin-top: 4px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .title-deco {
+      position: absolute;
+      top: 50%;
+      width: 80px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--blue));
+      transform: translateY(-50%);
+    }
+
+    .title-deco.l {
+      right: 100%;
+      margin-right: 20px;
+    }
+
+    .title-deco.r {
+      left: 100%;
+      margin-left: 20px;
+      background: linear-gradient(90deg, var(--blue), transparent);
+    }
+
+    .title-deco::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--blue);
+      transform: translateY(-50%);
+      box-shadow: 0 0 8px var(--blue);
+    }
+
+    .title-deco.l::before {
+      right: 0;
+    }
+
+    .title-deco.r::before {
+      left: 0;
+    }
+
+    /* 时钟与全屏 */
+    .clock-box {
+      text-align: right;
+    }
+
+    .clock {
+      font-family: 'Orbitron', monospace;
+      font-size: 24px;
+      color: var(--cyan);
+      font-weight: 700;
+      text-shadow: 0 0 12px rgba(34, 211, 238, 0.5);
+      letter-spacing: 0.08em;
+    }
+
+    .date {
+      font-size: 10px;
+      color: var(--t2);
+      margin-top: 2px;
+      letter-spacing: 0.12em;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .fullscreen-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(34, 211, 238, 0.06));
+      border: 1px solid var(--border-hi);
+      color: var(--cyan);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.3s;
+      backdrop-filter: blur(8px);
+    }
+
+    .fullscreen-btn:hover {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(34, 211, 238, 0.15));
+      border-color: var(--cyan);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    /* ==================== 左侧 Left ==================== */
+    .left {
+      grid-area: left;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .prop-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .prop-groups {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 4px 10px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      scrollbar-width: none;
+    }
+
+    .prop-groups::-webkit-scrollbar {
+      display: none;
+    }
+
+    .prop-group-label {
+      font-size: 10px;
+      color: var(--cyan);
+      letter-spacing: 0.2em;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 4px 4px 2px;
+      border-bottom: 1px solid rgba(34, 211, 238, 0.15);
+    }
+
+    .prop-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+
+    .prop-card {
+      position: relative;
+      padding: 6px 9px;
+      background: linear-gradient(135deg, rgba(10, 24, 48, 0.6), rgba(8, 15, 34, 0.4));
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+      overflow: hidden;
+    }
+
+    .prop-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--blue);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .prop-card:hover {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.1), rgba(8, 15, 34, 0.4));
+      border-color: var(--border-hi);
+      transform: translateX(2px);
+    }
+
+    .prop-card:hover::before {
+      opacity: 1;
+    }
+
+    .prop-card.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(8, 15, 34, 0.4));
+      border-color: var(--blue);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.2), inset 0 0 16px rgba(56, 189, 248, 0.05);
+    }
+
+    .prop-card.active::before {
+      opacity: 1;
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
+    }
+
+    .prop-card.breath {
+      animation: breath-warn 1.8s ease-in-out infinite;
+    }
+
+    .prop-name {
+      font-size: 10.5px;
+      color: var(--t1);
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    .prop-vals {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    .prop-cur {
+      font-family: 'Orbitron', monospace;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--t1);
+      text-shadow: 0 0 8px rgba(241, 245, 249, 0.2);
+    }
+
+    .prop-unit {
+      font-size: 9px;
+      color: var(--t3);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .prop-ci {
+      font-size: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 2px;
+    }
+
+    .prop-ci.ok {
+      color: var(--t3);
+    }
+
+    .prop-ci.warn {
+      color: var(--red);
+      text-shadow: 0 0 6px rgba(248, 113, 113, 0.4);
+    }
+
+    .prop-limit {
+      font-size: 8px;
+      color: var(--t4);
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 1px;
+    }
+
+    /* 能耗排名 */
+    .energy-list {
+      padding: 8px 12px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .energy-row {
+      display: grid;
+      grid-template-columns: 24px 80px 1fr 66px;
+      align-items: center;
+      gap: 8px;
+      font-size: 10.5px;
+      padding: 2px 0;
+      transition: all 0.3s;
+    }
+
+    .energy-row:hover {
+      transform: translateX(2px);
+    }
+
+    .energy-rank {
+      font-family: 'Orbitron', monospace;
+      font-size: 12.5px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .energy-rank.r1 {
+      color: var(--red);
+      text-shadow: 0 0 8px rgba(248, 113, 113, 0.5);
+    }
+
+    .energy-rank.r2 {
+      color: var(--orange);
+      text-shadow: 0 0 8px rgba(251, 146, 60, 0.5);
+    }
+
+    .energy-rank.r3 {
+      color: var(--yellow);
+      text-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+    }
+
+    .energy-rank.r4,
+    .energy-rank.r5,
+    .energy-rank.r6 {
+      color: var(--t2);
+    }
+
+    .energy-name {
+      color: var(--t1);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 500;
+    }
+
+    .energy-bar {
+      height: 7px;
+      background: rgba(10, 24, 48, 0.6);
+      border: 1px solid rgba(56, 189, 248, 0.1);
+      border-radius: 1px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .energy-fill {
+      height: 100%;
+      border-radius: 1px;
+      background: linear-gradient(90deg, var(--cyan), var(--blue));
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+      transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+      position: relative;
+    }
+
+    .energy-val {
+      font-family: 'Orbitron', monospace;
+      font-size: 10.5px;
+      color: var(--cyan);
+      text-align: right;
+      font-weight: 600;
+    }
+
+    /* ==================== 中间 Center ==================== */
+    .main {
+      grid-area: main;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .core-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 14px;
+    }
+
+    .core-card {
+      position: relative;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.07), rgba(34, 211, 238, 0.02));
+      border: 1px solid var(--border);
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .core-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 10%, var(--blue) 50%, transparent 90%);
+      opacity: 0.7;
+    }
+
+    .core-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-hi);
+      box-shadow: 0 8px 30px rgba(56, 189, 248, 0.15);
+    }
+
+    .core-label {
+      font-size: 11px;
+      color: var(--t2);
+      letter-spacing: 0.18em;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 500;
+    }
+
+    .core-en {
+      font-size: 9px;
+      color: var(--t3);
+      margin-top: 1px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .core-val {
+      font-family: 'Orbitron', monospace;
+      font-size: 40px;
+      font-weight: 800;
+      line-height: 1;
+      margin-top: 8px;
+      background: linear-gradient(180deg, #fff, var(--blue));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.3));
+    }
+
+    .core-val.green {
+      background: linear-gradient(180deg, #fff, var(--green));
+      -webkit-background-clip: text;
+      background-clip: text;
+      filter: drop-shadow(0 0 16px rgba(52, 211, 153, 0.3));
+    }
+
+    .core-val.orange {
+      background: linear-gradient(180deg, #fff, var(--orange));
+      -webkit-background-clip: text;
+      background-clip: text;
+      filter: drop-shadow(0 0 16px rgba(251, 146, 60, 0.3));
+    }
+
+    .core-unit {
+      font-size: 14px;
+      color: var(--t2);
+      margin-left: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      -webkit-text-fill-color: var(--t2);
+    }
+
+    .core-sub {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--t2);
+    }
+
+    .core-trend {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 7px;
+      border-radius: 2px;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+    }
+
+    .core-trend.up {
+      color: var(--red);
+      background: rgba(248, 113, 113, 0.1);
+      border: 1px solid rgba(248, 113, 113, 0.2);
+    }
+
+    .core-trend.down {
+      color: var(--green);
+      background: rgba(52, 211, 153, 0.1);
+      border: 1px solid rgba(52, 211, 153, 0.2);
+    }
+
+    .core-trend.flat {
+      color: var(--t2);
+      background: rgba(148, 163, 184, 0.08);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+    }
+
+    /* 主走势图 */
+    .trend-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .trend-tabs {
+      display: flex;
+      gap: 5px;
+      padding: 8px 10px 4px;
+      flex-wrap: wrap;
+    }
+
+    .trend-tab {
+      padding: 4px 11px;
+      font-size: 10.5px;
+      color: var(--t2);
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: rgba(10, 24, 48, 0.4);
+      transition: all 0.3s;
+      letter-spacing: 0.06em;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 500;
+    }
+
+    .trend-tab:hover {
+      color: var(--t1);
+      border-color: var(--border-hi);
+    }
+
+    .trend-tab.active {
+      color: var(--cyan);
+      border-color: var(--cyan);
+      background: rgba(34, 211, 238, 0.12);
+      box-shadow: 0 0 12px rgba(34, 211, 238, 0.2);
+      text-shadow: 0 0 6px rgba(34, 211, 238, 0.5);
+    }
+
+    .trend-chart {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+    }
+
+    /* 时间轴 */
+    .milestone-bar {
+      display: flex;
+      align-items: flex-start;
+      padding: 12px 14px;
+      position: relative;
+    }
+
+    .milestone-bar::before {
+      content: '';
+      position: absolute;
+      left: 80px;
+      right: 80px;
+      top: 24px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent 0%, var(--red) 10%, var(--yellow) 40%, var(--green) 70%, var(--cyan) 95%, transparent 100%);
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+    }
+
+    .milestone-bar::after {
+      content: '';
+      position: absolute;
+      left: 80px;
+      right: 80px;
+      top: 24px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      animation: milestone-flow 4s linear infinite;
+    }
+
+    .milestone {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .milestone-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--bg-1);
+      border: 2px solid var(--blue);
+      box-shadow: 0 0 10px var(--blue);
+      margin-top: 17px;
+    }
+
+    .milestone-dot.cur {
+      background: var(--cyan);
+      border-color: var(--cyan);
+      box-shadow: 0 0 16px var(--cyan), 0 0 32px rgba(34, 211, 238, 0.3);
+      animation: pulse-dot 2s infinite;
+    }
+
+    .milestone-dot.past {
+      border-color: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      background: var(--green);
+    }
+
+    .milestone-year {
+      font-family: 'Orbitron', monospace;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--t1);
+      margin-top: 2px;
+    }
+
+    .milestone-level {
+      font-size: 11px;
+      color: var(--t2);
+      font-weight: 600;
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    .milestone-level.bad {
+      color: var(--red);
+      text-shadow: 0 0 6px rgba(248, 113, 113, 0.4);
+    }
+
+    .milestone-level.mid {
+      color: var(--yellow);
+      text-shadow: 0 0 6px rgba(251, 191, 36, 0.4);
+    }
+
+    .milestone-level.good {
+      color: var(--green);
+      text-shadow: 0 0 6px rgba(52, 211, 153, 0.4);
+    }
+
+    .milestone-note {
+      font-size: 9px;
+      color: var(--t3);
+      max-width: 130px;
+      text-align: center;
+      line-height: 1.5;
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 2px;
+    }
+
+    /* ==================== 右侧 Right ==================== */
+    .right {
+      grid-area: right;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .acc-wrap {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 14px;
+      padding: 14px;
+      align-items: center;
+    }
+
+    .acc-ring {
+      position: relative;
+      width: 140px;
+      height: 140px;
+    }
+
+    .acc-ring canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .acc-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .acc-num {
+      font-family: 'Orbitron', monospace;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--green);
+      text-shadow: 0 0 16px rgba(52, 211, 153, 0.5);
+    }
+
+    .acc-label {
+      font-size: 9px;
+      color: var(--t2);
+      letter-spacing: 0.15em;
+      margin-top: 2px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .acc-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .acc-stat {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 10px;
+      background: linear-gradient(90deg, rgba(10, 24, 48, 0.5), rgba(8, 15, 34, 0.3));
+      border-left: 2px solid var(--border);
+    }
+
+    .acc-stat .l {
+      font-size: 11px;
+      color: var(--t2);
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 500;
+    }
+
+    .acc-stat .v {
+      font-family: 'Orbitron', monospace;
+      font-size: 13.5px;
+      font-weight: 700;
+    }
+
+    .acc-stat.max {
+      border-left-color: var(--green);
+    }
+
+    .acc-stat.max .v {
+      color: var(--green);
+    }
+
+    .acc-stat.min {
+      border-left-color: var(--orange);
+    }
+
+    .acc-stat.min .v {
+      color: var(--orange);
+    }
+
+    .acc-stat.err {
+      border-left-color: var(--yellow);
+    }
+
+    .acc-stat.err .v {
+      color: var(--yellow);
+    }
+
+    .acc-stat.avg {
+      border-left-color: var(--cyan);
+    }
+
+    .acc-stat.avg .v {
+      color: var(--cyan);
+    }
+
+    .radar-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .radar-wrap {
+      flex: 1;
+      min-height: 0;
+      padding: 4px;
+      position: relative;
+    }
+
+    .radar-wrap::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      border: 1px solid rgba(56, 189, 248, 0.08);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: radar-sweep 6s linear infinite;
+    }
+
+    .radar-chart {
+      width: 100%;
+      height: 100%;
+    }
+
+    .cov-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 10px;
+    }
+
+    .cov-card {
+      padding: 10px;
+      background: linear-gradient(135deg, rgba(10, 24, 48, 0.5), rgba(8, 15, 34, 0.3));
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.35s;
+    }
+
+    .cov-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-hi);
+    }
+
+    .cov-name {
+      font-size: 10px;
+      color: var(--t2);
+      letter-spacing: 0.12em;
+      font-family: 'Rajdhani', sans-serif;
+      font-weight: 500;
+    }
+
+    .cov-val {
+      font-family: 'Orbitron', monospace;
+      font-size: 19px;
+      font-weight: 700;
+      margin-top: 4px;
+      line-height: 1;
+    }
+
+    .cov-val.t {
+      color: var(--orange);
+      text-shadow: 0 0 10px rgba(251, 146, 60, 0.4);
+    }
+
+    .cov-val.r {
+      color: var(--cyan);
+      text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
+    }
+
+    .cov-unit {
+      font-size: 10px;
+      color: var(--t3);
+      margin-left: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 400;
+    }
+
+    /* ==================== 底部 Footer ==================== */
+    .footer {
+      grid-area: footer;
+      display: grid;
+      grid-template-columns: 300px 1fr 280px;
+      gap: 14px;
+      padding: 0;
+    }
+
+    .footer-block {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 18px;
+      background: linear-gradient(135deg, rgba(13, 27, 51, 0.78), rgba(8, 15, 34, 0.6));
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+    }
+
+    .footer-block::before {
+      top: -1px;
+      left: -1px;
+      border-right: 0;
+      border-bottom: 0;
+      content: '';
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border: 2px solid var(--blue);
+    }
+
+    .footer-block::after {
+      bottom: -1px;
+      right: -1px;
+      border-left: 0;
+      border-top: 0;
+      content: '';
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border: 2px solid var(--blue);
+    }
+
+    .model-tag {
+      padding: 4px 12px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.12), rgba(34, 211, 238, 0.06));
+      border: 1px solid var(--border-hi);
+      color: var(--cyan);
+      font-family: 'Orbitron', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-shadow: 0 0 6px rgba(34, 211, 238, 0.4);
+      white-space: nowrap;
+    }
+
+    .model-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .model-title {
+      color: var(--t1);
+      font-weight: 600;
+      font-size: 11.5px;
+      font-family: 'Rajdhani', sans-serif;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    .model-desc {
+      font-size: 10px;
+      color: var(--t3);
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+    }
+
+    .alert-ticker {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow: hidden;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .alert-label {
+      flex-shrink: 0;
+      padding: 4px 12px;
+      background: linear-gradient(135deg, rgba(248, 113, 113, 0.15), rgba(248, 113, 113, 0.05));
+      border: 1px solid rgba(248, 113, 113, 0.4);
+      color: var(--red);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    .alert-label::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red);
+      animation: pulse-dot 1.2s infinite;
+    }
+
+    .alert-marquee {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+      height: 22px;
+      mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+    }
+
+    .alert-track {
+      position: absolute;
+      display: flex;
+      gap: 50px;
+      animation: marquee 35s linear infinite;
+      white-space: nowrap;
+      font-size: 11px;
+      color: var(--t2);
+      line-height: 22px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .alert-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .alert-item .t {
+      color: var(--cyan);
+      font-weight: 600;
+    }
+
+    .lvl-warning {
+      color: var(--yellow);
+      font-weight: 600;
+    }
+
+    .lvl-info {
+      color: var(--blue);
+      font-weight: 600;
+    }
+
+    .lvl-danger {
+      color: var(--red);
+      font-weight: 600;
+    }
+
+    .source-info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      width: 100%;
+    }
+
+    .source-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .source-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--cyan);
+      padding: 1px 6px;
+      background: rgba(34, 211, 238, 0.08);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      border-radius: 2px;
+    }
+
+    .source-title {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--t1);
+    }
+
+    .source-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--t3);
+    }
+
+    .source-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: pulse-dot 2s infinite;
+    }
+
+    .source-time {
+      color: var(--blue);
+      font-weight: 500;
+    }
+
+    /* ==================== 开屏 Loader ==================== */
+    .cockpit-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: #030712;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), filter 0.6s;
+    }
+
+    .cockpit-loader.loader-exit {
+      opacity: 0;
+      transform: scale(1.06);
+      filter: blur(12px);
+      pointer-events: none;
+    }
+
+    .loader-bg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .loader-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(56, 189, 248, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.06) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 1) 30%, transparent 80%);
+    }
+
+    .loader-scan {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.8), transparent);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.8);
+      animation: loader-scan 3s ease-in-out infinite;
+    }
+
+    .loader-hud {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .hud-circle-wrap {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hud-ring {
+      position: absolute;
+      border-radius: 50%;
+      box-sizing: border-box;
+    }
+
+    .hud-ring.r-outer {
+      inset: 0;
+      border: 2px solid rgba(56, 189, 248, 0.2);
+      border-top-color: #38bdf8;
+      border-right-color: #22d3ee;
+      animation: rotate-cw 6s linear infinite;
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+    }
+
+    .hud-ring.r-ticks {
+      inset: 12px;
+      border: 2px dashed rgba(34, 211, 238, 0.35);
+      animation: rotate-ccw 10s linear infinite;
+    }
+
+    .hud-ring.r-inner {
+      inset: 28px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-left-color: #38bdf8;
+      border-bottom-color: #34d399;
+      animation: rotate-ccw 4s linear infinite;
+    }
+
+    .hud-percent {
+      font-family: 'Orbitron', monospace;
+      font-size: 34px;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 20px rgba(56, 189, 248, 0.8);
+    }
+
+    .hud-percent small {
+      font-size: 16px;
+      color: var(--cyan);
+      margin-left: 2px;
+    }
+
+    .hud-info {
+      text-align: center;
+    }
+
+    .sys-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--cyan);
+      letter-spacing: 0.25em;
+      margin-bottom: 6px;
+    }
+
+    .hud-title {
+      font-family: 'Orbitron', 'Rajdhani', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      color: #fff;
+      text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+    }
+
+    .hud-en {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px;
+      color: var(--t3);
+      letter-spacing: 0.25em;
+      margin-top: 4px;
+    }
+
+    .hud-progress-bar {
+      width: 320px;
+      height: 4px;
+      background: rgba(56, 189, 248, 0.15);
+      border-radius: 2px;
+      margin: 14px auto 8px;
+      overflow: hidden;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    .hud-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue), var(--cyan), var(--green));
+      box-shadow: 0 0 10px var(--cyan);
+      transition: width 0.1s linear;
+    }
+
+    .hud-log {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--t2);
+      margin-top: 4px;
+    }
+
+    .log-cursor {
+      color: var(--cyan);
+      margin-right: 6px;
+      animation: pulse-dot 1s infinite;
+    }
+
+    /* ==================== 快捷控制器 (悬浮右下角，便于操作与对比) ==================== */
+    .mock-toolbox {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 9999;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: rgba(8, 15, 34, 0.85);
+      border: 1px solid var(--border-hi);
+      padding: 6px 12px;
+      border-radius: 4px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      opacity: 0.4;
+      transition: opacity 0.3s;
+    }
+
+    .mock-toolbox:hover {
+      opacity: 1;
+    }
+
+    .mock-toolbox button {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--cyan);
+      font-size: 11.5px;
+      font-family: 'JetBrains Mono', sans-serif;
+      padding: 4px 10px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+
+    .mock-toolbox button:hover {
+      background: rgba(56, 189, 248, 0.3);
+      color: #fff;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    }
+
+    .mock-toolbox a {
+      color: var(--t2);
+      font-size: 11px;
+      text-decoration: none;
+      padding: 4px 6px;
+      font-family: 'JetBrains Mono', sans-serif;
+    }
+
+    .mock-toolbox a:hover {
+      color: var(--cyan);
+      text-decoration: underline;
+    }
+
+    /* ==================== 动画 Keyframes ==================== */
+    @keyframes wave-shift {
+      to {
+        transform: translate(100px, 100px);
+      }
+    }
+
+    @keyframes rise {
+      0% {
+        transform: translateY(0) translateX(0);
+        opacity: 0;
+      }
+
+      10% {
+        opacity: 0.6;
+      }
+
+      90% {
+        opacity: 0.15;
+      }
+
+      100% {
+        transform: translateY(-1100px) translateX(20px);
+        opacity: 0;
+      }
+    }
+
+    @keyframes edge-flow {
+      to {
+        left: 100%;
+      }
+    }
+
+    @keyframes pulse-dot {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.4;
+        transform: scale(0.85);
+      }
+    }
+
+    @keyframes scan {
+      0% {
+        top: 0;
+      }
+
+      100% {
+        top: 100%;
+      }
+    }
+
+    @keyframes light-sweep {
+      to {
+        left: 130%;
+      }
+    }
+
+    @keyframes title-glow {
+
+      0%,
+      100% {
+        filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.3));
+      }
+
+      50% {
+        filter: drop-shadow(0 0 18px rgba(56, 189, 248, 0.8)), drop-shadow(0 0 32px rgba(34, 211, 238, 0.4));
+      }
+    }
+
+    @keyframes breath-warn {
+
+      0%,
+      100% {
+        box-shadow: 0 0 8px rgba(248, 113, 113, 0.2), inset 0 0 8px rgba(248, 113, 113, 0.05);
+        border-color: rgba(248, 113, 113, 0.3);
+      }
+
+      50% {
+        box-shadow: 0 0 20px rgba(248, 113, 113, 0.6), inset 0 0 16px rgba(248, 113, 113, 0.15);
+        border-color: rgba(248, 113, 113, 0.7);
+      }
+    }
+
+    @keyframes radar-sweep {
+      to {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+
+    @keyframes milestone-flow {
+      0% {
+        transform: translateX(-100%);
+      }
+
+      100% {
+        transform: translateX(100%);
+      }
+    }
+
+    @keyframes marquee {
+      to {
+        transform: translateX(-50%);
+      }
+    }
+
+    @keyframes rotate-cw {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes rotate-ccw {
+      to {
+        transform: rotate(-360deg);
+      }
+    }
+
+    @keyframes loader-scan {
+      0% {
+        top: 0%;
+        opacity: 0;
+      }
+
+      50% {
+        opacity: 1;
+      }
+
+      100% {
+        top: 100%;
+        opacity: 0;
+      }
+    }
+
+    @keyframes enterHeader {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes enterLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-40px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes enterRight {
+      from {
+        opacity: 0;
+        transform: translateX(40px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes enterMain {
+      from {
+        opacity: 0;
+        transform: scale(0.94);
+        filter: brightness(1.3);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+        filter: brightness(1);
+      }
+    }
+
+    @keyframes enterFooter {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ============================================================
+       东湖水质预测智能体 · 水灵 AI (AquaAgent Copilot) 专属样式
+       ============================================================ */
+    /* 1. 悬浮唤醒球 (Floating Action Ball) */
+    .agent-fab {
+      position: fixed;
+      right: 24px;
+      bottom: 68px;
+      z-index: 9998;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 14px 6px 6px;
+      background: linear-gradient(135deg, rgba(8, 15, 34, 0.95), rgba(13, 27, 51, 0.92));
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      border-radius: 40px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 16px rgba(56, 189, 248, 0.25);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      user-select: none;
+    }
+
+    .agent-fab:hover {
+      transform: translateY(-2px) scale(1.03);
+      border-color: rgba(34, 211, 238, 0.8);
+      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.7), 0 0 25px rgba(34, 211, 238, 0.5);
+    }
+
+    .agent-fab.active {
+      border-color: var(--teal);
+      box-shadow: 0 0 20px rgba(45, 212, 191, 0.4);
+    }
+
+    .agent-fab.has-listening {
+      border-color: var(--rose);
+      box-shadow: 0 0 25px rgba(251, 113, 133, 0.6);
+      animation: pulse-border 1.5s infinite;
+    }
+
+    .agent-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #38bdf8, #0284c7 70%, #0369a1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.7);
+    }
+
+    .agent-icon {
+      font-size: 20px;
+      filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+    }
+
+    .agent-live-dot {
+      position: absolute;
+      top: 1px;
+      right: 1px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+      border: 2px solid var(--bg-0);
+      box-shadow: 0 0 6px var(--green);
+    }
+
+    .agent-live-dot.mic {
+      background: var(--rose);
+      box-shadow: 0 0 8px var(--rose);
+      animation: pulse-dot 0.8s infinite;
+    }
+
+    .agent-live-dot.speak {
+      background: var(--yellow);
+      box-shadow: 0 0 8px var(--yellow);
+      animation: pulse-dot 0.8s infinite;
+    }
+
+    .agent-pulse-ring {
+      position: absolute;
+      left: 6px;
+      top: 6px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid var(--blue);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .agent-fab:hover .agent-pulse-ring.a,
+    .agent-fab.has-listening .agent-pulse-ring.a {
+      animation: fab-ripple 2s infinite ease-out;
+    }
+
+    .agent-fab:hover .agent-pulse-ring.b,
+    .agent-fab.has-listening .agent-pulse-ring.b {
+      animation: fab-ripple 2s infinite ease-out 0.8s;
+    }
+
+    @keyframes fab-ripple {
+      0% {
+        transform: scale(1);
+        opacity: 0.8;
+      }
+      100% {
+        transform: scale(2.2);
+        opacity: 0;
+      }
+    }
+
+    .agent-fab-label {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+    }
+
+    .fab-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.05em;
+      text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+    }
+
+    .fab-sub {
+      font-size: 10.5px;
+      color: var(--cyan);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* 2. 抽屉对话窗口 (Agent Drawer / Window) */
+    .agent-drawer {
+      position: fixed;
+      right: 24px;
+      bottom: 68px;
+      width: 440px;
+      max-width: calc(100vw - 36px);
+      height: 640px;
+      max-height: calc(100vh - 84px);
+      z-index: 10001;
+      background: rgba(8, 15, 34, 0.94);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      border-radius: 10px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 16px 45px rgba(0, 0, 0, 0.75), 0 0 35px rgba(56, 189, 248, 0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .agent-drawer .c1,
+    .agent-drawer .c2,
+    .agent-drawer .c3,
+    .agent-drawer .c4 {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .agent-drawer .c1 {
+      top: 0;
+      left: 0;
+      border-top: 2px solid var(--cyan);
+      border-left: 2px solid var(--cyan);
+    }
+
+    .agent-drawer .c2 {
+      top: 0;
+      right: 0;
+      border-top: 2px solid var(--cyan);
+      border-right: 2px solid var(--cyan);
+    }
+
+    .agent-drawer .c3 {
+      bottom: 0;
+      left: 0;
+      border-bottom: 2px solid var(--cyan);
+      border-left: 2px solid var(--cyan);
+    }
+
+    .agent-drawer .c4 {
+      bottom: 0;
+      right: 0;
+      border-bottom: 2px solid var(--cyan);
+      border-right: 2px solid var(--cyan);
+    }
+
+    .agent-edge-glow {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), var(--blue), transparent);
+      opacity: 0.8;
+      pointer-events: none;
+    }
+
+    .agent-scan-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.3), transparent);
+      animation: scan 7s linear infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* 浮窗头部 */
+    .agent-header {
+      padding: 12px 14px;
+      background: rgba(13, 27, 51, 0.6);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+
+    .agent-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .agent-avatar-sm {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #38bdf8, #0284c7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+    }
+
+    .agent-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: 0.04em;
+    }
+
+    .agent-status-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5px;
+      color: var(--t2);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .agent-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 5px var(--green);
+    }
+
+    .agent-status-dot.listening {
+      background: var(--rose);
+      box-shadow: 0 0 8px var(--rose);
+      animation: pulse-dot 0.7s infinite;
+    }
+
+    .agent-status-dot.speaking {
+      background: var(--yellow);
+      box-shadow: 0 0 8px var(--yellow);
+      animation: pulse-dot 0.7s infinite;
+    }
+
+    .agent-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .agent-icon-btn {
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: var(--t2);
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .agent-icon-btn:hover {
+      background: rgba(56, 189, 248, 0.25);
+      color: #fff;
+      border-color: var(--cyan);
+    }
+
+    .agent-icon-btn.active {
+      color: var(--cyan);
+      border-color: rgba(34, 211, 238, 0.5);
+      background: rgba(34, 211, 238, 0.15);
+    }
+
+    .agent-icon-btn.close-btn {
+      font-size: 14px;
+      padding: 3px 8px;
+      color: var(--t3);
+    }
+
+    .agent-icon-btn.close-btn:hover {
+      color: var(--rose);
+      border-color: var(--rose);
+    }
+
+    /* 快捷问答推荐芯片 (Chips) */
+    .agent-chips {
+      padding: 8px 12px;
+      background: rgba(10, 20, 40, 0.5);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.12);
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+      z-index: 2;
+    }
+
+    .agent-chips::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip-item {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 14px;
+      font-size: 11px;
+      color: var(--cyan);
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .chip-item:hover {
+      background: rgba(56, 189, 248, 0.22);
+      border-color: var(--blue);
+      color: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    }
+
+    /* 对话消息滚动流 */
+    .agent-messages {
+      flex: 1;
+      padding: 14px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      z-index: 2;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(56, 189, 248, 0.3) transparent;
+    }
+
+    .agent-messages::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .agent-messages::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.25);
+      border-radius: 3px;
+    }
+
+    .agent-msg-item {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      animation: msg-fade-in 0.25s ease-out;
+    }
+
+    @keyframes msg-fade-in {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .agent-msg-item.user {
+      flex-direction: row-reverse;
+    }
+
+    .msg-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #38bdf8, #0284c7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+      box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
+    }
+
+    .msg-avatar.user {
+      background: linear-gradient(135deg, #0ea5e9, #6366f1);
+      box-shadow: 0 0 6px rgba(99, 102, 241, 0.4);
+    }
+
+    .msg-content-wrap {
+      max-width: 82%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .agent-msg-item.user .msg-content-wrap {
+      align-items: flex-end;
+    }
+
+    .msg-bubble {
+      padding: 10px 13px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      line-height: 1.55;
+      word-break: break-word;
+      user-select: text;
+    }
+
+    .agent-msg-item.assistant .msg-bubble {
+      background: rgba(13, 27, 51, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      color: #f1f5f9;
+      border-top-left-radius: 2px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .agent-msg-item.user .msg-bubble {
+      background: linear-gradient(135deg, rgba(2, 132, 199, 0.8), rgba(14, 116, 144, 0.8));
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      color: #fff;
+      border-top-right-radius: 2px;
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .msg-text p {
+      margin-bottom: 6px;
+    }
+
+    .msg-text p:last-child {
+      margin-bottom: 0;
+    }
+
+    .msg-text b {
+      color: var(--cyan);
+    }
+
+    .msg-time {
+      font-size: 10px;
+      color: var(--t4);
+      font-family: 'JetBrains Mono', monospace;
+      margin-top: 3px;
+      padding: 0 2px;
+    }
+
+    /* 3. 水质预测趋势结构化卡片 (Agent Trend Card) */
+    .agent-trend-card {
+      margin-top: 10px;
+      padding: 10px 12px;
+      background: rgba(5, 11, 26, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .trend-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .trend-prop-name b {
+      font-size: 13.5px;
+      color: #fff;
+      margin-right: 4px;
+    }
+
+    .trend-unit {
+      font-size: 11px;
+      color: var(--t3);
+    }
+
+    .trend-status-badge {
+      font-size: 10.5px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', sans-serif;
+    }
+
+    .trend-status-badge.ok {
+      background: rgba(52, 211, 153, 0.15);
+      color: var(--green);
+      border: 1px solid rgba(52, 211, 153, 0.4);
+    }
+
+    .trend-status-badge.warn {
+      background: rgba(248, 113, 113, 0.18);
+      color: var(--rose);
+      border: 1px solid rgba(248, 113, 113, 0.45);
+      animation: breath-warn 1.5s infinite;
+    }
+
+    .trend-card-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      background: rgba(13, 27, 51, 0.4);
+      padding: 6px 8px;
+      border-radius: 4px;
+    }
+
+    .tc-metric {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .tc-lbl {
+      font-size: 10px;
+      color: var(--t3);
+    }
+
+    .tc-val {
+      font-family: 'Rajdhani', 'JetBrains Mono', sans-serif;
+      font-size: 13.5px;
+      font-weight: 700;
+    }
+
+    .tc-val.cur {
+      color: var(--cyan);
+    }
+
+    .tc-val.pred {
+      color: var(--blue);
+    }
+
+    .tc-val.ci {
+      color: #cbd5e1;
+      font-size: 11px;
+    }
+
+    /* 范围可视化标尺 */
+    .trend-range-bar-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .range-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9.5px;
+      color: var(--t3);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .range-bar-track {
+      height: 8px;
+      background: rgba(30, 41, 59, 0.6);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .range-ci-zone {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.25), rgba(56, 189, 248, 0.55));
+      border-radius: 4px;
+    }
+
+    .range-cur-dot {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 6px #fff;
+      z-index: 2;
+    }
+
+    .range-limit-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      right: 15%;
+      width: 2px;
+      background: var(--rose);
+      box-shadow: 0 0 4px var(--rose);
+      z-index: 1;
+    }
+
+    .trend-card-advise {
+      font-size: 11px;
+      color: var(--t2);
+      line-height: 1.5;
+      display: flex;
+      align-items: flex-start;
+      gap: 5px;
+      background: rgba(56, 189, 248, 0.05);
+      padding: 6px 8px;
+      border-radius: 4px;
+      border-left: 2px solid var(--teal);
+    }
+
+    .advise-icon {
+      flex-shrink: 0;
+      color: var(--yellow);
+    }
+
+    .trend-focus-btn {
+      width: 100%;
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.15), rgba(34, 211, 238, 0.25));
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: var(--cyan);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .trend-focus-btn:hover {
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.3), rgba(34, 211, 238, 0.45));
+      color: #fff;
+      border-color: var(--blue);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+    }
+
+    /* 4. 语音拾音波纹频谱 */
+    .agent-voice-listening {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: rgba(244, 63, 94, 0.08);
+      border: 1px dashed rgba(244, 63, 94, 0.4);
+      border-radius: 6px;
+      animation: pulse-border 1.5s infinite;
+    }
+
+    .voice-wave {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 18px;
+    }
+
+    .voice-wave .bar {
+      width: 3px;
+      height: 6px;
+      background: var(--rose);
+      border-radius: 2px;
+      animation: wave-bar 0.8s ease-in-out infinite alternate;
+    }
+
+    .voice-wave .b1 { animation-delay: 0.1s; }
+    .voice-wave .b2 { animation-delay: 0.3s; }
+    .voice-wave .b3 { animation-delay: 0.5s; }
+    .voice-wave .b4 { animation-delay: 0.2s; }
+    .voice-wave .b5 { animation-delay: 0.4s; }
+
+    @keyframes wave-bar {
+      0% { height: 4px; opacity: 0.4; }
+      100% { height: 18px; opacity: 1; }
+    }
+
+    .listening-tip {
+      font-size: 11.5px;
+      color: #fecdd3;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* 5. 底部输入与语音控制器 */
+    .agent-footer {
+      padding: 10px 12px;
+      background: rgba(13, 27, 51, 0.85);
+      border-top: 1px solid rgba(56, 189, 248, 0.2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .btn-voice {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      color: var(--cyan);
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .btn-voice:hover {
+      background: rgba(56, 189, 248, 0.3);
+      color: #fff;
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    }
+
+    .btn-voice.listening {
+      background: var(--rose);
+      border-color: #fda4af;
+      color: #fff;
+      box-shadow: 0 0 14px rgba(244, 63, 94, 0.7);
+      animation: pulse-dot 0.8s infinite;
+    }
+
+    .input-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      background: rgba(5, 11, 26, 0.8);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 4px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: #f1f5f9;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .input-wrap input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px rgba(34, 211, 238, 0.35);
+      background: rgba(5, 11, 26, 0.95);
+    }
+
+    .input-wrap input::placeholder {
+      color: var(--t3);
+      font-size: 11.5px;
+    }
+
+    .btn-send {
+      padding: 7px 14px;
+      background: linear-gradient(135deg, var(--blue), #0284c7);
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      border-radius: 4px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .btn-send:hover:not(:disabled) {
+      background: linear-gradient(135deg, #0284c7, var(--cyan));
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .btn-send:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    /* ============ 交互模式切换标签 ============ */
+    .agent-mode-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 10px 14px 0;
+      z-index: 2;
+    }
+
+    .mode-tab {
+      flex: 1;
+      padding: 8px 0;
+      border-radius: 8px;
+      background: rgba(56, 189, 248, 0.05);
+      border: 1px solid rgba(56, 189, 248, 0.18);
+      color: var(--t2);
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.22s;
+    }
+
+    .mode-tab:hover { color: #fff; border-color: rgba(56, 189, 248, 0.45); }
+
+    .mode-tab.active {
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.28), rgba(2, 132, 199, 0.22));
+      color: #fff;
+      border-color: var(--cyan);
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+    }
+
+    /* ============ 语音对话舞台 ============ */
+    .voice-stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px 14px;
+      z-index: 2;
+      min-height: 0;
+    }
+
+    .voice-transcript {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;   /* 记录贴底，紧挨声呐球，避免中间大片空白 */
+      gap: 8px;
+      min-height: 0;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(56, 189, 248, 0.3) transparent;
+      padding-right: 4px;
+    }
+
+    .vt-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12.5px;
+      line-height: 1.65;
+      animation: vt-in 0.3s ease;
+    }
+
+    @keyframes vt-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .vt-who {
+      flex-shrink: 0;
+      font-size: 10.5px;
+      padding: 2px 9px;
+      border-radius: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .vt-item.user .vt-who {
+      background: rgba(148, 163, 184, 0.16);
+      color: var(--t2);
+    }
+
+    .vt-item.assistant .vt-who {
+      background: rgba(56, 189, 248, 0.16);
+      color: var(--cyan);
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
+    }
+
+    .vt-text {
+      color: #e2e8f0;
+      word-break: break-word;
+    }
+
+    .vt-item.assistant .vt-text { color: #dbeafe; }
+
+    /* 中央声呐球 */
+    .voice-orb-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 0 10px;
+      position: relative;
+    }
+
+    .voice-orb-rings {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92px;
+      height: 92px;
+      pointer-events: none;
+    }
+
+    .voice-orb-rings .ring {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 1.5px solid rgba(56, 189, 248, 0.35);
+      opacity: 0;
+    }
+
+    .voice-orb-rings.listening .ring.r1 { animation: ring-spread 1.6s ease-out infinite; }
+    .voice-orb-rings.listening .ring.r2 { animation: ring-spread 1.6s ease-out 0.5s infinite; }
+    .voice-orb-rings.listening .ring.r3 { animation: ring-spread 1.6s ease-out 1s infinite; }
+    .voice-orb-rings.speaking .ring.r1 { animation: ring-spread 1.2s ease-out infinite; border-color: rgba(251, 191, 36, 0.5); }
+    .voice-orb-rings.speaking .ring.r2 { animation: ring-spread 1.2s ease-out 0.4s infinite; border-color: rgba(251, 191, 36, 0.5); }
+    .voice-orb-rings.thinking .ring.r1 { animation: ring-spread 1.4s ease-out infinite; border-color: rgba(129, 140, 248, 0.5); }
+    .voice-orb-rings.thinking .ring.r2 { animation: ring-spread 1.4s ease-out 0.7s infinite; border-color: rgba(129, 140, 248, 0.5); }
+
+    @keyframes ring-spread {
+      0% { opacity: 0.8; transform: scale(0.9); }
+      100% { opacity: 0; transform: scale(1.55); }
+    }
+
+    .voice-orb {
+      position: relative;
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      background: radial-gradient(circle at 35% 32%, #4cc7f8, #0c6fb8 68%, #0a5590);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 28px rgba(14, 165, 233, 0.5), inset 0 -4px 12px rgba(0, 0, 0, 0.35), 0 0 34px rgba(56, 189, 248, 0.3);
+      transition: transform 0.25s, box-shadow 0.25s, background 0.25s;
+      z-index: 2;
+    }
+
+    .voice-orb:hover { transform: scale(1.06); }
+    .voice-orb:active { transform: scale(0.97); }
+
+    .voice-orb .orb-icon { font-size: 32px; filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.45)); }
+
+    .voice-orb.listening {
+      background: radial-gradient(circle at 35% 32%, #fb7185, #be123c 68%, #9f1239);
+      box-shadow: 0 8px 28px rgba(244, 63, 94, 0.55), inset 0 -4px 12px rgba(0, 0, 0, 0.35), 0 0 40px rgba(244, 63, 94, 0.4);
+      animation: orb-breathe 1.3s ease-in-out infinite;
+    }
+
+    .voice-orb.thinking {
+      background: radial-gradient(circle at 35% 32%, #a5b4fc, #4f46e5 68%, #3730a3);
+      box-shadow: 0 8px 28px rgba(99, 102, 241, 0.5), inset 0 -4px 12px rgba(0, 0, 0, 0.35);
+      animation: orb-breathe 1.8s ease-in-out infinite;
+    }
+
+    .voice-orb.speaking {
+      background: radial-gradient(circle at 35% 32%, #fcd34d, #b45309 68%, #92400e);
+      box-shadow: 0 8px 28px rgba(245, 158, 11, 0.5), inset 0 -4px 12px rgba(0, 0, 0, 0.35), 0 0 34px rgba(251, 191, 36, 0.35);
+    }
+
+    @keyframes orb-breathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.07); }
+    }
+
+    .voice-state-label {
+      margin-top: 12px;
+      font-size: 12.5px;
+      color: var(--t2);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.05em;
+      min-height: 18px;
+    }
+
+    .voice-chips {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      flex-wrap: wrap;
+      padding-top: 10px;
+      border-top: 1px solid rgba(56, 189, 248, 0.1);
+    }
+
+    .vc-chip {
+      padding: 4px 11px;
+      border-radius: 14px;
+      background: rgba(56, 189, 248, 0.07);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      color: var(--cyan);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .vc-chip:hover {
+      background: rgba(56, 189, 248, 0.2);
+      color: #fff;
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    }
+
+    /* ============ 主趋势图切换动效 ============ */
+    .trend-panel { position: relative; overflow: hidden; }
+
+    .trend-panel.switching {
+      animation: panel-glow 0.9s ease;
+    }
+
+    @keyframes panel-glow {
+      0% { box-shadow: 0 0 0 rgba(56, 189, 248, 0); }
+      30% { box-shadow: 0 0 34px rgba(56, 189, 248, 0.55), inset 0 0 24px rgba(56, 189, 248, 0.18); border-color: rgba(34, 211, 238, 0.9); }
+      100% { box-shadow: 0 0 0 rgba(56, 189, 248, 0); }
+    }
+
+    .trend-switch-fx {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      overflow: hidden;
+      border-radius: inherit;
+    }
+
+    /* 斜向扫掠光带 ×2（第二道延迟追踪，形成"先盖后揭"节奏） */
+    .fx-sweep {
+      position: absolute;
+      top: -30%;
+      bottom: -30%;
+      width: 46%;
+      transform: translateX(-130%) skewX(-18deg);
+      background: linear-gradient(100deg,
+        rgba(8, 15, 34, 0) 0%,
+        rgba(8, 15, 34, 0.82) 22%,
+        rgba(56, 189, 248, 0.35) 50%,
+        rgba(8, 15, 34, 0.82) 78%,
+        rgba(8, 15, 34, 0) 100%);
+    }
+
+    .fx-sweep2 {
+      width: 26%;
+      background: linear-gradient(100deg,
+        transparent 0%,
+        rgba(34, 211, 238, 0.5) 50%,
+        transparent 100%);
+    }
+
+    .trend-switch-fx.phase-cover .fx-sweep {
+      animation: fx-cover 0.42s cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards;
+    }
+
+    .trend-switch-fx.phase-cover .fx-sweep2 {
+      animation: fx-cover 0.42s cubic-bezier(0.55, 0.06, 0.68, 0.19) 0.08s forwards;
+    }
+
+    .trend-switch-fx.phase-reveal .fx-sweep {
+      transform: translateX(280%) skewX(-18deg);
+      animation: fx-reveal 0.5s cubic-bezier(0.22, 0.9, 0.3, 1) forwards;
+    }
+
+    .trend-switch-fx.phase-reveal .fx-sweep2 {
+      transform: translateX(280%) skewX(-18deg);
+      animation: fx-reveal 0.5s cubic-bezier(0.22, 0.9, 0.3, 1) 0.08s forwards;
+    }
+
+    @keyframes fx-cover {
+      from { transform: translateX(-130%) skewX(-18deg); }
+      to { transform: translateX(280%) skewX(-18deg); }
+    }
+
+    @keyframes fx-reveal {
+      from { transform: translateX(-130%) skewX(-18deg); }
+      to { transform: translateX(280%) skewX(-18deg); }
+    }
+
+    /* 中央指标名徽章：扫掠到中位时弹出，揭开时收回 */
+    .fx-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.4);
+      opacity: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 14px 30px;
+      background: rgba(6, 12, 28, 0.9);
+      border: 1px solid rgba(34, 211, 238, 0.75);
+      border-radius: 10px;
+      box-shadow: 0 0 34px rgba(56, 189, 248, 0.55), inset 0 0 18px rgba(56, 189, 248, 0.12);
+      backdrop-filter: blur(3px);
+    }
+
+    .fx-badge-name {
+      font-size: 21px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.12em;
+      text-shadow: 0 0 14px rgba(56, 189, 248, 0.9);
+    }
+
+    .fx-badge-sub {
+      font-size: 9.5px;
+      color: var(--cyan);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.22em;
+    }
+
+    .trend-switch-fx.phase-cover .fx-badge {
+      animation: badge-pop 0.42s cubic-bezier(0.18, 1.25, 0.4, 1) 0.24s forwards;
+    }
+
+    .trend-switch-fx.phase-reveal .fx-badge {
+      animation: badge-out 0.3s ease forwards;
+    }
+
+    @keyframes badge-pop {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+      100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    @keyframes badge-out {
+      0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -62%) scale(1.12); }
+    }
+
+    /* 抽屉弹出动画 */
+    .agent-pop-enter-active,
+    .agent-pop-leave-active {
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .agent-pop-enter-from,
+    .agent-pop-leave-to {
+      opacity: 0;
+      transform: translateY(20px) scale(0.96);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <!-- 开屏 HUD 加载动画 -->
+    <div class="cockpit-loader" :class="{ 'loader-exit': isExiting }" v-if="!isDestroyed">
+      <div class="loader-bg">
+        <div class="loader-grid"></div>
+        <div class="loader-scan"></div>
+      </div>
+      <div class="loader-hud">
+        <div class="hud-circle-wrap">
+          <div class="hud-ring r-outer"></div>
+          <div class="hud-ring r-ticks"></div>
+          <div class="hud-ring r-inner"></div>
+          <div class="hud-percent">{{ displayPercent }}<small>%</small></div>
+        </div>
+        <div class="hud-info">
+          <div class="sys-tag">AI COCKPIT SYSTEM STARTUP</div>
+          <h1 class="hud-title">东湖水质智能预测驾驶舱</h1>
+          <div class="hud-en">EAST LAKE WATER QUALITY PREDICTION PLATFORM</div>
+          <div class="hud-progress-bar">
+            <div class="hud-progress-fill" :style="{ width: `${displayPercent}%` }"></div>
+          </div>
+          <div class="hud-log">
+            <span class="log-cursor">▶</span>
+            <span class="log-text">{{ currentLog }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 驾驶舱主界面 -->
+    <div class="cockpit-root">
+      <!-- 背景动效层 -->
+      <div class="cockpit-bg">
+        <div class="bg-grid"></div>
+        <div class="bg-glow a"></div>
+        <div class="bg-glow b"></div>
+        <div class="bg-glow c"></div>
+        <div class="bg-glow d"></div>
+        <div class="bg-wave"></div>
+        <div id="cockpit-particles"></div>
+      </div>
+
+      <!-- 1920x1080 栅格内容 -->
+      <div id="screen" class="cockpit" :class="{ 'cockpit-enter': isLoaded }" :style="{ transform: `scale(${scale})` }">
+        <!-- 头部 Header -->
+        <header class="header">
+          <div class="header-light"></div>
+          <div class="header-left">
+            <div class="health-item" title="系统通讯链路状态">
+              <span class="health-dot" :class="health.api === 'online' ? '' : 'err'"></span>
+              <span>API</span><b>{{ health.api === 'online' ? '在线' : '离线' }}</b>
+            </div>
+            <div class="health-item">
+              <span style="color: var(--t3);">延迟</span>
+              <b style="font-family: Orbitron; color: var(--cyan);">{{ health.latency }}</b>
+            </div>
+            <!-- 未来 3 天天气预报 -->
+            <div class="weather fc3">
+              <div class="wf3-item" v-for="(w, i) in weatherForecast" :key="i" :class="{ today: i === 0 }">
+                <span class="wf3-day">{{ i === 0 ? '今日' : i === 1 ? '明日' : '后日' }}</span>
+                <span class="wf3-icon">{{ w.icon }}</span>
+                <span class="wf3-temp">{{ w.hi }}° / {{ w.lo }}°</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="header-center">
+            <div class="title-wrap">
+              <span class="title-deco l"></span>
+              <div class="title">
+                <span class="title-char" v-for="(ch, i) in titleChars" :key="i"
+                  :style="{ animationDelay: i * 0.15 + 's' }">{{ ch }}</span>
+              </div>
+              <div class="subtitle">EAST LAKE WATER QUALITY PREDICTION</div>
+              <span class="title-deco r"></span>
+            </div>
+          </div>
+
+          <div class="header-right">
+            <div class="clock-box">
+              <div class="clock">{{ clock.time }}</div>
+              <div class="date">{{ clock.date }} · 武汉</div>
+            </div>
+            <button class="fullscreen-btn" @click="toggleFullscreen" :title="isFullscreen ? '退出全屏 (ESC)' : '全屏展示'">
+              <span>{{ isFullscreen ? '🗗 窗口' : '⛶ 全屏' }}</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- 左侧 Left: 12 属性分组与能耗排行 -->
+        <aside class="left">
+          <section class="panel prop-panel">
+            <span class="c1"></span><span class="c2"></span>
+            <div class="edge-glow"></div>
+            <div class="ptitle">
+              <div class="ptitle-l">
+                <div class="ptitle-bar"></div>
+                <div>
+                  <div class="ptitle-text">预测属性概览</div>
+                  <div class="ptitle-en">PREDICTION OVERVIEW · 进水/出水</div>
+                </div>
+              </div>
+              <span class="ptitle-tag">{{ properties.length }} 项指标</span>
+            </div>
+
+            <div class="prop-groups">
+              <div class="prop-group" v-for="(grp, gi) in propGroups" :key="gi">
+                <div class="prop-group-label">{{ grp.label }} · {{ grp.items.length }} 项</div>
+                <div class="prop-list">
+                  <div v-for="p in grp.items" :key="p.name" class="prop-card"
+                    :class="{ active: p.name === activeProp, breath: p.warning }" @click="switchPropAnimated(p.name)">
+                    <div class="prop-name">{{ p.name }}</div>
+                    <div class="prop-vals">
+                      <span class="prop-cur">{{ fmt(p.predicted) }}</span>
+                      <span class="prop-unit">{{ p.unit }}</span>
+                    </div>
+                    <div class="prop-ci" :class="p.warning ? 'warn' : 'ok'">CI {{ fmt(p.ciLow) }}~{{ fmt(p.ciHigh) }}
+                    </div>
+                    <div class="prop-limit" v-if="p.limit">限值 {{ p.limit }}{{ p.unit }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 能耗排名 -->
+          <section class="panel">
+            <span class="c1"></span><span class="c2"></span>
+            <div class="edge-glow"></div>
+            <div class="ptitle">
+              <div class="ptitle-l">
+                <div class="ptitle-bar"></div>
+                <div>
+                  <div class="ptitle-text">能耗排名</div>
+                  <div class="ptitle-en">ENERGY RANKING · 预测驱动节能</div>
+                </div>
+              </div>
+              <span class="ptitle-tag">TOP 6</span>
+            </div>
+            <div class="energy-list">
+              <div class="energy-row" v-for="(e, i) in energyRanking" :key="e.name">
+                <span class="energy-rank" :class="'r' + (i + 1)">0{{ i + 1 }}</span>
+                <span class="energy-name" :title="e.name">{{ e.name }}</span>
+                <div class="energy-bar">
+                  <div class="energy-fill" :style="{ width: calcEnergyPct(e) + '%' }"></div>
+                </div>
+                <span class="energy-val">{{ e.value }} kWh</span>
+              </div>
+            </div>
+          </section>
+        </aside>
+
+        <!-- 中间 Main: 核心看板 + 主走势折线图 + 时间轴 -->
+        <main class="main">
+          <!-- 3 个核心大数字 -->
+          <section class="panel core-panel">
+            <span class="c1"></span><span class="c2"></span>
+            <div class="edge-glow"></div>
+            <div class="scan-line"></div>
+            <div class="core-grid">
+              <div class="core-card">
+                <div class="core-label">超标指标数</div>
+                <div class="core-en">OVER-LIMIT COUNT</div>
+                <div class="core-val" :class="overLimitCount > 0 ? 'orange' : 'green'">
+                  {{ overLimitCount }}<span class="core-unit">项</span>
+                </div>
+                <div class="core-sub">
+                  <span class="core-trend" :class="overLimitCount > 0 ? 'up' : 'down'">
+                    {{ overLimitCount > 0 ? '↑ 存在风险' : '✓ 全部合规' }}
+                  </span>
+                  <span>预测值 vs 标准限值</span>
+                </div>
+              </div>
+              <div class="core-card">
+                <div class="core-label">模型综合准确率</div>
+                <div class="core-en">MODEL ACCURACY</div>
+                <div class="core-val">{{ fmt(accuracy.average) }}<span class="core-unit">%</span></div>
+                <div class="core-sub">
+                  <span class="core-trend down">↑ 高可靠拟合</span>
+                  <span>LSTM v2.3</span>
+                </div>
+              </div>
+              <div class="core-card">
+                <div class="core-label">预测前瞻时长</div>
+                <div class="core-en">PREDICTION HORIZON</div>
+                <div class="core-val">24<span class="core-unit">h</span></div>
+                <div class="core-sub">
+                  <span class="core-trend flat">→ 滚动推演</span>
+                  <span>步长 30min 连续推演</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 主预测走势图 Hero View -->
+          <section class="panel trend-panel" :class="{ switching: switchFx.show }">
+            <span class="c1"></span><span class="c2"></span>
+            <div class="edge-glow"></div>
+            <!-- 指标切换动效遮罩（扫掠 + 指标名徽章） -->
+            <div class="trend-switch-fx" v-if="switchFx.show" :class="switchFx.phase">
+              <div class="fx-sweep"></div>
+              <div class="fx-sweep fx-sweep2"></div>
+              <div class="fx-badge">
+                <span class="fx-badge-name">{{ switchFx.name }}</span>
+                <span class="fx-badge-sub">TREND SWITCH · 趋势切换</span>
+              </div>
+            </div>
+            <div class="ptitle">
+              <div class="ptitle-l">
+                <div class="ptitle-bar"></div>
+                <div>
+                  <div class="ptitle-text">主预测走势 · 历史拟合 + 未来预测 + 置信区间</div>
+                  <div class="ptitle-en">PREDICTION TREND HERO VIEW</div>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <span class="ptitle-tag"
+                  style="color: var(--green); border-color: rgba(52, 211, 153, 0.4); background: rgba(52, 211, 153, 0.06);">●
+                  历史实际</span>
+                <span class="ptitle-tag" style="color: var(--cyan);">● 历史拟合</span>
+                <span class="ptitle-tag"
+                  style="color: var(--blue); border-color: rgba(56, 189, 248, 0.4); background: rgba(56, 189, 248, 0.06);">●
+                  未来预测</span>
+                <span class="ptitle-tag" style="color: var(--t2);">▒ 置信区间带</span>
+              </div>
+            </div>
+            <!-- 指标快速切换 Tabs -->
+            <div class="trend-tabs">
+              <div v-for="p in properties" :key="p.name" class="trend-tab" :class="{ active: p.name === activeProp }"
+                @click="switchPropAnimated(p.name)">
+                {{ p.name }}
+              </div>
+            </div>
+            <div ref="trendChartRef" class="trend-chart"></div>
+          </section>
+
+          <!-- 治理成效时间轴 -->
+          <section class="panel">
+            <span class="c1"></span><span class="c2"></span>
+            <div class="edge-glow"></div>
+            <div class="ptitle">
+              <div class="ptitle-l">
+                <div class="ptitle-bar"></div>
+                <div>
+                  <div class="ptitle-text">治理成效时间轴 · 预测基线锚点</div>
+                  <div class="ptitle-en">GOVERNANCE MILESTONES</div>
+                </div>
+              </div>
+              <span class="ptitle-tag">成效跟踪</span>
+            </div>
+            <div class="milestone-bar">
+              <div class="milestone" v-for="m in milestones" :key="m.year">
+                <div class="milestone-dot" :class="m.status"></div>
+                <div class="milestone-year">{{ m.year }}</div>
+                <div class="milestone-level" :class="m.cls">{{ m.level }}</div>
+                <div class="milestone-note">{{ m.note }}</div>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <!-- 右侧 Right: 准确率环形分析 + 归一化雷达 + 环境因子 -->
+        <aside class="right">
+          <!-- 预测准确率环形图 -->
+          <section class="panel">
+            <span class="c1"></span><span class="c2"></span>
+            <div class="edge-glow"></div>
+            <div class="ptitle">
+              <div class="ptitle-l">
+                <div class="ptitle-bar"></div>
+                <div>
+                  <div class="ptitle-text">预测准确率分析</div>
+                  <div class="ptitle-en">ACCURACY ANALYSIS</div>
+                </div>
+              </div>
+              <span class="ptitle-tag">{{ activeProp }}</span>
+            </div>
+            <div class="acc-wrap">
+              <div class="acc-ring">
+                <canvas ref="accRingCanvas" width="280" height="280"></canvas>
+                <div class="acc-center">
+                  <div class="acc-num">{{ fmt(animatedAverageAcc) }}</div>
+                  <div class="acc-label">平均准确率 %</div>
+                </div>
+              </div>
+              <div class="acc-stats">
+                <div class="acc-stat max"><span class="l">最高准确率</span><span class="v">{{ fmt(accuracy.highest)
+                    }}%</span></div>
+                <div class="acc-stat min"><span class="l">最低准确率</span><span class="v">{{ fmt(accuracy.lowest) }}%</span>
+                </div>
+                <div class="acc-stat err"><span class="l">平均误差</span><span class="v">{{ fmt(accuracy.error) }}%</span>
+                </div>
+                <div class="acc-stat avg"><span class="l">推演窗口</span><span class="v">24h 序列</span></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- 综合指标雷达图 -->
+          <section class="panel radar-panel">
+            <span class="c1"></span><span class="c2"></span>
+            <div class="edge-glow"></div>
+            <div class="ptitle">
+              <div class="ptitle-l">
+                <div class="ptitle-bar"></div>
+                <div>
+                  <div class="ptitle-text">综合指标雷达 · 6 维归一化</div>
+                  <div class="ptitle-en">OUTFLOW RADAR ASSESSMENT</div>
+                </div>
+              </div>
+              <span class="ptitle-tag">出水质控</span>
+            </div>
+            <div class="radar-wrap">
+              <div ref="radarChartRef" class="radar-chart"></div>
+            </div>
+          </section>
+
+          <!-- 环境因子 -->
+          <section class="panel">
+            <span class="c1"></span><span class="c2"></span>
+            <div class="edge-glow"></div>
+            <div class="ptitle">
+              <div class="ptitle-l">
+                <div class="ptitle-bar"></div>
+                <div>
+                  <div class="ptitle-text">环境驱动因子 · 协变量实时监控</div>
+                  <div class="ptitle-en">ENVIRONMENT COVARIATES</div>
+                </div>
+              </div>
+              <span class="ptitle-tag">实时同步</span>
+            </div>
+            <div class="cov-list">
+              <div class="cov-card">
+                <div class="cov-name">进水流量 (m³/h)</div>
+                <div class="cov-val" style="color: var(--blue);">{{ covariates.flow }}<span class="cov-unit">m³/h</span>
+                </div>
+              </div>
+              <div class="cov-card">
+                <div class="cov-name">水质监测温度</div>
+                <div class="cov-val t">{{ covariates.temp }}<span class="cov-unit">°C</span></div>
+              </div>
+              <div class="cov-card">
+                <div class="cov-name">面源降雨量</div>
+                <div class="cov-val r">{{ covariates.rain }}<span class="cov-unit">mm/h</span></div>
+              </div>
+              <div class="cov-card">
+                <div class="cov-name">推演水质类别</div>
+                <div class="cov-val" style="color: var(--green);">{{ category }}<span class="cov-unit">优良</span></div>
+              </div>
+            </div>
+          </section>
+        </aside>
+
+        <!-- 底部 Footer: 模型信息 + 跑马灯预警 + 数据源信息 -->
+        <footer class="footer">
+          <div class="footer-block">
+            <div class="model-tag">{{ modelInfo.version }}</div>
+            <div class="model-info">
+              <div class="model-meta">
+                <div class="model-title">长短期记忆时序预测网络</div>
+                <div class="model-desc">水质时序建模 · 30s 滚动推演</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-block">
+            <div class="alert-ticker">
+              <span class="alert-label">风险预警</span>
+              <div class="alert-marquee">
+                <div class="alert-track">
+                  <span class="alert-item" v-for="(a, i) in doubledAlerts" :key="i">
+                    <span class="t">{{ a.time }}</span>
+                    <span :class="'lvl-' + a.level">[{{ a.level === 'warning' ? '警告' : a.level === 'danger' ? '严重' :
+                      '提示' }}]</span>
+                    <span>{{ a.message }}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-block">
+            <div class="source-info">
+              <div class="source-header">
+                <span class="source-tag">数据源</span>
+                <span class="source-title">东湖水质自动遥测站</span>
+              </div>
+              <div class="source-meta">
+                <span class="source-dot"></span>
+                <span>数据质量: Normal (95%置信) · 更新时间：</span>
+                <span class="source-time">{{ health.lastUpdate }}</span>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+
+    <!-- ==================== 水质智能体 · 水灵 AI (AquaAgent) ==================== -->
+    <!-- 1. 悬浮唤醒球 -->
+    <div class="agent-fab" :class="{ active: agentOpen, 'has-listening': isListening }" @click="toggleAgent" title="唤醒水灵 AI 小助手 (语音对话/趋势研判)">
+      <div class="agent-pulse-ring a"></div>
+      <div class="agent-pulse-ring b"></div>
+      <div class="agent-avatar">
+        <span class="agent-icon">🌊</span>
+        <span class="agent-live-dot" :class="{ mic: isListening, speak: isSpeaking }"></span>
+      </div>
+      <div class="agent-fab-label">
+        <span class="fab-title">水灵</span>
+        <span class="fab-sub">{{ isListening ? '正在聆听...' : isSpeaking ? '正在播报...' : 'AI 小助手' }}</span>
+      </div>
+    </div>
+
+    <!-- 2. 对话抽屉浮窗 -->
+    <transition name="agent-pop">
+      <div class="agent-drawer" v-if="agentOpen">
+        <span class="c1"></span><span class="c2"></span><span class="c3"></span><span class="c4"></span>
+        <div class="agent-edge-glow"></div>
+        <div class="agent-scan-line"></div>
+
+        <!-- 浮窗头部 -->
+        <div class="agent-header">
+          <div class="agent-header-left">
+            <div class="agent-avatar-sm">🌊</div>
+            <div>
+              <div class="agent-title">水灵</div>
+              <div class="agent-status-line">
+                <span class="agent-status-dot" :class="{ listening: voiceStatus === 'listening', speaking: voiceStatus === 'speaking' || isSpeaking }"></span>
+                <span class="agent-status-txt">{{ chatMode === 'voice' ? voiceStatusText : '全景时序预测智能体就绪 · 数据已接入' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="agent-header-actions">
+            <button class="agent-icon-btn" :class="{ active: speechEnabled }" @click="toggleSpeech" :title="speechEnabled ? '语音播报已开启 (点击静音)' : '语音播报已静音 (点击开启)'">
+              {{ speechEnabled ? '🔊 播报开' : '🔇 静音' }}
+            </button>
+            <button class="agent-icon-btn close-btn" @click="agentOpen = false" title="收起水灵">✕</button>
+          </div>
+        </div>
+
+        <!-- 交互模式切换：文字对话 / 语音对话（两种模式相互独立） -->
+        <div class="agent-mode-tabs">
+          <button class="mode-tab" :class="{ active: chatMode === 'text' }" @click="switchChatMode('text')">💬 文字对话</button>
+          <button class="mode-tab" :class="{ active: chatMode === 'voice' }" @click="switchChatMode('voice')">🎙 语音对话</button>
+        </div>
+
+        <!-- 对话消息列表（文字模式） -->
+        <div class="agent-messages" ref="msgContainerRef" v-if="chatMode === 'text'">
+          <div v-for="(msg, idx) in messages" :key="idx" class="agent-msg-item" :class="msg.role">
+            <div class="msg-avatar" v-if="msg.role === 'assistant'">🌊</div>
+            <div class="msg-content-wrap">
+              <div class="msg-bubble">
+                <div class="msg-text" v-html="msg.text"></div>
+
+                <!-- 嵌入式结构化水质趋势卡片 -->
+                <div class="agent-trend-card" v-if="msg.trendCard">
+                  <div class="trend-card-top">
+                    <div class="trend-prop-name">
+                      <b>{{ msg.trendCard.name }}</b>
+                      <span class="trend-unit">({{ msg.trendCard.unit }})</span>
+                    </div>
+                    <span class="trend-status-badge" :class="msg.trendCard.warning ? 'warn' : 'ok'">
+                      {{ msg.trendCard.warning ? '⚠️ 接近/超出限值' : '✓ 达标受控' }}
+                    </span>
+                  </div>
+
+                  <div class="trend-card-metrics">
+                    <div class="tc-metric">
+                      <span class="tc-lbl">当前监测值</span>
+                      <span class="tc-val cur">{{ fmt(msg.trendCard.current) }}</span>
+                    </div>
+                    <div class="tc-metric">
+                      <span class="tc-lbl">未来24h均值</span>
+                      <span class="tc-val pred">{{ fmt(msg.trendCard.predicted) }}</span>
+                    </div>
+                    <div class="tc-metric">
+                      <span class="tc-lbl">95% 置信区间</span>
+                      <span class="tc-val ci">{{ fmt(msg.trendCard.ciLow) }}~{{ fmt(msg.trendCard.ciHigh) }}</span>
+                    </div>
+                  </div>
+
+                  <!-- 标尺与置信度指示条 -->
+                  <div class="trend-range-bar-wrap" v-if="msg.trendCard.limit">
+                    <div class="range-labels">
+                      <span>0</span>
+                      <span class="cur-anchor">当前: {{ fmt(msg.trendCard.current) }}</span>
+                      <span class="limit-anchor">限值: {{ msg.trendCard.limit }} {{ msg.trendCard.unit }}</span>
+                    </div>
+                    <div class="range-bar-track">
+                      <div class="range-ci-zone" :style="calcRangeBarStyle(msg.trendCard)"></div>
+                      <div class="range-cur-dot" :style="{ left: calcDotPos(msg.trendCard.current, msg.trendCard.limit) }"></div>
+                      <div class="range-limit-line"></div>
+                    </div>
+                  </div>
+
+                  <div class="trend-card-advise">
+                    <span class="advise-icon">💡</span>
+                    <span>{{ msg.trendCard.advice }}</span>
+                  </div>
+
+                  <button class="trend-focus-btn" @click="focusDashboardProp(msg.trendCard.name)">
+                    👉 大屏联动聚焦此走势
+                  </button>
+                </div>
+              </div>
+              <div class="msg-time">{{ msg.time }}</div>
+            </div>
+            <div class="msg-avatar user" v-if="msg.role === 'user'">👤</div>
+          </div>
+        </div>
+
+        <!-- 底部输入（文字模式，纯打字） -->
+        <div class="agent-footer" v-if="chatMode === 'text'">
+          <div class="input-wrap">
+            <input type="text" v-model="inputText" @keydown.enter="sendTextMessage" placeholder="输入问题，如: 出水COD趋势如何..." />
+          </div>
+          <button class="btn-send" :disabled="!inputText.trim()" @click="sendTextMessage">发送</button>
+        </div>
+
+        <!-- ============ 语音对话舞台（独立模式） ============ -->
+        <div class="voice-stage" v-if="chatMode === 'voice'">
+          <!-- 实时对话记录（语音轮次，横向滚动缩略） -->
+          <div class="voice-transcript" ref="voiceTranscriptRef">
+            <div v-for="(msg, idx) in voiceTurns" :key="idx" class="vt-item" :class="msg.role">
+              <span class="vt-who">{{ msg.role === 'user' ? '我' : '水灵' }}</span>
+              <span class="vt-text">{{ msg.plain }}</span>
+            </div>
+          </div>
+
+          <!-- 中央声呐球 -->
+          <div class="voice-orb-wrap">
+            <div class="voice-orb-rings" :class="voiceOrbState">
+              <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
+            </div>
+            <button class="voice-orb" :class="voiceOrbState" @click="toggleVoiceConversation">
+              <span class="orb-icon">{{ voiceOrbIcon }}</span>
+            </button>
+            <div class="voice-state-label">{{ voiceStatusText }}</div>
+          </div>
+
+          <!-- 快捷语音指令（点击直接以语音模式提问） -->
+          <div class="voice-chips">
+            <span class="vc-chip" v-for="c in voiceChips" :key="c" @click="askByVoiceChip(c)">{{ c }}</span>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- 右下角悬浮快捷演示工具条 -->
+    <div class="mock-toolbox">
+      <button @click="triggerSimulateFluctuation" title="模拟实时采集数据小幅随机波动">⚡ 模拟波动</button>
+      <button @click="replayLoader" title="重新体验开屏 HUD 科技动效">↺ 重放开屏</button>
+      <a href="classic_dashboard.html" title="点击打开旧版智慧水质预测看板">👈 切换到旧版</a>
+    </div>
+  </div>
+
+  <!-- 水灵 AI 对话智能体：配置 + 适配器（填好 agent.config.js 后真 Agent 生效，未配置自动回退本地规则） -->
+  <script>
+    const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted, nextTick } = Vue;
+
+    createApp({
+      setup() {
+        // ---- 状态与开屏控制 ----
+        const isLoaded = ref(false);
+        const isExiting = ref(false);
+        const isDestroyed = ref(false);
+        const isFullscreen = ref(false);
+        const percent = ref(0);
+        const displayPercent = computed(() => Math.floor(percent.value));
+
+        const logs = [
+          '正在初始化遥测传感器链路与水质特征矩阵...',
+          '正在装载 LSTM v2.3 时序预测神经网络模型权重...',
+          '正在计算多因子置信区间与 24 小时水质推演...',
+          '正在同步能耗排位、环境驱动因子与警报流...',
+          '系统初始化完成，全景感知驾驶舱就绪！',
+        ];
+        const currentLogIndex = ref(0);
+        const currentLog = computed(() => logs[currentLogIndex.value] || logs[logs.length - 1]);
+
+        // ---- 自适应缩放 (基准 1920x1080) ----
+        
+        // ---- 规范 safeInit 与空值保护 ----
+        const safeInit = () => {
+          const el = document.getElementById('screen');
+          if (!el) return;
+          updateScale();
+        };
+
+        const scale = ref(1);
+        const updateScale = () => {
+          scale.value = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+          const el = document.getElementById('screen');
+          if (el) {
+            el.style.transform = `scale(${scale.value})`;
+          }
+        };
+
+        // ---- 标题与时钟 ----
+        const titleChars = '东湖水质预测智能驾驶舱'.split('');
+        const clock = reactive({ time: '--:--:--', date: '2026-09-03' });
+        const updateClock = () => {
+          const d = new Date();
+          const p = (n) => String(n).padStart(2, '0');
+          clock.time = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+          clock.date = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+        };
+
+        // ---- 系统健康与气象 Mock ----
+        const health = reactive({
+          api: 'online',
+          latency: '42ms',
+          lastUpdate: '2026-09-03 19:48:20'
+        });
+
+        const weatherForecast = ref([
+          { date: '今日', hi: 29, lo: 22, desc: '多云', icon: '⛅' },
+          { date: '明日', hi: 31, lo: 23, desc: '晴间多云', icon: '☀' },
+          { date: '后日', hi: 27, lo: 21, desc: '小雨', icon: '🌧' },
+        ]);
+
+        // ---- 12 项水质指标元数据与真实 Mock 数据 ----
+        const properties = ref([
+          { name: '进水COD', unit: 'mg/L', current: 248.5, predicted: 265.2, ciLow: 245.0, ciHigh: 288.5, limit: 350, warning: false },
+          { name: '进水TP', unit: 'mg/L', current: 3.42, predicted: 3.85, ciLow: 3.20, ciHigh: 4.40, limit: 5.0, warning: false },
+          { name: '进水TN', unit: 'mg/L', current: 32.1, predicted: 35.8, ciLow: 31.0, ciHigh: 40.5, limit: 45, warning: false },
+          { name: '进水NH4', unit: 'mg/L', current: 24.6, predicted: 27.2, ciLow: 22.5, ciHigh: 31.2, limit: 35, warning: false },
+          { name: '进水PH', unit: '-', current: 7.35, predicted: 7.42, ciLow: 7.10, ciHigh: 7.75, limit: null, warning: false },
+          { name: '进水SS', unit: 'mg/L', current: 142.0, predicted: 156.4, ciLow: 135.0, ciHigh: 178.0, limit: 200, warning: false },
+
+          { name: '出水COD', unit: 'mg/L', current: 28.6, predicted: 31.4, ciLow: 26.0, ciHigh: 36.8, limit: 50, warning: false },
+          { name: '出水TP', unit: 'mg/L', current: 0.28, predicted: 0.33, ciLow: 0.25, ciHigh: 0.42, limit: 0.5, warning: false },
+          { name: '出水TN', unit: 'mg/L', current: 11.8, predicted: 13.9, ciLow: 11.2, ciHigh: 15.6, limit: 15, warning: true },
+          { name: '出水NH4', unit: 'mg/L', current: 2.15, predicted: 2.65, ciLow: 1.90, ciHigh: 3.40, limit: 5.0, warning: false },
+          { name: '出水PH', unit: '-', current: 7.48, predicted: 7.55, ciLow: 7.20, ciHigh: 7.80, limit: null, warning: false },
+          { name: '出水SS', unit: 'mg/L', current: 6.4, predicted: 7.2, ciLow: 5.5, ciHigh: 8.9, limit: 10, warning: false },
+        ]);
+
+        const activeProp = ref('出水COD');
+
+        const propGroups = computed(() => [
+          { label: '进水指标', items: properties.value.filter(p => p.name.startsWith('进水')) },
+          { label: '出水指标', items: properties.value.filter(p => p.name.startsWith('出水')) },
+        ]);
+
+        const overLimitCount = computed(() => properties.value.filter(p => p.warning).length);
+        const category = ref('IV 类');
+
+        // ---- 能耗排名 Mock ----
+        const energyRanking = ref([
+          { name: '1# 进水主泵', value: 842.5 },
+          { name: '2# 曝气风机', value: 715.2 },
+          { name: '3# 污泥回流泵', value: 580.4 },
+          { name: '4# 智能脱水机', value: 432.8 },
+          { name: '5# 加药计量泵', value: 312.0 },
+          { name: '6# 沉淀刮泥机', value: 218.6 },
+        ]);
+        const calcEnergyPct = (e) => Math.max(8, Math.round((e.value / 842.5) * 100));
+
+        // ---- 准确率统计 ----
+        const accuracy = reactive({
+          average: 94.68,
+          highest: 99.85,
+          lowest: 88.20,
+          error: 1.45,
+        });
+        const animatedAverageAcc = ref(0);
+
+        // ---- 环境协变量 ----
+        const covariates = reactive({
+          flow: 1350,
+          temp: 26.8,
+          rain: 1.5,
+        });
+
+        // ---- 治理成效里程碑 ----
+        const milestones = ref([
+          { year: 2018, level: '劣Ⅴ类', cls: 'bad', note: 'TLI 75.0 重度富营养化', status: 'past' },
+          { year: 2020, level: 'Ⅴ类', cls: 'mid', note: 'TLI 61.7 中度富营养化', status: 'past' },
+          { year: 2023, level: 'Ⅳ类', cls: 'good', note: '中央环保督察目标达成', status: 'past' },
+          { year: 2026, level: '维持Ⅳ类', cls: 'good', note: '时序预测持续达标', status: 'cur' },
+        ]);
+
+        // ---- 预警流播报 ----
+        const alerts = ref([
+          { time: '19:42', level: 'warning', message: '预测出水TN指标接近国家一级A限值(限值15mg/L，预测13.9mg/L)' },
+          { time: '19:35', level: 'info', message: '进水流量环比上升14.2%，曝气系统联动微调供气量' },
+          { time: '19:20', level: 'info', message: '过去24小时LSTM推演综合拟合优度达到95.2%' },
+          { time: '19:00', level: 'info', message: '气象遥测检测到夜间微量降雨，面源水体稳定' },
+        ]);
+        const doubledAlerts = computed(() => [...alerts.value, ...alerts.value]);
+
+        const modelInfo = reactive({
+          version: 'LSTM v2.3',
+          trainingTime: '2026-09-03 04:00'
+        });
+
+        const fmt = (v) => (v === null || v === undefined || isNaN(v) ? '-' : Number(v).toFixed(2));
+
+        // ---- 准确率 Canvas 环动效 ----
+        const accRingCanvas = ref(null);
+        let ringRaf = null;
+        const renderAccRing = (targetAcc) => {
+          const canvas = accRingCanvas.value;
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+          const w = canvas.width;
+          const h = canvas.height;
+          const cx = w / 2;
+          const cy = h / 2;
+          const r = w * 0.4;
+
+          const startVal = animatedAverageAcc.value;
+          const endVal = targetAcc;
+          const startTime = performance.now();
+          const duration = 1000;
+
+          const draw = (now) => {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const ease = 1 - Math.pow(1 - progress, 3);
+            const curVal = startVal + (endVal - startVal) * ease;
+            animatedAverageAcc.value = Number(curVal.toFixed(2));
+
+            ctx.clearRect(0, 0, w, h);
+
+            // 底轨
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.12)';
+            ctx.lineWidth = 14;
+            ctx.stroke();
+
+            // 刻度齿轮
+            ctx.beginPath();
+            ctx.arc(cx, cy, r + 12, 0, Math.PI * 2);
+            ctx.setLineDash([2, 8]);
+            ctx.strokeStyle = 'rgba(34, 211, 238, 0.25)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 进度高光弧
+            const angle = (curVal / 100) * Math.PI * 2;
+            const grad = ctx.createLinearGradient(0, 0, w, h);
+            grad.addColorStop(0, '#22d3ee');
+            grad.addColorStop(0.5, '#38bdf8');
+            grad.addColorStop(1, '#34d399');
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + angle);
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 14;
+            ctx.lineCap = 'round';
+            ctx.shadowColor = 'rgba(34, 211, 238, 0.6)';
+            ctx.shadowBlur = 16;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            if (progress < 1) {
+              ringRaf = requestAnimationFrame(draw);
+            }
+          };
+          if (ringRaf) cancelAnimationFrame(ringRaf);
+          ringRaf = requestAnimationFrame(draw);
+        };
+
+        // ---- ECharts: 主走势图 (历史拟合 + 未来预测 + 置信带) ----
+        const trendChartRef = ref(null);
+        let trendChart = null;
+
+        const renderTrendChart = () => {
+          if (!trendChart) return;
+          const prop = properties.value.find(p => p.name === activeProp.value) || properties.value[0];
+          const base = prop.predicted || 20;
+          const low = prop.ciLow || base * 0.9;
+          const high = prop.ciHigh || base * 1.1;
+          const now = Date.now();
+
+          // 生成 24h 历史 96 点
+          const histPts = 96;
+          const histInterval = (24 * 3600 * 1000) / histPts;
+          const histData = [];
+          const fitData = [];
+
+          for (let i = histPts; i >= 0; i--) {
+            const t = now - i * histInterval;
+            const phase = (i / histPts) * Math.PI * 2;
+            const wave = Math.sin(phase * 2) * base * 0.08 + Math.cos(phase * 3) * base * 0.04;
+            const jitter = Math.sin(i * 0.7) * base * 0.015;
+            const val = Math.max(0, base + wave + jitter);
+            const fitVal = Math.max(0, base + wave);
+            histData.push([t, Number(val.toFixed(2))]);
+            fitData.push([t, Number(fitVal.toFixed(2))]);
+          }
+
+          // 生成未来 24h 预测 48 点与置信区间带
+          const predPts = 48;
+          const predInterval = (24 * 3600 * 1000) / predPts;
+          const predData = [];
+          const bandLower = [];
+          const bandDiff = [];
+
+          const lastPt = histData[histData.length - 1];
+          predData.push(lastPt);
+          bandLower.push([lastPt[0], Number((lastPt[1] - (high - low) * 0.2).toFixed(2))]);
+          bandDiff.push([lastPt[0], Number(((high - low) * 0.4).toFixed(2))]);
+
+          for (let i = 1; i <= predPts; i++) {
+            const t = now + i * predInterval;
+            const trendOffset = Math.sin(i / 10) * base * 0.07 + (i / predPts) * base * 0.02;
+            const v = Math.max(0, base + trendOffset);
+            const spread = Math.max((high - low) * 0.45, (i / predPts) * base * 0.12 + (high - low) * 0.25);
+            const lower = Math.max(0, v - spread);
+            const upper = v + spread;
+            predData.push([t, Number(v.toFixed(2))]);
+            bandLower.push([t, Number(lower.toFixed(2))]);
+            bandDiff.push([t, Number((upper - lower).toFixed(2))]);
+          }
+
+          trendChart.setOption({
+            backgroundColor: 'transparent',
+            grid: { left: 55, right: 35, top: 35, bottom: 42 },
+            tooltip: {
+              trigger: 'axis',
+              backgroundColor: 'rgba(8, 15, 34, 0.95)',
+              borderColor: 'rgba(56, 189, 248, 0.4)',
+              textStyle: { color: '#e2e8f0', fontSize: 11 },
+              axisPointer: { lineStyle: { color: 'rgba(56, 189, 248, 0.4)', type: 'dashed' } },
+              formatter: (params) => {
+                if (!Array.isArray(params) || !params.length) return '';
+                const time = new Date(params[0].axisValue);
+                const pad2 = (n) => String(n).padStart(2, '0');
+                const ts = `${time.getFullYear()}-${pad2(time.getMonth() + 1)}-${pad2(time.getDate())} ${pad2(time.getHours())}:${pad2(time.getMinutes())}`;
+                const lines = params
+                  .filter(p => !p.seriesName.includes('下界'))
+                  .map(p => {
+                    const color = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color};margin-right:6px"></span>`;
+                    const val = Number(p.value[1] ?? p.value).toFixed(2);
+                    return `${color}${p.seriesName}: <b>${val} ${prop.unit}</b>`;
+                  });
+                return `<div style="font-size:12px;line-height:1.8"><span style="color:#22d3ee;font-weight:600">${ts}</span><br/>${lines.join('<br/>')}</div>`;
+              },
+            },
+            xAxis: {
+              type: 'time',
+              splitNumber: 8,
+              axisLine: { lineStyle: { color: 'rgba(56, 189, 248, 0.35)' } },
+              axisLabel: {
+                color: '#94a3b8',
+                fontSize: 10,
+                formatter: (v) => {
+                  const d = new Date(v);
+                  return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:00`;
+                },
+              },
+              splitLine: { show: true, lineStyle: { color: 'rgba(56, 189, 248, 0.06)' } },
+            },
+            yAxis: {
+              type: 'value',
+              name: prop.unit,
+              nameTextStyle: { color: '#64748b', fontSize: 10, padding: [0, 0, 0, -25] },
+              axisLine: { show: false },
+              axisLabel: { color: '#94a3b8', fontSize: 10 },
+              splitLine: { lineStyle: { color: 'rgba(56, 189, 248, 0.08)' } },
+            },
+            series: [
+              {
+                name: '置信区间下界',
+                type: 'line',
+                data: bandLower,
+                lineStyle: { opacity: 0 },
+                stack: 'confidence-band',
+                symbol: 'none',
+              },
+              {
+                name: '置信区间(95%)',
+                type: 'line',
+                data: bandDiff,
+                lineStyle: { opacity: 0 },
+                areaStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: 'rgba(56, 189, 248, 0.28)' },
+                    { offset: 1, color: 'rgba(56, 189, 248, 0.04)' },
+                  ]),
+                },
+                stack: 'confidence-band',
+                symbol: 'none',
+              },
+              {
+                name: '历史实际',
+                type: 'line',
+                data: histData,
+                lineStyle: { color: '#34d399', width: 2 },
+                itemStyle: { color: '#34d399' },
+                showSymbol: false,
+                smooth: true,
+              },
+              {
+                name: '历史拟合',
+                type: 'line',
+                data: fitData,
+                lineStyle: { color: '#22d3ee', width: 1.5, type: 'dashed' },
+                itemStyle: { color: '#22d3ee' },
+                showSymbol: false,
+                smooth: true,
+              },
+              {
+                name: '未来预测',
+                type: 'line',
+                data: predData,
+                lineStyle: { color: '#38bdf8', width: 2.8, shadowColor: 'rgba(56, 189, 248, 0.6)', shadowBlur: 10 },
+                itemStyle: { color: '#38bdf8' },
+                showSymbol: false,
+                smooth: true,
+              },
+            ],
+          }, true);
+        };
+
+        // ---- ECharts: 综合指标雷达图 ----
+        const radarChartRef = ref(null);
+        let radarChart = null;
+
+        // 计算出水指标在雷达图上的归一化比率 (标准限值对照: 1.0 为警戒线)
+        const calcRadarRatio = (p) => {
+          if (p.name.includes('PH')) {
+            // 国标 GB18918 一级A标准 PH 限值为 6~9，采用上限 9.0 进行归一化推算 (7.55 / 9.0 ≈ 0.84)
+            return Number((p.predicted / 9.0).toFixed(2));
+          }
+          const lim = (typeof p.limit === 'number' && p.limit > 0) ? p.limit : 1;
+          return Number((p.predicted / lim).toFixed(2));
+        };
+
+        const renderRadarChart = () => {
+          if (!radarChart) return;
+          const outProps = properties.value.filter(p => p.name.startsWith('出水'));
+          radarChart.setOption({
+            backgroundColor: 'transparent',
+            tooltip: {
+              trigger: 'item',
+              backgroundColor: 'rgba(8, 15, 34, 0.95)',
+              borderColor: 'rgba(56, 189, 248, 0.4)',
+              textStyle: { color: '#e2e8f0', fontSize: 11 },
+              formatter: (params) => {
+                const item = Array.isArray(params) ? params[0] : params;
+                if (!item) return '';
+                const itemName = item.name || item.seriesName || '';
+                if (itemName.includes('限值')) {
+                  return `<div style="font-size:11px;padding:3px 6px">
+                    <div style="color:#fb923c;font-weight:600;margin-bottom:3px">排放标准限值线 (1.00)</div>
+                    <div style="font-size:10px;color:#94a3b8">出水预测达到限值 100% 触发预警</div>
+                  </div>`;
+                }
+                const rows = outProps.map((p) => {
+                  const ratio = calcRadarRatio(p);
+                  const shortName = p.name.replace('出水', '');
+                  const isOver = Number(ratio) >= 1.0;
+                  const color = isOver ? '#f87171' : Number(ratio) >= 0.9 ? '#fb923c' : '#22d3ee';
+                  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:18px;line-height:1.8">
+                    <span style="color:#cbd5e1"><span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${color};margin-right:6px"></span>${shortName}</span>
+                    <span style="font-family:'JetBrains Mono',monospace;color:${color};font-weight:700">${ratio}</span>
+                  </div>`;
+                });
+                return `<div style="font-size:11px;min-width:145px;padding:3px 6px">
+                  <div style="font-weight:600;color:#22d3ee;margin-bottom:5px;border-bottom:1px solid rgba(56,189,248,.25);padding-bottom:3px">出水预测 / 排放限值比率</div>
+                  ${rows.join('')}
+                </div>`;
+              },
+            },
+            radar: {
+              indicator: outProps.map(p => ({
+                name: p.name.replace('出水', ''),
+                max: 1.3,
+              })),
+              center: ['50%', '54%'],
+              radius: '62%',
+              axisName: { color: '#94a3b8', fontSize: 11, fontFamily: 'Rajdhani, sans-serif' },
+              splitLine: { lineStyle: { color: 'rgba(56, 189, 248, 0.12)' } },
+              splitArea: { areaStyle: { color: ['rgba(56, 189, 248, 0.01)', 'rgba(56, 189, 248, 0.04)'] } },
+              axisLine: { lineStyle: { color: 'rgba(56, 189, 248, 0.1)' } },
+            },
+            series: [{
+              type: 'radar',
+              data: [
+                {
+                  name: '预测指标/限值比',
+                  value: outProps.map(p => calcRadarRatio(p)),
+                  lineStyle: { color: '#22d3ee', width: 2, shadowColor: 'rgba(34, 211, 238, 0.5)', shadowBlur: 8 },
+                  areaStyle: { color: 'rgba(34, 211, 238, 0.18)' },
+                  itemStyle: { color: '#22d3ee' },
+                },
+                {
+                  name: '排放标准限值线(1.0)',
+                  value: outProps.map(() => 1.0),
+                  lineStyle: { color: '#fb923c', width: 1.5, type: 'dashed' },
+                  itemStyle: { color: '#fb923c' },
+                },
+              ],
+            }],
+          }, true);
+        };
+
+        // 背景粒子生成
+        const createParticles = () => {
+          const wrap = document.getElementById('cockpit-particles');
+          if (!wrap) return;
+          wrap.innerHTML = '';
+          const colors = ['#38bdf8', '#22d3ee', '#34d399', '#2dd4bf'];
+          for (let i = 0; i < 28; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            const size = Math.random() * 3 + 1.5;
+            p.style.width = size + 'px';
+            p.style.height = size + 'px';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDuration = (Math.random() * 18 + 12) + 's';
+            p.style.animationDelay = Math.random() * 15 + 's';
+            const col = colors[Math.floor(Math.random() * colors.length)];
+            p.style.background = col;
+            p.style.boxShadow = `0 0 8px ${col}`;
+            wrap.appendChild(p);
+          }
+        };
+
+        // 模拟数据小幅波动
+        const triggerSimulateFluctuation = () => {
+          properties.value.forEach(p => {
+            const delta = (Math.random() - 0.48) * (p.predicted * 0.03);
+            p.predicted = Number(Math.max(0, p.predicted + delta).toFixed(2));
+            p.ciLow = Number(Math.max(0, p.ciLow + delta * 0.9).toFixed(2));
+            p.ciHigh = Number((p.ciHigh + delta * 1.1).toFixed(2));
+            if (p.limit) {
+              p.warning = p.predicted >= p.limit * 0.9;
+            }
+          });
+          covariates.flow = Math.round(1350 + (Math.random() - 0.5) * 60);
+          covariates.temp = Number((26.8 + (Math.random() - 0.5) * 0.8).toFixed(1));
+          accuracy.average = Number((94.5 + (Math.random() - 0.5) * 0.6).toFixed(2));
+
+          const d = new Date();
+          const pad2 = (n) => String(n).padStart(2, '0');
+          health.lastUpdate = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+
+          renderTrendChart();
+          renderRadarChart();
+          renderAccRing(accuracy.average);
+        };
+
+        // 重放开屏
+        const replayLoader = () => {
+          isLoaded.value = false;
+          isExiting.value = false;
+          isDestroyed.value = false;
+          percent.value = 0;
+          currentLogIndex.value = 0;
+          safeInit();
+          startLoader();
+        };
+
+        // 全屏切换
+        const toggleFullscreen = () => {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().then(() => {
+              isFullscreen.value = true;
+            }).catch(() => { });
+          } else {
+            if (document.exitFullscreen) {
+              document.exitFullscreen().then(() => {
+                isFullscreen.value = false;
+              }).catch(() => { });
+            }
+          }
+        };
+
+        const onFullscreenChange = () => {
+          isFullscreen.value = !!document.fullscreenElement;
+        };
+
+        // ============================================================
+        // 水质智能体 · 水灵 AI (AquaAgent Copilot) 核心引擎
+        // ============================================================
+        const agentOpen = ref(false);
+        const isListening = ref(false);
+        const isSpeaking = ref(false);
+        const speechEnabled = ref(true);
+        const inputText = ref('');
+        const msgContainerRef = ref(null);
+
+        // ---- 双交互模式：'text' 文字对话 / 'voice' 语音对话（相互独立） ----
+        const chatMode = ref('text');
+        const voiceStatus = ref('idle');   // idle | listening | thinking | speaking
+        const voiceTranscriptRef = ref(null);
+        const voiceTurns = ref([]);        // 语音轮次记录 {role, plain}
+        const voiceChips = ref(['出水COD走势怎么看？', '现在哪些指标有风险？', '预测准确率多少？', '今天进水流量大吗？']);
+        let voiceAskSeq = 0;               // 语音轮次序号（防止过期响应覆盖新状态）
+
+        const getCurrentTime = () => {
+          const d = new Date();
+          const p = (n) => String(n).padStart(2, '0');
+          return `${p(d.getHours())}:${p(d.getMinutes())}`;
+        };
+
+        const quickChips = ref([
+          { label: '📈 出水COD走势', query: '查看出水COD走势' },
+          { label: '⚠️ 哪些指标超标？', query: '有哪些指标超标或有风险？' },
+          { label: '🎯 预测准确率', query: '预测模型的准确率如何？' },
+          { label: '🌊 综合水质雷达', query: '综合水质雷达评估结果' },
+          { label: '⚡ 模拟水质波动', query: '模拟实时数据小幅波动' },
+        ]);
+
+        const messages = ref([
+          {
+            role: 'assistant',
+            text: '您好，我是<b>「水灵」</b>🌊 您的 AI 小助手，已接入 12 项水质指标、LSTM 预测与实时工况数据。切换上方<b>语音对话</b>可以直接说话，或在这里输入问题。',
+            time: getCurrentTime(),
+          }
+        ]);
+
+        const scrollMsgToBottom = () => {
+          if (msgContainerRef.value) {
+            msgContainerRef.value.scrollTop = msgContainerRef.value.scrollHeight;
+          }
+        };
+
+        const toggleAgent = () => {
+          agentOpen.value = !agentOpen.value;
+          if (agentOpen.value) {
+            nextTick(scrollMsgToBottom);
+          }
+        };
+
+        // 计算置信区间条样式 (95% CI 区间)
+        const calcRangeBarStyle = (c) => {
+          if (!c.limit || c.limit <= 0) return { left: '10%', width: '50%' };
+          const maxRange = c.limit * 1.25;
+          const left = Math.max(0, Math.min(100, (c.ciLow / maxRange) * 100));
+          const right = Math.max(0, Math.min(100, (c.ciHigh / maxRange) * 100));
+          return {
+            left: left.toFixed(1) + '%',
+            width: Math.max(8, right - left).toFixed(1) + '%',
+          };
+        };
+
+        // 计算当前监测点在标尺上的百分比
+        const calcDotPos = (val, limit) => {
+          if (!limit || limit <= 0) return '45%';
+          const maxRange = limit * 1.25;
+          const pos = Math.max(2, Math.min(98, (val / maxRange) * 100));
+          return pos.toFixed(1) + '%';
+        };
+
+        // ============ 主趋势图切换动效 ============
+        // 节奏：光带扫入盖住图表(0.42s) -> 图表换数据 + 中央徽章弹出 -> 光带揭开(0.5s) -> 图表重放入场动画
+        const switchFx = reactive({ show: false, phase: 'cover', name: '' });
+        let switchFxTimer = null;
+
+        const flashPropCard = (propName) => {
+          const propCards = document.querySelectorAll('.prop-card');
+          propCards.forEach(el => {
+            if (el.textContent.includes(propName)) {
+              el.style.boxShadow = '0 0 25px #38bdf8, inset 0 0 15px rgba(56, 189, 248, 0.4)';
+              el.style.borderColor = '#38bdf8';
+              setTimeout(() => {
+                el.style.boxShadow = '';
+                el.style.borderColor = '';
+              }, 2500);
+            }
+          });
+        };
+
+        const switchPropAnimated = (propName) => {
+          const target = (properties.value.find(p => p.name === propName) || {}).name;
+          if (!target) return;
+          const isSame = target === activeProp.value;
+          flashPropCard(target);
+
+          // 点当前已选中的指标：只闪卡片，不重复播切换动画
+          if (isSame && !switchFx.show) return;
+
+          if (switchFxTimer) { clearTimeout(switchFxTimer); switchFxTimer = null; }
+          // 第一阶段：光带扫入
+          switchFx.show = true;
+          switchFx.phase = 'cover';
+          switchFx.name = target;
+
+          // 第二阶段：被盖住的瞬间换数据（图表在遮罩后完成重绘）
+          setTimeout(() => {
+            activeProp.value = target;
+          }, 330);
+
+          // 第三阶段：光带扫出揭开 + 重放图表入场动画
+          switchFxTimer = setTimeout(() => {
+            switchFx.phase = 'reveal';
+            try {
+              trendChart && trendChart.clear();   // 清空后重设，ECharts 重新播放曲线生长动画
+              renderTrendChart();
+            } catch (e) { }
+            switchFxTimer = setTimeout(() => {
+              switchFx.show = false;
+              switchFxTimer = null;
+            }, 560);
+          }, 560);
+        };
+
+        // 大屏聚光与高亮联动（智能体 action 入口：带完整切换动效）
+        const focusDashboardProp = (propName) => {
+          switchPropAnimated(propName);
+        };
+
+        // 语音识别 (STT) - 基于 Web Speech API
+        let recognitionInstance = null;
+        const initSpeechRecognition = () => {
+          const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (!SpeechRec) return null;
+          try {
+            const rec = new SpeechRec();
+            rec.lang = 'zh-CN';
+            rec.continuous = false;
+            rec.interimResults = false;
+            rec.maxAlternatives = 1;
+            rec.onstart = () => {
+              isListening.value = true;
+            };
+            rec.onresult = (event) => {
+              if (event.results && event.results.length > 0) {
+                const transcript = event.results[0][0].transcript.trim();
+                if (transcript) {
+                  inputText.value = transcript;
+                  sendTextMessage();
+                }
+              }
+            };
+            rec.onerror = (err) => {
+              console.warn('[AquaAgent] 语音识别提示:', err);
+              isListening.value = false;
+              if (err.error === 'not-allowed') {
+                messages.value.push({
+                  role: 'assistant',
+                  text: '⚠️ 麦克风权限未开启或被拒绝。您可以直接在下方输入文字，或点击上方快捷标签与我交互。',
+                  time: getCurrentTime(),
+                });
+                nextTick(scrollMsgToBottom);
+              }
+            };
+            rec.onend = () => {
+              isListening.value = false;
+            };
+            return rec;
+          } catch (e) {
+            console.warn('[AquaAgent] 初始化语音识别异常:', e);
+            return null;
+          }
+        };
+
+        const toggleVoiceInput = () => {
+          // 文字模式底部已无麦克风：语音交互统一走"语音对话"舞台
+          switchChatMode('voice');
+          if (voiceStatus.value === 'idle') toggleVoiceConversation();
+        };
+
+        const _legacyToggleVoiceInput = () => {
+          if (isListening.value) {
+            if (recognitionInstance) {
+              try { recognitionInstance.stop(); } catch(e){}
+            }
+            isListening.value = false;
+            return;
+          }
+          if (!recognitionInstance) {
+            recognitionInstance = initSpeechRecognition();
+          }
+          if (!recognitionInstance) {
+            messages.value.push({
+              role: 'assistant',
+              text: '💡 当前浏览器暂未开放 Web Speech API 接口，建议使用 Edge 或 Chrome 浏览器体验麦克风语音拾音。您现在可直接文字输入或点击快捷芯片。',
+              time: getCurrentTime(),
+            });
+            nextTick(scrollMsgToBottom);
+            return;
+          }
+          try {
+            recognitionInstance.start();
+          } catch (e) {
+            console.warn('[AquaAgent] 启动语音拾音重试:', e);
+            recognitionInstance = initSpeechRecognition();
+            recognitionInstance && recognitionInstance.start();
+          }
+        };
+
+        // 语音合成播报 (TTS) - 服务端 edge-tts 优先，回退 SpeechSynthesis
+        const speakText = (text) => {
+          if (!speechEnabled.value) return;
+          // 服务端合成（音色自然，zh-CN-XiaoxiaoNeural，参考 MVP 链路）
+          if (window.AquaAgent && AquaAgent.cfg.voice && AquaAgent.cfg.voice.ttsMode === 'server') {
+            isSpeaking.value = true;
+            AquaAgent.speak(text);
+            // 播报时长按文本长度估测，结束后恢复状态灯
+            const est = Math.min(20000, 800 + String(text).replace(/<[^>]+>/g, '').length * 180);
+            setTimeout(() => { isSpeaking.value = false; }, est);
+            return;
+          }
+          if (!('speechSynthesis' in window)) return;
+          try {
+            window.speechSynthesis.cancel();
+            const clean = text.replace(/<[^>]+>/g, '').replace(/[\r\n]+/g, ' ').trim();
+            const brief = clean.length > 120 ? clean.slice(0, 120) + '...' : clean;
+            const utter = new SpeechSynthesisUtterance(brief);
+            utter.lang = 'zh-CN';
+            utter.rate = 1.05;
+            utter.pitch = 1.0;
+            utter.onstart = () => { isSpeaking.value = true; };
+            utter.onend = () => { isSpeaking.value = false; };
+            utter.onerror = () => { isSpeaking.value = false; };
+            window.speechSynthesis.speak(utter);
+          } catch (e) {
+            isSpeaking.value = false;
+          }
+        };
+
+        const toggleSpeech = () => {
+          speechEnabled.value = !speechEnabled.value;
+          if (!speechEnabled.value && 'speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            isSpeaking.value = false;
+          }
+        };
+
+        // ============ 语音对话模式（独立交互区） ============
+        const voiceStatusText = computed(() => {
+          if (voiceStatus.value === 'listening') return '正在聆听… 说完自动发送';
+          if (voiceStatus.value === 'thinking') return '水灵思考中…';
+          if (voiceStatus.value === 'speaking') return '正在播报，说完可再问';
+          return '点击开始语音对话';
+        });
+        const voiceOrbState = computed(() => {
+          const s = voiceStatus.value;
+          return s === 'listening' || s === 'thinking' || s === 'speaking' ? s : '';
+        });
+        const voiceOrbIcon = computed(() => {
+          if (voiceStatus.value === 'listening') return '⏹';
+          if (voiceStatus.value === 'thinking') return '⏳';
+          if (voiceStatus.value === 'speaking') return '🔊';
+          return '🎙';
+        });
+
+        const switchChatMode = (m) => {
+          chatMode.value = m;
+          // 切走语音模式时若正在录音/播报则停止
+          if (m !== 'voice') {
+            if (voiceStatus.value === 'listening') { AquaAgent.stopRecord(); isListening.value = false; }
+            if (voiceStatus.value === 'speaking') { AquaAgent.stopSpeaking(); isSpeaking.value = false; }
+            if (voiceStatus.value !== 'idle') voiceStatus.value = 'idle';
+          }
+        };
+
+        const scrollVoiceTranscript = () => {
+          if (voiceTranscriptRef.value) {
+            voiceTranscriptRef.value.scrollTop = voiceTranscriptRef.value.scrollHeight;
+          }
+        };
+
+        const pushVoiceTurn = (role, plain) => {
+          voiceTurns.value.push({ role, plain });
+          nextTick(scrollVoiceTranscript);
+        };
+
+        // 快捷语音芯片：直接以"用户语音轮次"发起提问（服务端按语音人设口语化回答）
+        const askByVoiceChip = (q) => {
+          if (voiceStatus.value === 'speaking') { AquaAgent.stopSpeaking(); }
+          if (voiceStatus.value === 'listening') { AquaAgent.stopRecord(); isListening.value = false; }
+          startVoiceTurn(q);
+        };
+
+        // 语音一轮：提问 -> 流式回答 -> 播报 -> 允许继续说
+        const startVoiceTurn = (question) => {
+          const seq = ++voiceAskSeq;
+          voiceStatus.value = 'thinking';
+          pushVoiceTurn('user', question);
+          AquaAgent.askStream(question, {
+            onThink: () => { if (voiceAskSeq === seq) voiceStatus.value = 'thinking'; },
+            onDelta: () => {},
+            onDone: (answer) => {
+              if (voiceAskSeq !== seq) return;
+              const parsed = AquaAgent.extractActions(answer || '');
+              const clean = (parsed.cleanText || answer || '抱歉，我没有听清，请再说一遍。').trim();
+              pushVoiceTurn('assistant', clean);
+              (parsed.actions || []).forEach((a) => {
+                if (a.action === 'focus_prop' && a.prop) focusDashboardProp(a.prop);
+                else if (a.action === 'simulate_fluctuation') triggerSimulateFluctuation();
+              });
+              if (AquaAgent.cfg.voice.speakAnswers !== false) {
+                voiceStatus.value = 'speaking';
+                isSpeaking.value = true;
+                AquaAgent.speak(clean, () => {
+                  isSpeaking.value = false;
+                  if (voiceAskSeq === seq) {
+                    voiceStatus.value = 'idle';   // 播报完，回到待命，等用户继续说
+                  }
+                });
+              } else {
+                voiceStatus.value = 'idle';
+              }
+            },
+            onError: (msg) => {
+              if (voiceAskSeq !== seq) return;
+              pushVoiceTurn('assistant', '⚠️ ' + msg);
+              voiceStatus.value = 'idle';
+            },
+          }, 'voice');   // channel=voice：服务端切换语音人设（更口语、更短、无指令行）
+        };
+
+        // 声呐球点击：待命 -> 开始录音；录音中 -> 手动结束
+        const toggleVoiceConversation = () => {
+          if (voiceStatus.value === 'listening') {
+            AquaAgent.stopRecord();
+            isListening.value = false;
+            return;
+          }
+          if (voiceStatus.value === 'speaking') {
+            AquaAgent.stopSpeaking();
+            isSpeaking.value = false;
+            voiceStatus.value = 'idle';
+            return;
+          }
+          if (voiceStatus.value === 'thinking') return;   // 思考中不可打断
+          voiceStatus.value = 'listening';
+          isListening.value = true;
+          AquaAgent.startRecord((text) => {
+            isListening.value = false;
+            if (text) startVoiceTurn(text);
+            else voiceStatus.value = 'idle';
+          }, (errMsg) => {
+            isListening.value = false;
+            voiceStatus.value = 'idle';
+            pushVoiceTurn('assistant', '⚠️ ' + errMsg);
+          });
+        };
+
+        const clearMessages = () => {
+          messages.value = [
+            {
+              role: 'assistant',
+              text: '已清空。切换上方<b>语音对话</b>可以直接说话，或在这里输入问题。🌊',
+              time: getCurrentTime(),
+            }
+          ];
+          voiceTurns.value = [];
+        };
+
+        const handleChipClick = (chip) => {
+          inputText.value = chip.query;
+          sendTextMessage();
+        };
+
+        // 意图解析与大屏声画决策引擎
+        const processUserMessage = (query) => {
+          const q = query.trim();
+          if (!q) return;
+
+          messages.value.push({
+            role: 'user',
+            text: q,
+            time: getCurrentTime(),
+          });
+          inputText.value = '';
+          nextTick(scrollMsgToBottom);
+
+          // ============ 真·对话智能体优先（SSE 流式 + 实时数据注入） ============
+          // 服务端代理把驾驶舱 API 真实数据注入上下文，回答引用具体数值；
+          // 未配置/服务不可用时自动回退下方本地关键词规则。
+          if (window.AquaAgent && AquaAgent.hasBrain && AquaAgent.hasBrain()) {
+            const thinkTexts = [
+              '💭 水灵正在查询实时数据…',
+              '🧠 正在推演水质时序数据…',
+              '🔍 正在比对历史工况与指标区间…',
+              '✍️ 正在组织回答…',
+            ];
+            let thinkIdx = 0;
+            let thinking = true;
+            let streamBuf = '';
+            messages.value.push({
+              role: 'assistant',
+              text: thinkTexts[0],
+              time: getCurrentTime(),
+            });
+            nextTick(scrollMsgToBottom);
+            const thinkTimer = setInterval(() => {
+              if (!thinking) return;
+              thinkIdx = (thinkIdx + 1) % thinkTexts.length;
+              const b = messages.value[messages.value.length - 1];
+              if (b && b.role === 'assistant') b.text = thinkTexts[thinkIdx];
+            }, 2600);
+
+            const stopThinking = () => {
+              thinking = false;
+              if (thinkTimer) clearInterval(thinkTimer);
+            };
+            const lastBubble = () => messages.value[messages.value.length - 1];
+
+            AquaAgent.askStream(q, {
+              onDelta: (t) => {
+                stopThinking();
+                streamBuf += t;
+                lastBubble().text = streamBuf.replace(/\n/g, '<br/>');
+                nextTick(scrollMsgToBottom);
+              },
+              onDone: (answer) => {
+                stopThinking();
+                const parsed = AquaAgent.extractActions(answer || streamBuf);
+                const b = lastBubble();
+                b.text = (parsed.cleanText || streamBuf || '（本次没有生成回答。）').replace(/\n/g, '<br/>');
+                // 大屏联动：执行智能体返回的工具指令
+                (parsed.actions || []).forEach((a) => {
+                  if (a.action === 'focus_prop' && a.prop) focusDashboardProp(a.prop);
+                  else if (a.action === 'simulate_fluctuation') triggerSimulateFluctuation();
+                  // show_radar / show_accuracy：雷达与准确率本就常驻大屏，文本已覆盖
+                });
+                if (AquaAgent.cfg.voice.speakAnswers !== false && parsed.cleanText) speakText(parsed.cleanText);
+                nextTick(scrollMsgToBottom);
+              },
+              onError: (msg) => {
+                stopThinking();
+                const b = lastBubble();
+                b.text = streamBuf
+                  ? streamBuf.replace(/\n/g, '<br/>') + '<br/><br/>⚠️ ' + msg
+                  : '⚠️ ' + msg + '<br/><br/>可点击上方快捷芯片体验本地联动，或稍后再试。';
+                nextTick(scrollMsgToBottom);
+              },
+            });
+            return;
+          }
+
+          const qLower = q.toLowerCase();
+
+          // 指标别名匹配表
+          const propMap = [
+            { keys: ['进水cod', '进水化学需氧量'], name: '进水COD' },
+            { keys: ['出水cod', '出水化学需氧量', 'cod', '化学需氧量'], name: '出水COD' },
+            { keys: ['进水tp', '进水总磷'], name: '进水TP' },
+            { keys: ['出水tp', '出水总磷', 'tp', '总磷'], name: '出水TP' },
+            { keys: ['进水tn', '进水总氮'], name: '进水TN' },
+            { keys: ['出水tn', '出水总氮', 'tn', '总氮'], name: '出水TN' },
+            { keys: ['进水nh4', '进水氨氮', '进水铵'], name: '进水NH4' },
+            { keys: ['出水nh4', '出水氨氮', 'nh4', '氨氮', '铵'], name: '出水NH4' },
+            { keys: ['进水ph', '进水酸碱度'], name: '进水PH' },
+            { keys: ['出水ph', '出水酸碱度', 'ph', '酸碱度'], name: '出水PH' },
+            { keys: ['进水ss', '进水悬浮物'], name: '进水SS' },
+            { keys: ['出水ss', '出水悬浮物', 'ss', '悬浮物'], name: '出水SS' },
+          ];
+
+          const isIncoming = q.includes('进水');
+          let matchedProp = null;
+
+          for (const item of propMap) {
+            if (isIncoming && !item.name.startsWith('进水')) continue;
+            if (!isIncoming && q.includes('出水') && !item.name.startsWith('出水')) continue;
+            if (item.keys.some(k => qLower.includes(k))) {
+              matchedProp = properties.value.find(p => p.name === item.name);
+              if (matchedProp) break;
+            }
+          }
+
+          // 场景 1: 水质走势分析与指标呈现
+          if (matchedProp || qLower.includes('走势') || qLower.includes('趋势') || qLower.includes('预测') || qLower.includes('曲线')) {
+            const prop = matchedProp || properties.value.find(p => p.name === activeProp.value) || properties.value[6];
+            switchPropAnimated(prop.name);
+
+            let advice = '未来 24 小时推演曲线平稳，各项工艺参数受控，建议维持当前运行负荷。';
+            if (prop.name === '出水TN' || prop.warning) {
+              advice = '预测值逼近排放标准限值！建议根据时序曲线峰值，联动提高反硝化深床滤池碳源投加比，防范夜间超标风险。';
+            } else if (prop.name.includes('COD')) {
+              advice = '生化曝气池负荷适中，好氧微生物降解效率处于高位，出水有机物去除率优良。';
+            } else if (prop.name.includes('NH4')) {
+              advice = '硝化反应彻底，氨氮去除率达到 92% 以上，曝气风机可执行预测节能调优策略。';
+            } else if (prop.name.includes('TP')) {
+              advice = '化学除磷与生物除磷协同稳定，出水指标符合地表水 IV 类环境基线。';
+            }
+
+            const replyText = `已在大屏主视窗为您切至 <b>${prop.name}</b> 未来 24 小时推演走势。<br/>当前实时监测为 <b>${fmt(prop.current)} ${prop.unit}</b>，LSTM 网络预测 24h 均值为 <b>${fmt(prop.predicted)} ${prop.unit}</b>（95% 置信区间 <b>[${fmt(prop.ciLow)} ~ ${fmt(prop.ciHigh)}]</b>）。`;
+
+            messages.value.push({
+              role: 'assistant',
+              text: replyText,
+              time: getCurrentTime(),
+              trendCard: {
+                name: prop.name,
+                unit: prop.unit,
+                current: prop.current,
+                predicted: prop.predicted,
+                ciLow: prop.ciLow,
+                ciHigh: prop.ciHigh,
+                limit: prop.limit,
+                warning: prop.warning,
+                advice: advice,
+              },
+            });
+
+            speakText(`已为您在大屏呈现${prop.name}预测走势。预测均值为 ${fmt(prop.predicted)} ${prop.unit}，${prop.warning ? '存在预警风险，请注意工艺调控。' : '水质达标受控。'}`);
+            nextTick(scrollMsgToBottom);
+            return;
+          }
+
+          // 场景 2: 超标与风险预警诊断
+          if (qLower.includes('超标') || qLower.includes('预警') || qLower.includes('风险') || qLower.includes('报警') || qLower.includes('异常')) {
+            const warnProps = properties.value.filter(p => p.warning || (p.limit && p.predicted >= p.limit * 0.88));
+            if (warnProps.length > 0) {
+              const top = warnProps[0];
+              switchPropAnimated(top.name);
+              const propNames = warnProps.map(p => `<b>${p.name}</b> (预测: ${fmt(p.predicted)} ${p.unit} / 限值: ${p.limit})`).join('、');
+              const replyText = `⚠️ <b>水质风险预警排查</b>：<br/>系统推演检测到以下指标存在风险或接近限值：<br/>${propNames}。<br/>大屏已自动为您联动切至风险指标 <b>${top.name}</b>。建议工艺人员检查曝气与投药配比。`;
+              messages.value.push({
+                role: 'assistant',
+                text: replyText,
+                time: getCurrentTime(),
+                trendCard: {
+                  name: top.name,
+                  unit: top.unit,
+                  current: top.current,
+                  predicted: top.predicted,
+                  ciLow: top.ciLow,
+                  ciHigh: top.ciHigh,
+                  limit: top.limit,
+                  warning: true,
+                  advice: '预测出水TN接近国标一级A标准上限，建议联动曝气系统并适当追加反硝化辅助药剂。',
+                },
+              });
+              speakText(`预警提示：系统检测到${top.name}指标接近标准限值，大屏已自动为您切换聚焦，请注意工艺调控。`);
+            } else {
+              messages.value.push({
+                role: 'assistant',
+                text: '✅ <b>全景监测合规</b>：当前推演窗口内，全部 12 项水质指标均处于国家标准限值以内，未检测到超标风险！水体生态状况良好。',
+                time: getCurrentTime(),
+              });
+              speakText('全景推演显示：当前各项水质指标全部合规，未发现超标风险。');
+            }
+            nextTick(scrollMsgToBottom);
+            return;
+          }
+
+          // 场景 3: 预测准确率与模型评估
+          if (qLower.includes('准确率') || qLower.includes('模型') || qLower.includes('精度') || qLower.includes('误差') || qLower.includes('拟合')) {
+            const replyText = `📊 <b>模型性能与置信度报告</b>：<br/>当前模型：<b>${modelInfo.version} 时序网络</b><br/>综合平均准确率：<b>${fmt(accuracy.average)}%</b><br/>最高拟合优度：<b>${fmt(accuracy.highest)}%</b> (最低: ${fmt(accuracy.lowest)}%)<br/>平均绝对误差 (MAE)：<b>${fmt(accuracy.error)}%</b><br/>具备工业级精准预测与提前 24 小时前瞻避险能力。`;
+            messages.value.push({
+              role: 'assistant',
+              text: replyText,
+              time: getCurrentTime(),
+            });
+            speakText(`当前时序预测模型平均准确率达到 ${fmt(accuracy.average)}%，拟合优度稳定可靠。`);
+            nextTick(scrollMsgToBottom);
+            return;
+          }
+
+          // 场景 4: 综合雷达图与水质类别
+          if (qLower.includes('雷达') || qLower.includes('综合') || qLower.includes('几类') || qLower.includes('等级') || qLower.includes('评价')) {
+            const replyText = `🌊 <b>水质综合评估</b>：<br/>当前综合推演水质类别为：<b style="color:var(--green)">${category.value}（优良）</b>。<br/>右侧出水综合雷达图涵盖 COD、TP、TN、NH4、PH、SS 6 维归一化比率，各指标比值均处于 1.00 警戒线安全内侧，满足东湖中央生态环保督察长期治理基线。`;
+            messages.value.push({
+              role: 'assistant',
+              text: replyText,
+              time: getCurrentTime(),
+            });
+            speakText(`东湖目前推演水质评定为${category.value}优良水质，6维出水质控雷达指标全部处于安全阈值内。`);
+            nextTick(scrollMsgToBottom);
+            return;
+          }
+
+          // 场景 5: 驾驶舱控制联动 (模拟波动 / 全屏 / 重放开屏)
+          if (qLower.includes('波动') || qLower.includes('模拟') || qLower.includes('测试数据')) {
+            triggerSimulateFluctuation();
+            messages.value.push({
+              role: 'assistant',
+              text: '⚡ <b>已触发数据模拟微波动</b>：实时传感器与 24h 推演序列已注入轻度随机扰动，大屏主折线图与雷达图已联动刷新。',
+              time: getCurrentTime(),
+            });
+            speakText('已为您触发水质数据微幅模拟波动，大屏走势图已实时更新。');
+            nextTick(scrollMsgToBottom);
+            return;
+          }
+
+          if (qLower.includes('全屏')) {
+            toggleFullscreen();
+            messages.value.push({
+              role: 'assistant',
+              text: '🖥️ <b>已为您切换驾驶舱全屏视口模式</b>。',
+              time: getCurrentTime(),
+            });
+            nextTick(scrollMsgToBottom);
+            return;
+          }
+
+          if (qLower.includes('重放') || qLower.includes('开屏') || qLower.includes('重启')) {
+            replayLoader();
+            messages.value.push({
+              role: 'assistant',
+              text: '↺ <b>已为您重新触发开屏 HUD 启动进程</b>。',
+              time: getCurrentTime(),
+            });
+            nextTick(scrollMsgToBottom);
+            return;
+          }
+
+          // 场景 6: 开放问答引导兜底
+          const defaultReply = `水灵已收到您的咨询：“<b>${q}</b>”。<br/><br/>作为您的 AI 小助手，我随时支持以下协同指令：<br/>• 🗣️ 语音/输入：“<b>查看出水COD走势</b>” 或 “<b>切换到出水氨氮</b>”；<br/>• ⚠️ 诊断：“<b>有哪些指标超标风险？</b>”；<br/>• 🎯 评估：“<b>当前预测准确率是多少？</b>”；<br/>• ⚡ 控制：“<b>模拟水质波动</b>” 或 “<b>切换全屏</b>”。<br/><br/>您可以直接点击上方快捷芯片体验！`;
+          messages.value.push({
+            role: 'assistant',
+            text: defaultReply,
+            time: getCurrentTime(),
+          });
+          speakText('您好，您可以直接告诉我想要查看哪项指标的预测走势，或者询问超标预警情况。');
+          nextTick(scrollMsgToBottom);
+        };
+
+        const sendTextMessage = () => {
+          const txt = inputText.value;
+          if (!txt || !txt.trim()) return;
+          processUserMessage(txt);
+        };
+
+        // 启动 Loader 进程
+        const startLoader = () => {
+          const startTime = Date.now();
+          const duration = 1500;
+          const step = () => {
+            const elapsed = Date.now() - startTime;
+            const p = Math.min(elapsed / duration, 1);
+            const ease = 1 - Math.pow(1 - p, 2.5);
+            percent.value = ease * 100;
+            currentLogIndex.value = Math.min(Math.floor(ease * logs.length), logs.length - 1);
+
+            if (p < 1) {
+              requestAnimationFrame(step);
+            } else {
+              percent.value = 100;
+              setTimeout(() => {
+                isExiting.value = true;
+                isLoaded.value = true;
+                setTimeout(() => {
+                  isDestroyed.value = true;
+                  nextTick(() => {
+                    initCharts();
+                  });
+                }, 600);
+              }, 200);
+            }
+          };
+          requestAnimationFrame(step);
+        };
+
+        const initCharts = () => {
+          if (trendChartRef.value && !trendChart) {
+            trendChart = echarts.init(trendChartRef.value);
+            renderTrendChart();
+          }
+          if (radarChartRef.value && !radarChart) {
+            radarChart = echarts.init(radarChartRef.value);
+            renderRadarChart();
+          }
+          renderAccRing(accuracy.average);
+        };
+
+        const onResize = () => {
+          updateScale();
+          trendChart && trendChart.resize();
+          radarChart && radarChart.resize();
+        };
+
+        let clockTimer = null;
+        let simTimer = null;
+
+        watch(activeProp, () => {
+          renderTrendChart();
+        });
+
+        onMounted(() => {
+          updateScale();
+          updateClock();
+          createParticles();
+          clockTimer = setInterval(updateClock, 1000);
+          simTimer = setInterval(triggerSimulateFluctuation, 15000); // 15s 自动微更新
+
+          window.addEventListener('resize', onResize);
+          document.addEventListener('fullscreenchange', onFullscreenChange);
+
+          safeInit();
+          startLoader();
+        });
+
+        onUnmounted(() => {
+          if (clockTimer) clearInterval(clockTimer);
+          if (simTimer) clearInterval(simTimer);
+          window.removeEventListener('resize', onResize);
+          document.removeEventListener('fullscreenchange', onFullscreenChange);
+          if (trendChart) trendChart.dispose();
+          if (radarChart) radarChart.dispose();
+          if (recognitionInstance) {
+            try { recognitionInstance.abort(); } catch (e) { }
+          }
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+          }
+        });
+
+        return {
+          isLoaded,
+          isExiting,
+          isDestroyed,
+          isFullscreen,
+          displayPercent,
+          currentLog,
+          scale,
+          titleChars,
+          clock,
+          health,
+          weatherForecast,
+          properties,
+          activeProp,
+          propGroups,
+          overLimitCount,
+          category,
+          energyRanking,
+          calcEnergyPct,
+          accuracy,
+          animatedAverageAcc,
+          covariates,
+          milestones,
+          doubledAlerts,
+          modelInfo,
+          fmt,
+          trendChartRef,
+          radarChartRef,
+          accRingCanvas,
+          toggleFullscreen,
+          triggerSimulateFluctuation,
+          replayLoader,
+
+          // 水灵 AI 小助手相关暴露
+          agentOpen,
+          isListening,
+          isSpeaking,
+          speechEnabled,
+          inputText,
+          messages,
+          quickChips,
+          msgContainerRef,
+          toggleAgent,
+          toggleVoiceInput,
+          toggleSpeech,
+          clearMessages,
+          handleChipClick,
+          sendTextMessage,
+          focusDashboardProp,
+
+          // 语音对话模式
+          chatMode,
+          switchPropAnimated,
+          switchFx,
+          switchChatMode,
+          voiceStatus,
+          voiceStatusText,
+          voiceOrbState,
+          voiceOrbIcon,
+          voiceTurns,
+          voiceTranscriptRef,
+          voiceChips,
+          askByVoiceChip,
+          toggleVoiceConversation,
+          calcRangeBarStyle,
+          calcDotPos,
+        };
+      },
+    }).mount('#app');
+  </script>
+</body>
+
+</html>

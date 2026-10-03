@@ -1,47 +1,45 @@
-import sys
 from pathlib import Path
 from playwright.sync_api import sync_playwright
+from scene_25_check import CHROME
 
 ROOT = Path(__file__).resolve().parent.parent
 
 def run():
     with sync_playwright() as p:
-        browser = p.chromium.launch()
-        
-        # 1. 打开 25 号场景
+        browser = p.chromium.launch(headless=True, executable_path=CHROME)
+
+        # 1. 打开 25 号场景（污泥浓缩脱水）
         page = browser.new_page(viewport={"width": 1920, "height": 1080})
         page.route("http://**/*", lambda route: route.abort())
         page.route("https://**/*", lambda route: route.abort())
-        url_25 = (ROOT / "scenarios" / "water-treatment" / "25-智慧水务宏观地球与多级厂区穿透数字驾驶舱.html").as_uri()
+        url_25 = (ROOT / "scenarios" / "water-treatment" / "25-污泥浓缩脱水全流程智能监控中心.html").as_uri()
         page.goto(url_25, wait_until="networkidle")
-        page.wait_for_timeout(1500)
-        
-        # 截图 Level 1: 宏观地球主图
-        main_img = ROOT / "docs" / "screenshots" / "25-global-water-twin.png"
+        page.locator('#chartTrend canvas').wait_for()
+        page.emulate_media(reduced_motion='reduce')
+        page.get_by_role('button', name='暂停演示').click()
+
+        # 截图主图：常规运行全景
+        main_img = ROOT / "docs" / "screenshots" / "25-sludge-dewatering.png"
         page.screenshot(path=str(main_img), full_page=False)
-        print(f"[截图完成] Level 1 主图 -> {main_img}")
-        
-        # 截图 Level 2: 华东水厂集群
-        page.locator(".step-item").nth(1).click()
-        page.wait_for_timeout(800)
-        state_l2_img = ROOT / "docs" / "screenshots" / "states" / "25-state-regional-grid.png"
-        page.screenshot(path=str(state_l2_img), full_page=False)
-        print(f"[截图完成] Level 2 特写 -> {state_l2_img}")
-        
-        # 截图 Level 3: 厂区空间孪生全景
-        page.locator(".step-item").nth(2).click()
-        page.wait_for_timeout(800)
-        state_l3_img = ROOT / "docs" / "screenshots" / "states" / "25-state-plant-twin.png"
-        page.screenshot(path=str(state_l3_img), full_page=False)
-        print(f"[截图完成] Level 3 特写 -> {state_l3_img}")
-        
-        # 截图 Level 4: 核心工艺数据中枢
-        page.locator(".step-item").nth(3).click()
-        page.wait_for_timeout(800)
-        state_l4_img = ROOT / "docs" / "screenshots" / "states" / "25-state-process-detail.png"
-        page.screenshot(path=str(state_l4_img), full_page=False)
-        print(f"[截图完成] Level 4 特写 -> {state_l4_img}")
-        
+        print(f"[截图完成] 主图 -> {main_img}")
+
+        # 截图特写：高含固冲击 + 脱水机 Faceplate
+        page.get_by_role("button", name="高含固冲击").click()
+        page.get_by_role('button', name='查看1号离心脱水机', exact=True).click()
+        page.get_by_role('dialog').wait_for()
+        state_img = ROOT / "docs" / "screenshots" / "states" / "25-state-dewater-line.png"
+        page.screenshot(path=str(state_img), full_page=False)
+        print(f"[截图完成] 特写 -> {state_img}")
+
+        # 故障事件确认后保持锁定的工况归档
+        page.get_by_role('button', name='关闭设备详情').click()
+        page.get_by_role('button', name='单机故障', exact=True).click()
+        page.locator('.ack-btn').click()
+        page.wait_for_timeout(2800)
+        fault_img = ROOT / 'docs/screenshots/states/25-state-fault-isolation.png'
+        page.screenshot(path=str(fault_img), full_page=False)
+        print(f'[截图完成] 故障隔离 -> {fault_img}')
+
         # 2. 刷新 Showcase 体验包总览图
         showcase_page = browser.new_page(viewport={"width": 1440, "height": 900})
         showcase_page.route("http://**/*", lambda route: route.abort())
@@ -57,7 +55,7 @@ def run():
         showcase_img = ROOT / "docs" / "screenshots" / "showcase.png"
         showcase_page.screenshot(path=str(showcase_img), full_page=False)
         print(f"[截图完成] Showcase -> {showcase_img}")
-        
+
         browser.close()
 
 if __name__ == "__main__":
