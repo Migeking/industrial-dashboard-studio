@@ -47,3 +47,23 @@ works/
 # Plan & tasks
 implementation_plan.md
 task.md
+
+# Confidential & Proprietary Scenario Isolation (CSO-SS-02)
+scenarios/custom-cso/
+scenarios/**/custom-cso-*
+scenarios/**/*-巡司河*
+docs/screenshots/states/cso-*
+**/scratch/
+excel_summary.txt
+dwg_strings_*.txt
+analyze_excel.py
+extract_dwg.py
+*.dwg
+
+# 过程截图与状态测试特写（仅保留主图与总览图）
+docs/screenshots/states/
+docs/screenshots/responsive/
+docs/screenshots/pipeline_*.png
+docs/screenshots/v6_*.png
+
+
