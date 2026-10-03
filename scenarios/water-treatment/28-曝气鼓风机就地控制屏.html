@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="quality" content="DEMO - 离线仿真演示">
+<meta name="timestamp" content="STATIC DEMO FIXTURE">
+<title>28 曝气鼓风机就地控制屏</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<style>
+:root {
+  --chassis: #0a1118;
+  --panel-bg: #152230;
+  --border-metal: #283e54;
+  --border-highlight: rgba(255, 255, 255, 0.08);
+  --ink-primary: #f0f6fc;
+  --ink-secondary: #9bb0c4;
+  --ink-muted: #5e748a;
+  --cyan-glow: #38d6ff;
+  --green-run: #2cd67e;
+  --amber-warn: #ffb834;
+  --red-alarm: #ff4d4d;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--chassis);
+  color: var(--ink-primary);
+  font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; }
+
+#viewport {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 35%, #142333 0%, #0a1118 70%);
+}
+
+#screen {
+  box-sizing: border-box;
+  width: 1920px;
+  height: 1080px;
+  position: relative;
+  flex: 0 0 auto;
+  overflow: hidden;
+  transform-origin: center center;
+  background: linear-gradient(180deg, #101a26 0%, #0c141e 100%);
+  border: 1px solid #233547;
+  border-radius: 8px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.75), inset 0 1px 0 var(--border-highlight);
+  display: grid;
+  grid-template-rows: 92px 1fr 64px;
+}
+[v-cloak] { visibility: hidden; }
+
+/* 工业嵌入式机箱顶部防眩光饰条 */
+#screen::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, #1a7ab5, #38d6ff 50%, #1a7ab5);
+  z-index: 10;
+}
+
+/* 顶部工控标牌 */
+.topbar {
+  background: linear-gradient(180deg, #172433 0%, #111b27 100%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 36px;
+  border-bottom: 2px solid #24374a;
+  position: relative;
+  z-index: 2;
+}
+.title-block { display: flex; align-items: center; gap: 20px; }
+.scene-mark {
+  width: 54px;
+  height: 54px;
+  border: 2px solid #3d5873;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #1c2b3a, #0e1722);
+  color: #38d6ff;
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: .05em;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.1), 0 3px 8px rgba(0,0,0,0.4);
+}
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: .16em;
+  color: #6c8aa5;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+h1 {
+  margin: 3px 0 0;
+  font-size: 28px;
+  line-height: 1.15;
+  font-weight: 700;
+  color: #f2f7fc;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.top-meta { display: flex; align-items: center; gap: 18px; }
+.industrial-plate {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: #0d151f;
+  border: 1px solid #283c50;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 14px;
+  color: var(--ink-secondary);
+}
+.plate-tag {
+  color: #38d6ff;
+  font-weight: 700;
+  letter-spacing: .05em;
+  border-right: 1px solid #283c50;
+  padding-right: 12px;
+}
+.demo-badge {
+  border: 1px solid #c9932a;
+  background: rgba(184, 134, 11, 0.18);
+  color: #ffd875;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.demo-badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffd875;
+  box-shadow: 0 0 8px #ffd875;
+}
+
+/* 主工作台布局 */
+.workspace {
+  min-height: 0;
+  padding: 22px 28px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(620px, 0.95fr);
+  gap: 22px;
+}
+
+/* 机壳级工控面板卡片 */
+.panel {
+  border: 1px solid var(--border-metal);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  box-shadow: inset 0 1px 0 var(--border-highlight), 0 8px 24px rgba(0,0,0,0.45);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 左侧设备与机组展示 */
+.machine-panel {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 64px 1fr 156px;
+}
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: linear-gradient(180deg, #1b2938 0%, #152230 100%);
+  border-bottom: 1px solid #23374b;
+}
+.panel-heading h2 {
+  font-size: 19px;
+  margin: 0;
+  font-weight: 700;
+  color: #dce7f2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.panel-heading h2::before {
+  content: "";
+  width: 4px;
+  height: 18px;
+  background: #38d6ff;
+  border-radius: 2px;
+}
+.panel-sub-tag {
+  color: #7b94aa;
+  font-size: 13px;
+  background: #0e1722;
+  border: 1px solid #24374b;
+  padding: 3px 10px;
+  border-radius: 3px;
+}
+
+/* 高精矢量设备剖面图容器 */
+.machine-canvas {
+  min-height: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 20px;
+  background: radial-gradient(circle at 50% 50%, #172738 0%, #0d1620 100%);
+  overflow: hidden;
+}
+.machine-canvas svg {
+  width: 100%;
+  height: 100%;
+  max-height: 520px;
+  filter: drop-shadow(0 12px 20px rgba(0,0,0,0.5));
+}
+
+/* 动效：多级离心鼓风机叶轮气动旋转与流线粒子 */
+.impeller-rotator {
+  transform-box: view-box;
+  transform-origin: 476px 292px;
+}
+.impeller.is-rotating {
+  animation: blower-impeller-spin 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes blower-impeller-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.air-flow-stream {
+  stroke-dasharray: 8 10;
+  animation: air-stream 0.9s linear infinite;
+}
+@keyframes air-stream {
+  from { stroke-dashoffset: 36; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* 核心状态带 */
+.status-band {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr 1fr;
+  border-top: 1px solid #23374b;
+  background: #0f1823;
+}
+.status-cell {
+  padding: 16px 18px;
+  border-right: 1px solid #1f2f41;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+.status-cell:last-child { border-right: none; }
+.status-label { font-size: 13px; color: var(--ink-secondary); font-weight: 600; }
+.status-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: .02em;
+}
+.status-value.running { color: var(--green-run); text-shadow: 0 0 10px rgba(44, 214, 126, 0.35); }
+.status-value.stopped { color: #8ba2b5; }
+.status-value.fault { color: var(--red-alarm); text-shadow: 0 0 10px rgba(255, 77, 77, 0.4); }
+
+.lamp-beacon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #475a6c;
+  border: 2px solid #1a2430;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.25);
+  flex-shrink: 0;
+}
+.lamp-beacon.run { background: #2cd67e; box-shadow: 0 0 10px #2cd67e; }
+.lamp-beacon.fault { background: #ff4d4d; box-shadow: 0 0 10px #ff4d4d; animation: fault-pulse 1s infinite alternate; }
+@keyframes fault-pulse {
+  from { opacity: 0.6; }
+  to { opacity: 1; filter: drop-shadow(0 0 6px #ff4d4d); }
+}
+
+/* 右侧控制立柜操作区 */
+.right-column {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 1.15fr 0.95fr;
+  gap: 20px;
+}
+
+/* 就地操作箱面板 */
+.operator-panel {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.operator-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #23374b;
+  padding-bottom: 12px;
+}
+.operator-header h3 { margin: 0; font-size: 19px; color: #f0f6fc; font-weight: 700; }
+.auth-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.auth-badge.local {
+  background: rgba(44, 214, 126, 0.15);
+  border: 1px solid rgba(44, 214, 126, 0.5);
+  color: #36eb8f;
+}
+.auth-badge.remote {
+  background: rgba(255, 184, 52, 0.14);
+  border: 1px solid rgba(255, 184, 52, 0.45);
+  color: #ffca66;
+}
+
+/* 拟真三位万能转换开关区 */
+.selector-box {
+  background: #0f1924;
+  border: 1px solid #22374b;
+  border-radius: 6px;
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: center;
+  gap: 20px;
+}
+.knob-assembly {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.knob-plate {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #2d3e50 0%, #151f2b 100%);
+  border: 3px solid #3c5267;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 6px 14px rgba(0,0,0,0.6);
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+}
+.knob-handle {
+  width: 14px;
+  height: 52px;
+  background: linear-gradient(90deg, #1c2633 0%, #3a4e63 50%, #1c2633 100%);
+  border-radius: 7px;
+  position: absolute;
+  top: 22px;
+  left: 41px;
+  transform-origin: center 26px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.7), inset 0 1px 2px rgba(255,255,255,0.3);
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.knob-handle::after {
+  content: "";
+  position: absolute;
+  top: 3px; left: 5px; width: 4px; height: 16px;
+  background: #38d6ff;
+  border-radius: 2px;
+  box-shadow: 0 0 6px #38d6ff;
+}
+.knob-pos-local { transform: rotate(-45deg); }
+.knob-pos-remote { transform: rotate(45deg); }
+
+.mode-selector-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.mode-btn {
+  background: #162433;
+  border: 1px solid #283e54;
+  border-radius: 6px;
+  color: #8da4b8;
+  padding: 12px 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.18s ease;
+}
+.mode-btn small { font-size: 12px; font-weight: 400; opacity: 0.75; }
+.mode-btn.active {
+  background: linear-gradient(180deg, #22384e 0%, #182837 100%);
+  border-color: #38d6ff;
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(56, 214, 255, 0.25), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.mode-btn.active .mode-dot { background: #38d6ff; box-shadow: 0 0 8px #38d6ff; }
+.mode-dot { width: 8px; height: 8px; border-radius: 50%; background: #4a6176; margin-bottom: 2px; }
+
+/* 3D 物理质感按键区 */
+.actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+}
+.push-btn {
+  height: 68px;
+  border-radius: 8px;
+  border: 2px solid;
+  font-size: 20px;
+  font-weight: 750;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  position: relative;
+  user-select: none;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.25);
+  transition: transform 0.08s, filter 0.12s, box-shadow 0.08s;
+}
+.push-btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 2px 4px rgba(0,0,0,0.4);
+}
+.push-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.85);
+  box-shadow: none;
+  transform: none;
+}
+.btn-start {
+  background: linear-gradient(180deg, #1f7a49 0%, #135230 100%);
+  border-color: #3be088;
+  color: #ebfff5;
+}
+.btn-start:hover:not(:disabled) { filter: brightness(1.1); }
+.btn-stop {
+  background: linear-gradient(180deg, #a13232 0%, #691d1d 100%);
+  border-color: #ff6161;
+  color: #fff2f2;
+}
+.btn-stop:hover:not(:disabled) { filter: brightness(1.1); }
+.btn-reset {
+  background: linear-gradient(180deg, #274b6a 0%, #173045 100%);
+  border-color: #4a82b0;
+  color: #e5f1fc;
+}
+.btn-reset:hover:not(:disabled) { filter: brightness(1.1); }
+.btn-reset.pulsing {
+  animation: reset-glow 1.2s infinite alternate;
+}
+@keyframes reset-glow {
+  from { border-color: #4a82b0; box-shadow: 0 0 6px #38d6ff; }
+  to { border-color: #ffb834; box-shadow: 0 0 18px #ffb834; }
+}
+
+.operator-hint-bar {
+  background: #0d1722;
+  border-left: 3px solid #38d6ff;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #9bb5cc;
+  line-height: 1.5;
+  border-radius: 0 4px 4px 0;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+}
+
+/* 下半部分：变频器微操与电气数显监控单元 */
+.instrument-panel {
+  padding: 18px 24px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 12px;
+}
+.instrument-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #23374b;
+  padding-bottom: 8px;
+}
+.instrument-header h3 { margin: 0; font-size: 17px; color: #e4edf5; font-weight: 700; }
+.vfd-model-tag { font-size: 12px; color: #38d6ff; letter-spacing: .08em; }
+
+/* 变频器数显双屏 (设定与反馈) */
+.vfd-cluster {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  background: #0a111a;
+  border: 1px solid #1e3144;
+  border-radius: 6px;
+  padding: 12px 16px;
+}
+.vfd-display-box {
+  background: #04090e;
+  border: 1px solid #162638;
+  border-radius: 5px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.8);
+}
+.vfd-title { font-size: 12px; color: #6f89a0; font-weight: 600; }
+.vfd-value {
+  font-family: "Bahnschrift", "Segoe UI", "Courier New", monospace;
+  font-size: 38px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  color: #38d6ff;
+  text-shadow: 0 0 12px rgba(56, 214, 255, 0.45);
+  margin: 4px 0 2px;
+}
+.vfd-value.feedback { color: #2cd67e; text-shadow: 0 0 12px rgba(44, 214, 126, 0.45); }
+.vfd-unit { font-size: 14px; color: #5f7a91; align-self: flex-end; }
+
+/* 步进微调按键 */
+.vfd-step-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.vfd-step-btn {
+  flex: 1;
+  background: #162433;
+  border: 1px solid #263c50;
+  color: #a3bcd1;
+  border-radius: 4px;
+  padding: 6px 0;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.vfd-step-btn:hover:not(:disabled) {
+  background: #22384f;
+  border-color: #38d6ff;
+  color: #ffffff;
+}
+.vfd-step-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 三相电流与电能电表 */
+.power-metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.metric-card {
+  background: #0f1924;
+  border: 1px solid #1f3244;
+  border-radius: 4px;
+  padding: 8px 10px;
+  text-align: center;
+}
+.metric-card span { display: block; font-size: 12px; color: #708ba3; margin-bottom: 2px; }
+.metric-card strong {
+  font-family: "Bahnschrift", monospace;
+  font-size: 19px;
+  font-weight: 700;
+  color: #e2edf7;
+  font-variant-numeric: tabular-nums;
+}
+.metric-card small { font-size: 12px; color: #5e768c; margin-left: 2px; }
+
+/* 故障注入与演练脚手架 */
+.demo-toolstrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px dashed #273b50;
+  padding-top: 10px;
+}
+.demo-toolstrip span { font-size: 12px; color: #698299; }
+.inject-btn {
+  background: rgba(255, 77, 77, 0.15);
+  border: 1px solid #ff4d4d;
+  color: #ff9999;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.inject-btn:hover:not(:disabled) { background: rgba(255, 77, 77, 0.3); }
+.inject-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 底部防爆免责与数据质量底栏 */
+.bottom-bar {
+  background: linear-gradient(180deg, #101924 0%, #0a111a 100%);
+  border-top: 1px solid #203346;
+  padding: 0 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  color: #7b94a8;
+  font-size: 13px;
+  z-index: 2;
+}
+.safety-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffb834;
+  font-weight: 600;
+}
+.quality-stamp {
+  font-family: monospace;
+  color: #556c80;
+  font-size: 12px;
+}
+
+/* ================= 1024x768 紧凑触控工控机重排 ================= */
+#screen.compact {
+  box-sizing: border-box;
+  width: 1024px;
+  height: 768px;
+  border: none;
+  border-radius: 0;
+  grid-template-rows: 72px 1fr 48px;
+}
+#screen.compact .topbar { padding: 0 18px; }
+#screen.compact .scene-mark { width: 42px; height: 42px; font-size: 18px; }
+#screen.compact h1 { font-size: 21px; }
+#screen.compact .top-meta { gap: 10px; }
+#screen.compact .industrial-plate { padding: 4px 10px; font-size: 12px; }
+#screen.compact .demo-badge { padding: 5px 10px; font-size: 11px; }
+
+#screen.compact .workspace {
+  padding: 12px 16px;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 12px;
+}
+#screen.compact .machine-panel { grid-template-rows: 44px 1fr 108px; }
+#screen.compact .panel-heading { padding: 0 16px; }
+#screen.compact .panel-heading h2 { font-size: 16px; }
+#screen.compact .machine-canvas { padding: 6px 10px; }
+#screen.compact .machine-canvas svg { max-height: 330px; }
+#screen.compact .status-band { grid-template-columns: repeat(2, 1fr); }
+#screen.compact .status-cell { padding: 8px 12px; gap: 4px; }
+#screen.compact .status-label { font-size: 11px; }
+#screen.compact .status-value { font-size: 15px; }
+
+#screen.compact .right-column { gap: 10px; grid-template-rows: 1fr 1fr; }
+#screen.compact .operator-panel { padding: 10px 14px; gap: 8px; }
+#screen.compact .operator-header { padding-bottom: 6px; }
+#screen.compact .operator-header h3 { font-size: 15px; }
+#screen.compact .selector-box { padding: 6px 10px; grid-template-columns: 80px 1fr; gap: 10px; }
+#screen.compact .knob-plate { width: 62px; height: 62px; }
+#screen.compact .knob-handle { width: 9px; height: 34px; top: 14px; left: 26px; transform-origin: center 17px; }
+#screen.compact .mode-btn { padding: 6px 8px; font-size: 13px; }
+#screen.compact .actions-grid { gap: 8px; }
+#screen.compact .push-btn { height: 48px; font-size: 15px; }
+#screen.compact .operator-hint-bar { min-height: 26px; padding: 3px 8px; font-size: 11px; }
+
+#screen.compact .instrument-panel { padding: 10px 14px; gap: 6px; }
+#screen.compact .instrument-header { padding-bottom: 4px; }
+#screen.compact .instrument-header h3 { font-size: 14px; }
+#screen.compact .vfd-cluster { padding: 6px 8px; gap: 8px; }
+#screen.compact .vfd-display-box { padding: 4px 8px; }
+#screen.compact .vfd-value { font-size: 24px; margin: 2px 0; }
+#screen.compact .vfd-step-actions { margin-top: 3px; gap: 4px; }
+#screen.compact .vfd-step-btn { padding: 3px 0; font-size: 11px; }
+#screen.compact .power-metrics-strip { gap: 6px; }
+#screen.compact .metric-card { padding: 3px 4px; }
+#screen.compact .metric-card span { font-size: 10px; }
+#screen.compact .metric-card strong { font-size: 14px; }
+#screen.compact .demo-toolstrip { padding-top: 4px; }
+#screen.compact .inject-btn { padding: 3px 8px; font-size: 11px; }
+#screen.compact .bottom-bar { padding: 0 16px; font-size: 11px; }
+#screen.compact .quality-stamp { font-size: 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+  .impeller-rotator.is-spinning, .impeller.is-rotating { animation: none !important; }
+}
+</style>
+</head>
+<body>
+<div id="viewport">
+  <main id="screen" v-cloak>
+    <!-- 顶部工控标牌 -->
+    <header class="topbar">
+      <div class="title-block">
+        <div class="scene-mark">28</div>
+        <div>
+          <div class="eyebrow">现场控制箱 · 就地操作终端 (LCP)</div>
+          <h1>曝气鼓风机就地控制屏</h1>
+        </div>
+      </div>
+      <div class="top-meta">
+        <div class="industrial-plate">
+          <span class="plate-tag">1# BLW-01</span>
+          <span>多级离心鼓风机机组</span>
+          <span style="color:#4a6885">|</span>
+          <span style="font-size:12px;color:#38d6ff">Ex d IIB T4 · IP65</span>
+        </div>
+        <span class="demo-badge">离线演示 · 未接现场 I/O</span>
+      </div>
+    </header>
+
+    <!-- 工作区布局 -->
+    <section class="workspace">
+      <!-- 左侧：鼓风机设备精工剖面与工艺流态 -->
+      <article class="panel machine-panel">
+        <div class="panel-heading">
+          <h2>机组工况与内部透视</h2>
+          <span class="panel-sub-tag">多级离心式 · 气动流线仿真</span>
+        </div>
+
+        <div class="machine-canvas">
+          <svg viewBox="0 0 920 500" role="img" aria-label="曝气多级离心鼓风机机械透视剖面">
+            <defs>
+              <linearGradient id="motorBody" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#3c556e"/>
+                <stop offset="35%" stop-color="#2a3d50"/>
+                <stop offset="100%" stop-color="#172430"/>
+              </linearGradient>
+              <linearGradient id="scrollVolute" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#2e4860"/>
+                <stop offset="70%" stop-color="#192a3a"/>
+                <stop offset="100%" stop-color="#0f1924"/>
+              </linearGradient>
+              <linearGradient id="impellerGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#557b9e"/>
+                <stop offset="100%" stop-color="#2d4255"/>
+              </linearGradient>
+              <filter id="airGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+              </filter>
+            </defs>
+
+            <!-- 减震重工型机架底座 -->
+            <rect x="70" y="390" width="780" height="24" rx="4" fill="#1b2a3a" stroke="#36506a" stroke-width="2"/>
+            <rect x="90" y="414" width="740" height="12" fill="#0d151e"/>
+            <!-- 阻尼隔振脚垫 -->
+            <rect x="120" y="426" width="60" height="16" rx="2" fill="#2d3f50" stroke="#16222d"/>
+            <rect x="360" y="426" width="60" height="16" rx="2" fill="#2d3f50" stroke="#16222d"/>
+            <rect x="580" y="426" width="60" height="16" rx="2" fill="#2d3f50" stroke="#16222d"/>
+            <rect x="740" y="426" width="60" height="16" rx="2" fill="#2d3f50" stroke="#16222d"/>
+
+            <!-- 驱动电机部分 (左) -->
+            <g id="electric-motor">
+              <!-- 电机接线盒 -->
+              <rect x="145" y="222" width="70" height="36" rx="4" fill="#283d52" stroke="#466482" stroke-width="2"/>
+              <text x="180" y="244" text-anchor="middle" fill="#7fa6c7" font-size="11" font-family="monospace">380V AC</text>
+              <!-- 电机主体外壳与散热鳍片 -->
+              <rect x="110" y="258" width="220" height="132" rx="8" fill="url(#motorBody)" stroke="#466482" stroke-width="3"/>
+              <!-- 散热筋线条 -->
+              <line x1="140" y1="262" x2="140" y2="386" stroke="#1c2b38" stroke-width="4"/>
+              <line x1="165" y1="262" x2="165" y2="386" stroke="#1c2b38" stroke-width="4"/>
+              <line x1="190" y1="262" x2="190" y2="386" stroke="#1c2b38" stroke-width="4"/>
+              <line x1="215" y1="262" x2="215" y2="386" stroke="#1c2b38" stroke-width="4"/>
+              <line x1="240" y1="262" x2="240" y2="386" stroke="#1c2b38" stroke-width="4"/>
+              <line x1="265" y1="262" x2="265" y2="386" stroke="#1c2b38" stroke-width="4"/>
+              <line x1="290" y1="262" x2="290" y2="386" stroke="#1c2b38" stroke-width="4"/>
+              <!-- 非驱动端后风罩 (NDE) -->
+              <path d="M110 270 Q90 324 110 378 Z" fill="#223344" stroke="#466482" stroke-width="2"/>
+              <!-- 铭牌与状态灯 -->
+              <rect x="180" y="305" width="80" height="34" rx="2" fill="#0f1924" stroke="#2e4860"/>
+              <text x="220" y="322" text-anchor="middle" fill="#38d6ff" font-size="12" font-weight="700">75 kW</text>
+              <text x="220" y="334" text-anchor="middle" fill="#6a879e" font-size="9">2950 RPM</text>
+            </g>
+
+            <!-- 膜片联轴器与防护罩 -->
+            <rect x="330" y="306" width="46" height="36" rx="3" fill="#1b2a38" stroke="#50708f" stroke-width="2"/>
+            <line x1="353" y1="306" x2="353" y2="342" stroke="#ffb834" stroke-width="3" stroke-dasharray="4 2"/>
+
+            <!-- 鼓风机多级压缩段蜗壳主体 (右) -->
+            <g id="blower-body">
+              <!-- 大蜗壳外廓 -->
+              <path d="M476 142 C560 142 630 205 630 292 C630 378 558 402 476 402 C390 402 334 350 334 292 C334 210 400 142 476 142 Z"
+                    fill="url(#scrollVolute)" stroke="#3f5d7a" stroke-width="4"/>
+              <!-- 渐扩出风管道 (竖直向上出风) -->
+              <path d="M570 240 L570 80 L675 80 L675 292" fill="none" stroke="#2b4359" stroke-width="8" stroke-linejoin="round"/>
+              <rect x="566" y="65" width="114" height="18" rx="3" fill="#3d5872" stroke="#5a7e9e" stroke-width="2"/>
+              <text x="623" y="52" text-anchor="middle" fill="#38d6ff" font-size="13" font-weight="700">排气至曝气主管 ◄</text>
+
+              <!-- 气流流态流线 (运行中脉冲发光) -->
+              <g v-if="running" filter="url(#airGlow)">
+                <path class="air-flow-stream" d="M623 310 L623 80" fill="none" stroke="#38d6ff" stroke-width="6" stroke-linecap="round"/>
+                <path class="air-flow-stream" d="M605 290 L605 85" fill="none" stroke="rgba(56,214,255,0.6)" stroke-width="3"/>
+                <path class="air-flow-stream" d="M640 290 L640 85" fill="none" stroke="rgba(56,214,255,0.6)" stroke-width="3"/>
+              </g>
+
+              <!-- 进风消音过滤舱 (底部/侧向吸气) -->
+              <path d="M376 340 L340 370 L340 402 L420 402" fill="#152433" stroke="#354e66" stroke-width="2"/>
+              <text x="350" y="420" fill="#6c8ca6" font-size="11">进气消音器</text>
+
+              <!-- 内部透视：多级叶轮腔视窗 -->
+              <circle cx="476" cy="292" r="115" fill="#0d1822" stroke="#2c4257" stroke-width="4"/>
+              <circle cx="476" cy="292" r="82" fill="#13212e" stroke="#3e5a75" stroke-width="2" stroke-dasharray="6 4"/>
+
+              <!-- 多级钛合金动叶轮 (带旋转动画) -->
+              <g class="impeller impeller-rotator" :class="{ 'is-spinning': running, 'is-rotating': running }">
+                <circle cx="476" cy="292" r="28" fill="#415d78" stroke="#688cae" stroke-width="3"/>
+                <!-- 8 片气动弯曲叶片 -->
+                <path d="M476 264 Q505 230 520 205 Q490 225 476 250 Z" fill="url(#impellerGrad)" stroke="#7fa5c7"/>
+                <path d="M504 292 Q538 321 563 336 Q533 306 518 292 Z" fill="url(#impellerGrad)" stroke="#7fa5c7"/>
+                <path d="M476 320 Q447 354 432 379 Q462 359 476 334 Z" fill="url(#impellerGrad)" stroke="#7fa5c7"/>
+                <path d="M448 292 Q414 263 389 248 Q419 278 434 292 Z" fill="url(#impellerGrad)" stroke="#7fa5c7"/>
+                <path d="M496 272 Q532 260 554 250 Q522 268 496 280 Z" fill="url(#impellerGrad)" stroke="#7fa5c7"/>
+                <path d="M496 312 Q515 348 528 368 Q510 338 496 324 Z" fill="url(#impellerGrad)" stroke="#7fa5c7"/>
+                <path d="M456 312 Q420 324 398 334 Q430 316 456 304 Z" fill="url(#impellerGrad)" stroke="#7fa5c7"/>
+                <path d="M456 272 Q437 236 424 216 Q442 246 456 260 Z" fill="url(#impellerGrad)" stroke="#7fa5c7"/>
+              </g>
+
+              <!-- 主轴中心锁紧螺母 -->
+              <polygon points="476,284 483,288 483,296 476,300 469,296 469,288" fill="#38d6ff"/>
+            </g>
+
+            <!-- 现场传感器探头热点标注 -->
+            <g id="sensors">
+              <!-- DE 轴承探头 -->
+              <circle cx="340" cy="286" r="6" fill="#ffb834" stroke="#121d28" stroke-width="2"/>
+              <line x1="340" y1="286" x2="310" y2="240" stroke="#ffb834" stroke-width="1.5" stroke-dasharray="3 2"/>
+              <rect x="235" y="224" width="72" height="20" rx="3" fill="#12202e" stroke="#ffb834"/>
+              <text x="271" y="238" text-anchor="middle" fill="#ffca66" font-size="10" font-weight="700">DE 振动 1.2G</text>
+
+              <!-- 排气端温度压力传感器 -->
+              <circle cx="623" cy="180" r="6" fill="#38d6ff" stroke="#121d28" stroke-width="2"/>
+              <line x1="623" y1="180" x2="710" y2="150" stroke="#38d6ff" stroke-width="1.5" stroke-dasharray="3 2"/>
+              <rect x="710" y="136" width="110" height="34" rx="4" fill="#12202e" stroke="#38d6ff"/>
+              <text x="765" y="152" text-anchor="middle" fill="#38d6ff" font-size="11" font-weight="700">PT-101 压力回读</text>
+              <text x="765" y="165" text-anchor="middle" fill="#a4c2db" font-size="10">{{ running ? '58.4 kPa 正常' : '0.0 kPa 待机' }}</text>
+            </g>
+          </svg>
+        </div>
+
+        <!-- 底部工况监测条 -->
+        <div class="status-band">
+          <div class="status-cell">
+            <span class="status-label">运行状态反馈</span>
+            <div class="status-value" :class="running ? 'running' : (faultLatched ? 'fault' : 'stopped')">
+              <span class="lamp-beacon" :class="running ? 'run' : (faultLatched ? 'fault' : '')"></span>
+              {{ faultLatched ? '故障锁存' : (running ? '运行中' : '停机备妥') }}
+            </div>
+          </div>
+          <div class="status-cell">
+            <span class="status-label">控制模式</span>
+            <div class="status-value" style="color:#dcedf7">
+              {{ mode === 'LOCAL' ? '就地控制 (现场)' : '远方受控 (DCS)' }}
+            </div>
+          </div>
+          <div class="status-cell">
+            <span class="status-label">现场操作权限</span>
+            <div class="status-value" :class="canOperate ? 'running' : 'stopped'">
+              {{ canOperate ? '允许就地操作' : '远方闭锁切除' }}
+            </div>
+          </div>
+          <div class="status-cell">
+            <span class="status-label">出口排气压力</span>
+            <div class="status-value" style="color:#38d6ff">
+              {{ running ? '58.4' : '0.0' }} <small style="font-size:13px;color:#7e9bb5">kPa</small>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 右侧：工业就地操作箱与变频监控仪表 -->
+      <div class="right-column">
+        <!-- 上卡片：操作按键与权限选择 -->
+        <section class="panel operator-panel">
+          <div class="operator-header">
+            <div>
+              <h3>就地操作控制箱</h3>
+              <span style="font-size:12px;color:#6d889e">物理触控模拟 · 启动/停止指令受就地权限约束</span>
+            </div>
+            <span class="auth-badge" :class="mode === 'LOCAL' ? 'local' : 'remote'">
+              ● {{ mode === 'LOCAL' ? '就地模式已激活' : '远方自动受控' }}
+            </span>
+          </div>
+
+          <!-- 拟真三位万能转换开关 -->
+          <div class="selector-box">
+            <div class="knob-assembly">
+              <div class="knob-plate" @click="toggleMode" title="点击旋转切换控制模式">
+                <div class="knob-handle" :class="mode === 'LOCAL' ? 'knob-pos-local' : 'knob-pos-remote'"></div>
+              </div>
+              <span style="font-size:11px;color:#7a94a8">万能转换开关</span>
+            </div>
+            <div class="mode-selector-tabs mode-switch" role="group" aria-label="控制模式切换">
+              <button class="mode-btn" type="button"
+                      :class="{ active: mode === 'LOCAL', selected: mode === 'LOCAL' }"
+                      :aria-pressed="mode === 'LOCAL'"
+                      aria-label="就地 LOCAL"
+                      @click="setMode('LOCAL')">
+                <span class="mode-dot"></span>
+                <span>就地控制</span>
+                <small>现场操作有效</small>
+              </button>
+              <button class="mode-btn" type="button"
+                      :class="{ active: mode === 'REMOTE', selected: mode === 'REMOTE' }"
+                      :aria-pressed="mode === 'REMOTE'"
+                      aria-label="远程 REMOTE"
+                      @click="setMode('REMOTE')">
+                <span class="mode-dot"></span>
+                <span>远方受控</span>
+                <small>DCS/中控联锁</small>
+              </button>
+            </div>
+          </div>
+
+          <!-- 3D 物理操作按键阵列 -->
+          <div class="actions-grid command-grid">
+            <button class="push-btn btn-start command start" type="button"
+                    :disabled="!canStart"
+                    @click="start"
+                    aria-label="启动">
+              <span style="font-size:24px">▶</span>
+              <span>就地启动</span>
+            </button>
+
+            <button class="push-btn btn-stop command stop" type="button"
+                    :disabled="!canStop"
+                    @click="stop"
+                    aria-label="停止">
+              <span style="font-size:22px">■</span>
+              <span>就地停止</span>
+            </button>
+
+            <button class="push-btn btn-reset command reset" type="button"
+                    :class="{ pulsing: faultLatched }"
+                    :disabled="!canReset"
+                    @click="resetFault"
+                    aria-label="故障复位">
+              <span style="font-size:20px">↺</span>
+              <span>故障复位</span>
+            </button>
+          </div>
+
+          <!-- 人机工效引导与闭锁提示 -->
+          <div class="operator-hint-bar command-help" role="status" aria-live="polite">
+            <span style="margin-right:6px">ℹ</span>
+            <span>{{ operationHint }}</span>
+          </div>
+        </section>
+
+        <!-- 下卡片：变频器仪表与三相电气遥测 -->
+        <section class="panel instrument-panel signal-panel">
+          <div class="instrument-header">
+            <h3>变频驱动单元 (VFD) 监控</h3>
+            <span class="vfd-model-tag">ABB ACS880 · 矢量控制模式</span>
+          </div>
+
+          <!-- 双显数码荧光屏 -->
+          <div class="vfd-cluster frequency-panel">
+            <div class="vfd-display-box frequency-reading">
+              <span class="vfd-title">设定频率 (SP)</span>
+              <strong class="vfd-value">{{ frequencySetpoint.toFixed(1) }}</strong>
+              <div class="vfd-unit">Hz</div>
+              <!-- 步进微调按钮 -->
+              <div class="vfd-step-actions frequency-actions">
+                <button class="vfd-step-btn frequency-adjust" type="button" :disabled="!canAdjustFrequency" @click="adjustFrequency(-0.5)" aria-label="频率减 0.5 赫兹">-0.5</button>
+                <button class="vfd-step-btn frequency-adjust" type="button" :disabled="!canAdjustFrequency" @click="adjustFrequency(-0.1)" aria-label="频率减 0.1 赫兹">-0.1</button>
+                <button class="vfd-step-btn frequency-adjust" type="button" :disabled="!canAdjustFrequency" @click="adjustFrequency(+0.1)" aria-label="频率加 0.1 赫兹">+0.1</button>
+                <button class="vfd-step-btn frequency-adjust" type="button" :disabled="!canAdjustFrequency" @click="adjustFrequency(+0.5)" aria-label="频率加 0.5 赫兹">+0.5</button>
+              </div>
+            </div>
+
+            <div class="vfd-display-box frequency-reading feedback">
+              <span class="vfd-title">实际输出频率 (PV)</span>
+              <strong class="vfd-value feedback">{{ frequencyFeedback !== null ? frequencyFeedback.toFixed(1) : '—.—' }}</strong>
+              <div class="vfd-unit">Hz · 实时反馈</div>
+              <div style="font-size:11px;color:#55748c;margin-top:10px">
+                母线电压：{{ running ? '542 V' : '538 V' }} · 功率因数：{{ running ? '0.92' : '0.00' }}
+              </div>
+            </div>
+          </div>
+
+          <!-- 三相电流微表阵列 -->
+          <div class="power-metrics-strip telemetry-grid">
+            <div class="metric-card current-cell">
+              <span>A相电流</span>
+              <strong>{{ phaseCurrents.a !== null ? phaseCurrents.a.toFixed(1) : '—.—' }}</strong>
+              <small>A</small>
+            </div>
+            <div class="metric-card current-cell">
+              <span>B相电流</span>
+              <strong>{{ phaseCurrents.b !== null ? phaseCurrents.b.toFixed(1) : '—.—' }}</strong>
+              <small>A</small>
+            </div>
+            <div class="metric-card current-cell">
+              <span>C相电流</span>
+              <strong>{{ phaseCurrents.c !== null ? phaseCurrents.c.toFixed(1) : '—.—' }}</strong>
+              <small>A</small>
+            </div>
+            <div class="metric-card">
+              <span>电机温升</span>
+              <strong style="color:#e2edf7;font-size:19px">{{ running ? '42.6' : '23.4' }}</strong>
+              <small>℃</small>
+            </div>
+          </div>
+
+          <!-- 离线演练工具栏 -->
+          <div class="demo-toolstrip demo-inject">
+            <span>应急演练辅助工具：</span>
+            <button class="inject-btn demo-fault" type="button" :disabled="faultLatched" @click="injectFault" aria-label="注入演示故障">
+              注入演示故障
+            </button>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- 底部安全与免责告示 -->
+    <footer class="bottom-bar">
+      <span class="safety-warning bottom-warning">
+        🛡 实体急停（E-STOP）与电气硬回路保护由现场硬件执行；本画面操作仅在就地授权下生效，不提供任何安全旁路功能。
+      </span>
+      <span class="quality-stamp quality">
+        QUALITY: DEMO · TIMESTAMP: STATIC FIXTURE · 离线仿真演示
+      </span>
+    </footer>
+  </main>
+</div>
+
+<script>
+function safeInit(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  return el;
+}
+
+const screen = safeInit('screen');
+if (screen && window.Vue) {
+  const { createApp, computed, ref } = Vue;
+  createApp({
+    setup() {
+      const mode = ref('LOCAL'); // 'LOCAL' (就地) | 'REMOTE' (远方)
+      const running = ref(false);
+      const faultLatched = ref(false);
+      const frequencySetpoint = ref(40.0);
+      const quality = 'DEMO';
+      const timestamp = 'STATIC FIXTURE';
+
+      const canOperate = computed(() => mode.value === 'LOCAL');
+      const canAdjustFrequency = computed(() => canOperate.value && !faultLatched.value);
+      const canStart = computed(() => canOperate.value && !running.value && !faultLatched.value);
+      const canStop = computed(() => canOperate.value && running.value);
+      const canReset = computed(() => canOperate.value && faultLatched.value);
+
+      const statusText = computed(() => faultLatched.value ? '故障锁存' : (running.value ? '正常运行中' : '就绪待机'));
+      const statusClass = computed(() => faultLatched.value ? 'state-fault' : (running.value ? 'state-running' : 'state-stopped'));
+      const lampClass = computed(() => faultLatched.value ? 'fault' : (running.value ? 'run' : 'offline'));
+
+      const frequencyFeedback = computed(() => running.value ? frequencySetpoint.value : null);
+      const phaseCurrents = computed(() => {
+        if (!running.value) return { a: null, b: null, c: null };
+        return { a: 12.4, b: 12.1, c: 12.3 };
+      });
+
+      const operationHint = computed(() => {
+        if (faultLatched.value) {
+          return '设备故障锁存报警：必须由巡检人员在就地模式下点击“故障复位”；复位后保持停机备妥，不会自动重启。';
+        }
+        if (mode.value === 'REMOTE') {
+          return '远方受控模式：设备受中控 DCS 自动启停与调速控制；现场就地启动、停止与变频微调按钮已被电气闭锁。';
+        }
+        if (running.value) {
+          return '就地运行中：鼓风机平稳运转，气动动叶轮高速旋转；可使用变频微调增减转速，或点击“就地停止”。';
+        }
+        return '就地控制权就绪：当前处于就地手动模式，各项电气联锁正常，点击“就地启动”开始运转。';
+      });
+
+      function setMode(nextMode) {
+        mode.value = nextMode === 'REMOTE' ? 'REMOTE' : 'LOCAL';
+      }
+      function toggleMode() {
+        mode.value = mode.value === 'LOCAL' ? 'REMOTE' : 'LOCAL';
+      }
+      function start() {
+        if (canStart.value) running.value = true;
+      }
+      function stop() {
+        if (canStop.value) running.value = false;
+      }
+      function adjustFrequency(step) {
+        if (!canAdjustFrequency.value) return;
+        const next = Math.max(20.0, Math.min(50.0, frequencySetpoint.value + step));
+        frequencySetpoint.value = Number(next.toFixed(1));
+      }
+      function injectFault() {
+        running.value = false;
+        faultLatched.value = true;
+      }
+      function resetFault() {
+        if (!canReset.value) return;
+        faultLatched.value = false;
+        running.value = false;
+      }
+
+      return {
+        mode, running, faultLatched, frequencySetpoint, frequencyFeedback, phaseCurrents, quality, timestamp,
+        canOperate, canAdjustFrequency, canStart, canStop, canReset,
+        statusText, statusClass, lampClass, operationHint,
+        setMode, toggleMode, adjustFrequency, start, stop, injectFault, resetFault
+      };
+    }
+  }).mount(screen);
+}
+
+// 优化后的自适应与缩放算法：保证任意分辨率平滑抗锯齿与精准居中
+function resizeScreen() {
+  const el = safeInit('screen');
+  if (!el) return;
+  const isCompact = window.innerWidth <= 1100;
+  el.classList.toggle('compact', isCompact);
+  const baseWidth = isCompact ? 1024 : 1920;
+  const baseHeight = isCompact ? 768 : 1080;
+  const scale = Math.min(window.innerWidth / baseWidth, window.innerHeight / baseHeight);
+  el.style.transform = 'scale(' + scale + ')';
+}
+window.resizeScreen = resizeScreen;
+window.addEventListener('resize', resizeScreen);
+if (window.matchMedia) {
+  window.matchMedia('(max-width: 1100px)').addEventListener('change', resizeScreen);
+}
+resizeScreen();
+</script>
+</body>
+</html>
