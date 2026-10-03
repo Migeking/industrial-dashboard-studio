@@ -1,5 +1,6 @@
 from pathlib import Path
 from playwright.sync_api import sync_playwright
+from scene_25_check import assert_scene_25
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -366,7 +367,7 @@ with sync_playwright() as playwright:
         p.locator(".handle-btn").click()
         p.wait_for_timeout(300)
         assert "96" in p.locator(".comfort-val").inner_text()
-        p.get_by_role("button", name="2层", exact=True).click()
+        p.locator(".pill-btn").filter(has_text="2F").click()
         p.wait_for_timeout(300)
         assert "核心数据机房" in p.locator(".pill-btn.active").inner_text()
 
@@ -464,66 +465,175 @@ with sync_playwright() as playwright:
         estop_btn.click()
         estop_btn.filter(has_text="就地急停").wait_for()
 
-    def assert_global_twin_25_interaction(p):
-        assert p.locator("#screen").count() == 1
-        p.locator(".brand-text h1").filter(has_text="智慧水务宏观地球与多级厂区穿透数字驾驶舱").wait_for()
-
-        # 1. 验证 Level 1 默认状态与画布存在
-        p.locator(".step-item.active").filter(has_text="宏观地球全景").wait_for()
-        assert p.locator(".kpi-stat-num").first.is_visible()
-        assert p.locator("#webgl-container canvas").count() == 1
-
-        # 2. 依次测试四级视界下钻与回跳
-        # 下钻 Level 2
-        p.locator(".step-item").nth(1).click()
-        p.locator(".step-item.active").filter(has_text="华东水厂集群").wait_for()
-        p.locator(".plant-item-card").first.wait_for()
-
-        # 下钻 Level 3
-        p.locator(".step-item").nth(2).click()
-        p.locator(".step-item.active").filter(has_text="厂区空间孪生").wait_for()
-        p.locator(".l3-top-banner").wait_for()
-
-        # 下钻 Level 4
-        p.locator(".step-item").nth(3).click()
-        p.locator(".step-item.active").filter(has_text="核心工艺中枢").wait_for()
-        p.locator(".water-metric-table").wait_for()
-        assert "CODcr" in p.locator(".water-metric-table").inner_text()
-
-        # 3. 测试底栏半自动推进步进按钮回退
-        prev_btn = p.locator(".nav-prev-btn")
-        prev_btn.click() # 4 -> 3
-        p.locator(".step-item.active").filter(has_text="厂区空间孪生").wait_for()
-
-        # 回跳 Level 1
-        p.locator(".step-item").first.click()
-        p.locator(".step-item.active").filter(has_text="宏观地球全景").wait_for()
-
-        # 4. 测试双推进模式切换 (自动推进 / 半自动步进)
-        semi_btn = p.locator(".mode-btn").filter(has_text="半自动步进模式")
-        semi_btn.click()
-        p.locator(".mode-btn.active").filter(has_text="半自动步进模式").wait_for()
-        auto_btn = p.locator(".mode-btn").filter(has_text="自动推进模式")
-        auto_btn.click()
-        p.locator(".mode-btn.active").filter(has_text="自动推进模式").wait_for()
+    def assert_sludge_dewatering_25_interaction(p):
+        assert_scene_25(p)
 
     run_case(
         page,
-        "water-treatment/25-智慧水务宏观地球与多级厂区穿透数字驾驶舱.html",
+        "water-treatment/25-污泥浓缩脱水全流程智能监控中心.html",
         lambda p: None,
-        assert_global_twin_25_interaction,
+        assert_sludge_dewatering_25_interaction,
+    )
+
+    def assert_cso_v6_odor_interaction(p):
+        assert p.locator("#screen").count() == 1
+        assert p.locator("#cc-fan-tag-1").is_visible()
+        # 测试点击除臭间气体逸散超标联动
+        p.locator("#scen-cc-leak").click()
+        p.wait_for_timeout(300)
+        assert "12.8" in p.locator("#cc-h2s-val").inner_text()
+        # 测试复常延时停机倒计时
+        p.locator("#scen-reset").click()
+        p.wait_for_timeout(300)
+        assert "延时停机中" in p.locator("#delay-timer-label").inner_text()
+
+    run_case(
+        page,
+        "custom-cso/05-cso-ss02-odor-safety-ventilation.html",
+        lambda p: None,
+        assert_cso_v6_odor_interaction,
+    )
+
+    def assert_water_quality_cockpit_26_interaction(p):
+        assert p.locator("#screen").count() == 1
+        title_text = p.locator(".title-wrap .title").inner_text().replace('\n', '').replace(' ', '')
+        assert "东湖水质预测智能驾驶舱" in title_text
+
+        # 1. 等待开屏 HUD Loader 结束，主面板加载完毕
+        p.locator(".prop-panel").wait_for(timeout=15000)
+
+        # 2. 测试左翼指标卡切换
+        p.locator(".prop-card").filter(has_text="出水TP").click()
+        p.locator(".prop-card.active").filter(has_text="出水TP").wait_for(timeout=3000)
+        assert p.locator(".prop-card.active").filter(has_text="出水TP").count() == 1
+
+        # 3. 测试右下角 AquaAgent 水灵助手唤醒球点击与抽屉展开
+        p.locator(".agent-fab").click()
+        p.locator(".agent-drawer").wait_for(timeout=3000)
+        assert "水灵" in p.locator(".agent-title").inner_text()
+
+        # 4. 测试文字对话输入与智能研判问答
+        p.locator(".input-wrap input").fill("出水COD趋势如何")
+        p.locator(".btn-send").click()
+        p.locator(".agent-msg-item.user").filter(has_text="出水COD趋势如何").wait_for(timeout=3000)
+        p.locator(".agent-msg-item.assistant").last.wait_for(timeout=3000)
+
+        # 5. 关闭水灵抽屉
+        p.locator(".close-btn").click()
+        p.locator(".agent-drawer").wait_for(state="detached", timeout=3000)
+
+        # 6. 测试右下角模拟波动微调按钮
+        p.locator(".mock-toolbox button").filter(has_text="模拟波动").click()
+
+    run_case(
+        page,
+        "water-treatment/26-东湖智慧水质时序预测与Aqua-Agent数字驾驶舱.html",
+        lambda p: None,
+        assert_water_quality_cockpit_26_interaction,
+    )
+
+    def assert_blower_house_27_interaction(p):
+        assert p.locator("#screen").count() == 1
+        p.locator(".brand-title").filter(has_text="曝气鼓风机房").wait_for()
+        assert p.locator("#chartTrend canvas").count() == 1
+        assert p.locator("#chartGauge canvas").count() == 1
+        assert p.locator("#chartCompare canvas").count() == 1
+        # 切换高峰负荷工况
+        p.get_by_role("button", name="高峰负荷").click()
+        p.locator(".scenario-tabs button.active").filter(has_text="高峰负荷").wait_for()
+        p.locator(".kpi").first.locator(".k-value").filter(has_text="4.62").wait_for()
+        # 点击 1# 鼓风机弹出 Faceplate
+        p.locator(".blower-unit").first.click()
+        p.locator(".faceplate").wait_for()
+        assert "Hz" in p.locator(".faceplate").inner_text()
+        # DO 目标步进 +1
+        p.locator(".do-plus").click()
+        p.locator(".do-target").filter(has_text="2.3").wait_for()
+        # 告警确认
+        p.locator(".ack-btn").first.click()
+        p.locator(".alarm-table td").filter(has_text="已确认").first.wait_for()
+
+    run_case(
+        page,
+        "water-treatment/27-曝气鼓风机房智能供风能效驾驶舱.html",
+        lambda p: None,
+        assert_blower_house_27_interaction,
+    )
+
+    def assert_blower_local_panel_28(p):
+        assert "未接现场 I/O" in p.locator(".demo-badge").inner_text()
+        assert p.locator(".status-value").first.filter(has_text="停机").count() == 1
+        assert p.locator(".impeller").evaluate("e => getComputedStyle(e).animationName") == "none"
+        assert p.locator(".frequency-reading").first.locator("strong").inner_text().startswith("40.0")
+        assert p.locator(".frequency-reading.feedback strong").inner_text().startswith("—.—")
+        assert p.locator(".current-cell strong").all_inner_texts() == ["—.—", "—.—", "—.—"]
+
+        p.get_by_role("button", name="频率加 0.5 赫兹").click()
+        assert p.locator(".frequency-reading").first.locator("strong").inner_text().startswith("40.5")
+
+        p.get_by_role("button", name="启动").click()
+        p.locator(".status-value").first.filter(has_text="运行").wait_for()
+        assert p.locator(".impeller.is-rotating").count() == 1
+        assert p.locator(".impeller").evaluate("e => getComputedStyle(e).animationName") == "blower-impeller-spin"
+        spin_transform_start = p.locator(".impeller").evaluate("e => getComputedStyle(e).transform")
+        p.wait_for_timeout(300)
+        spin_transform_end = p.locator(".impeller").evaluate("e => getComputedStyle(e).transform")
+        assert spin_transform_start != spin_transform_end
+        assert p.locator(".frequency-reading.feedback strong").inner_text().startswith("40.5")
+        assert p.locator(".current-cell strong").all_inner_texts() == ["12.4", "12.1", "12.3"]
+        p.get_by_role("button", name="停止").click()
+        p.locator(".status-value").first.filter(has_text="停机").wait_for()
+        assert p.locator(".impeller.is-rotating").count() == 0
+        assert p.locator(".impeller").evaluate("e => getComputedStyle(e).animationName") == "none"
+        assert p.locator(".frequency-reading.feedback strong").inner_text().startswith("—.—")
+
+        p.get_by_role("button", name="远程 REMOTE").click()
+        assert p.get_by_role("button", name="启动").is_disabled()
+        assert p.get_by_role("button", name="停止").is_disabled()
+        assert p.get_by_role("button", name="故障复位").is_disabled()
+        assert p.get_by_role("button", name="频率加 0.5 赫兹").is_disabled()
+
+        p.get_by_role("button", name="注入演示故障").click()
+        p.locator(".status-value").first.filter(has_text="故障锁存").wait_for()
+        assert "不会自动重启" in p.locator(".command-help").inner_text()
+        assert p.get_by_role("button", name="故障复位").is_disabled()
+        assert p.get_by_role("button", name="频率减 0.5 赫兹").is_disabled()
+        p.get_by_role("button", name="就地 LOCAL").click()
+        p.get_by_role("button", name="故障复位").click()
+        p.locator(".status-value").first.filter(has_text="停机").wait_for()
+        assert p.get_by_role("button", name="启动").is_enabled()
+        assert p.get_by_role("button", name="频率加 0.5 赫兹").is_enabled()
+
+        p.set_viewport_size({"width": 1024, "height": 768})
+        compact = p.locator("#screen").bounding_box()
+        assert compact and compact["width"] == 1024 and compact["height"] == 768
+        for selector in [".frequency-panel", ".command-grid", ".signal-panel", ".bottom-bar"]:
+            assert p.locator(selector).is_visible(), selector
+        operator = p.locator(".operator-panel").bounding_box()
+        help_box = p.locator(".command-help").bounding_box()
+        assert operator and help_box and help_box["y"] + help_box["height"] <= operator["y"] + operator["height"]
+        signals = p.locator(".signal-panel").bounding_box()
+        inject = p.locator(".demo-inject").bounding_box()
+        assert signals and inject and inject["y"] + inject["height"] <= signals["y"] + signals["height"]
+        p.set_viewport_size({"width": 1920, "height": 1080})
+
+    run_case(
+        page,
+        "water-treatment/28-曝气鼓风机就地控制屏.html",
+        lambda p: None,
+        assert_blower_local_panel_28,
     )
 
     showcase = browser.new_page(viewport={"width": 1440, "height": 900})
     showcase.route("http://**/*", lambda route: route.abort())
     showcase.route("https://**/*", lambda route: route.abort())
     showcase.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="networkidle")
-    assert showcase.locator(".card").count() == 25
-    latest_card = showcase.locator('.card[data-src*="25-"]')
+    assert showcase.locator(".card").count() == 28
+    latest_card = showcase.locator('.card[data-src*="28-"]')
     latest_card.scroll_into_view_if_needed()
     assert latest_card.is_visible()
     latest_card.click()
-    assert "宏观地球与厂区穿透" in showcase.locator("#stageTitle").inner_text() or "智慧水务宏观地球" in showcase.locator("#stageTitle").inner_text()
+    assert "就地控制屏" in showcase.locator("#stageTitle").inner_text()
     portrait = browser.new_page(viewport={"width": 390, "height": 844})
     portrait.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="domcontentloaded")
     assert portrait.locator(".rotate").is_visible()

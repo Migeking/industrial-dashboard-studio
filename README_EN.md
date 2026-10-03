@@ -1,6 +1,6 @@
 # Industrial Dashboard Studio
 
-> Offline-first productization workspace for industrial dashboards · 25 ready-to-run templates + reusable runtime + SCADA designer + 5 deliverable Skills
+> Offline-first productization workspace for industrial dashboards · 28 ready-to-run templates + reusable runtime + SCADA designer + 6 deliverable Skills
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -36,17 +36,35 @@
 
 | Entry | Preview |
 |------|------|
-| **Showcase landscape entry (All 25 Scenarios)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
+| **Showcase landscape entry (All 28 Scenarios)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
 | **SCADA scenario designer** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
 <details open>
-<summary><b>Expand: All 25 scenario categories & screenshots</b></summary>
+<summary><b>Expand: All 28 scenario categories & screenshots</b></summary>
 
-### Global Digital Earth & Spatial Digital Twin Cockpit (Latest New)
+### Single-equipment blower local panel (newest)
 
 | Scenario | File | Preview |
 |------|------|------|
-| 25 Smart Water Global Digital Earth & Multi-tier Drill-down Digital Cockpit | `scenarios/water-treatment/25-智慧水务宏观地球与多级厂区穿透数字驾驶舱.html` | ![25](docs/screenshots/25-global-water-twin.png) |
+| 28 Aeration Blower On-Site Local Control Panel | `scenarios/water-treatment/28-曝气鼓风机就地控制屏.html` | ![28](docs/screenshots/28-blower-local-control-panel.png) |
+
+### Blower Air Supply · Efficiency Cockpit (New)
+
+| Scenario | File | Preview |
+|------|------|------|
+| 27 Aeration Blower House Intelligent Air Supply & Efficiency Cockpit | `scenarios/water-treatment/27-曝气鼓风机房智能供风能效驾驶舱.html` | ![27](docs/screenshots/27-blower-efficiency.png) |
+
+### Water Quality Time-Series Prediction & AI Copilot Cockpit (Latest New)
+
+| Scenario | File | Preview |
+|------|------|------|
+| 26 East Lake Smart Water Quality Prediction & Aqua-Agent Digital Cockpit | `scenarios/water-treatment/26-东湖智慧水质时序预测与Aqua-Agent数字驾驶舱.html` | ![26](docs/screenshots/26-lake-water-quality-ai-cockpit.png) |
+
+### Sludge Thickening & Dewatering Monitoring Center
+
+| Scenario | File | Preview |
+|------|------|------|
+| 25 Sludge Thickening & Dewatering Full-Process Monitoring Center | `scenarios/water-treatment/25-污泥浓缩脱水全流程智能监控中心.html` | ![25](docs/screenshots/25-sludge-dewatering.png) |
 
 ### Field Local Touchscreen Panels · DCS & Clean Flat HMI
 
@@ -317,36 +335,103 @@ open apps/scada-designer/index.html
 
 </details>
 
-### 25 Smart Water Global Digital Earth & Multi-tier Drill-down Digital Cockpit (Panoramic 3D Spatial Twin)
-- **Role**: designed for water authority group headquarters and flagship water plant exhibition halls as a "macro-earth to micro-process four-tier drill-down digital cockpit". Replaces standard flat report portals with cinematic 3D camera travel from "Global Earth → China Regional Water Grid → Plant Spatial Twin → Core Process Telemetry Hub".
-- **Visual Design & Realistic Sci-Fi Digital Globe**:
-  - **Eliminated Artificial Outer Ring**: completely discarded artificial glowing halos and harsh outer ring meshes, ensuring the globe naturally integrates into deep-space starfields;
-  - **High-Precision Geography & Fluorescent Dot Matrix**: procedural algorithm maps accurate continental shorelines filled with organized fluorescent dot matrix grids (cyan-blue for global land, vivid cyan-green for China), complete with the Yangtze and Yellow River arterial lifelines;
-  - **Global 3D Cyber Arcs**: graceful 3D quadratic parabolic arcs arc across continents from Europe, North America, South America, and Australia into the Shanghai East China Dispatch Hub, carrying dynamic flowing light particles;
-  - **3D Energy Beacon & Surface Sonar**: vertical cyan light beacon and concentric ripple waves centered at 121.5°E, 31.2°N.
-- **Four-Tier Progressive Drill-down & Camera Trajectory**:
-  1. **Level 1 Macro 3D Digital Earth (Global Water Portfolio)**: deep-space starfield, slow-spinning dot-matrix digital globe, visualizing 42 nationwide managed wastewater treatment plants with aggregate 12.5M m³/d capacity, 100% compliance rate, and carbon reduction metrics;
-  2. **Level 2 China & Regional Water Grid (East China · Shanghai Demonstration Zone)**: camera dives into regional airspace while the globe locks onto East China, revealing key municipal facilities: Bailonggang (2.8M m³/d), Zhuyuan #4 (1.2M m³/d), Shidongkou (0.4M m³/d), and Wumin (0.5M m³/d);
-  3. **Level 3 Flagship Water Treatment Plant Spatial Twin (Bailonggang Demonstration Plant)**: cinematic camera penetration through the geographic veil into the facility's 3D architectural model (raw screens, grit chambers, A²O bioreactor basins, secondary clarifier matrix, UV channels, sludge buildings) with floating 3D telemetry badges;
-  4. **Level 4 Core Process Telemetry Hub (Bioreactor Micro-Control Center)**: camera dollys close to the bioreactor basin while professional process telemetry panels smoothly expand on both wings: influent/effluent quality benchmarks (COD: 285 → 22.4 mg/L, NH₃-N: 29.2 → 0.95 mg/L, TP: 3.85 → 0.18 mg/L with Grade 1A+ green badges), bioreactor flow vector micro-view, blower drive frequencies, and 24-hour compliance trend curves.
-- **Dual Progression Modes System**:
-  - **Auto-Progression Mode**: 8-second smooth automatic transition per level accompanied by a bottom countdown progress bar, ideal for unattended executive exhibition displays;
-  - **Semi-Auto Guided Progression Mode**: built for live technical briefings and keynote presentations, offering a bottom control cockpit (`[◀ Previous View]`, tier telemetry status, `[Next Progression ➔]`) with keyboard Spacebar step-forward and ESC/Backspace step-back support;
-  - **100% Offline Zero-CDN Architecture**: powered entirely by vendored `vendor/three.min.js` + `vendor/OrbitControls.js`; all globe geometry and plant structures are procedurally synthesized in code with zero external tile/map dependencies, guaranteeing instant loading and zero lag.
-- **File**: `scenarios/water-treatment/25-智慧水务宏观地球与多级厂区穿透数字驾驶舱.html`
+### 25 Sludge Thickening & Dewatering Full-Process Monitoring Center (Thickening—Conditioning—Dewatering—Haulage)
+- **Role**: a daylight monitoring desk for sludge-treatment operators. Cool-gray surfaces, muted green and equipment line drawings organize thickening, PAM conditioning, centrifugal dewatering and cake haulage. Four offline scenarios cover normal operation, solids surge, a single-unit fault and rain dilution. Visual direction follows the `frontend-design` Skill.
+- **Core Technology & Industrial Mechanisms**:
+  1. **Process line drawing**: two gravity thickeners, two feed pumps, a static mixer, three-tank PAM preparation, twin centrifuges and a cake silo; separate sludge, polymer, liquid-return and cake paths, with a Line 1 focus view;
+  2. **Equipment drawer**: click, Enter or Space opens the parameter panel; Escape closes it, with focus containment and restoration. Text accompanies running, standby and fault colors;
+  3. **Fault demonstration**: a locked fault on centrifuge 1 stops its feed pump while Line 2 remains running. Acknowledgment changes the event record without resetting the fault. Field/local control, start/stop permissions and actual interlock bindings are not connected;
+  4. **PAM dosage demonstration**: ±0.1 steps bounded to 3.0–6.0 kg/tDS, changing a simulated setpoint only; no inferred dewatering effects or field commands;
+  5. **Metrics and trends**: feed flow, solids, cake moisture, simulated daily dry-solids output and unit energy, with 8/24 h dual-axis simulated history; pause sampling or restore the initial demo.
+- **File**: `scenarios/water-treatment/25-污泥浓缩脱水全流程智能监控中心.html`
 
 <details open>
-<summary><b>View Scenario 25 Global Digital Earth & Drill-down Gallery</b></summary>
+<summary><b>View Scenario 25 Sludge Dewatering Gallery</b></summary>
 
-| Level 1: Global 3D Digital Earth | Level 2: East China Regional Water Grid |
-|---|---|
-| ![25-earth](docs/screenshots/25-global-water-twin.png) | ![25-regional](docs/screenshots/states/25-state-regional-grid.png) |
+| Daylight Monitoring Desk: 1920×1080 Native Viewport | Equipment Drawer: High-Solids Surge |
+| :---: | :---: |
+| ![25-main](docs/screenshots/25-sludge-dewatering.png) | ![25-line](docs/screenshots/states/25-state-dewater-line.png) |
 
-| Level 3: Plant Spatial Digital Twin | Level 4: Core Process Telemetry Hub |
-|---|---|
-| ![25-plant](docs/screenshots/states/25-state-plant-twin.png) | ![25-process](docs/screenshots/states/25-state-process-detail.png) |
+![25-fault](docs/screenshots/states/25-state-fault-isolation.png)
 
-> Cinematic smooth camera penetration, ring-free pure dot-matrix tech globe, global cyber arc convergence, dual progression modes, and four-tier drill-down deliver the definitive visual frontier of industrial digital twins.
+> Local Vue + SVG + ECharts resources, with data quality marked DEMO. The process diagram is illustrative and has not been validated against field point lists or process contracts.
+
+</details>
+
+### 28 Aeration Blower On-Site Local Control Panel (single-equipment touch HMI · offline demo)
+
+- **Industrial context and boundary**: a single-equipment companion to Scenario 27's blower-house overview. It focuses on one example blower, its state, mode, and essential local actions. The equipment tag and actual point table are unconfirmed, so the name is identified as an example.
+- **Implementation**: a single-page HMI using Vue for demo state and SVG for the equipment illustration. It keeps a native 1920×1080 layout and reflows into a compact 1024×768 layout so touch controls and readings remain legible.
+- **Operating values**: frequency setpoint uses 0.5 Hz steps as a page-only interaction demo. While running, the impeller animates and the panel shows simulated frequency feedback and A/B/C phase currents; while stopped, the impeller stops and feedback shows a dash. The motion and values do not represent field equipment state, equipment limits, real sampling, or field writes.
+- **Local/remote selection**: mode selection changes only the page demo state. In REMOTE, local start, stop, and reset buttons are disabled. No remote command is simulated.
+- **Fault latch and reset**: demo fault injection stops the page run state and latches the fault. An operator must return to LOCAL and reset it; reset leaves the state stopped with no automatic restart.
+- **Field-signal boundary**: PLC, run feedback, and protection inputs are labeled unconnected. Physical emergency-stop and electrical protection remain in hardware; this page has no bypass.
+- **File**: `scenarios/water-treatment/28-曝气鼓风机就地控制屏.html`
+
+<details open>
+<summary><b>View Scenario 28 local panel and state gallery</b></summary>
+
+| Local stopped: native 1920×1080 view | REMOTE: local buttons disabled |
+| :---: | :---: |
+| ![28-main](docs/screenshots/28-blower-local-control-panel.png) | ![28-remote](docs/screenshots/states/28-state-remote-mode.png) |
+
+| Demo running: frequency feedback and phase currents are simulated | Latched fault: manual reset leaves it stopped |
+| :---: | :---: |
+| ![28-running](docs/screenshots/states/28-state-running.png) | ![28-fault](docs/screenshots/states/28-state-fault-latched.png) |
+
+| Compact 1K layout: 1024×768 |
+| :---: |
+| ![28-1024x768](docs/screenshots/responsive/28-local-control-panel-1024x768.png) |
+
+> Every button changes page demo state only; there is no field communication, PLC read-back, or device control.
+
+</details>
+
+### 27 Aeration Blower House Intelligent Air Supply & Efficiency Cockpit (De-AI Industrial SCADA · Air Supply & Efficiency Benchmarking)
+- **Role**: An integrated "air supply—aeration—efficiency" industrial SCADA cockpit for blower stations and energy management dispatchers. Completely eliminates cheap AI neon glowing blues and arbitrary corner notches in favor of ISA-101 industrial dark-slate & precision steel-blue ergonomics. Built around 3 air-foil bearing centrifugal blowers (2 duty + 1 standby), it seamlessly unifies parallel VFD topologies, anti-surge bypass venting loops, header pressure safety gauges, aerobic-tank DO closed-loop regulation, and dual-carbon specific energy benchmarking across normal, peak, and night demo modes.
+- **Core Technology & Industrial Mechanisms**:
+  1. **High-Fidelity P&ID Process Topology Simulation**: Precision vector graphics featuring intake silencer/filter boxes, permanent-magnet motor cooling fins, scroll casing, turbine impeller dynamics, check valves, and motorized isolation valves. Integrates DN800 header manifolds, anti-surge rapid vent bypass lines, 4 motorized throttle butterfly valves, microporous aeration diffuser grids, rising micro-bubble curtain physics, and submerged water-quality probes;
+  2. **DCS-Grade Per-Unit Faceplate**: Click any blower to inspect its 6-cell telemetry well (VFD frequency, shaft power, discharge pressure, flow rate, motor bearing temperature, and horizontal vibration) with glow envelopment and standby dimming;
+  3. **Header Pressure Anti-Surge Safety Gauge**: 0–100 kPa industrial gauge with segmented safety bands (low-pressure startup, emerald green economical zone, amber warning zone, and red danger zone at 78.0 kPa surge threshold), triggering safety margin alerts under peak load;
+  4. **DO Closed-Loop Controller**: Target DO ±0.1 step adjustment (1.0–3.0 mg/L) with first-order-lag dynamic tracking and real-time average opening across all 4 branch valves;
+  5. **Energy Efficiency & Carbon Benchmarking**: 4 core KPIs (total air flow / total power / specific energy benchmarking ≤ 0.260 kWh/m³ / isentropic adiabatic efficiency) + per-unit specific power bars (with GB Level-1 benchmark at 4.8 kW/kNm³/h) + 24h air flow & DO coupled dual-axis trend with 2.4/1.6 mg/L alert bands.
+- **File**: `scenarios/water-treatment/27-曝气鼓风机房智能供风能效驾驶舱.html`
+
+<details open>
+<summary><b>View Scenario 27 Blower House Gallery</b></summary>
+
+| Full Panoramic Cockpit: 1920×1080 Native Viewport | Unit Faceplate: Click-to-Inspect Blower Panel |
+| :---: | :---: |
+| ![27-main](docs/screenshots/27-blower-efficiency.png) | ![27-faceplate](docs/screenshots/states/27-state-faceplate.png) |
+
+> 100% offline self-contained operation, strictly compliant with ISA-101 industrial ergonomics. Pure 2D SVG + ECharts with zero 3D dependencies — rock-solid performance on industrial all-in-one panel PCs.
+
+</details>
+
+---
+
+### 26 East Lake Smart Water Quality Prediction & Aqua-Agent Digital Cockpit (AI Time-Series 推演 & Copilot Diagnostic)
+- **Role**: designed for Wuhan East Lake Water Environmental Governance Center and smart municipal ecological flood control hubs. Overcomes the traditional limitation of "passive post-incident monitoring" by fusing deep learning (LSTM time-series forecasting models) with an industrial multi-modal LLM Copilot (Aqua-Agent), creating a predictive command center equipped with proactive warnings, dynamic confidence band assessment, environmental covariate analysis, and closed-loop dosing recommendations.
+- **Core Technology & Industrial Mechanisms**:
+  1. **12 Inlet/Outlet Water Quality Indicators Rolling Inference**: 6 inlet metrics (COD, TP, TN, NH4, pH, SS) and 6 outlet metrics mapped against GB3838 lake/reservoir standards and Grade 1A discharge limits, rendering 72h historical fit alongside 24~48h predictive trajectories;
+  2. **95% Dynamic Confidence Bands & Data Quality Governance**: ECharts hero view overlays stacked semi-transparent gradient ribbons to visualize the 95% confidence interval upper/lower bounds, paired with "Normal / Degraded" status flags to reflect predictive credibility;
+  3. **Aqua-Agent (Multi-Modal AI Copilot)**: breathing water-crystal orb in the bottom-right corner providing voice/text dialog, water quality expert diagnosis (TP peak spike analysis, precipitation surge response, aeration tuning), and real-time dashboard linkage via `focus_prop` events;
+  4. **Native Canvas 60-Tick Glowing Accuracy Ring & 6-Axis Radar**: 60 precision ticks and smooth progress arc showcasing high-accuracy neural network metrics (94.68%+), complemented by a normalized 6-axis radar evaluating discharge safety margins;
+  5. **Governance Milestone Baseline & Environmental Covariates**: historical milestones anchoring 2018 Inferior V → 2020 V → 2023 IV → 2026 Predicted IV, actively driven by inlet flow rate (m³/h), water temperature (°C), and rainfall (mm/h).
+- **File**: `scenarios/water-treatment/26-东湖智慧水质时序预测与Aqua-Agent数字驾驶舱.html`
+
+<details open>
+<summary><b>View Scenario 26 Water Quality Prediction Cockpit & Aqua-Agent Gallery</b></summary>
+
+| Full Panoramic Cockpit: 1920×1080 Native Viewport | Aqua-Agent Copilot: Water Quality Diagnosis & Linkage Dialog |
+| :---: | :---: |
+| ![26-main](docs/screenshots/26-lake-water-quality-ai-cockpit.png) | ![26-chat](docs/screenshots/states/26-state-aqua-agent-chat.png) |
+
+| HUD Boot Startup: Adaptive System Loader | Metric Switching Transition: Cyber Sweep & CI Indicator |
+| :---: | :---: |
+| ![26-hud](docs/screenshots/states/26-state-hud-loader.png) | ![26-switch](docs/screenshots/states/26-state-prop-switch-fx.png) |
+
+> 100% offline self-contained operation, micro-fluctuation simulation support, hot API failover, and a state-of-the-art cyber dark-tech aesthetic.
 
 </details>
 
@@ -402,7 +487,7 @@ apps/
   scada-designer/      # SCADA scenario designer
 scenarios/
   building-automation/ # 22 Intelligent building automation & spatial microclimate twin
-  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21,24,25 (full water chain, including Scenario 25 Global Earth & Plant Penetration)
+  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21,24,25,26,27,28 (full water chain, including 25 Sludge Dewatering, 26 Water Quality Prediction, 27 Blower Efficiency & 28 Local Panel)
   predictive-maintenance/ # 02 Critical-unit predictive maintenance
   reactor-safety/      # 03 Reactor safety interlock
   process-control/     # 15 Continuous separation process, 23 Local DCS panel
@@ -411,14 +496,14 @@ packages/
   components/          # industrial component styles (industrial-components.css)
   data-adapters/       # demo / rest / websocket adapters
   design-system/       # tokens (tokens.css)
-skills/                # 5 reusable Skills (industrial-dashboard, HMI, SCADA, light-3d, scada-gateway)
+skills/                # 6 reusable Skills (industrial-dashboard, classic HMI, SCADA, local panel, light-3d, SCADA gateway)
 vendor/                # vendored deps: vue.global.prod.js / echarts.min.js / three.min.js / OrbitControls.js
 assets/models/         # 3D models
 docs/
   architecture.md      # architecture baseline
   offline-delivery.md  # offline delivery notes
-  screenshots/         # 35 screenshots (states/ multi-condition + responsive/ multi-resolution)
-    states/            # 01/04 drills + 08 Faceplate + 23/24/25 penetration states
+  screenshots/         # screenshots assets (states/ multi-condition + responsive/ multi-resolution)
+    states/            # 01/04 drills + 08 Faceplate + 23/24/25/26/27/28 interaction states
     responsive/        # 1366/3840 fit for showcase/08/09
   works/               # 11 design-iteration drafts (referenced in gallery)
 tests/interaction_check.py
@@ -430,7 +515,7 @@ works/                 # 11 design-iteration drafts (multi-resolution)
 
 ## Skills in detail
 
-> Skills are reusable Codex / OpenCode delivery specs under `skills/`. Each Skill ships `SKILL.md`, `references/`, `scripts/validate-*.js`, and `agents/openai.yaml`.
+> Skill instructions live in `skills/<skill-name>/SKILL.md`; supporting references, validators, and agent configs are included as needed.
 
 ### 1) industrial-dashboard — industrial precision dashboards
 
@@ -536,6 +621,20 @@ node skills/light-3d-water-hmi/scripts/validate-light-3d-hmi.js scenarios/water-
 
 ---
 
+### 5) industrial-local-control-panel — industrial on-site equipment panel
+
+**Scope**: a concise touch HMI for one piece of equipment or one local cabinet, such as a pump, blower, or valve. It focuses on state, LOCAL/REMOTE selection, and essential local actions instead of a plant-wide cockpit.
+
+**Core boundaries**:
+- Without verified equipment identity, point table, and protocol, identify the equipment as an example and mark field inputs unconnected
+- LOCAL/REMOTE selection represents page demo state only; disable local demo actions in REMOTE and do not fake remote control
+- Demo faults stop and latch the page state, require manual reset, and never auto-restart
+- Physical emergency stops and electrical protection remain in hardware; provide no screen bypass or real write endpoint
+
+**Read first and verify**: repository `AGENTS.md` and the `industrial-dashboard` design system; run `python -X utf8 tests/interaction_check.py` for interactive scenes.
+
+---
+
 ### Loading Skills in Codex / OpenCode
 
 ```yaml
@@ -545,6 +644,7 @@ node skills/light-3d-water-hmi/scripts/validate-light-3d-hmi.js scenarios/water-
 # - industrial-hmi-classic
 # - industrial-scada
 # - light-3d-water-hmi
+# - industrial-local-control-panel
 ```
 
 ---

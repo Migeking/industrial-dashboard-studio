@@ -1,6 +1,6 @@
 # Industrial Dashboard Studio
 
-> 工业大屏产品化工作区 · 25 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 5 个可交付 Skill
+> 工业大屏产品化工作区 · 28 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 6 个可交付 Skill
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -36,17 +36,35 @@
 
 | 入口 | 预览 |
 |------|------|
-| **Showcase 横屏互动入口 (25 套全量)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
+| **Showcase 横屏互动入口 (28 套全量)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
 | **SCADA 场景设计器** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
 <details open>
-<summary><b>展开查看 25 套场景全量分类与截图</b></summary>
+<summary><b>展开查看 28 套场景全量分类与截图</b></summary>
 
-### 宏观地球与数字孪生 · 空间穿透驾驶舱（最新上线）
+### 单机就地操作 · 鼓风机控制屏（最新上线）
 
 | 场景 | 文件 | 预览 |
 |------|------|------|
-| 25 智慧水务宏观地球与多级厂区穿透数字驾驶舱 | `scenarios/water-treatment/25-智慧水务宏观地球与多级厂区穿透数字驾驶舱.html` | ![25](docs/screenshots/25-global-water-twin.png) |
+| 28 曝气鼓风机就地控制屏 | `scenarios/water-treatment/28-曝气鼓风机就地控制屏.html` | ![28](docs/screenshots/28-blower-local-control-panel.png) |
+
+### 鼓风曝气供风 · 能效优化驾驶舱（最新上线）
+
+| 场景 | 文件 | 预览 |
+|------|------|------|
+| 27 曝气鼓风机房智能供风能效驾驶舱 | `scenarios/water-treatment/27-曝气鼓风机房智能供风能效驾驶舱.html` | ![27](docs/screenshots/27-blower-efficiency.png) |
+
+### 水质时序推演与 AI Copilot · 智能研判驾驶舱
+
+| 场景 | 文件 | 预览 |
+|------|------|------|
+| 26 东湖智慧水质时序预测与Aqua-Agent数字驾驶舱 | `scenarios/water-treatment/26-东湖智慧水质时序预测与Aqua-Agent数字驾驶舱.html` | ![26](docs/screenshots/26-lake-water-quality-ai-cockpit.png) |
+
+### 污泥处理 · 浓缩脱水全流程监控中心
+
+| 场景 | 文件 | 预览 |
+|------|------|------|
+| 25 污泥浓缩脱水全流程智能监控中心 | `scenarios/water-treatment/25-污泥浓缩脱水全流程智能监控中心.html` | ![25](docs/screenshots/25-sludge-dewatering.png) |
 
 ### 现场就地控制屏 · DCS 与极简扁平触控
 
@@ -317,36 +335,102 @@ open apps/scada-designer/index.html
 
 </details>
 
-### 25 智慧水务宏观地球与多级厂区穿透数字驾驶舱（全景 3D 空间孪生）
-- **定位**：面向水务集团总部与标杆水厂展厅的“宏观地球到微观工艺四级穿透式数字驾驶舱”。打破常规扁平报表界面，通过纯程序化 3D 运镜，实现从“地球 → 中国省域水网 → 水厂微缩空间孪生 → 核心工艺数据信息中枢”的渐进式下钻。
-- **高阶视觉与真实感科技地球仪设计**：
-  - **彻底移除生硬外圈**：杜绝一切外挂光环与生硬几何壳体，地球自然浑圆，深邃渐隐于星河深空；
-  - **高精真实地理与科技点阵 (Dot Matrix)**：纯算法绘制各大洲精确海岸线多边形，陆地内部整齐铺设高密度荧光微点阵（普通大陆淡蓝，中国版图高亮青绿），长江、黄河两大水利干流贯穿华夏；
-  - **全球 3D 太空数据飞线 (Cyber Arcs)**：从欧洲莱茵河、北美五大湖、南美、澳洲等水系向中国·上海华东调度中心引出 3D 空间抛物线流光弧线，光粒子动态流动，呈现全球水质遥测实时汇聚；
-  - **华东中枢立体信标**：东经 121.5°、北纬 31.2° 设立垂直微光能量柱与地表动态扩散同心圆脉冲波。
-- **四级层级渐进穿透与运镜架构**：
-  1. **Level 1 宏观 3D 数字地球仪（全球水务大盘）**：深空星空环境、点阵自转科技地球，监视全国在管 42 座水厂处理能力（1,250 万 m³/d）、100% 达标率与碳减排指标；
-  2. **Level 2 中国及省域水务集群（华东·上海示范区）**：摄像机平滑俯冲（Dive In），地球旋转锁定至东经 121.5°，展示上海及长三角水系，浮现白龙港（280万吨）、竹园第四（120万吨）、石洞口（40万吨）和吴闵（50万吨）4 座主力水厂点位与负荷卡片；
-  3. **Level 3 标杆水处理厂微缩空间孪生（白龙港示范厂全景）**：镜头穿透云层飞入水厂园区，呈现完整 3D 建筑与工艺构筑物（细格栅沉砂池、A²O 生化反应池组、二沉池矩阵、加药间、紫外线消毒渠），各工段漂浮 3D 状态徽标；
-  4. **Level 4 厂内核心工艺数据信息中枢（生化微观工艺中控）**：镜头推近核心生化反应池，界面平滑展开专业水务工艺看板，包含进出水指标对比（COD: 285 → 22.4 mg/L、氨氮: 29.2 → 0.95 mg/L、TP: 3.85 → 0.18 mg/L 全部国标一级 A+ 达标绿标）、生化流程微视图、鼓风机变频负荷及 24h 出水连续在线达标趋势。
-- **双推进模式控制系统 (Dual Progression Modes)**：
-  - **自动推进模式 (Auto-Progression)**：8 秒自动平滑过渡一级，配备底部平滑倒计时进度条，适合展厅大屏与无人值守循环演示；
-  - **半自动步进导引 (Semi-Auto Progression)**：专为主管汇报与技术讲解设计，底栏提供步进控制舱（`[◀ 上一步视角]`、视界状态指示及讲解摘要、`[下一步推进 ➔]`），支持键盘空格键（Space）推进与 ESC/退格键回退；
-  - **100% 纯本地零 CDN 依赖**：基于本地 `vendor/three.min.js` + `vendor/OrbitControls.js`，全部地球经纬网格与园区模型由算法程序化生成，秒级响应，永不卡顿。
-- **文件**：`scenarios/water-treatment/25-智慧水务宏观地球与多级厂区穿透数字驾驶舱.html`
+### 25 污泥浓缩脱水全流程智能监控中心（浓缩—调理—脱水—外运）
+- **定位**：面向污泥处理工段运行岗的浅色监控操作台。冷灰底色、低饱和绿与设备线稿形成清晰的阅读层级，集中展示浓缩、PAM 调理、离心脱水与泥饼外运；覆盖常规运行、高含固冲击、单机故障、雨季稀释四种离线演示工况。视觉设计依据 `frontend-design` Skill。
+- **核心技术与工业机制**：
+  1. **工艺线稿**：两座重力浓缩池、两台螺杆泵、静态混合器、PAM 三槽制备、双离心机与泥饼仓；污泥、药液、上清液/分离液和泥饼管线分别标识，可聚焦 1# 线；
+  2. **设备详情抽屉**：点击或使用 Enter/空格查看参数；支持 Escape 关闭、焦点约束与返回设备，运行/备用/故障状态使用文字和颜色共同表达；
+  3. **故障演示**：1# 离心机故障锁定时对应进泥泵停机，2# 线继续运行；事件确认仅改变记录状态，不复位故障。实际就地控制、设备启停和联锁绑定未接入；
+  4. **PAM 配比演示**：±0.1 步进，边界为 3.0–6.0 kg/tDS；仅改变模拟设定值，不推算脱水效果或向现场下发；
+  5. **指标与趋势**：进泥量、含固率、泥饼含水率、模拟累计干固体和单位电耗，配合 8/24 h 双轴模拟时序；可暂停模拟采样或恢复初始演示。
+- **文件**：`scenarios/water-treatment/25-污泥浓缩脱水全流程智能监控中心.html`
 
 <details open>
-<summary><b>查看 25 号宏观地球与多级穿透四级画廊</b></summary>
+<summary><b>查看 25 号污泥浓缩脱水交互画廊</b></summary>
 
-| Level 1: 宏观 3D 数字地球大盘 | Level 2: 华东省域水厂集群点位 |
-|---|---|
-| ![25-earth](docs/screenshots/25-global-water-twin.png) | ![25-regional](docs/screenshots/states/25-state-regional-grid.png) |
+| 浅色操作台：1920×1080 原生视口主视图 | 设备详情：高含固冲击工况 |
+| :---: | :---: |
+| ![25-main](docs/screenshots/25-sludge-dewatering.png) | ![25-line](docs/screenshots/states/25-state-dewater-line.png) |
 
-| Level 3: 厂区空间孪生微缩全景 | Level 4: 厂内核心工艺数据中枢 |
-|---|---|
-| ![25-plant](docs/screenshots/states/25-state-plant-twin.png) | ![25-process](docs/screenshots/states/25-state-process-detail.png) |
+![25-fault](docs/screenshots/states/25-state-fault-isolation.png)
 
-> 电影级平滑运镜穿透、无生硬外圈的纯净点阵科技地球、全球飞线汇聚、双推进模式与四级自由下钻，实现工业水务数字孪生的极致视界。
+> Vue + SVG + ECharts 本地资源实现，数据质量标记为 DEMO。工艺图为演示示意，未经现场点表和工艺协议确认。
+
+</details>
+
+### 28 曝气鼓风机就地控制屏（单机触控 · 离线状态演示）
+- **工业背景与边界**：作为 27 号鼓风机房综合驾驶舱的单机配套画面，聚焦一台示例鼓风机和现场人员常用的状态、模式与启停操作。设备位号和实际点表未确认，名称明确标为示例。
+- **实现结构**：以 Vue 管理演示状态、SVG 表达设备外形；1920×1080 保持原生布局，1024×768 使用紧凑重排，确保现场触控按钮与读数可读。
+- **运行参数显示**：频率设定以 0.5 Hz 步进作页面交互演示，运行时叶轮同步旋转，并显示模拟频率反馈及 A/B/C 三相电流；停机时叶轮停止、反馈显示横线。动效与数值都不代表现场设备状态、设备限值、真实采样或现场写入。
+- **就地/远程控制机制**：模式选择只改变本页面的演示选择；REMOTE 下本地启动、停止和复位按钮禁用。没有模拟远程控制。
+- **故障锁存与复位**：演示故障注入会停止页面运行状态并锁存；切回 LOCAL 后人工复位，复位后保持停机，不自动重启。
+- **现场信号边界**：PLC、运行反馈和保护输入均标记为未接入；实体急停和电气保护由现场硬件回路实施，页面不提供旁路。
+- **文件**：`scenarios/water-treatment/28-曝气鼓风机就地控制屏.html`
+
+<details open>
+<summary><b>查看 28 号鼓风机就地控制屏与状态画廊</b></summary>
+
+| 就地停机：1920×1080 原生视口 | REMOTE：本地按钮禁用 |
+| :---: | :---: |
+| ![28-main](docs/screenshots/28-blower-local-control-panel.png) | ![28-remote](docs/screenshots/states/28-state-remote-mode.png) |
+
+| 演示运行：频率反馈与三相电流为页面模拟值 | 故障锁存：人工复位后保持停机 |
+| :---: | :---: |
+| ![28-running](docs/screenshots/states/28-state-running.png) | ![28-fault](docs/screenshots/states/28-state-fault-latched.png) |
+
+| 1K 紧凑布局：1024×768 |
+| :---: |
+| ![28-1024x768](docs/screenshots/responsive/28-local-control-panel-1024x768.png) |
+
+> 全部按钮只改变页面演示状态；没有现场通信、真实 PLC 回读或设备控制。
+
+</details>
+
+### 27 曝气鼓风机房智能供风能效驾驶舱（去 AI 化工业 SCADA · 智能供风与能效对标）
+- **定位**：面向大型水质净化厂鼓风机房与能源管理中枢的“供风—曝气—能效”一体化工控驾驶舱。彻底去除 AI 模板化刺眼高光青色与浮夸切角，全面转向 ISA-101 工业深色玄武岩与精工钢蓝规范。围绕 3 台空气悬浮离心鼓风机（2用1备），将多机变频并联拓扑、防喘振旁通放风回路、干管压力工况表、好氧生化池 DO 智能闭环与吨水电耗对标融为一体，覆盖常规、高峰负荷与夜间低峰三档演示工况。
+- **核心技术与工业机制**：
+  1. **高保真 P&ID 工艺拓扑仿真**：精细绘制空气悬浮离心机组吸风过滤箱、高速永磁电机散热鳍片、金属蜗壳、涡轮叶片动效、止回阀与电动隔离阀；集成集气主管（DN800）、防喘振快速放空旁通回路、4 路电动调节蝶阀与好氧生化池微孔曝气盘阵列、高保真水下微气泡升腾动画与水质浸没探头；
+  2. **DCS 级单机运行 Faceplate**：点击任意机组无缝切换 6 维工况仪表槽（变频频率/轴功率/风压/风量/电机轴温/水平振动），带高亮微光包络与热备置灰停机保护；
+  3. **干管压力防喘振安全表**：量程 0~100 kPa 仪表盘精准标定低压区、经济运行区（翡翠绿）、警戒区（琥珀橙）与喘振危险区（警戒红 78.0 kPa），高峰工况自动带出接近喘振安全裕度报警；
+  4. **好氧池 DO 智能闭环调控器**：目标值 ±0.1 步进调节（1.0~3.0 mg/L），实测值一阶滞后闭环动态跟踪，实时显示 4 阀平均开度；
+  5. **能效与双碳精益对标体系**：总供气量/总功率/吨水电耗（国标优级 ≤0.260）/综合等熵效率四 KPI + 三台机组单机比功率阶梯柱图（标定国标一级能效 4.8 基线）+ 24h 智能供气量与 DO 闭环耦合双轴趋势图（标定 2.4/1.6 mg/L 警戒带）。
+- **文件**：`scenarios/water-treatment/27-曝气鼓风机房智能供风能效驾驶舱.html`
+
+<details open>
+<summary><b>查看 27 号鼓风机房供风能效交互画廊</b></summary>
+
+| 全景驾驶舱：1920×1080 原生视口主视图 | 单机 Faceplate：点击风机组的运行小面板 |
+| :---: | :---: |
+| ![27-main](docs/screenshots/27-blower-efficiency.png) | ![27-faceplate](docs/screenshots/states/27-state-faceplate.png) |
+
+> 100% 离线闭环运行，符合 ISA-101 工业人机工程标准，纯 2D SVG + ECharts 实现，无三维依赖，低配置工控一体机也可极致流畅运行。
+
+</details>
+
+---
+
+### 26 东湖智慧水质时序预测与Aqua-Agent数字驾驶舱（AI 时序推演与 Copilot 研判）
+- **定位**：面向武汉东湖水环境治理中枢与智慧水务生态防汛监管大厅的“水质时序预测与 AI Copilot 决策驾驶舱”。改变传统大屏仅停留在“现状监测”的滞后被动模式，将深度学习（LSTM 时序推演模型）与水务大模型智能体（Aqua-Agent 水灵助手）融为一体，构建具备前瞻预警、置信区间评估、环境因子驱动分析与闭环调控建议的全景指挥中枢。
+- **核心技术与工业机制**：
+  1. **进出水 12 项水质指标滚动推演**：进水 6 项（COD、TP、TN、NH4、pH、SS）与出水 6 项，依据 GB3838 湖库标准与一级A排放限值，实时呈现 72h 历史拟合、当前监测值与未来 24~48h 预测值；
+  2. **95% 动态置信区间与数据质控**：ECharts 英雄视图结合双层堆叠渐变带呈现模型 95% 置信区间上/下界，配合“Normal 正常置信 / Degraded 退化补偿”数据质量判定，直观呈现推演可靠度；
+  3. **Aqua-Agent 水灵助手（多模态 AI Copilot）**：常驻右下角呼吸光晕水球，支持语音/文字双模对话、水务专家知识库问答（TP升高峰值诊断、降雨流量冲击、曝气调控策略），且回答能直接向大屏发出 `focus_prop` 动作联动聚焦切换走势；
+  4. **原生 Canvas 60 格发光准确率环与 6 维综合雷达图**：60 格精密刻度与平滑生长弧线展示模型高精度综合准确率（94.68%+），雷达图进行出水指标归一化达标裕度监控；
+  5. **东湖治理成效基线时间轴与环境协变量**：2018 劣Ⅴ类 → 2020 Ⅴ类 → 2023 Ⅳ类 → 2026 预测维持Ⅳ类历史锚点，联动进水流量、水温与面源降雨量实时驱动推演。
+- **文件**：`scenarios/water-treatment/26-东湖智慧水质时序预测与Aqua-Agent数字驾驶舱.html`
+
+<details open>
+<summary><b>查看 26 号水质预测驾驶舱与 Aqua-Agent 交互画廊</b></summary>
+
+| 全景驾驶舱：1920×1080 原生视口主视图 | Aqua-Agent 水灵助手：水质诊断与大屏联动对话 |
+| :---: | :---: |
+| ![26-main](docs/screenshots/26-lake-water-quality-ai-cockpit.png) | ![26-chat](docs/screenshots/states/26-state-aqua-agent-chat.png) |
+
+| 开屏动效：HUD 自适应加载进程 | 指标切换动效：光带扫掠与置信度指示 |
+| :---: | :---: |
+| ![26-hud](docs/screenshots/states/26-state-hud-loader.png) | ![26-switch](docs/screenshots/states/26-state-prop-switch-fx.png) |
+
+> 100% 离线闭环运行，支持微波动仿真与实测 API 容灾热切换，极致的科技蓝绿预测视觉体系。
 
 </details>
 
@@ -402,7 +486,7 @@ apps/
   scada-designer/      # SCADA 场景设计器
 scenarios/
   building-automation/ # 22 智能楼宇自控与空间微气候数字孪生
-  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21,24,25 (水务全流程，含25号宏观地球与空间穿透)
+  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21,24,25,26,27,28 (水务全流程，含25号污泥脱水、26号水质预测、27号鼓风供风能效与28号就地控制屏)
   predictive-maintenance/ # 02 关键机组预测性维护
   reactor-safety/      # 03 反应釜热失控安全联锁
   process-control/     # 15 连续分离工艺驾驶舱, 23 现场DCS就地控制屏
@@ -411,14 +495,14 @@ packages/
   components/          # 工业组件样式 (industrial-components.css)
   data-adapters/       # demo / rest / websocket 三类适配器
   design-system/       # Token (tokens.css)
-skills/                # 5 个可复用 Skill（工业大屏、HMI、SCADA、轻量3D、SCADA网关）
+skills/                # 6 个可复用 Skill（工业大屏、经典HMI、SCADA、就地控制屏、轻量3D、SCADA网关）
 vendor/                # 固化依赖：vue.global.prod.js / echarts.min.js / three.min.js / OrbitControls.js
 assets/models/         # 三维模型
 docs/
   architecture.md      # 架构基线
   offline-delivery.md  # 离线交付说明
-  screenshots/         # 35 张截图（含 states/ 多工况 + responsive/ 多分辨率）
-    states/            # 01/04 多工况演练 + 08 Faceplate + 23/24/25 穿透特写
+  screenshots/         # 截图资产（含 states/ 多工况 + responsive/ 多分辨率）
+    states/            # 01/04 多工况演练 + 08 Faceplate + 23/24/25/26/27/28 交互特写
     responsive/        # showcase/08/09 的 1366/3840 适配
   works/               # 11 张设计过程稿（本 README 画廊引用）
 tests/interaction_check.py
@@ -430,7 +514,7 @@ works/                 # 11 张设计过程稿（多分辨率）
 
 ## Skill 完整说明
 
-> Skill 是可复用的 Codex / OpenCode 交付规范，位于 `skills/`，每个 Skill 包含 `SKILL.md`、 `references/`、 `scripts/validate-*.js` 与 `agents/openai.yaml`。
+> Skill 的主说明位于 `skills/<skill-name>/SKILL.md`；按需附带 references、校验脚本或 Agent 配置。
 
 ### 1) industrial-dashboard — 工业精密驾驶舱
 
@@ -533,6 +617,20 @@ node skills/light-3d-water-hmi/scripts/validate-light-3d-hmi.js scenarios/water-
 ```
 
 **参考**：`references/visual-system.md`
+
+---
+
+### 5) industrial-local-control-panel — 工业设备就地控制屏
+
+**定位**：面向单台设备或一个就地柜的简明触控 HMI，例如泵、风机和阀门。聚焦设备状态、LOCAL/REMOTE 选择和必要的就地操作，不扩展成综合驾驶舱。
+
+**核心约束**：
+- 没有设备身份、点表和通信协议依据时，设备名称标为示例，现场输入标记为未接入
+- LOCAL/REMOTE 选择只代表演示页面状态；REMOTE 下禁用本地演示操作，不伪造远程控制
+- 演示故障停止页面状态并锁存，要求人工复位，复位后不自动重启
+- 实体急停和电气保护由硬件回路实施，页面不提供旁路或真实写入端点
+
+**前置阅读与校验**：仓库 `AGENTS.md`、`industrial-dashboard` 设计系统；场景含交互时运行 `python -X utf8 tests/interaction_check.py`。
 
 ---
 
