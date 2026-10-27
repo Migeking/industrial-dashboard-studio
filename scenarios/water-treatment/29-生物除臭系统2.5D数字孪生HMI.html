@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>城市污水净化中心 生物除臭系统数字孪生 HMI</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<script src="../../vendor/three.min.js"></script>
+<script src="../../vendor/OrbitControls.js"></script>
+<script src="../../assets/models/water-process/water-process.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#b7c6d6;color:#344b5f;font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+button,input,select{font:inherit}
+button{color:inherit}
+[v-cloak]{display:none}
+.num{font-family:"Bahnschrift","DIN Alternate",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+:root{--page:#dfe8f3;--surface:#f8fbff;--surface-strong:#ffffff;--line:#c8d5e3;--line-soft:#dbe4ee;--text:#344b5f;--muted:#718597;--blue:#247ac4;--blue-soft:#dcecf9;--green:#21ad79;--amber:#f0a54a;--danger:#e15555;--purple:#a975d6}
+#screen{width:1920px;height:1080px;position:absolute;left:50%;top:50%;transform-origin:center center;display:grid;grid-template-rows:72px 54px 680px 274px;overflow:hidden;background:linear-gradient(145deg,#eaf0f7,#d9e4ef 58%,#d3dfeb);box-shadow:0 18px 60px rgba(54,75,96,.25)}
+.topbar{display:grid;grid-template-columns:330px 1fr 420px;align-items:center;padding:0 16px;border-bottom:1px solid var(--line);background:rgba(248,251,255,.94)}
+.brand strong{display:block;font-size:25px;letter-spacing:1px;color:#29465a}.brand span{display:block;margin-top:3px;color:var(--muted);font-size:11px}
+.primary-nav{height:100%;display:flex;align-items:stretch;justify-content:center}.primary-nav button{min-width:120px;padding:0 13px;border:0;border-bottom:3px solid transparent;background:transparent;color:#3e5364;font-size:14px;cursor:pointer}.primary-nav button:hover,.primary-nav button.active{color:var(--blue);background:#eef5fb;border-bottom-color:var(--blue)}
+.system-meta{display:flex;align-items:center;justify-content:flex-end;gap:14px;color:#41586b;font-size:12px}.meta-item{display:flex;align-items:center;gap:6px;white-space:nowrap}.weather-symbol{width:18px;height:18px;border:2px solid #566e81;border-radius:50%;position:relative}.weather-symbol:after{content:"";position:absolute;left:7px;top:-5px;width:2px;height:3px;background:#566e81;box-shadow:0 20px #566e81,-10px 10px #566e81,10px 10px #566e81}
+.subnav{display:grid;grid-template-columns:repeat(6,1fr) 1.15fr;gap:0;padding:0 12px;border-bottom:1px solid var(--line);background:#f4f8fc}.subnav button{border:0;border-right:1px solid #e0e8f0;background:transparent;color:#536a7c;font-size:14px;cursor:pointer}.subnav button:hover{background:#e8f1f8;color:var(--blue)}.subnav button.active{margin:6px 0;border-radius:5px;border-right:0;background:var(--blue);color:#fff;font-weight:700}.demo-badge{display:flex;align-items:center;justify-content:center;color:#8a6c32;font-size:11px;background:#fff7e8;border-left:1px solid #ead8b5}
+.main-area{min-height:0;display:grid;grid-template-columns:1fr 468px;gap:10px;padding:10px 12px 8px}.scene-shell{position:relative;min-width:0;overflow:hidden;border:1px solid #c3d1df;border-radius:8px;background:linear-gradient(145deg,#dce6f2,#cfdcea);box-shadow:inset 0 1px rgba(255,255,255,.9)}
+.scene-shell:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(to bottom,rgba(255,255,255,.18),transparent 28%)}
+#twin3d{position:absolute;inset:0}#twin3d canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}#twin3d canvas:active{cursor:grabbing}
+.overview-card{position:absolute;z-index:5;left:12px;top:12px;width:302px;height:178px;padding:12px;border:1px solid rgba(194,208,222,.9);border-radius:8px;background:rgba(248,251,255,.91);box-shadow:0 10px 24px rgba(88,109,130,.14);backdrop-filter:blur(7px)}
+.overview-title{display:flex;align-items:center;gap:8px;color:#4c6579;font-size:12px}.back-arrow{font-size:18px;color:#60798d}.mini-map{position:relative;height:124px;margin-top:8px;overflow:hidden;perspective:300px}.mini-ground{position:absolute;left:32px;top:24px;width:220px;height:82px;transform:rotateX(58deg) rotateZ(-12deg);background:linear-gradient(135deg,#dfeaf3,#f8fbff);border:1px solid #bfcddd;box-shadow:12px 15px 20px rgba(79,103,124,.12)}.mini-block{position:absolute;background:#edf4fa;border:1px solid #b8c8d7;box-shadow:4px 5px 7px rgba(85,105,124,.12)}.mini-a{left:56px;top:55px;width:62px;height:38px}.mini-b{left:126px;top:42px;width:44px;height:58px}.mini-c{left:178px;top:50px;width:67px;height:40px}.mini-water{position:absolute;left:63px;top:61px;width:48px;height:24px;background:#b7d6e7;opacity:.75}.mini-pipe{position:absolute;left:104px;top:38px;width:3px;height:68px;background:#5c8fc5;transform:rotate(-20deg)}
+.metrics-float{position:absolute;z-index:5;left:12px;bottom:14px;width:430px;height:154px;display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:14px 16px;border:1px solid rgba(194,208,222,.92);border-radius:8px;background:rgba(248,251,255,.93);box-shadow:0 10px 24px rgba(88,109,130,.15);backdrop-filter:blur(7px)}.metric{padding:4px 10px;border-right:1px solid var(--line-soft)}.metric:nth-child(3n){border-right:0}.metric:nth-child(-n+3){border-bottom:1px solid var(--line-soft)}.metric span{display:block;color:#718597;font-size:11px}.metric b{display:inline-block;margin-top:7px;color:#334f63;font-size:22px}.metric small{margin-left:4px;color:#5f7588;font-size:10px}.metric .good{color:var(--green)}
+.scene-tools{position:absolute;z-index:10;left:326px;top:12px;display:flex;gap:5px;flex-wrap:wrap;max-width:820px}
+.scene-tools button{height:28px;padding:0 9px;border:1px solid #bfd0df;border-radius:5px;background:rgba(248,251,255,.92);color:#51697e;font-size:10px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .18s ease;white-space:nowrap}
+.scene-tools button:hover{border-color:var(--blue);color:var(--blue);background:#fff}
+.scene-tools button.active{border-color:var(--blue);background:var(--blue);color:#fff;font-weight:700;box-shadow:0 3px 8px rgba(36,122,196,.25)}
+.device-inspector{position:absolute;z-index:10;left:456px;bottom:14px;width:446px;height:154px;padding:12px 14px;border:1px solid rgba(168,193,217,.95);border-radius:8px;background:rgba(248,252,255,.95);box-shadow:0 12px 28px rgba(65,90,115,.16);backdrop-filter:blur(8px);display:flex;flex-direction:column;justify-content:space-between;animation:fadeIn .22s ease}
+.inspector-head{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid var(--line-soft);padding-bottom:5px}
+.inspector-title strong{display:block;font-size:13px;color:#2c465b;letter-spacing:.3px}
+.inspector-title span{display:block;font-size:9.5px;color:var(--blue);font-weight:700;margin-top:2px}
+.inspector-close{border:0;background:transparent;color:#7e93a5;font-size:11px;cursor:pointer;padding:2px 7px;border-radius:3px}
+.inspector-close:hover{color:var(--danger);background:#fee}
+.inspector-body{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;margin-top:5px}
+.spec-item{display:flex;justify-content:space-between;font-size:9.5px;line-height:1.45;border-bottom:1px dashed #e1e9f0;padding-bottom:1px}
+.spec-item span{color:#768b9d}
+.spec-item b{color:#385266;font-weight:600}
+.inspector-foot{display:flex;align-items:center;justify-content:space-between;margin-top:3px;padding-top:3px;border-top:1px solid var(--line-soft);font-size:9px}
+.inspector-tip{color:#6c8295;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px}
+.inspector-link{border:1px solid var(--blue);background:#edf5fb;color:var(--blue);padding:2px 8px;border-radius:3px;cursor:pointer;font-size:9px}
+.inspector-link:hover{background:var(--blue);color:#fff}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.flow-key{position:absolute;z-index:5;right:16px;bottom:16px;display:flex;gap:14px;padding:6px 10px;border:1px solid rgba(194,208,222,.82);border-radius:5px;background:rgba(248,251,255,.82);font-size:9px;color:#718597}.flow-key i{display:inline-block;width:16px;height:3px;margin-right:5px;vertical-align:middle}.flow-key .water{background:#2c78bd}.flow-key .chemical{background:#a975d6}.flow-key .run{background:#21ad79}
+.control-panel{min-height:0;display:grid;grid-template-rows:1fr 314px;gap:10px}.control-card,.video-card{min-height:0;border:1px solid #c3d1df;border-radius:8px;background:rgba(248,251,255,.96);box-shadow:0 8px 20px rgba(93,113,134,.1);overflow:hidden}.control-head{height:52px;padding:10px 14px 0}.control-head strong{display:block;font-size:14px}.control-head span{display:block;margin-top:4px;color:var(--blue);font-size:12px;font-weight:700}.control-tabs{height:46px;display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line-soft)}.control-tabs button{position:relative;border:0;background:transparent;color:#718597;font-size:11px;cursor:pointer}.control-tabs button.active{color:var(--blue);font-weight:700}.control-tabs button.active:after{content:"";position:absolute;left:30%;right:30%;bottom:-1px;height:3px;background:var(--blue)}
+.control-body{height:calc(100% - 98px);padding:12px 14px;overflow:hidden}.state-line{display:flex;align-items:center;justify-content:space-between;padding:7px 0 10px;border-bottom:1px solid var(--line-soft);font-size:11px}.state-left{display:flex;gap:18px}.state-left span{color:#708597}.state-left b{margin-left:4px;color:#40586b}.state-normal{color:var(--green);font-weight:700}.tiny-state{display:inline-block;width:8px;height:8px;margin-right:5px;border-radius:2px;background:var(--green)}
+.quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.quick-cell{height:58px;padding:8px;border:1px solid var(--line-soft);background:#f5f9fc}.quick-cell span{display:block;color:#8295a6;font-size:9px}.quick-cell b{display:inline-block;margin-top:6px;color:#3f586b;font-size:18px}.quick-cell small{margin-left:2px;color:#718597;font-size:8px}
+.process-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.process-cell{height:60px;padding:8px 10px;border:1px solid var(--line-soft);background:#f7fafc}.process-cell span{display:block;color:#8295a6;font-size:9px}.process-cell b{display:block;margin-top:5px;color:#3e5668;font-size:16px}.last-action{margin-top:10px;padding:10px;border:1px solid var(--line-soft);background:#f4f8fc;color:#708597;font-size:10px}.last-action b{color:var(--blue);font-size:16px}.control-form{display:grid;gap:12px}.control-device{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border:1px solid var(--line-soft);background:#f5f9fc}.control-device b{font-size:13px}.control-device span{color:var(--green);font-size:11px}.slider-row{display:grid;grid-template-columns:84px 1fr 64px;gap:8px;align-items:center;font-size:11px}.slider-row input{width:100%;accent-color:var(--blue)}.value-box{padding:5px;border:2px inset #c2cfda;background:#fff;text-align:right;font-weight:700}.control-buttons{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}.control-buttons button{height:38px;border:1px solid #b8c8d8;border-radius:4px;background:#f5f9fc;cursor:pointer;font-size:11px}.control-buttons button.open{border-color:#7bc9ad;color:#168a62}.control-buttons button.close{border-color:#e2bb80;color:#b77825}.control-buttons button.apply{border-color:var(--blue);background:var(--blue);color:#fff}.control-note{padding:9px;border-left:3px solid var(--blue);background:#eef5fa;color:#6c8091;font-size:10px;line-height:1.55}.event-list{display:grid;gap:8px}.event-row{display:grid;grid-template-columns:58px 70px 1fr;gap:8px;padding:8px 0;border-bottom:1px solid var(--line-soft);font-size:10px}.event-row time{color:#8295a6}.event-row b{color:var(--blue)}.event-row span{color:#576e80}
+.video-head{height:50px;padding:12px 14px;border-bottom:1px solid var(--line-soft);font-size:12px;font-weight:700}.video-head span{color:var(--blue)}.video-window{height:244px;margin:10px 14px;border:1px solid #c9d6e2;border-radius:4px;background:linear-gradient(135deg,#fbfdff,#f3f7fb);display:grid;place-items:center;color:#8799a9}.video-placeholder{text-align:center}.video-icon{width:62px;height:42px;margin:0 auto 10px;border:2px solid #c7d5e1;border-radius:5px;position:relative}.video-icon:before{content:"";position:absolute;left:23px;top:12px;border-left:16px solid #abc0d1;border-top:9px solid transparent;border-bottom:9px solid transparent}.video-placeholder b{display:block;color:#6d8395;font-size:11px}.video-placeholder span{display:block;margin-top:5px;font-size:9px}
+.bottom-grid{min-height:0;display:grid;grid-template-columns:1.12fr 1.12fr 1fr 1fr 1fr 1.12fr;gap:8px;padding:0 12px 10px}.bottom-card{min-width:0;overflow:hidden;border:1px solid #c3d1df;border-radius:8px;background:rgba(248,251,255,.96);box-shadow:0 6px 16px rgba(93,113,134,.08)}.bottom-head{height:42px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line-soft);font-size:12px;font-weight:700}.bottom-head span{color:var(--blue);font-size:9px;font-weight:500}.head-icon{display:inline-block;width:18px;height:18px;margin-right:6px;border:2px solid #607a8e;border-radius:50%;vertical-align:middle;position:relative}.head-icon.chart{border-radius:2px;border-top:0;border-right:0}.head-icon.chart:after{content:"";position:absolute;left:3px;top:7px;width:10px;height:6px;border-left:2px solid #607a8e;border-bottom:2px solid #607a8e;transform:skewY(-28deg)}
+.mini-chart{width:100%;height:216px}.status-list{padding:8px 14px}.status-row{height:38px;display:grid;grid-template-columns:1fr auto;align-items:center;border-bottom:1px solid var(--line-soft);font-size:10px;color:#5c7284}.status-row:last-child{border-bottom:0}.status-row b{color:var(--green);font-size:10px}.status-row em{display:inline-block;width:8px;height:8px;margin-right:5px;border-radius:50%;background:var(--green);vertical-align:middle}.valve-list{padding:10px 12px}.valve-line{width:100%;height:50px;margin-bottom:6px;display:grid;grid-template-columns:1fr 48px;align-items:center;padding:0 9px;border:1px solid transparent;border-bottom-color:var(--line-soft);background:transparent;text-align:left;cursor:pointer}.valve-line:hover,.valve-line.active{border-color:#a8cae6;background:#eef6fc}.valve-line span{font-size:10px}.valve-line b{font-size:17px;color:#476176;text-align:right}.valve-line small{display:block;margin-top:3px;color:var(--muted)}.valve-legend{display:flex;justify-content:center;gap:14px;color:#718597;font-size:9px}.legend-dot{display:inline-block;width:7px;height:7px;margin-right:4px;border-radius:2px}.legend-dot.run{background:var(--green)}.legend-dot.stop{background:var(--amber)}.legend-dot.fault{background:var(--danger)}
+.health-body{display:grid;grid-template-columns:128px 1fr;gap:12px;padding:16px 13px}.health-ring{width:116px;height:116px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#2787d2 0 62%,#f28d22 62% 78%,#e6eef5 78% 100%);position:relative}.health-ring:after{content:"";position:absolute;inset:17px;border-radius:50%;background:#f8fbff}.health-ring div{position:relative;z-index:2;text-align:center}.health-ring span{display:block;color:#6e8395;font-size:9px}.health-ring b{display:block;color:#36556d;font-size:23px}.health-info{padding-top:2px}.health-info div{height:28px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line-soft);font-size:9px;color:#718597}.health-info b{font-size:10px;color:#4a6375}.health-info .good{color:var(--green)}
+.confirm-mask{position:absolute;z-index:50;inset:0;display:grid;place-items:center;background:rgba(97,118,137,.25);backdrop-filter:blur(2px)}.confirm-box{width:390px;border:1px solid #b9cad9;border-radius:7px;background:#f8fbff;box-shadow:0 18px 50px rgba(74,94,114,.24);overflow:hidden}.confirm-title{padding:13px 15px;border-bottom:1px solid var(--line-soft);color:#3f586b;font-weight:700}.confirm-body{padding:16px;color:#60778a;font-size:12px;line-height:1.7}.confirm-command{margin-top:10px;padding:10px;border-left:3px solid var(--blue);background:#edf5fb}.confirm-actions{display:flex;justify-content:flex-end;gap:8px;padding:11px 14px;border-top:1px solid var(--line-soft)}.confirm-actions button{height:34px;padding:0 15px;border:1px solid #bdcddd;border-radius:4px;background:#fff;cursor:pointer}.confirm-actions .primary{border-color:var(--blue);background:var(--blue);color:#fff}.toast{position:absolute;z-index:60;left:50%;top:140px;transform:translateX(-50%);padding:9px 15px;border:1px solid #a9c5db;border-radius:5px;background:#f8fbff;color:#456177;box-shadow:0 9px 24px rgba(78,99,119,.2);font-size:11px}.toast.good{border-color:#77c8aa;color:#16865f}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+<div id="screen">
+  <header class="topbar">
+    <div class="brand"><strong>城市污水净化中心</strong><span>及计算机监控 / 除臭系统工段</span></div>
+    <nav class="primary-nav"><button>工艺驾驶舱</button><button>预处理系统</button><button>生化处理系统</button><button>膜处理系统</button><button>出水系统</button><button>污泥系统</button><button class="active">除臭系统</button></nav>
+    <div class="system-meta"><span class="meta-item"><i class="weather-symbol"></i>晴 26℃</span><span class="meta-item num">◷ {{date}} {{clock}}</span></div>
+  </header>
+
+  <nav class="subnav"><button>除臭总览</button><button class="active">生物除臭系统</button><button>化学洗涤塔</button><button>离子除臭区</button><button>风机房</button><button>加药间</button><div class="demo-badge">演示模式 / 数据质量 GOOD / 29号场景 / 更新时间 {{clock}}</div></nav>
+
+  <main class="main-area">
+    <section class="scene-shell" aria-label="生物除臭系统数字孪生场景">
+      <div id="twin3d"></div>
+      <div class="overview-card"><div class="overview-title"><span class="back-arrow">‹</span><span>返回总览 Full View</span></div><div class="mini-map"><div class="mini-ground"></div><div class="mini-block mini-a"></div><div class="mini-water"></div><div class="mini-block mini-b"></div><div class="mini-block mini-c"></div><div class="mini-pipe"></div></div></div>
+      <div class="scene-tools">
+        <button id="viewHome" :class="{active: activeInspect==='ALL'}" @click="focusDevice('ALL')">🌐 全景总览</button>
+        <button id="viewFan1" :class="{active: activeInspect==='FAN-01'}" @click="focusDevice('FAN-01')">🌀 1#引风机</button>
+        <button id="viewFan2" :class="{active: activeInspect==='FAN-02'}" @click="focusDevice('FAN-02')">🌀 2#引风机</button>
+        <button id="viewFocus" :class="{active: activeInspect==='TANK-01'}" @click="focusDevice('TANK-01')">🏢 预洗涤池</button>
+        <button id="viewTank2" :class="{active: activeInspect==='TANK-02'}" @click="focusDevice('TANK-02')">🏢 生物滤池</button>
+        <button id="viewPump" :class="{active: activeInspect==='PUMP-01'}" @click="focusDevice('PUMP-01')">💧 喷淋泵组</button>
+        <button id="viewChimney" :class="{active: activeInspect==='CHIMNEY'}" @click="focusDevice('CHIMNEY')">🗼 烟囱&CEMS</button>
+        <button id="viewTop" @click="setTopView">俯视视角</button>
+      </div>
+      <div class="device-inspector" v-if="activeInspect!=='ALL'">
+        <div class="inspector-head">
+          <div class="inspector-title">
+            <strong>{{currentInspectInfo.name}}</strong>
+            <span>{{currentInspectInfo.tag}} · {{currentInspectInfo.subtitle}}</span>
+          </div>
+          <button class="inspector-close" @click="focusDevice('ALL')" title="退出特写并返回全景">✕ 返回全景</button>
+        </div>
+        <div class="inspector-body">
+          <div class="spec-item" v-for="item in currentInspectInfo.specs" :key="item.label">
+            <span>{{item.label}}</span>
+            <b>{{item.val}}</b>
+          </div>
+        </div>
+        <div class="inspector-foot">
+          <span class="inspector-tip">💡 提示：按住鼠标左键可 360° 自由旋转特写观察构件细节</span>
+          <button class="inspector-link" @click="jumpToControl(currentInspectInfo)">联动控制</button>
+        </div>
+      </div>
+      <div class="metrics-float"><div class="metric"><span>通讯状态</span><b class="good">正常</b></div><div class="metric"><span>处理风量</span><b class="num">12,500</b><small>m³/h</small></div><div class="metric"><span>硫化氢(H2S)</span><b class="num">0.05</b><small>mg/m³</small></div><div class="metric"><span>氨气(NH3)</span><b class="num">0.21</b><small>mg/m³</small></div><div class="metric"><span>臭气浓度</span><b class="num">15</b><small>OU</small></div><div class="metric"><span>滤池压降</span><b class="num">350</b><small>Pa</small></div></div>
+      <div class="flow-key"><span><i class="water"></i>气体管道</span><span><i class="chemical"></i>加药/喷淋管</span><span><i class="run"></i>设备运行</span></div>
+    </section>
+
+    <aside class="control-panel">
+      <section class="control-card">
+        <div class="control-head"><strong>控制面板</strong><span>{{selectedValve.name}}</span></div>
+        <div class="control-tabs"><button v-for="tab in controlTabs" :key="tab.id" :class="{active:activeTab===tab.id}" @click="activeTab=tab.id">{{tab.label}}</button></div>
+        <div class="control-body" v-if="activeTab==='status'">
+          <div class="state-line"><div class="state-left"><span>状态 <b>{{valveState}}</b></span><span>控制 <b>远程</b></span></div><div class="state-normal"><i class="tiny-state"></i>通讯正常</div></div>
+          <div class="quick-grid"><div class="quick-cell"><span>变频频率</span><b class="num">{{selectedValve.opening.toFixed(1)}}</b><small>Hz</small></div><div class="quick-cell"><span>运行电流</span><b class="num">24.5</b><small>A</small></div><div class="quick-cell"><span>出口风压</span><b class="num">850</b><small>Pa</small></div><div class="quick-cell"><span>运行时长</span><b class="num">4,520</b><small>h</small></div></div>
+          <div class="process-grid"><div class="process-cell"><span>轴承温度</span><b class="num">45 <small>℃</small></b></div><div class="process-cell"><span>风机振动</span><b class="num">2.1 <small>mm/s</small></b></div></div>
+          <div class="last-action"><span>最近动作</span><br><b class="num">{{lastAction.time}}</b>　{{lastAction.text}}</div>
+        </div>
+        <div class="control-body" v-else-if="activeTab==='control'">
+          <div class="control-form"><div class="control-device"><b>{{selectedValve.tag}} / {{selectedValve.name}}</b><span>{{valveState}}</span></div><div class="slider-row"><span>目标频率</span><input type="range" min="0" max="50" step="1" v-model.number="tempOpening"><div class="value-box num">{{tempOpening}}Hz</div></div><div class="control-buttons"><button class="open" @click="requestValve(50,'工频运行')">工频运行</button><button class="close" @click="requestValve(0,'停止运行')">停止</button><button class="apply" @click="requestValve(tempOpening,'调节频率')">应用</button></div><div class="control-note">选择风机后在此调整变频器频率。确认执行后，三维设备运转速度和管道气流同步变化。</div></div>
+        </div>
+        <div class="control-body" v-else-if="activeTab==='trend'"><div id="valveTrend" style="width:100%;height:260px"></div></div>
+        <div class="control-body" v-else><div class="event-list"><div class="event-row" v-for="event in events" :key="event.time+event.text"><time class="num">{{event.time}}</time><b>{{event.tag}}</b><span>{{event.text}}</span></div></div></div>
+      </section>
+
+      <section class="video-card"><div class="video-head">现场视频 · <span>数字融合</span></div><div class="video-window"><div class="video-placeholder"><div class="video-icon"></div><b>生物除臭滤池区</b><span>演示环境未接入现场视频流</span></div></div></section>
+    </aside>
+  </main>
+
+  <section class="bottom-grid">
+    <article class="bottom-card"><div class="bottom-head"><div><i class="head-icon chart"></i>排气 H2S 浓度(mg/m³)</div></div><div id="levelChart" class="mini-chart"></div></article>
+    <article class="bottom-card"><div class="bottom-head"><div><i class="head-icon chart"></i>系统处理风量(m³/h)</div></div><div id="flowChart" class="mini-chart"></div></article>
+    <article class="bottom-card"><div class="bottom-head"><div><i class="head-icon"></i>设备状态</div></div><div class="status-list"><div class="status-row"><span>1#离心引风机</span><b><em></em>正常</b></div><div class="status-row"><span>2#离心引风机</span><b><em></em>正常</b></div><div class="status-row"><span>1#循环喷淋泵</span><b><em></em>正常</b></div><div class="status-row"><span>2#循环喷淋泵</span><b><em></em>正常</b></div><div class="status-row"><span>营养液加药泵</span><b><em></em>运行</b></div></div></article>
+    <article class="bottom-card"><div class="bottom-head"><div><i class="head-icon"></i>联锁状态</div></div><div class="status-list"><div class="status-row"><span>风机-喷淋泵联锁</span><b><em></em>正常</b></div><div class="status-row"><span>液位超低保护</span><b><em></em>正常</b></div><div class="status-row"><span>硫化氢超标报警</span><b><em></em>正常</b></div><div class="status-row"><span>压差高限报警</span><b><em></em>正常</b></div></div></article>
+    <article class="bottom-card"><div class="bottom-head"><div><i class="head-icon"></i>风机频率</div><span>{{selectedValve.name}}</span></div><div class="valve-list"><button class="valve-line" v-for="valve in valves" :key="valve.tag" :class="{active:selectedTag===valve.tag}" @click="selectValve(valve.tag)"><span>{{valve.name}}<small>{{valve.tag}}</small></span><b class="num">{{Math.round(valve.opening)}} Hz</b></button><div class="valve-legend"><span><i class="legend-dot run"></i>运行 {{runningValves}}</span><span><i class="legend-dot stop"></i>故障 0</span><span><i class="legend-dot fault"></i>检修 0</span></div></div></article>
+    <article class="bottom-card"><div class="bottom-head"><div><i class="head-icon"></i>健康评价</div><span>生物滤池</span></div><div class="health-body"><div class="health-ring"><div><span>效能度</span><b class="num">92</b></div></div><div class="health-info"><div><span>菌种活性</span><b class="good">良好</b></div><div><span>填料状态</span><b class="good">正常</b></div><div><span>压降评估</span><b>偏高</b></div><div><span>换料预测</span><b class="num">18个月</b></div><div><span>综合诊断</span><b class="good">运行稳定</b></div></div></div></article>
+  </section>
+
+  <div class="confirm-mask" v-if="confirmDialog.show"><div class="confirm-box"><div class="confirm-title">确认设备控制命令</div><div class="confirm-body">本页面处于演示模式，命令仅影响本地三维模型和模拟数据。<div class="confirm-command"><b>{{selectedValve.tag}} / {{selectedValve.name}}</b><br>当前频率 {{selectedValve.opening.toFixed(1)}} Hz，目标频率 {{confirmDialog.target}} Hz，动作 {{confirmDialog.action}}</div></div><div class="confirm-actions"><button @click="confirmDialog.show=false">取消</button><button class="primary" @click="executeValve">确认执行</button></div></div></div>
+  <div class="toast" :class="toast.type" v-if="toast.show">{{toast.text}}</div>
+</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const $id=function(id){return document.getElementById(id);};
+  const safeInit=function(id){try{const el=$id(id);if(!el)return null;return echarts.init(el);}catch(e){console.error(e);return null;}};
+  let levelChart=null,flowChart=null,valveTrend=null,twin=null;
+  const vm=Vue.createApp({
+    data:function(){
+      return{
+        clock:'--:--:--',
+        date:'----/--/--',
+        activeTab:'status',
+        selectedTag:'FAN-01',
+        tempOpening:35,
+        activeInspect:'ALL',
+        inspectMap:{
+          'ALL':{
+            id:'ALL',
+            name:'生物除臭工艺全流程数字孪生',
+            tag:'SYSTEM-ALL',
+            subtitle:'全工段立体三维透视',
+            specs:[
+              {label:'工艺工段',val:'预洗增湿 + 复合生物滤池'},
+              {label:'设计风量',val:'12,500 m³/h'},
+              {label:'综合除臭率',val:'≥ 95.8%'},
+              {label:'排气指标',val:'H2S ≤ 0.05 mg/m³'}
+            ]
+          },
+          'FAN-01':{
+            id:'FAN-01',
+            name:'1# 离心引风机组',
+            tag:'FAN-01',
+            subtitle:'FRP高强耐腐蚀负压引风机',
+            specs:[
+              {label:'机壳构型',val:'渐开线蜗壳 + FRP环向加筋'},
+              {label:'减振系统',val:'双层型钢 + 4组弹簧阻尼器'},
+              {label:'柔性短节',val:'EPDM/PTFE波纹防腐接头'},
+              {label:'变频电机',val:'18.5kW Ex d IIB T4 (密集散热)'}
+            ]
+          },
+          'FAN-02':{
+            id:'FAN-02',
+            name:'2# 离心引风机组',
+            tag:'FAN-02',
+            subtitle:'热备用负压离心引风机',
+            specs:[
+              {label:'机壳构型',val:'渐开线蜗壳 + 排凝冷凝阀'},
+              {label:'减振系统',val:'双层型钢 + 4组弹簧阻尼器'},
+              {label:'运行状态',val:'自动化联锁热备 (0 Hz)'},
+              {label:'现场控制',val:'防爆就地控制柱(LCS急停/起停)'}
+            ]
+          },
+          'TANK-01':{
+            id:'TANK-01',
+            name:'1# 预洗涤增湿除臭池',
+            tag:'TANK-01',
+            subtitle:'酸雾与颗粒物预调理反应段',
+            specs:[
+              {label:'池体构架',val:'一体化FRP抗负压加筋密闭箱体'},
+              {label:'高空爬梯',val:'全高圆弧安全护笼直爬梯'},
+              {label:'巡检平台',val:'热镀锌钢格板 + 双层安全防护栏'},
+              {label:'喷淋管网',val:'顶部DN40歧管 + 螺旋防堵喷嘴'}
+            ]
+          },
+          'TANK-02':{
+            id:'TANK-02',
+            name:'2# 生物过滤反应池',
+            tag:'TANK-02',
+            subtitle:'微生物活性菌群核心降解池',
+            specs:[
+              {label:'生物填料',val:'火山岩+改性树皮复合填料床'},
+              {label:'结构支承',val:'底部6组重型H型钢立柱支腿'},
+              {label:'观察装置',val:'双层防爆钢化视镜(内部透视)'},
+              {label:'检修人孔',val:'带旋转摇臂密封快开人孔门'}
+            ]
+          },
+          'PUMP-01':{
+            id:'PUMP-01',
+            name:'循环喷淋水泵组',
+            tag:'PUMP-01',
+            subtitle:'耐酸碱卧式离心管道泵站',
+            specs:[
+              {label:'吸水管系',val:'偏心异径管 + Y型管道过滤器'},
+              {label:'吐出管系',val:'同心渐扩管 + 止回阀 + 调节手轮'},
+              {label:'减振缓冲',val:'进出水耐腐蚀橡胶避震喉'},
+              {label:'测量仪表',val:'耐震不锈钢U型缓冲冷凝弯压力表'}
+            ]
+          },
+          'CHIMNEY':{
+            id:'CHIMNEY',
+            name:'高空排气筒及CEMS监测站',
+            tag:'CHIMNEY',
+            subtitle:'15米洁净排放高耸构筑物',
+            specs:[
+              {label:'筒身材质',val:'3节渐细耐候玻璃钢 + 加厚法兰'},
+              {label:'采样平台',val:'标高8.5m 环形钢格板+挑梁托架'},
+              {label:'在线监测',val:'CEMS伴热采样探头 + 反吹电磁阀箱'},
+              {label:'防雷航标',val:'不锈钢避雷针 + 双联LED红光航标'}
+            ]
+          }
+        },
+        controlTabs:[{id:'status',label:'状态'},{id:'control',label:'控制'},{id:'trend',label:'趋势'},{id:'events',label:'事件'}],
+        valves:[{tag:'FAN-01',name:'1#离心风机',opening:35,target:35},{tag:'FAN-02',name:'2#离心风机',opening:0,target:0}],
+        lastAction:{time:'14:27',text:'变频运行'},
+        events:[{time:'14:27',tag:'FAN-01',text:'频率稳定在 35Hz'},{time:'13:52',tag:'PUMP-01',text:'喷淋泵启动运行'},{time:'12:40',tag:'PLC-01',text:'通讯质量 GOOD'}],
+        confirmDialog:{show:false,target:0,action:''},
+        toast:{show:false,text:'',type:''},
+        toastTimer:null
+      };
+    },
+    computed:{
+      selectedValve:function(){return this.valves.find(function(v){return v.tag===this.selectedTag;}.bind(this))||this.valves[0];},
+      valveState:function(){if(this.selectedValve.opening<=1)return '停机';if(this.selectedValve.opening>=49)return '工频';return '变频';},
+      runningValves:function(){return this.valves.filter(function(v){return v.opening>1;}).length;},
+      currentInspectInfo:function(){return this.inspectMap[this.activeInspect]||this.inspectMap['ALL'];}
+    },
+    watch:{
+      activeTab:function(value){
+        if(value==='trend')this.$nextTick(function(){if(!valveTrend)valveTrend=safeInit('valveTrend');this.renderValveTrend();});
+      }
+    },
+    methods:{
+      tick:function(){const d=new Date();this.clock=d.toLocaleTimeString('zh-CN',{hour12:false});this.date=d.toLocaleDateString('zh-CN').replaceAll('/','/');},
+      selectValve:function(tag){this.selectedTag=tag;this.tempOpening=Math.round(this.selectedValve.opening);this.activeTab='status';if(twin)twin.highlight(tag);},
+      focusDevice:function(tag){
+        this.activeInspect=tag;
+        if(tag==='FAN-01'||tag==='FAN-02'){
+          this.selectedTag=tag;
+          this.tempOpening=Math.round(this.selectedValve.opening);
+        }
+        if(twin)twin.focus(tag);
+      },
+      jumpToControl:function(info){
+        if(info.id==='FAN-01'||info.id==='FAN-02'){
+          this.selectedTag=info.id;
+          this.activeTab='control';
+        }else{
+          this.activeTab='status';
+        }
+      },
+      setTopView:function(){
+        this.activeInspect='ALL';
+        if(twin)twin.setTopView();
+      },
+      requestValve:function(target,action){this.confirmDialog={show:true,target:Math.max(0,Math.min(50,Math.round(Number(target)||0))),action:action};},
+      executeValve:function(){
+        const valve=this.selectedValve;
+        const old=Math.round(valve.opening);
+        valve.target=this.confirmDialog.target;
+        valve.opening=this.confirmDialog.target;
+        this.tempOpening=this.confirmDialog.target;
+        this.confirmDialog.show=false;
+        const t=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false});
+        this.lastAction={time:t,text:this.confirmDialog.action+'至 '+this.confirmDialog.target+'Hz'};
+        this.events.unshift({time:t,tag:valve.tag,text:'频率由 '+old+'Hz 调整至 '+this.confirmDialog.target+'Hz'});
+        this.toastMessage('控制命令已执行，三维设备和气流已同步','good');
+        this.activeTab='status';
+        if(twin)twin.pulse(valve.tag);
+      },
+      toastMessage:function(text,type){
+        const self=this;
+        if(this.toastTimer)clearTimeout(this.toastTimer);
+        this.toast={show:true,text:text,type:type||''};
+        this.toastTimer=setTimeout(function(){self.toast.show=false;},2200);
+      },
+      renderValveTrend:function(){
+        if(!valveTrend)return;
+        valveTrend.setOption(makeMiniOption(['13:55','14:00','14:05','14:10','14:15','14:20','14:25'],[30,35,35,40,40,35,this.selectedValve.opening],'风机频率','#247ac4',0,50,'Hz'));
+      }
+    },
+    mounted:function(){
+      const self=this;
+      this.tick();
+      setInterval(function(){try{self.tick();}catch(e){console.error(e);}},1000);
+      this.$nextTick(function(){
+        levelChart=safeInit('levelChart');
+        flowChart=safeInit('flowChart');
+        renderBottomCharts();
+        twin=legacyWaterTwin(self);
+      });
+    }
+  }).mount('#app');
+
+  function makeMiniOption(times,data,name,color,min,max,unit){return{animation:false,grid:{left:38,right:10,top:20,bottom:28},tooltip:{trigger:'axis'},xAxis:{type:'category',data:times,boundaryGap:false,axisLine:{lineStyle:{color:'#c9d6e2'}},axisTick:{show:false},axisLabel:{color:'#8194a5',fontSize:8}},yAxis:{type:'value',min:min,max:max,axisLine:{show:false},axisTick:{show:false},axisLabel:{color:'#8194a5',fontSize:8},splitLine:{lineStyle:{color:'#e1e9f1'}}},series:[{name:name,type:'line',data:data,symbol:'circle',symbolSize:3,lineStyle:{color:color,width:2},itemStyle:{color:color},areaStyle:{color:color,opacity:.13}}],textStyle:{fontFamily:'Microsoft YaHei'},unit:unit};}
+  function renderBottomCharts(){try{const times=['00:00','04:00','08:00','12:00','16:00','20:00','24:00'];if(levelChart)levelChart.setOption(makeMiniOption(times,[0.03,0.04,0.06,0.05,0.08,0.05,0.04],'H2S浓度','#2c91d4',0,0.2,'mg/m³'));if(flowChart)flowChart.setOption(makeMiniOption(times,[12000,12200,12500,13000,12800,12500,12500],'处理风量','#21ad79',0,15000,'m³/h'));}catch(e){console.error(e);}}
+
+  function legacyWaterTwin(state){
+    const host=$id('twin3d');if(!host||!window.THREE)return null;
+    const scene=new THREE.Scene();scene.background=new THREE.Color(0xdce7f2);scene.fog=new THREE.Fog(0xdce7f2,26,62);
+    const camera=new THREE.PerspectiveCamera(34,host.clientWidth/host.clientHeight,.1,100);
+    camera.position.set(17,13,21);
+    const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    renderer.setSize(host.clientWidth,host.clientHeight);
+    renderer.outputEncoding=THREE.sRGBEncoding;
+    renderer.shadowMap.enabled=true;
+    renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    host.appendChild(renderer.domElement);
+
+    const controls=new THREE.OrbitControls(camera,renderer.domElement);
+    controls.enableDamping=true;
+    controls.dampingFactor=.07;
+    controls.minDistance=2.5;
+    controls.maxDistance=48;
+    controls.maxPolarAngle=Math.PI*.48;
+    controls.target.set(0,0,0);
+
+    scene.add(new THREE.HemisphereLight(0xf7fbff,0x71889a,1.1));
+    const sun=new THREE.DirectionalLight(0xffffff,.86);
+    sun.position.set(-14,20,16);
+    sun.castShadow=true;
+    sun.shadow.mapSize.set(2048,2048);
+    sun.shadow.camera.near=0.5;
+    sun.shadow.camera.far=60;
+    sun.shadow.camera.left=-20;
+    sun.shadow.camera.right=20;
+    sun.shadow.camera.top=20;
+    sun.shadow.camera.bottom=-20;
+    scene.add(sun);
+    const fill=new THREE.DirectionalLight(0xa9cce2,.32);
+    fill.position.set(14,8,-12);
+    scene.add(fill);
+
+    const floorMat=new THREE.MeshStandardMaterial({color:0xbacbd8,roughness:.94,metalness:0});
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(48,32),floorMat);
+    floor.rotation.x=-Math.PI/2;
+    floor.position.y=-1.25;
+    floor.receiveShadow=true;
+    scene.add(floor);
+    const grid=new THREE.GridHelper(48,32,0x8fa9bc,0xa9bdcb);
+    grid.position.y=-1.2;
+    grid.material.opacity=.45;
+    grid.material.transparent=true;
+    scene.add(grid);
+
+    // 工业专业材质库
+    const concrete=new THREE.MeshStandardMaterial({color:0xc8d5de,roughness:.76,metalness:.01});
+    const concreteTop=new THREE.MeshStandardMaterial({color:0xdbe5ec,roughness:.7,metalness:.02});
+    const concreteSide=new THREE.MeshStandardMaterial({color:0xafc0cb,roughness:.82,metalness:0});
+    const steel=new THREE.MeshStandardMaterial({color:0xd6e3ec,roughness:.35,metalness:.55});
+    const darkSteel=new THREE.MeshStandardMaterial({color:0x586e80,roughness:.45,metalness:.45});
+    const frpGreen=new THREE.MeshStandardMaterial({color:0x1d7a52,roughness:.3,metalness:.38}); // FRP耐腐蚀树脂绿
+    const motorBlue=new THREE.MeshStandardMaterial({color:0x1a6cb9,roughness:.32,metalness:.45}); // 变频电机蓝
+    const safetyYellow=new THREE.MeshStandardMaterial({color:0xdf9f28,roughness:.38,metalness:.25}); // 安全警示黄
+    const valveRed=new THREE.MeshStandardMaterial({color:0xd13d3d,roughness:.36,metalness:.2}); // 阀门控制红
+    const rubberMat=new THREE.MeshStandardMaterial({color:0x2b3844,roughness:.9,metalness:.05}); // 黑色波纹橡胶软接
+    const brassMat=new THREE.MeshStandardMaterial({color:0xd4ac44,roughness:.35,metalness:.7}); // 仪表黄铜接头
+    const cemsWhite=new THREE.MeshStandardMaterial({color:0xedf4f8,roughness:.45,metalness:.2}); // CEMS仪表箱白
+    const glassMat=new THREE.MeshPhysicalMaterial({color:0xa8d2e8,transparent:true,opacity:.5,roughness:.15,transmission:.6});
+    const pipeBlue=new THREE.MeshStandardMaterial({color:0x2474b8,roughness:.32,metalness:.42});
+    const pipePurple=new THREE.MeshStandardMaterial({color:0xa975d6,roughness:.35,metalness:.32});
+    const flowBlue=new THREE.MeshBasicMaterial({color:0x3b91c9});
+    const flowPurple=new THREE.MeshBasicMaterial({color:0xc58be4});
+    const edgeMat=new THREE.LineBasicMaterial({color:0x8da5b5,transparent:true,opacity:.45});
+    const warningStripe=new THREE.MeshStandardMaterial({color:0xdba638,roughness:.4,metalness:.2});
+
+    function addBox(parent,w,h,d,mat,x,y,z,rx=0,ry=0,rz=0){
+      const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+      mesh.position.set(x,y,z);
+      if(rx)mesh.rotation.x=rx;
+      if(ry)mesh.rotation.y=ry;
+      if(rz)mesh.rotation.z=rz;
+      mesh.castShadow=true;mesh.receiveShadow=true;
+      (parent||scene).add(mesh);
+      if(mat===concrete||mat===concreteTop||mat===concreteSide){
+        const edges=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),edgeMat);
+        mesh.add(edges);
+      }
+      return mesh;
+    }
+
+    function addCyl(parent,rt,rb,h,seg,mat,x,y,z,rx=0,ry=0,rz=0){
+      const mesh=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg),mat);
+      mesh.position.set(x,y,z);
+      if(rx)mesh.rotation.x=rx;
+      if(ry)mesh.rotation.y=ry;
+      if(rz)mesh.rotation.z=rz;
+      mesh.castShadow=true;mesh.receiveShadow=true;
+      (parent||scene).add(mesh);
+      return mesh;
+    }
+
+    const pumpRotors=[];
+    const clickables=[];
+
+    // 1. 极致精细化：玻璃钢离心引风机组 (FRP Centrifugal Fan Assembly)
+    function fanAssembly(tag, x, z, name) {
+      const g = new THREE.Group();
+      g.userData = { tag: tag, inspectId: tag, name: name };
+
+      // (1) 减震基础体系：混凝土基墩 + 槽钢底盘 + 4套弹簧阻尼减振器
+      addBox(g, 2.0, 0.22, 2.0, concreteTop, 0, 0.11, 0);
+      addBox(g, 1.8, 0.08, 1.8, darkSteel, 0, 0.26, 0);
+      const isocorners = [[-0.75,-0.75],[0.75,-0.75],[-0.75,0.75],[0.75,0.75]];
+      isocorners.forEach(function(c){
+        const px = c[0], pz = c[1];
+        addBox(g, 0.22, 0.03, 0.22, steel, px, 0.31, pz);
+        addCyl(g, 0.06, 0.06, 0.14, 12, darkSteel, px, 0.39, pz);
+        addBox(g, 0.22, 0.03, 0.22, steel, px, 0.47, pz);
+        addBox(g, 0.08, 0.06, 0.08, steel, px, 0.28, pz); // 锚栓座
+      });
+      addBox(g, 1.7, 0.08, 1.7, steel, 0, 0.52, 0);
+
+      // (2) 渐开线玻璃钢蜗壳 (Volute Casing)
+      const cy = 1.25;
+      const vol1 = addCyl(g, 0.72, 0.72, 0.48, 24, frpGreen, 0, cy, 0, Math.PI/2, 0, 0);
+      vol1.userData = { tag: tag, inspectId: tag };
+      clickables.push(vol1);
+      addCyl(g, 0.55, 0.78, 0.48, 24, frpGreen, -0.22, cy-0.18, 0, Math.PI/2, 0, 0);
+      addBox(g, 0.52, 0.95, 0.48, frpGreen, -0.48, cy+0.32, 0);
+
+      // 蜗壳外壁环形加强筋
+      const ring1 = new THREE.Mesh(new THREE.TorusGeometry(0.74, 0.024, 8, 24), frpGreen);
+      ring1.position.set(0, cy, 0.1); g.add(ring1);
+      const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.74, 0.024, 8, 24), frpGreen);
+      ring2.position.set(0, cy, -0.1); g.add(ring2);
+
+      // 蜗壳检修圆形盖板与紧固螺栓
+      addCyl(g, 0.28, 0.28, 0.03, 16, steel, 0, cy, 0.25, Math.PI/2, 0, 0);
+      for(let a=0; a<Math.PI*2; a+=Math.PI/4) {
+        addCyl(g, 0.015, 0.015, 0.02, 6, darkSteel, Math.cos(a)*0.22, cy+Math.sin(a)*0.22, 0.27, Math.PI/2, 0, 0);
+      }
+      addBox(g, 0.14, 0.02, 0.04, steel, 0, cy, 0.28); // U型把手
+
+      // 底部黄铜排凝考克阀
+      addCyl(g, 0.03, 0.03, 0.12, 8, brassMat, -0.2, 0.62, 0);
+      addBox(g, 0.06, 0.02, 0.02, valveRed, -0.2, 0.55, 0);
+
+      // (3) 进风与出风柔性短节（EPDM/橡胶膨胀节）
+      // 进风吸入喇叭口 + 橡胶波纹软接 + 不锈钢卡箍
+      addCyl(g, 0.42, 0.42, 0.06, 16, steel, 0, cy, 0.27, Math.PI/2, 0, 0);
+      addCyl(g, 0.44, 0.41, 0.18, 16, rubberMat, 0, cy, 0.38, Math.PI/2, 0, 0);
+      addCyl(g, 0.45, 0.45, 0.02, 16, steel, 0, cy, 0.33, Math.PI/2, 0, 0);
+      addCyl(g, 0.45, 0.45, 0.02, 16, steel, 0, cy, 0.43, Math.PI/2, 0, 0);
+      addCyl(g, 0.43, 0.43, 0.05, 16, steel, 0, cy, 0.48, Math.PI/2, 0, 0);
+
+      // 出风口矩形法兰 + 矩形橡胶软接 + 方变圆变径过渡段
+      addBox(g, 0.56, 0.05, 0.52, steel, -0.48, cy+0.82, 0);
+      addBox(g, 0.54, 0.14, 0.50, rubberMat, -0.48, cy+0.91, 0);
+      addBox(g, 0.56, 0.08, 0.52, steel, -0.48, cy+1.01, 0);
+
+      // (4) 变频防爆交流驱动电机 (18.5kW Ex d IIB T4)
+      const motorBody = addCyl(g, 0.28, 0.28, 0.72, 16, motorBlue, 0, cy, -0.72, Math.PI/2, 0, 0);
+      motorBody.userData = { tag: tag, inspectId: tag, name: name };
+      clickables.push(motorBody);
+      // 12 道密集散热筋板
+      for(let a=0; a<Math.PI*2; a+=Math.PI/6) {
+        const fin = addBox(g, 0.02, 0.08, 0.65, motorBlue, Math.cos(a)*0.29, cy+Math.sin(a)*0.29, -0.72);
+        fin.rotation.z = a;
+      }
+      addCyl(g, 0.26, 0.26, 0.08, 16, darkSteel, 0, cy, -0.32, Math.PI/2, 0, 0); // 前端盖
+      addCyl(g, 0.29, 0.29, 0.16, 16, steel, 0, cy, -1.14, Math.PI/2, 0, 0); // 尾部风扇罩
+      // 斜置防爆接线箱与黄铜软管
+      addBox(g, 0.16, 0.16, 0.18, motorBlue, 0.18, cy+0.28, -0.72, 0, 0, -Math.PI/6);
+      addCyl(g, 0.03, 0.03, 0.1, 8, brassMat, 0.28, cy+0.34, -0.72);
+
+      // 联轴器安全防护罩（工业醒目黄）
+      addBox(g, 0.32, 0.32, 0.18, safetyYellow, 0, cy, -0.22);
+
+      // 内置旋转风机叶轮（从进风口可见）
+      const rotor = addCyl(g, 0.32, 0.32, 0.08, 8, steel, 0, cy, 0.15, Math.PI/2, 0, 0);
+      pumpRotors.push({mesh: rotor, tag: tag, axis: 'z'});
+
+      // (5) 就地控制柱 (LCS) 与现场仪表
+      addCyl(g, 0.03, 0.03, 1.1, 8, steel, 0.85, 0.55, 0.6);
+      const lcs = addBox(g, 0.26, 0.32, 0.18, cemsWhite, 0.85, 1.15, 0.6);
+      lcs.userData = { tag: tag, inspectId: tag };
+      clickables.push(lcs);
+      addCyl(g, 0.02, 0.02, 0.02, 8, frpGreen, 0.85, 1.22, 0.7, Math.PI/2, 0, 0); // 启动钮
+      addCyl(g, 0.025, 0.025, 0.03, 8, valveRed, 0.85, 1.08, 0.7, Math.PI/2, 0, 0); // 急停蘑菇头
+
+      // 现场微差压仪表与紫铜导压管
+      addCyl(g, 0.08, 0.08, 0.03, 16, steel, -0.45, cy, 0.35, Math.PI/2, 0, 0);
+      addCyl(g, 0.01, 0.01, 0.25, 6, brassMat, -0.45, cy-0.15, 0.35);
+
+      g.position.set(x, -1.25, z);
+      scene.add(g);
+      return g;
+    }
+
+    const fan1 = fanAssembly('FAN-01', 6, -1.5, '1#离心引风机');
+    const fan2 = fanAssembly('FAN-02', 6, 1.5, '2#离心引风机');
+
+    // 2. 极致精细化：复合生物除臭一体化池体 (Bio Filter Complex)
+    function bioTank(tag, x, z, name, isPreWash) {
+      const g = new THREE.Group();
+      g.userData = { tag: tag, inspectId: tag, name: name };
+
+      // (1) 底部重型H型钢支柱支架 (6组承重工字钢柱，离地0.4m)
+      const legPositions = [[-2,-1.2],[0,-1.2],[2,-1.2],[-2,1.2],[0,1.2],[2,1.2]];
+      legPositions.forEach(function(pos){
+        addBox(g, 0.18, 0.45, 0.18, darkSteel, pos[0], 0.22, pos[1]);
+        addBox(g, 0.28, 0.04, 0.28, steel, pos[0], 0.02, pos[1]);
+      });
+
+      // (2) 箱体主结构与外置加劲槽钢龙骨网格（抗负压高刚度外架）
+      const body = addBox(g, 5.0, 3.8, 3.0, concreteSide, 0, 2.35, 0);
+      body.userData = { tag: tag, inspectId: tag };
+      clickables.push(body);
+
+      // 顶部坡度密封盖板及密封翻边法兰
+      addBox(g, 5.2, 0.18, 3.2, concreteTop, 0, 4.34, 0);
+      addBox(g, 5.3, 0.06, 3.3, steel, 0, 4.26, 0);
+
+      // 竖向槽钢加强立柱 (6根)
+      for(let i=-2; i<=2; i+=1) {
+        if(i!==0) {
+          addBox(g, 0.14, 3.8, 3.16, darkSteel, i, 2.35, 0);
+        }
+      }
+      // 横向加强圈梁 (3道环绕)
+      [1.2, 2.35, 3.5].forEach(function(hy){
+        addBox(g, 5.16, 0.12, 0.14, darkSteel, 0, hy, 1.55);
+        addBox(g, 5.16, 0.12, 0.14, darkSteel, 0, hy, -1.55);
+      });
+
+      // (3) 通顶钢爬梯与圆弧安全防护笼 (Ladder with Safety Cage)
+      const lx = 2.62;
+      addBox(g, 0.04, 4.4, 0.04, steel, lx, 2.2, 0.25);
+      addBox(g, 0.04, 4.4, 0.04, steel, lx, 2.2, 0.75);
+      for(let ly=0.3; ly<=4.3; ly+=0.32) {
+        addCyl(g, 0.015, 0.015, 0.5, 6, steel, lx, ly, 0.5, Math.PI/2, 0, 0);
+      }
+      // 圆弧安全护笼 (5道安全黄护圈)
+      for(let cy=2.0; cy<=4.3; cy+=0.46) {
+        const cageArc = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.02, 6, 12, Math.PI), safetyYellow);
+        cageArc.position.set(lx+0.18, cy, 0.5);
+        cageArc.rotation.y = Math.PI/2;
+        g.add(cageArc);
+      }
+      // 3根纵向安全扁铁护条
+      [-0.24, 0, 0.24].forEach(function(oz){
+        addBox(g, 0.02, 2.3, 0.02, safetyYellow, lx+0.52, 3.15, 0.5+oz);
+      });
+
+      // (4) 顶部巡检走道平台、踢脚板与双道安全护栏
+      addBox(g, 5.4, 0.06, 1.4, steel, 0, 4.46, 0.8);
+      // 100mm 踢脚挡板
+      addBox(g, 5.4, 0.12, 0.03, safetyYellow, 0, 4.54, 1.5);
+      addBox(g, 5.4, 0.12, 0.03, safetyYellow, 0, 4.54, 0.1);
+      // 护栏立柱与双横管
+      for(let px=-2.6; px<=2.6; px+=0.86) {
+        addBox(g, 0.04, 1.1, 0.04, pipeBlue, px, 5.05, 1.5);
+      }
+      addBox(g, 5.3, 0.04, 0.04, pipeBlue, 0, 5.58, 1.5); // 上扶手
+      addBox(g, 5.3, 0.03, 0.03, pipeBlue, 0, 5.05, 1.5); // 中挡管
+
+      // (5) 内部填料可视化双层防爆视镜与密封检修人孔
+      addBox(g, 1.1, 1.1, 0.06, steel, 0, 2.35, 1.52);
+      const win = new THREE.Mesh(new THREE.PlaneGeometry(0.96, 0.96), glassMat);
+      win.position.set(0, 2.35, 1.56);
+      win.userData = { tag: tag, inspectId: tag };
+      g.add(win);
+      clickables.push(win);
+
+      // 视镜内侧填料承托花板格栅与指示填料层
+      addBox(g, 0.9, 0.08, 0.2, darkSteel, 0, 1.85, 1.4);
+      addBox(g, 0.88, 0.45, 0.2, warningStripe, 0, 2.15, 1.4);
+
+      // 快开密封人孔门（带摇臂手柄）
+      const hatch = addCyl(g, 0.42, 0.42, 0.1, 16, steel, -1.6, 1.7, 1.54, Math.PI/2, 0, 0);
+      hatch.userData = { tag: tag, inspectId: tag };
+      clickables.push(hatch);
+      addBox(g, 0.36, 0.05, 0.06, darkSteel, -1.6, 1.7, 1.62);
+      addCyl(g, 0.08, 0.08, 0.03, 12, valveRed, -1.6, 1.7, 1.66, Math.PI/2, 0, 0);
+
+      // (6) 顶部加湿喷淋配水主管与下垂喷雾歧管
+      addCyl(g, 0.05, 0.05, 4.6, 12, pipePurple, 0, 4.7, 0.4, 0, 0, Math.PI/2);
+      [-1.5, 0, 1.5].forEach(function(sx){
+        addCyl(g, 0.03, 0.03, 0.45, 8, pipePurple, sx, 4.45, 0.4);
+        // 模拟喷嘴
+        addCyl(g, 0.03, 0.015, 0.06, 8, brassMat, sx, 4.2, 0.4);
+      });
+
+      // (7) 底部排污漏斗与微差压变送仪表
+      addCyl(g, 0.08, 0.08, 0.25, 8, pipeBlue, 0, 0.15, 0);
+      addBox(g, 0.15, 0.22, 0.12, cemsWhite, -2.6, 1.8, 0);
+      addCyl(g, 0.01, 0.01, 0.35, 6, brassMat, -2.6, 1.6, 0);
+
+      g.position.set(x, -1.25, z);
+      scene.add(g);
+      return g;
+    }
+
+    const tank1 = bioTank('TANK-01', 2, 0, '1#预洗除臭池', true);
+    const tank2 = bioTank('TANK-02', -4, 0, '2#生物过滤池', false);
+
+    // 3. 极致精细化：卧式循环喷淋水泵组 (Circulation Spray Pump Station)
+    function sprayPump(tag, x, z, name) {
+      const g = new THREE.Group();
+      g.userData = { tag: tag, inspectId: tag, name: name };
+
+      // (1) 基础与减振
+      addBox(g, 1.4, 0.2, 0.9, concreteTop, 0, 0.1, 0);
+      addBox(g, 1.25, 0.06, 0.75, darkSteel, 0, 0.23, 0);
+      [[-0.5,-0.3],[0.5,-0.3],[-0.5,0.3],[0.5,0.3]].forEach(function(pos){
+        addBox(g, 0.14, 0.04, 0.14, rubberMat, pos[0], 0.28, pos[1]);
+      });
+
+      // (2) 卧式离心泵本体与驱动电机
+      const phead = addCyl(g, 0.24, 0.24, 0.22, 16, steel, 0.22, 0.45, 0, 0, 0, Math.PI/2);
+      phead.userData = { tag: tag, inspectId: tag };
+      clickables.push(phead);
+      addCyl(g, 0.09, 0.09, 0.18, 12, steel, 0.22, 0.64, 0); // 吐出法兰口
+      addCyl(g, 0.1, 0.1, 0.18, 12, steel, 0.22, 0.45, 0.16, Math.PI/2, 0, 0); // 吸入法兰口
+
+      // 联轴器黄护罩与转轴
+      addBox(g, 0.18, 0.22, 0.22, safetyYellow, 0.04, 0.45, 0);
+      const shaft = addCyl(g, 0.03, 0.03, 0.12, 8, steel, 0.04, 0.45, 0, 0, 0, Math.PI/2);
+      pumpRotors.push({mesh: shaft, tag: tag, axis: 'x'});
+
+      // 电机本体与接线盒
+      const pmotor = addCyl(g, 0.18, 0.18, 0.46, 16, motorBlue, -0.28, 0.45, 0, 0, 0, Math.PI/2);
+      pmotor.userData = { tag: tag, inspectId: tag };
+      clickables.push(pmotor);
+      addCyl(g, 0.19, 0.19, 0.08, 16, steel, -0.54, 0.45, 0, 0, 0, Math.PI/2);
+      addBox(g, 0.1, 0.1, 0.12, motorBlue, -0.28, 0.65, 0);
+
+      // (3) 精密配管：吸水侧 Y型过滤器、避震短节与手轮蝶阀
+      addCyl(g, 0.11, 0.11, 0.1, 12, rubberMat, 0.22, 0.45, 0.32, Math.PI/2, 0, 0); // 避震喉
+      // Y型过滤器
+      addCyl(g, 0.08, 0.08, 0.22, 12, darkSteel, 0.22, 0.45, 0.48, Math.PI/2, 0, 0);
+      addCyl(g, 0.07, 0.07, 0.18, 10, darkSteel, 0.22, 0.36, 0.52, -Math.PI/4, 0, 0);
+      addCyl(g, 0.08, 0.08, 0.03, 10, steel, 0.22, 0.3, 0.58, -Math.PI/4, 0, 0);
+      // 吸水蝶阀与手轮
+      addCyl(g, 0.11, 0.11, 0.08, 12, darkSteel, 0.22, 0.45, 0.68, Math.PI/2, 0, 0);
+      addCyl(g, 0.08, 0.08, 0.02, 12, valveRed, 0.22, 0.62, 0.68);
+
+      // (4) 吐出侧同心管、止回阀、调节阀与冷凝缓冲弯压力表
+      addCyl(g, 0.1, 0.1, 0.1, 12, rubberMat, 0.22, 0.8, 0);
+      addBox(g, 0.16, 0.12, 0.16, darkSteel, 0.22, 0.94, 0); // 止回阀
+      addCyl(g, 0.1, 0.1, 0.08, 12, darkSteel, 0.22, 1.08, 0); // 调节阀
+      addCyl(g, 0.08, 0.08, 0.02, 12, valveRed, 0.38, 1.08, 0, 0, 0, Math.PI/2);
+
+      // U型缓冲管耐震压力表
+      addCyl(g, 0.015, 0.015, 0.16, 8, brassMat, 0.08, 1.15, 0);
+      addCyl(g, 0.07, 0.07, 0.03, 16, steel, 0.04, 1.25, 0, 0, 0, Math.PI/2);
+      addBox(g, 0.01, 0.04, 0.01, darkSteel, 0.02, 1.25, 0); // 指针
+
+      g.position.set(x, -1.25, z);
+      scene.add(g);
+      return g;
+    }
+
+    const pump1 = sprayPump('PUMP-01', 2, 2.2, '1#循环喷淋泵');
+    const pump2 = sprayPump('PUMP-01', -4, 2.2, '2#循环喷淋泵');
+
+    // 4. 极致精细化：15米排放烟囱及CEMS在线监测站 (Chimney Stack & CEMS Station)
+    function chimneyAssembly(tag, x, z, name) {
+      const g = new THREE.Group();
+      g.userData = { tag: tag, inspectId: tag, name: name };
+
+      // (1) 基墩与底部渐扩圆锥裙座支承
+      addCyl(g, 1.5, 1.6, 0.3, 16, concreteTop, 0, 0.15, 0);
+      const skirt = addCyl(g, 0.52, 0.95, 1.2, 16, concreteSide, 0, 0.9, 0);
+      skirt.userData = { tag: tag, inspectId: tag };
+      clickables.push(skirt);
+
+      // 8道放射状三角加劲肋板
+      for(let a=0; a<Math.PI*2; a+=Math.PI/4) {
+        const rib = addBox(g, 0.04, 0.9, 0.45, steel, Math.cos(a)*0.65, 0.75, Math.sin(a)*0.65);
+        rib.rotation.y = -a;
+      }
+
+      // (2) 3节渐细耐候玻璃钢筒身与多级加厚法兰环
+      addCyl(g, 0.48, 0.52, 3.2, 16, concreteSide, 0, 3.1, 0);
+      addCyl(g, 0.44, 0.48, 3.5, 16, concreteSide, 0, 6.45, 0);
+      addCyl(g, 0.40, 0.44, 3.8, 16, concreteSide, 0, 10.1, 0);
+
+      [1.5, 4.7, 8.2].forEach(function(fy){
+        addCyl(g, 0.58, 0.58, 0.12, 16, steel, 0, fy, 0);
+      });
+
+      // (3) 标高6.8m 环形钢格板采样平台与6组三角悬挑斜撑
+      const platGeom = new THREE.RingGeometry(0.48, 1.5, 20);
+      const platMesh = new THREE.Mesh(platGeom, steel);
+      platMesh.rotation.x = -Math.PI/2;
+      platMesh.position.y = 6.8;
+      g.add(platMesh);
+
+      for(let a=0; a<Math.PI*2; a+=Math.PI/3) {
+        const brace = addBox(g, 0.05, 0.8, 0.9, darkSteel, Math.cos(a)*0.9, 6.35, Math.sin(a)*0.9);
+        brace.rotation.y = -a;
+      }
+      // 踢脚挡板与双道环形防护栏
+      addCyl(g, 1.52, 1.52, 0.14, 20, safetyYellow, 0, 6.87, 0);
+      for(let a=0; a<Math.PI*2; a+=Math.PI/4) {
+        addCyl(g, 0.025, 0.025, 1.15, 8, pipeBlue, Math.cos(a)*1.48, 7.38, Math.sin(a)*1.48);
+      }
+      const rTop = new THREE.Mesh(new THREE.TorusGeometry(1.48, 0.025, 8, 24), pipeBlue);
+      rTop.rotation.x = Math.PI/2; rTop.position.set(0, 7.95, 0); g.add(rTop);
+      const rMid = new THREE.Mesh(new THREE.TorusGeometry(1.48, 0.02, 8, 24), pipeBlue);
+      rMid.rotation.x = Math.PI/2; rMid.position.set(0, 7.38, 0); g.add(rMid);
+
+      // (4) 通顶攀爬直梯与安全护笼
+      const ladderZ = -0.6;
+      addBox(g, 0.04, 5.8, 0.04, steel, -0.22, 4.4, ladderZ);
+      addBox(g, 0.04, 5.8, 0.04, steel, 0.22, 4.4, ladderZ);
+      for(let ly=1.6; ly<=6.8; ly+=0.38) {
+        addCyl(g, 0.015, 0.015, 0.44, 6, steel, 0, ly, ladderZ, 0, 0, Math.PI/2);
+      }
+      for(let cy=2.4; cy<=6.8; cy+=0.55) {
+        const cageArc = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.02, 6, 12, Math.PI), safetyYellow);
+        cageArc.position.set(0, cy, ladderZ-0.18);
+        cageArc.rotation.x = Math.PI/2;
+        g.add(cageArc);
+      }
+
+      // (5) CEMS 烟气伴热取样探头防护箱与现场反吹气路
+      const cemsBox = addBox(g, 0.35, 0.42, 0.32, cemsWhite, 0.95, 7.15, 0.35);
+      cemsBox.userData = { tag: tag, inspectId: tag };
+      clickables.push(cemsBox);
+      addCyl(g, 0.03, 0.03, 0.65, 8, steel, 0.65, 7.15, 0.25, 0, 0, Math.PI/3);
+      addCyl(g, 0.08, 0.08, 0.26, 10, darkSteel, 0.95, 7.45, -0.2); // 吹扫气包
+
+      // (6) 顶部防雨扩散风帽、避雷针与双联LED红光航标灯
+      addCyl(g, 0.52, 0.40, 0.35, 16, concreteSide, 0, 12.15, 0); // 扩散风帽
+      addCyl(g, 0.006, 0.02, 1.1, 8, steel, 0.35, 12.8, 0); // 避雷针
+
+      // 双联航空障碍灯
+      addBox(g, 0.25, 0.03, 0.04, darkSteel, -0.32, 12.35, 0);
+      addCyl(g, 0.035, 0.035, 0.07, 8, valveRed, -0.22, 12.42, 0);
+      addCyl(g, 0.035, 0.035, 0.07, 8, valveRed, -0.42, 12.42, 0);
+
+      g.position.set(x, -1.25, z);
+      scene.add(g);
+      return g;
+    }
+
+    const chimney = chimneyAssembly('CHIMNEY', -8, 0, '排放烟囱及CEMS站');
+
+    // 5. 气体与喷淋管系 (含电动密闭调节风阀)
+    const flowSystems=[];
+    function tube(points,material,flowMaterial,tag, radius=0.15, pCount=12, pSize=0.12){
+      const curve=new THREE.CatmullRomCurve3(points.map(function(p){return new THREE.Vector3(p[0],p[1],p[2]);}),false,'catmullrom',.08);
+      const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,72,radius,12,false),material);
+      scene.add(mesh);
+      const particles=[];
+      for(let i=0;i<pCount;i++){
+        const ball=new THREE.Mesh(new THREE.SphereGeometry(pSize,8,8),flowMaterial);
+        scene.add(ball);
+        particles.push(ball);
+      }
+      flowSystems.push({curve:curve,particles:particles,tag:tag,offset:tag==='FAN-01'?.18:.62});
+    }
+
+    // 电动调节风阀组件 (Motorized Control Damper)
+    function addDamper(x,y,z,tag) {
+      addCyl(scene, 0.26, 0.26, 0.1, 16, darkSteel, x, y, z, 0, 0, Math.PI/2);
+      const act = addBox(scene, 0.18, 0.22, 0.18, motorBlue, x, y+0.26, z);
+      act.userData = { tag: tag, inspectId: tag };
+      clickables.push(act);
+      addCyl(scene, 0.08, 0.08, 0.02, 12, safetyYellow, x, y+0.26, z+0.11, Math.PI/2, 0, 0); // 应急手轮
+    }
+
+    // 废气总管与电动风阀
+    tube([[9, -.15, -1.5], [6.5, -.15, -1.5]], pipeBlue, flowBlue, 'FAN-01');
+    tube([[9, -.15, 1.5], [6.5, -.15, 1.5]], pipeBlue, flowBlue, 'FAN-02');
+    addDamper(7.5, -0.15, -1.5, 'FAN-01');
+    addDamper(7.5, -0.15, 1.5, 'FAN-02');
+
+    // 进风管龙门支撑架
+    addBox(scene, 0.06, 1.2, 0.06, darkSteel, 7.8, -0.65, -1.5);
+    addBox(scene, 0.06, 1.2, 0.06, darkSteel, 7.8, -0.65, 1.5);
+
+    // 风机出风向上引至滤池
+    tube([[5.55, .65, -1.5], [5.55, 1.5, -1.5], [4.5, 1.5, -1.5], [3.5, 1.5, -1.5], [2, 1.5, -1.5]], pipeBlue, flowBlue, 'FAN-01');
+    tube([[5.55, .65, 1.5], [5.55, 1.5, 1.5], [4.5, 1.5, 1.5], [3.5, 1.5, 1.5], [2, 1.5, 1.5]], pipeBlue, flowBlue, 'FAN-02');
+
+    // 滤池1与滤池2联通管
+    tube([[-0.5, 1.5, -1], [-1.5, 1.5, -1]], pipeBlue, flowBlue, 'FAN-01');
+    tube([[-0.5, 1.5, 1], [-1.5, 1.5, 1]], pipeBlue, flowBlue, 'FAN-01');
+
+    // 滤池2引至烟囱
+    tube([[-6.5, 1.5, 0], [-7.6, 1.5, 0]], pipeBlue, flowBlue, 'FAN-01');
+
+    // 循环喷淋紫色管路
+    tube([[2, -0.9, 2.2], [2, 3.2, 2.2], [2, 3.2, 1.5]], pipePurple, flowPurple, 'PUMP-01', 0.04, 8, 0.03);
+    tube([[-4, -0.9, 2.2], [-4, 3.2, 2.2], [-4, 3.2, 1.5]], pipePurple, flowPurple, 'PUMP-01', 0.04, 8, 0.03);
+
+    // 6. 设备观察机位预设与平滑运镜补间系统
+    const FOCUS_PRESETS = {
+      'ALL':     { pos: [17, 13, 21],   look: [0, 0, 0] },
+      'FAN-01':  { pos: [9.2, 3.2, 0.2], look: [6.0, 1.1, -1.5] },
+      'FAN-02':  { pos: [9.2, 3.2, 3.2], look: [6.0, 1.1, 1.5] },
+      'TANK-01': { pos: [4.8, 4.2, 4.5], look: [2.0, 2.3, 0.0] },
+      'TANK-02': { pos: [-1.2, 4.2, 4.5], look: [-4.0, 2.3, 0.0] },
+      'PUMP-01': { pos: [3.6, 1.8, 4.0], look: [2.0, 0.5, 2.2] },
+      'CHIMNEY': { pos: [-5.0, 7.2, 5.2], look: [-8.0, 6.0, 0.0] }
+    };
+
+    let targetCamPos = new THREE.Vector3(17, 13, 21);
+    let targetLookAt = new THREE.Vector3(0, 0, 0);
+    let isTransitioning = false;
+
+    function smoothMoveCamera(pos, look) {
+      targetCamPos.set(pos[0], pos[1], pos[2]);
+      targetLookAt.set(look[0], look[1], look[2]);
+      isTransitioning = true;
+    }
+
+    // 3D 场景直接拾取与悬停
+    const ray=new THREE.Raycaster(),pointer=new THREE.Vector2();let moved=false;
+    renderer.domElement.addEventListener('pointerdown',function(){moved=false;});
+    renderer.domElement.addEventListener('pointermove',function(ev){
+      moved=true;
+      const rect=renderer.domElement.getBoundingClientRect();
+      pointer.x=((ev.clientX-rect.left)/rect.width)*2-1;
+      pointer.y=-((ev.clientY-rect.top)/rect.height)*2+1;
+      ray.setFromCamera(pointer,camera);
+      const hits=ray.intersectObjects(clickables,true);
+      renderer.domElement.style.cursor=hits.length>0?'pointer':'grab';
+    });
+    renderer.domElement.addEventListener('pointerup',function(ev){
+      if(moved)return;
+      const rect=renderer.domElement.getBoundingClientRect();
+      pointer.x=((ev.clientX-rect.left)/rect.width)*2-1;
+      pointer.y=-((ev.clientY-rect.top)/rect.height)*2+1;
+      ray.setFromCamera(pointer,camera);
+      const hits=ray.intersectObjects(clickables,true);
+      if(hits.length>0){
+        let cur=hits[0].object;
+        while(cur&&!cur.userData.inspectId&&cur.parent&&cur.parent!==scene){
+          cur=cur.parent;
+        }
+        if(cur&&cur.userData.inspectId){
+          state.focusDevice(cur.userData.inspectId);
+        }
+      }
+    });
+
+    let pulseTag='',pulseEnd=0,last=performance.now();
+    function animate(now){
+      requestAnimationFrame(animate);
+      const dt=Math.min(.05,(now-last)/1000);
+      last=now;
+      controls.update();
+
+      // 平滑运镜缓动过渡
+      if(isTransitioning){
+        camera.position.lerp(targetCamPos, 0.075);
+        controls.target.lerp(targetLookAt, 0.075);
+        if(camera.position.distanceTo(targetCamPos)<0.04 && controls.target.distanceTo(targetLookAt)<0.04){
+          camera.position.copy(targetCamPos);
+          controls.target.copy(targetLookAt);
+          isTransitioning=false;
+        }
+      }
+
+      // 叶轮与水泵旋转驱动
+      pumpRotors.forEach(function(r){
+        const data=state.valves.find(function(v){return v.tag===r.tag;});
+        const speed=data ? data.opening : (r.tag==='PUMP-01'?25:0);
+        if(r.axis==='x') r.mesh.rotation.x+=dt*(speed*0.5);
+        else r.mesh.rotation.z+=dt*(speed*0.5);
+      });
+
+      // 气流粒子流动
+      flowSystems.forEach(function(flow){
+        const data=state.valves.find(function(v){return v.tag===flow.tag;});
+        const opening=data?data.opening:25;
+        flow.offset=(flow.offset+dt*(.07+opening*.01))%1;
+        flow.particles.forEach(function(ball,i){
+          ball.position.copy(flow.curve.getPointAt((flow.offset+i/flow.particles.length)%1));
+          ball.visible=opening>1;
+          ball.scale.setScalar(.7+opening*.015);
+        });
+      });
+      renderer.render(scene,camera);
+    }
+    function resize(){const w=host.clientWidth,h=host.clientHeight;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h);}
+    window.addEventListener('resize',resize);
+    animate(performance.now());
+
+    return{
+      focus:function(tag){
+        const preset=FOCUS_PRESETS[tag]||FOCUS_PRESETS['ALL'];
+        smoothMoveCamera(preset.pos, preset.look);
+      },
+      setTopView:function(){
+        smoothMoveCamera([0,28,0.1],[0,0,0]);
+      },
+      highlight:function(tag){pulseTag=tag;pulseEnd=performance.now()+500;},
+      pulse:function(tag){pulseTag=tag;pulseEnd=performance.now()+1300;},
+      resize:resize
+    };
+  }
+
+  function fit(){try{const el=$id('screen');if(!el)return;const scale=Math.min(window.innerWidth/1920,window.innerHeight/1080);el.style.transform='translate(-50%, -50%) scale('+scale+')';}catch(e){console.error(e);}}
+  fit();window.addEventListener('resize',function(){try{fit();[levelChart,flowChart,valveTrend].filter(Boolean).forEach(function(c){c.resize();});if(twin)twin.resize();}catch(e){console.error(e);}});
+})();
+</script>
+</body>
+</html>
