@@ -1,6 +1,6 @@
 # Industrial Dashboard Studio
 
-> 工业大屏产品化工作区 · 28 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 6 个可交付 Skill
+> 工业大屏产品化工作区 · 30 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 6 个可交付 Skill
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -36,11 +36,11 @@
 
 | 入口 | 预览 |
 |------|------|
-| **Showcase 横屏互动入口 (28 套全量)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
+| **Showcase 横屏互动入口 (30 套全量)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
 | **SCADA 场景设计器** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
 <details open>
-<summary><b>展开查看 28 套场景全量分类与截图</b></summary>
+<summary><b>展开查看 30 套场景全量分类与截图</b></summary>
 
 ### 单机就地操作 · 鼓风机控制屏（最新上线）
 
@@ -78,6 +78,7 @@
 | 场景 | 文件 | 预览 |
 |------|------|------|
 | 22 智能楼宇自控与空间微气候数字孪生 | `scenarios/building-automation/22-智能楼宇自控与空间微气候数字孪生.html` | ![22](docs/screenshots/22-building-automation.png) |
+| 30 智慧园区多建筑集群运营管控数字孪生 | `scenarios/building-automation/30-智慧园区多建筑集群运营管控数字孪生.html` | ![30](docs/screenshots/30-smart-campus-multi-building.png) |
 
 ### 水处理 · 工艺驾驶舱与全流程 SCADA
 
@@ -106,6 +107,7 @@
 | 18 园区供水管网多节点平衡监控数字看板 | `scenarios/water-treatment/18-园区供水管网多节点平衡监控数字看板.html` | 水力平衡拓扑 |
 | 19 PAM 三槽式全自动加药熟化微单元 | `scenarios/water-treatment/19-PAM三槽式全自动加药熟化微单元.html` | 精密加药微单元 |
 | 20 紫外线渠式消毒与余氯闭环调控微单元 | `scenarios/water-treatment/20-紫外线渠式消毒与余氯闭环调控微单元.html` | 明渠紫外消毒 |
+| 29 生物除臭系统 2.5D 数字孪生 HMI | `scenarios/water-treatment/29-生物除臭系统2.5D数字孪生HMI.html` | ![29](docs/screenshots/29-bio-deodorization-twin.png) |
 
 ### 设备维护 / 反应安全 / 连续分离
 
@@ -261,7 +263,7 @@ open apps/scada-designer/index.html
 - **架构**：5 路粗格栅渠液位差监视、4 台大流量混流提升泵与 7 台潜污泵群控，集成工业级西门子/博途风格 Faceplate 微操弹窗与 SBO（Select-Before-Operate）双重确认防误闭环。
 - **文件**：`scenarios/water-treatment/21-粗格栅及进水提升泵房数字孪生SCADA.html`
 
-### 22 智能楼宇自控与空间微气候数字孪生（全新新增）
+### 22 智能楼宇自控与空间微气候数字孪生（全新全面精细化重构）
 - **布局**：`spatial-twin` — 顶部楼层与动环状态栏，中央 2.5D/3D 空间孪生视界，左翼能源动力与舒适度面板，右翼 iCooling 智控与空间微气候中枢，右下垂直楼层快速滑块，左右侧栏支持平滑无折行展开/收拢。
 - **信息问题**：高层建筑微气候分布如何、是否存在局部热岛过热、VAV 末端与冷热源系统如何动态匹配、IDC 机房动环与冷源动力机组运行效能如何。
 - **多楼层专属三维切面解耦**：
@@ -274,13 +276,17 @@ open apps/scada-designer/index.html
 - **文件**：`scenarios/building-automation/22-智能楼宇自控与空间微气候数字孪生.html`
 
 <details open>
-<summary><b>查看 22 号场景多切面与微气候孪生画廊</b></summary>
+<summary><b>查看 22 号场景四大精细化三维切面画廊</b></summary>
 
-| 27F 智慧办公 · 3D 温度场等温云图 | 2F IDC 核心数据机房 · 冷通道密封 | -1F 地下冷源动力站 · 离心冷机泵组 |
-|---|---|---|
-| ![22-office](docs/screenshots/22-building-automation.png) | ![22-datacenter](docs/screenshots/22-datacenter.png) | ![22-chiller](docs/screenshots/22-chiller-plant.png) |
+| 全楼综合总览 · 摩天大楼与园区建筑群 | 27F 智慧办公 · 完整室内与 3D 等温云图 |
+|---|---|
+| ![22-tower](docs/screenshots/states/22-state-building-tower.png) | ![22-office](docs/screenshots/22-building-automation.png) |
 
-> 垂直楼层选择器支持在全景、32F、27F（办公）、2F（IDC）、-1F（冷源）间平滑切换视角与专属三维场景，并无缝联动左侧动环数据与右侧 iCooling 控制中枢。
+| 2F IDC 核心数据机房 · 冷通道微模块与配电 | -1F 地下冷源动力站 · 离心冷机泵组闭环管网 |
+|---|---|
+| ![22-datacenter](docs/screenshots/22-datacenter.png) | ![22-chiller](docs/screenshots/22-chiller-plant.png) |
+
+> 垂直楼层选择器与顶部药丸导航支持在全楼综合大厦、27F智慧办公、2F核心机房、-1F冷源动力站间平滑飞跃切换相机与专属精细化三维场景，并实时联动左侧 BAS 矩阵与右侧 DDC 闭环微控中枢。
 
 </details>
 
@@ -438,6 +444,53 @@ open apps/scada-designer/index.html
 
 ## 应用入口
 
+### 29 生物除臭系统 2.5D 数字孪生 HMI（生物滤池除臭 · 废气净化工况全流程）
+- **定位**：面向污水厂恶臭废气处理工段与空间环保安全调控的 2.5D 数字孪生 HMI。采用工业质感浅灰底色（`#dfe8f3`）与清爽天蓝，将预洗涤喷淋塔、生物滴滤池、填料滤层阻力、引风机与排气筒监控融为一体。
+- **核心技术与工业机制**：
+  1. **Three.js 2.5D 轴测工段建模**：精细呈现除臭风管网流向、生物滴滤箱体、循环喷淋水流与填料床，支持三维旋转视角与工段部件高亮聚焦；
+  2. **多级微操面板与回路调节**：预洗水泵启停、排风机变频调速（50Hz / 60%）、循环喷淋泵联控与补水阀度调节；
+  3. **废气关键理化指标矩阵**：进出风 H2S（硫化氢）、NH3（氨气）浓度实时脱臭净化率计算（≥99.2%）、滤床压差（ΔP 180Pa）、喷淋液 pH 与循环箱液位；
+  4. **全工段健康评估雷达**：设备健康度综合评分（96 分）、振动/温升/腐蚀裕度多维度指标直读。
+- **文件**：`scenarios/water-treatment/29-生物除臭系统2.5D数字孪生HMI.html`
+
+<details open>
+<summary><b>查看 29 号生物除臭系统 2.5D 数字孪生交互画廊</b></summary>
+
+| 2.5D 数字孪生全景主视图 (1920×1080) |
+| :---: |
+| ![29-main](docs/screenshots/29-bio-deodorization-twin.png) |
+
+> 100% 离线闭环运行，支持 2.5D 漫游交互与微操指令下发演示。
+
+</details>
+
+---
+
+### 30 智慧园区多建筑集群运营管控数字孪生（四维协同 · 园区综合宏观态势）
+- **定位**：面向智慧科技园区与大型企业总部基地运营指挥中枢的“多建筑集群数字化全息管控平台”。跨越单体建筑视角，将“停车引导、电梯群控、智能照明、集中暖通”四大核心基础设施系统融汇于一体。
+- **核心技术与工业机制**：
+  1. **Three.js 园区三维建筑集群全景孪生**：立体构建研发大厦 A/B、总部中心、会议展厅与地下车库建筑群，带道路流光动效、天气系统与建筑微透视；
+  2. **四维运营协同联动视界**：
+     - **智慧停车中枢**：出入口道闸流量、剩余车位动态引导、车位周转率与防拥堵预警；
+     - **电梯垂直调度群控**：多部客梯/货梯楼层位置、满载率与高峰等候时间优化；
+     - **空间微气候与集中冷暖**：冷机负荷对标、水力管网平衡与室内恒温舒适度指数（PMV）；
+     - **全域节能照明矩阵**：光照度自适应感应、定时策略与能耗分项计量；
+  3. **碳排双控与综合能效驾驶舱**：建筑集群总用电/水耗/气耗综合折标煤监测，标定动态碳排放裕度。
+- **文件**：`scenarios/building-automation/30-智慧园区多建筑集群运营管控数字孪生.html`
+
+<details open>
+<summary><b>查看 30 号智慧园区多建筑集群运营管控画廊</b></summary>
+
+| 园区多建筑集群宏观数字孪生全景 (1920×1080) |
+| :---: |
+| ![30-main](docs/screenshots/30-smart-campus-multi-building.png) |
+
+> 融合宏观园区沙盘与微观机电设备运行状态，构建真正端到端的多维运营闭环。
+
+</details>
+
+---
+
 ### Showcase 横屏互动体验入口 `apps/showcase/index.html`
 - 三场景切换、横屏方向提示、全屏体验、1920×1080 等比缩放
 - 源码 `12304` 字节，零构建，离线可直接投标演示
@@ -485,8 +538,8 @@ apps/
   showcase/            # 横屏互动体验入口
   scada-designer/      # SCADA 场景设计器
 scenarios/
-  building-automation/ # 22 智能楼宇自控与空间微气候数字孪生
-  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21,24,25,26,27,28 (水务全流程，含25号污泥脱水、26号水质预测、27号鼓风供风能效与28号就地控制屏)
+  building-automation/ # 22 智能楼宇自控与空间微气候数字孪生、30 智慧园区多建筑集群运营管控
+  water-treatment/     # 01,04,05,06,07,08,09,10,11,12,13,14,16,17,18,19,20,21,24,25,26,27,28,29 (水务全流程，含25号污泥脱水、26号水质预测、27号鼓风供风能效与28号就地控制屏)
   predictive-maintenance/ # 02 关键机组预测性维护
   reactor-safety/      # 03 反应釜热失控安全联锁
   process-control/     # 15 连续分离工艺驾驶舱, 23 现场DCS就地控制屏

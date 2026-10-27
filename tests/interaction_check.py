@@ -605,6 +605,7 @@ with sync_playwright() as playwright:
         assert p.get_by_role("button", name="频率加 0.5 赫兹").is_enabled()
 
         p.set_viewport_size({"width": 1024, "height": 768})
+        p.wait_for_timeout(300)
         compact = p.locator("#screen").bounding_box()
         assert compact and compact["width"] == 1024 and compact["height"] == 768
         for selector in [".frequency-panel", ".command-grid", ".signal-panel", ".bottom-bar"]:
@@ -628,12 +629,12 @@ with sync_playwright() as playwright:
     showcase.route("http://**/*", lambda route: route.abort())
     showcase.route("https://**/*", lambda route: route.abort())
     showcase.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="networkidle")
-    assert showcase.locator(".card").count() == 28
-    latest_card = showcase.locator('.card[data-src*="28-"]')
+    assert showcase.locator(".card").count() == 30
+    latest_card = showcase.locator('.card[data-src*="30-"]')
     latest_card.scroll_into_view_if_needed()
     assert latest_card.is_visible()
     latest_card.click()
-    assert "就地控制屏" in showcase.locator("#stageTitle").inner_text()
+    assert "多建筑" in showcase.locator("#stageTitle").inner_text()
     portrait = browser.new_page(viewport={"width": 390, "height": 844})
     portrait.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="domcontentloaded")
     assert portrait.locator(".rotate").is_visible()

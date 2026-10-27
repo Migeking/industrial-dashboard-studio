@@ -1,6 +1,6 @@
 # Industrial Dashboard Studio
 
-> Offline-first productization workspace for industrial dashboards · 28 ready-to-run templates + reusable runtime + SCADA designer + 6 deliverable Skills
+> Offline-first productization workspace for industrial dashboards · 30 ready-to-run templates + reusable runtime + SCADA designer + 6 deliverable Skills
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -36,11 +36,11 @@
 
 | Entry | Preview |
 |------|------|
-| **Showcase landscape entry (All 28 Scenarios)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
+| **Showcase landscape entry (All 30 Scenarios)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
 | **SCADA scenario designer** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
 <details open>
-<summary><b>Expand: All 28 scenario categories & screenshots</b></summary>
+<summary><b>Expand: All 29 scenario categories & screenshots</b></summary>
 
 ### Single-equipment blower local panel (newest)
 
@@ -106,6 +106,7 @@
 | 18 Park water network multi-node balance dashboard | `scenarios/water-treatment/18-园区供水管网多节点平衡监控数字看板.html` | Hydraulic Balance Topology |
 | 19 PAM three-tank automatic dosing micro unit | `scenarios/water-treatment/19-PAM三槽式全自动加药熟化微单元.html` | Precision Dosing Unit |
 | 20 UV channel disinfection & residual chlorine micro unit | `scenarios/water-treatment/20-紫外线渠式消毒与余氯闭环调控微单元.html` | Open Channel UV Disinfection |
+| 29 Biological Deodorization System 2.5D Digital Twin HMI | `scenarios/water-treatment/29-生物除臭系统2.5D数字孪生HMI.html` | ![29](docs/screenshots/29-bio-deodorization-twin.png) |
 
 ### Asset Maintenance / Safety / Continuous Process
 
@@ -276,11 +277,15 @@ open apps/scada-designer/index.html
 <details open>
 <summary><b>View Scenario 22 multi-level spatial digital twin gallery</b></summary>
 
-| 27F Smart Office · 3D Thermal Heatmap | 2F IDC Data Center · Cold Aisle Containment | -1F Chiller Plant · Centrifugal Pumps |
-|---|---|---|
-| ![22-office](docs/screenshots/22-building-automation.png) | ![22-datacenter](docs/screenshots/22-datacenter.png) | ![22-chiller](docs/screenshots/22-chiller-plant.png) |
+| Overall Campus View · Skyscraper Tower & Complex | 27F Smart Office · Full Interior & 3D Heatmap |
+|---|---|
+| ![22-tower](docs/screenshots/states/22-state-building-tower.png) | ![22-office](docs/screenshots/22-building-automation.png) |
 
-> Seamlessly switch camera perspectives and dedicated 3D scenes across All-Floor, 32F, 27F (Office), 2F (IDC), and -1F (Chiller) via the vertical floor slider, with instant data telemetry binding.
+| 2F IDC Core Data Center · Cold Aisle Modules & UPS | -1F Underground Chiller Plant · Closed-Loop Piping |
+|---|---|
+| ![22-datacenter](docs/screenshots/22-datacenter.png) | ![22-chiller](docs/screenshots/22-chiller-plant.png) |
+
+> Vertical floor selector and pill navigation seamlessly transition between the 32-story skyscraper tower, 27F smart office interior, 2F IDC micro-modules, and -1F chiller plant, providing live DDC closed-loop controls.
 
 </details>
 
@@ -438,6 +443,38 @@ open apps/scada-designer/index.html
 ---
 
 ## App entries
+
+### 29 Biological Deodorization System 2.5D Digital Twin HMI
+- **Positioning**: 2.5D digital twin HMI for sewage odor treatment and environmental compliance. Utilizes clean industrial light gray (`#dfe8f3`) styling with biological filter beds, spray scrubbers, induced draft fan, and emission stacks.
+- **Key Features**: Three.js isometric piping topology, multi-stage micro-manipulation (fan frequency, chemical dosing pumps), live H2S/NH3 odor reduction efficiency calculation (≥99.2%), and holistic subsystem health radar scores.
+- **File**: `scenarios/water-treatment/29-生物除臭系统2.5D数字孪生HMI.html`
+
+<details open>
+<summary><b>View Scenario 29 Biological Deodorization gallery</b></summary>
+
+| 2.5D Digital Twin Native View (1920×1080) |
+| :---: |
+| ![29-main](docs/screenshots/29-bio-deodorization-twin.png) |
+
+</details>
+
+---
+
+### 30 Smart Campus Multi-Building Operations Digital Twin
+- **Positioning**: Macro-scale digital operations platform for multi-building enterprise campuses and high-tech parks.
+- **Key Features**: Campus 3D digital sandbox, 4-dimensional synergistic operations (smart parking guidance, elevator group control, intelligent lighting, and central HVAC energy balance), with carbon footprint dual-control monitoring.
+- **File**: `scenarios/building-automation/30-智慧园区多建筑集群运营管控数字孪生.html`
+
+<details open>
+<summary><b>View Scenario 30 Smart Campus Operations gallery</b></summary>
+
+| Campus Multi-Building Digital Twin Overview (1920×1080) |
+| :---: |
+| ![30-main](docs/screenshots/30-smart-campus-multi-building.png) |
+
+</details>
+
+---
 
 ### Showcase landscape entry `apps/showcase/index.html`
 - Three-scenario switching, landscape orientation hints, fullscreen mode, 1920×1080 proportional scaling
