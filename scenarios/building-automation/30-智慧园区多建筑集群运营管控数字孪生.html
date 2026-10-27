@@ -1,0 +1,2607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>30 · 智慧园区多建筑集群运营管控数字孪生</title>
+<script src="../../vendor/vue.global.prod.js"></script>
+<script src="../../vendor/echarts.min.js"></script>
+<script src="../../vendor/three.min.js"></script>
+<script src="../../vendor/OrbitControls.js"></script>
+<script src="../../packages/runtime/dashboard-runtime.js"></script>
+<style>
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#030712;color:#e2e8f0;font-family:"Microsoft YaHei","PingFang SC","Segoe UI",sans-serif}
+body{display:flex;align-items:center;justify-content:center}
+button{font:inherit;color:inherit;cursor:pointer;border:none;outline:none}
+[v-cloak]{display:none}
+
+:root{
+  --bg-deep:#040814;
+  --panel-bg:rgba(10,20,38,0.88);
+  --panel-border:rgba(56,189,248,0.22);
+  --panel-border-hover:rgba(56,189,248,0.55);
+  --accent-cyan:#38bdf8;
+  --accent-blue:#2563eb;
+  --accent-teal:#0d9488;
+  --accent-mint:#10b981;
+  --accent-amber:#f59e0b;
+  --accent-rose:#f43f5e;
+  --accent-purple:#a855f7;
+  --text-main:#f8fafc;
+  --text-muted:#94a3b8;
+  --text-dim:#64748b;
+  --radius-card:8px;
+}
+
+.num{font-family:"Bahnschrift","Segoe UI",Consolas,sans-serif;font-variant-numeric:tabular-nums}
+
+#screen{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:1920px;
+  height:1080px;
+  transform-origin:center center;
+  overflow:hidden;
+  background:radial-gradient(ellipse at 50% 20%,#09152b 0%,#040a17 60%,#02050b 100%);
+  box-shadow:0 24px 80px rgba(0,0,0,0.9);
+  display:grid;
+  grid-template-rows:68px 1fr 52px;
+  user-select:none;
+}
+
+/* 顶部顶栏 */
+.topbar{
+  position:relative;
+  z-index:30;
+  display:grid;
+  grid-template-columns:480px 1fr 500px;
+  align-items:center;
+  padding:0 24px;
+  background:linear-gradient(180deg,rgba(10,20,38,0.96) 0%,rgba(6,12,24,0.85) 100%);
+  border-bottom:1px solid var(--panel-border);
+  backdrop-filter:blur(12px);
+}
+.brand{display:flex;align-items:center;gap:14px;white-space:nowrap}
+.brand-icon{
+  width:42px;
+  height:42px;
+  border-radius:10px;
+  background:linear-gradient(135deg,#0284c7,#2563eb);
+  display:grid;
+  place-items:center;
+  box-shadow:0 0 20px rgba(14,165,233,0.5);
+  flex-shrink:0;
+}
+.brand-icon svg{width:24px;height:24px;fill:#fff}
+.brand-text h1{margin:0;font-size:18px;letter-spacing:.06em;color:#fff;font-weight:700;white-space:nowrap}
+.brand-text p{margin:2px 0 0;font-size:11px;color:var(--text-muted);letter-spacing:.04em;white-space:nowrap}
+
+/* 中间导航药丸切换 */
+.pill-nav{display:flex;justify-content:center;gap:8px;white-space:nowrap}
+.pill-btn{
+  padding:7px 16px;
+  border-radius:999px;
+  background:rgba(20,35,65,0.7);
+  border:1px solid rgba(56,189,248,0.18);
+  color:var(--text-muted);
+  font-size:13px;
+  font-weight:500;
+  transition:all .2s ease;
+  white-space:nowrap;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.pill-btn:hover{background:rgba(30,58,102,0.9);color:#fff;border-color:var(--accent-cyan)}
+.pill-btn.active{
+  background:linear-gradient(135deg,#0284c7,#2563eb);
+  color:#fff;
+  border-color:rgba(147,197,253,0.8);
+  box-shadow:0 0 16px rgba(14,165,233,0.6);
+  font-weight:700;
+}
+
+/* 顶部右侧指标与时间 */
+.top-meta{display:flex;justify-content:flex-end;align-items:center;gap:18px;white-space:nowrap}
+.meta-chip{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  font-size:11px;
+  color:var(--text-muted);
+}
+.meta-chip strong{color:var(--text-main);font-size:13px;font-weight:600}
+.quality-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:5px 10px;
+  border-radius:999px;
+  background:rgba(16,185,129,0.12);
+  border:1px solid rgba(16,185,129,0.35);
+  color:var(--accent-mint);
+  font-size:11px;
+}
+.quality-badge i{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--accent-mint);
+  box-shadow:0 0 8px var(--accent-mint);
+  display:inline-block;
+}
+
+/* 中央主舞台视口与 HUD 覆盖层 */
+.main-stage{
+  position:relative;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+}
+
+#canvas-container{
+  position:absolute;
+  inset:0;
+  z-index:1;
+}
+
+/* HUD 左右翼浮动面板 */
+.hud-wrapper-left{
+  position:absolute;
+  left:20px;
+  top:14px;
+  bottom:14px;
+  width:400px;
+  z-index:10;
+  transition:transform .35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events:none;
+}
+.hud-wrapper-left.collapsed{transform:translateX(-430px)}
+
+.hud-wrapper-right{
+  position:absolute;
+  right:20px;
+  top:14px;
+  bottom:14px;
+  width:400px;
+  z-index:10;
+  transition:transform .35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  pointer-events:none;
+}
+.hud-wrapper-right.collapsed{transform:translateX(430px)}
+
+.hud-panel{
+  width:100%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  overflow-y:auto;
+  pointer-events:auto;
+}
+.hud-panel::-webkit-scrollbar{display:none}
+
+/* 面板折叠/展开把手 */
+.toggle-handle{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:20px;
+  height:68px;
+  background:linear-gradient(180deg,rgba(14,30,56,0.95),rgba(8,17,34,0.98));
+  border:1px solid rgba(56,189,248,0.35);
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+  z-index:12;
+  box-shadow:0 4px 16px rgba(0,0,0,0.6);
+  color:var(--accent-cyan);
+  transition:all .2s ease;
+  pointer-events:auto;
+}
+.toggle-handle:hover{background:rgba(30,58,102,0.95);color:#fff}
+.toggle-handle-left{right:-21px;border-radius:0 8px 8px 0;border-left:none}
+.toggle-handle-right{left:-21px;border-radius:8px 0 0 8px;border-right:none}
+
+/* HUD 统一卡片 */
+.hud-card{
+  background:var(--panel-bg);
+  border:1px solid var(--panel-border);
+  border-radius:var(--radius-card);
+  backdrop-filter:blur(14px);
+  padding:12px 14px;
+  box-shadow:0 12px 36px rgba(0,0,0,0.5);
+  transition:border-color .2s;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.hud-card:hover{border-color:var(--panel-border-hover)}
+.hud-card *{white-space:nowrap}
+
+.card-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+  padding-bottom:6px;
+  border-bottom:1px solid rgba(56,189,248,0.12);
+}
+.card-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+  font-weight:700;
+  color:var(--text-main);
+  letter-spacing:.04em;
+}
+.card-title i{
+  width:4px;
+  height:14px;
+  background:var(--accent-cyan);
+  border-radius:2px;
+  box-shadow:0 0 8px var(--accent-cyan);
+}
+.card-badge{
+  font-size:11px;
+  color:var(--accent-cyan);
+  background:rgba(56,189,248,0.1);
+  padding:2px 7px;
+  border-radius:4px;
+  border:1px solid rgba(56,189,248,0.2);
+}
+
+/* 园区关键指标网格 */
+.stat-grid-3{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:8px;
+}
+.stat-box{
+  background:rgba(14,26,48,0.7);
+  border:1px solid rgba(56,189,248,0.14);
+  border-radius:6px;
+  padding:8px 10px;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.stat-label{font-size:11px;color:var(--text-muted)}
+.stat-val{font-size:18px;font-weight:700;color:#fff}
+.stat-sub{font-size:10px;color:var(--text-dim)}
+
+/* 停车管理微看板 */
+.parking-summary{
+  display:grid;
+  grid-template-columns:120px 1fr;
+  gap:12px;
+  align-items:center;
+}
+.donut-wrap{
+  position:relative;
+  width:110px;
+  height:110px;
+}
+.donut-center{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+}
+.donut-center strong{font-size:16px;color:#fff;font-weight:700}
+.donut-center span{font-size:10px;color:var(--text-muted)}
+
+.parking-details{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.lot-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:5px 8px;
+  border-radius:4px;
+  background:rgba(18,32,58,0.5);
+  font-size:11px;
+}
+.lot-bar-outer{
+  width:80px;
+  height:5px;
+  background:rgba(255,255,255,0.1);
+  border-radius:3px;
+  overflow:hidden;
+}
+.lot-bar-inner{
+  height:100%;
+  background:linear-gradient(90deg,#0284c7,#38bdf8);
+  border-radius:3px;
+  transition:width .4s ease;
+}
+
+/* 地下车库高精度车位指示器矩阵与安全警示微看板 */
+.gate-signal-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px;
+  margin-top:8px;
+  padding:6px 8px;
+  border-radius:6px;
+  background:rgba(12,24,46,0.85);
+  border:1px solid rgba(56,189,248,0.2);
+  font-size:11px;
+}
+.signal-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:2px 7px;
+  border-radius:4px;
+  font-size:10px;
+  font-weight:600;
+}
+.signal-pill.green{
+  background:rgba(16,185,129,0.16);
+  border:1px solid rgba(16,185,129,0.45);
+  color:#34d399;
+}
+.signal-pill.red{
+  background:rgba(244,63,94,0.18);
+  border:1px solid rgba(244,63,94,0.45);
+  color:#fb7185;
+}
+.signal-led{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  display:inline-block;
+}
+.signal-led.green{background:#10b981;box-shadow:0 0 8px #10b981}
+.signal-led.red{background:#f43f5e;box-shadow:0 0 8px #f43f5e}
+.signal-led.blue{background:#38bdf8;box-shadow:0 0 8px #38bdf8}
+
+.gate-ctrl-btn{
+  padding:3px 8px;
+  border-radius:4px;
+  background:linear-gradient(135deg,#0284c7,#2563eb);
+  color:#fff;
+  font-size:10px;
+  font-weight:600;
+  border:1px solid rgba(147,197,253,0.6);
+  transition:all .18s;
+}
+.gate-ctrl-btn:hover{filter:brightness(1.15)}
+
+.bay-matrix-wrap{
+  margin-top:8px;
+  padding-top:7px;
+  border-top:1px dashed rgba(56,189,248,0.16);
+}
+.bay-matrix-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:10px;
+  color:var(--text-muted);
+  margin-bottom:5px;
+}
+.bay-legend{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:10px;
+}
+.bay-grid{
+  display:grid;
+  grid-template-columns:repeat(6,1fr);
+  gap:4px;
+}
+.bay-cell{
+  padding:3px 4px;
+  border-radius:4px;
+  background:rgba(15,28,52,0.85);
+  border:1px solid rgba(56,189,248,0.18);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:10px;
+  cursor:pointer;
+  transition:all .15s;
+}
+.bay-cell:hover{border-color:var(--accent-cyan);transform:translateY(-1px)}
+.bay-cell.free{border-color:rgba(16,185,129,0.45);background:rgba(6,40,34,0.55);color:#a7f3d0}
+.bay-cell.occupied{border-color:rgba(244,63,94,0.45);background:rgba(45,14,24,0.55);color:#fecdd3}
+.bay-cell.ev{border-color:rgba(56,189,248,0.5);background:rgba(10,32,62,0.65);color:#bae6fd}
+
+.safety-warn-strip{
+  margin-top:7px;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:4px;
+}
+.safety-tag{
+  padding:3px 5px;
+  border-radius:4px;
+  background:rgba(245,158,11,0.12);
+  border:1px solid rgba(245,158,11,0.35);
+  color:#fcd34d;
+  font-size:10px;
+  text-align:center;
+  font-weight:600;
+}
+.safety-tag.ok{
+  background:rgba(16,185,129,0.12);
+  border-color:rgba(16,185,129,0.35);
+  color:#6ee7b7;
+}
+
+/* 舞台顶部：地下智慧车库专享子视角与信号控制浮岛 */
+.garage-top-hud{
+  position:absolute;
+  left:50%;
+  top:14px;
+  transform:translateX(-50%);
+  z-index:22;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:7px 14px;
+  border-radius:999px;
+  background:rgba(8,17,34,0.92);
+  border:1px solid rgba(56,189,248,0.4);
+  backdrop-filter:blur(14px);
+  box-shadow:0 10px 30px rgba(0,0,0,0.7);
+  white-space:nowrap;
+}
+.garage-sub-btn{
+  padding:4px 11px;
+  border-radius:999px;
+  background:rgba(20,36,66,0.75);
+  border:1px solid rgba(56,189,248,0.2);
+  color:var(--text-muted);
+  font-size:11px;
+  font-weight:600;
+  transition:all .18s;
+}
+.garage-sub-btn:hover,.garage-sub-btn.active{
+  background:linear-gradient(135deg,#0284c7,#2563eb);
+  color:#fff;
+  border-color:#7dd3fc;
+  box-shadow:0 0 10px rgba(56,189,248,0.45);
+}
+
+/* 电梯群控微看板 */
+.elevator-grid{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:6px;
+}
+.elevator-card{
+  background:rgba(16,28,52,0.7);
+  border:1px solid rgba(56,189,248,0.16);
+  border-radius:6px;
+  padding:6px 8px;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  position:relative;
+  transition:all .2s;
+}
+.elevator-card.warning{
+  border-color:rgba(244,63,94,0.6);
+  background:rgba(40,15,25,0.7);
+}
+.ele-top{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted)}
+.ele-floor{
+  font-size:16px;
+  font-weight:700;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.ele-dir{
+  font-size:12px;
+  padding:1px 4px;
+  border-radius:3px;
+  background:rgba(56,189,248,0.15);
+  color:var(--accent-cyan);
+}
+.ele-dir.up{background:rgba(16,185,129,0.2);color:var(--accent-mint)}
+.ele-dir.down{background:rgba(245,158,11,0.2);color:var(--accent-amber)}
+.ele-load{
+  font-size:10px;
+  color:var(--text-dim);
+  display:flex;
+  justify-content:space-between;
+}
+
+/* 暖通集中冷站管网看板 */
+.hvac-metrics{
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:8px;
+}
+.hvac-box{
+  background:rgba(14,26,48,0.75);
+  border:1px solid rgba(56,189,248,0.15);
+  border-radius:6px;
+  padding:8px 10px;
+}
+.hvac-tag{font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between}
+.hvac-val{font-size:17px;font-weight:700;color:var(--accent-cyan);margin:2px 0}
+.hvac-foot{font-size:10px;color:var(--text-dim)}
+
+/* 灯光自控看板 */
+.lighting-modes{
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:6px;
+  margin-bottom:8px;
+}
+.light-mode-btn{
+  padding:7px 10px;
+  border-radius:6px;
+  background:rgba(18,32,58,0.6);
+  border:1px solid rgba(56,189,248,0.14);
+  font-size:11px;
+  color:var(--text-muted);
+  display:flex;
+  align-items:center;
+  gap:6px;
+  transition:all .2s;
+}
+.light-mode-btn:hover{background:rgba(30,58,102,0.8);color:#fff}
+.light-mode-btn.active{
+  background:linear-gradient(135deg,rgba(2,132,199,0.4),rgba(37,99,235,0.4));
+  border-color:var(--accent-cyan);
+  color:#fff;
+  font-weight:600;
+  box-shadow:0 0 10px rgba(56,189,248,0.3);
+}
+
+.circuit-strip{
+  display:flex;
+  gap:4px;
+  margin-top:6px;
+}
+.circuit-dot{
+  flex:1;
+  height:6px;
+  border-radius:3px;
+  background:rgba(255,255,255,0.12);
+  transition:background .3s;
+}
+.circuit-dot.on{background:var(--accent-amber);box-shadow:0 0 6px var(--accent-amber)}
+
+/* 告警事件流卡片 */
+.alarm-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  max-height:165px;
+  overflow-y:auto;
+}
+.alarm-list::-webkit-scrollbar{display:none}
+.alarm-item{
+  padding:6px 10px;
+  border-radius:6px;
+  background:rgba(24,36,60,0.6);
+  border-left:3px solid var(--accent-cyan);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:11px;
+}
+.alarm-item.warning{border-left-color:var(--accent-amber);background:rgba(35,25,18,0.65)}
+.alarm-item.danger{border-left-color:var(--accent-rose);background:rgba(42,16,24,0.75)}
+.alarm-title{font-weight:600;color:#fff}
+.alarm-time{color:var(--text-dim);font-size:10px}
+
+/* 3D 浮空空间标签与标记 */
+.pin-marker{
+  position:absolute;
+  z-index:9;
+  transform:translate(-50%,-100%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  pointer-events:auto;
+  cursor:pointer;
+  transition:transform .2s ease;
+}
+.pin-marker:hover{transform:translate(-50%,-105%) scale(1.05)}
+.pin-pill{
+  background:rgba(10,20,38,0.92);
+  border:1px solid rgba(56,189,248,0.4);
+  border-radius:6px;
+  padding:4px 9px;
+  font-size:11px;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  backdrop-filter:blur(8px);
+  box-shadow:0 4px 16px rgba(0,0,0,0.7);
+  white-space:nowrap;
+}
+.pin-pill.accent{
+  border-color:var(--accent-cyan);
+  background:rgba(14,35,66,0.95);
+  box-shadow:0 0 14px rgba(56,189,248,0.4);
+}
+.pin-dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  background:var(--accent-cyan);
+  box-shadow:0 0 6px var(--accent-cyan);
+}
+.pin-pointer{
+  width:0;
+  height:0;
+  border-left:4px solid transparent;
+  border-right:4px solid transparent;
+  border-top:6px solid rgba(56,189,248,0.7);
+}
+
+/* 建筑聚焦交互弹窗 (Building Detail Modal) */
+.building-modal{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:580px;
+  background:rgba(9,19,37,0.96);
+  border:1px solid var(--accent-cyan);
+  border-radius:12px;
+  backdrop-filter:blur(18px);
+  padding:20px 24px;
+  z-index:40;
+  box-shadow:0 24px 60px rgba(0,0,0,0.85),0 0 30px rgba(56,189,248,0.25);
+  animation:popIn .25s ease;
+}
+@keyframes popIn{from{opacity:0;transform:translate(-50%,-46%) scale(0.96)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+
+.modal-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom:1px solid rgba(56,189,248,0.2);
+  padding-bottom:10px;
+  margin-bottom:14px;
+}
+.modal-title{font-size:16px;font-weight:700;color:#fff;display:flex;align-items:center;gap:8px}
+.modal-close{
+  width:28px;
+  height:28px;
+  border-radius:6px;
+  background:rgba(255,255,255,0.08);
+  display:grid;
+  place-items:center;
+  color:var(--text-muted);
+  cursor:pointer;
+  transition:all .2s;
+}
+.modal-close:hover{background:rgba(244,63,94,0.3);color:#fff}
+
+.modal-grid{
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
+  gap:12px;
+  margin-bottom:14px;
+}
+.modal-box{
+  background:rgba(16,28,52,0.7);
+  border:1px solid rgba(56,189,248,0.16);
+  border-radius:6px;
+  padding:10px 12px;
+}
+.modal-box-title{font-size:11px;color:var(--text-muted);margin-bottom:4px}
+.modal-box-val{font-size:18px;font-weight:700;color:#fff}
+
+/* 底部操作与工况演练控制条 */
+.bottom-bar{
+  position:relative;
+  z-index:30;
+  display:grid;
+  grid-template-columns:360px 1fr 360px;
+  align-items:center;
+  padding:0 24px;
+  background:linear-gradient(0deg,rgba(10,20,38,0.96) 0%,rgba(6,12,24,0.85) 100%);
+  border-top:1px solid var(--panel-border);
+  backdrop-filter:blur(12px);
+}
+.scenario-strip{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:10px;
+}
+.scenario-label{font-size:12px;color:var(--text-muted);margin-right:4px}
+.scenario-btn{
+  padding:6px 14px;
+  border-radius:6px;
+  background:rgba(20,35,65,0.75);
+  border:1px solid rgba(56,189,248,0.18);
+  font-size:12px;
+  color:var(--text-muted);
+  transition:all .2s;
+  white-space:nowrap;
+}
+.scenario-btn:hover{background:rgba(30,58,102,0.9);color:#fff;border-color:var(--accent-cyan)}
+.scenario-btn.active{
+  background:linear-gradient(135deg,#0284c7,#2563eb);
+  border-color:rgba(147,197,253,0.8);
+  color:#fff;
+  font-weight:700;
+  box-shadow:0 0 12px rgba(14,165,233,0.5);
+}
+
+.view-controls{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+}
+.view-btn{
+  padding:5px 12px;
+  border-radius:6px;
+  background:rgba(20,35,65,0.6);
+  border:1px solid rgba(56,189,248,0.15);
+  font-size:11px;
+  color:var(--text-muted);
+  transition:all .2s;
+}
+.view-btn:hover{background:rgba(30,58,102,0.85);color:#fff}
+</style>
+</head>
+<body>
+
+<div id="screen" v-cloak>
+  <!-- 顶部状态栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M19 2H9c-1.1 0-2 .9-2 2v2H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 4h10v16H9V4zM5 8h2v12H5V8zm6 2h2v2h-2v-2zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2zm4-8h2v2h-2v-2zm0 4h2v2h-2v-2zm0 4h2v2h-2v-2z"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>30 · 智慧园区多建筑集群运营管控数字孪生</h1>
+        <p>SMART CAMPUS MULTI-BUILDING OPERATIONS HUB</p>
+      </div>
+    </div>
+
+    <!-- 中间五大多维图层药丸切换 -->
+    <div class="pill-nav">
+      <button class="pill-btn" :class="{active: currentLayer === 'overview'}" @click="setLayer('overview')">
+        <span>🌐</span> 综合全景
+      </button>
+      <button class="pill-btn" :class="{active: currentLayer === 'parking'}" @click="setLayer('parking')">
+        <span>🚗</span> 停车位管理
+      </button>
+      <button class="pill-btn" :class="{active: currentLayer === 'elevators'}" @click="setLayer('elevators')">
+        <span>🛗</span> 电梯群控
+      </button>
+      <button class="pill-btn" :class="{active: currentLayer === 'lighting'}" @click="setLayer('lighting')">
+        <span>💡</span> 智能灯光
+      </button>
+      <button class="pill-btn" :class="{active: currentLayer === 'hvac'}" @click="setLayer('hvac')">
+        <span>❄️</span> 集中暖通
+      </button>
+    </div>
+
+    <!-- 顶部右侧指标与数据质量 -->
+    <div class="top-meta">
+      <div class="meta-chip">
+        <span>园区瞬时能耗</span>
+        <strong class="num">{{ totalPower.toFixed(1) }} <small style="font-size:10px;font-weight:normal">kW</small></strong>
+      </div>
+      <div class="meta-chip">
+        <span>在园总人数</span>
+        <strong class="num">{{ totalPersons.toLocaleString() }} <small style="font-size:10px;font-weight:normal">人</small></strong>
+      </div>
+      <div class="meta-chip">
+        <span>更新时间</span>
+        <strong class="num">{{ currentTimeStr }}</strong>
+      </div>
+      <div class="quality-badge">
+        <i></i> <span>数据质量 {{ qualityLabel }}</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 中央主舞台与三维视口 -->
+  <main class="main-stage">
+    <!-- WebGL Canvas 挂载点 -->
+    <div id="canvas-container"></div>
+
+    <!-- 地下停车场专属顶部高保真视角与现场控制浮岛 -->
+    <div v-if="currentLayer === 'parking'" class="garage-top-hud">
+      <span style="font-size:11px;color:var(--accent-cyan);font-weight:700">🅿️ B1 智慧地下车库数字孪生：</span>
+      <button class="garage-sub-btn" :class="{active: garageCamMode === 'all'}" @click="focusGarageZone('all')">地库全景鸟瞰</button>
+      <button class="garage-sub-btn" :class="{active: garageCamMode === 'gate'}" @click="focusGarageZone('gate')">进出口信号灯与道闸</button>
+      <button class="garage-sub-btn" :class="{active: garageCamMode === 'bays'}" @click="focusGarageZone('bays')">超声波车位指示器特写</button>
+      <button class="garage-sub-btn" :class="{active: garageCamMode === 'ev'}" @click="focusGarageZone('ev')">新能源超充专区</button>
+      <button class="garage-sub-btn" :class="{active: garageCamMode === 'safety'}" @click="focusGarageZone('safety')">安全警示与消防岛</button>
+      <span style="width:1px;height:14px;background:rgba(56,189,248,0.25)"></span>
+      <button class="gate-ctrl-btn" @click="toggleBarrierGate">
+        {{ entryGateOpen ? '🚧 落下入口道闸' : '🚧 抬起入口道闸' }}
+      </button>
+    </div>
+
+    <!-- 3D 浮空空间标签：宏观园区建筑 (非停车图层) -->
+    <template v-if="currentLayer !== 'parking'">
+      <div v-for="b in buildings" :key="b.id" class="pin-marker" :style="b.screenPos" @click="focusBuilding(b)">
+        <div class="pin-pill" :class="{accent: selectedBuilding && selectedBuilding.id === b.id}">
+          <span class="pin-dot"></span>
+          <strong>{{ b.name }}</strong>
+          <span class="num" style="color:var(--accent-cyan);font-size:10px">{{ b.shortMetric }}</span>
+        </div>
+        <div class="pin-pointer"></div>
+      </div>
+    </template>
+
+    <!-- 3D 浮空空间标签：B1 地下智慧车库高精度点位 (停车图层专属) -->
+    <template v-else>
+      <div v-for="gp in garagePins" :key="gp.id" class="pin-marker" :style="gp.screenPos" @click="focusGarageZone(gp.zone)">
+        <div class="pin-pill" :style="{borderColor: gp.color}">
+          <span class="signal-led" :class="gp.ledCls"></span>
+          <strong>{{ gp.title }}</strong>
+          <span class="num" :style="{color: gp.color, fontSize: '10px', fontWeight: '700'}">{{ gp.sub }}</span>
+        </div>
+        <div class="pin-pointer"></div>
+      </div>
+    </template>
+
+    <!-- 左翼 HUD 监控面板 -->
+    <aside class="hud-wrapper-left" :class="{collapsed: leftCollapsed}">
+      <button class="toggle-handle toggle-handle-left" @click="leftCollapsed = !leftCollapsed">
+        {{ leftCollapsed ? '▶' : '◀' }}
+      </button>
+      <div class="hud-panel">
+        <!-- 园区核心运营大盘 -->
+        <div class="hud-card">
+          <div class="card-header">
+            <div class="card-title"><i></i>园区运行综合态势</div>
+            <div class="card-badge">CAMPUS STATUS</div>
+          </div>
+          <div class="stat-grid-3">
+            <div class="stat-box">
+              <span class="stat-label">今日绿电比</span>
+              <span class="stat-val num">{{ greenEnergyRatio }}%</span>
+              <span class="stat-sub">屋顶光伏+风储</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">综合绿建评级</span>
+              <span class="stat-val num" style="color:var(--accent-mint)">LEED 金级</span>
+              <span class="stat-sub">碳足迹降低 22%</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">设备在线率</span>
+              <span class="stat-val num">{{ deviceOnlineRate }}%</span>
+              <span class="stat-sub">点表 14,280/14,310</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. 停车位管理看板 (Parking Management) -->
+        <div class="hud-card" :style="{borderColor: currentLayer === 'parking' ? 'var(--accent-cyan)' : ''}">
+          <div class="card-header">
+            <div class="card-title"><i></i>B1 地下停车场 · 车位与指示器系统</div>
+            <div class="card-badge" style="cursor:pointer" @click="setLayer('parking')">点击进入地库3D</div>
+          </div>
+          <div class="parking-summary">
+            <div class="donut-wrap" id="parkingDonutChart"></div>
+            <div class="parking-details">
+              <div class="lot-row">
+                <span style="color:var(--text-muted)">A/B 标准车位 (指示灯控)</span>
+                <span class="num">{{ undergroundOccupied }} / 2,000</span>
+              </div>
+              <div class="lot-row">
+                <span style="color:var(--text-muted)">C区 超充车位 (320桩)</span>
+                <span class="num" style="color:var(--accent-cyan)">{{ evChargingPower }} kW</span>
+              </div>
+              <div class="lot-row">
+                <span style="color:var(--text-muted)">地库空余可停 (绿灯)</span>
+                <strong class="num" style="color:var(--accent-mint)">{{ freeSpots }} 个</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- 进出口通道信号灯与电动道闸控制 -->
+          <div class="gate-signal-row">
+            <div class="signal-pill" :class="entryGateOpen ? 'green' : 'red'">
+              <i class="signal-led" :class="entryGateOpen ? 'green' : 'red'"></i>
+              <span>北入口: {{ entryGateOpen ? '绿灯通行' : '红灯落杆' }}</span>
+            </div>
+            <div class="signal-pill green">
+              <i class="signal-led green"></i>
+              <span>南出口: 绿灯畅通</span>
+            </div>
+            <button class="gate-ctrl-btn" @click="toggleBarrierGate">
+              {{ entryGateOpen ? '落杆禁行' : '抬杆放行' }}
+            </button>
+          </div>
+
+          <!-- 高精度超声波车位指示器实时矩阵 (点击车位直接切换 3D 汽车与红绿灯) -->
+          <div class="bay-matrix-wrap">
+            <div class="bay-matrix-head">
+              <span>超声波车位探测器状态 (点击泊位切换)</span>
+              <div class="bay-legend">
+                <span><i class="signal-led green"></i>空位</span>
+                <span><i class="signal-led red"></i>有车</span>
+                <span><i class="signal-led blue"></i>充电</span>
+              </div>
+            </div>
+            <div class="bay-grid">
+              <div v-for="(slot, idx) in parkingSlotsUI" :key="slot.code"
+                   class="bay-cell num"
+                   :class="slot.occupied ? (slot.isEv ? 'ev' : 'occupied') : 'free'"
+                   :title="slot.occupied ? (slot.plate + ' 已停入 (红灯)') : '空余车位 (绿灯)'"
+                   @click="toggleParkingSlot(idx)">
+                <span>{{ slot.code }}</span>
+                <i class="signal-led" :class="slot.occupied ? (slot.isEv ? 'blue' : 'red') : 'green'"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- 地下车库安全警示与环境联锁状态 -->
+          <div class="safety-warn-strip">
+            <div class="safety-tag">⚠️ 限速 5km/h</div>
+            <div class="safety-tag">🚧 限高 2.2m</div>
+            <div class="safety-tag ok">🧯 消火栓就绪</div>
+            <div class="safety-tag ok">💨 CO 8ppm</div>
+          </div>
+        </div>
+
+        <!-- 2. 电梯群控垂直交通看板 (Elevator Management) -->
+        <div class="hud-card" :style="{borderColor: currentLayer === 'elevators' ? 'var(--accent-cyan)' : ''}">
+          <div class="card-header">
+            <div class="card-title"><i></i>电梯垂直交通群控</div>
+            <div class="card-badge">28 梯联网监控</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:8px">
+            <span>平均候梯时间: <strong class="num" style="color:#fff">{{ avgWaitTime }} s</strong></span>
+            <span>日运送客流: <strong class="num" style="color:var(--accent-cyan)">{{ elevatorDailyTrips }} 人次</strong></span>
+          </div>
+          <div class="elevator-grid">
+            <div v-for="e in elevators" :key="e.id" class="elevator-card" :class="{warning: e.status === 'warn'}">
+              <div class="ele-top">
+                <span>{{ e.name }}</span>
+                <span class="ele-dir" :class="{up: e.dir === '↑', down: e.dir === '↓'}">{{ e.dir }}</span>
+              </div>
+              <div class="ele-floor">
+                <span class="num">{{ e.floor }}F</span>
+                <span style="font-size:10px;color:var(--text-dim)">{{ e.speed }} m/s</span>
+              </div>
+              <div class="ele-load">
+                <span>载重</span>
+                <span class="num">{{ e.load }}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 右翼 HUD 监控面板 -->
+    <aside class="hud-wrapper-right" :class="{collapsed: rightCollapsed}">
+      <button class="toggle-handle toggle-handle-right" @click="rightCollapsed = !rightCollapsed">
+        {{ rightCollapsed ? '◀' : '▶' }}
+      </button>
+      <div class="hud-panel">
+        <!-- 3. 集中暖通与冷热源管网 (HVAC Management) -->
+        <div class="hud-card" :style="{borderColor: currentLayer === 'hvac' ? 'var(--accent-cyan)' : ''}">
+          <div class="card-header">
+            <div class="card-title"><i></i>D座集中能源站 · 供冷管网</div>
+            <div class="card-badge">HVAC COP {{ hvacCop }}</div>
+          </div>
+          <div class="hvac-metrics">
+            <div class="hvac-box">
+              <div class="hvac-tag"><span>供水温度</span><span>标准 7.0℃</span></div>
+              <div class="hvac-val num">{{ chwSupplyTemp.toFixed(1) }} <small style="font-size:11px">℃</small></div>
+              <div class="hvac-foot">流量 1,240 m³/h</div>
+            </div>
+            <div class="hvac-box">
+              <div class="hvac-tag"><span>回水温度</span><span>温差 5.2℃</span></div>
+              <div class="hvac-val num" style="color:var(--accent-rose)">{{ chwReturnTemp.toFixed(1) }} <small style="font-size:11px">℃</small></div>
+              <div class="hvac-foot">管网压差 280 kPa</div>
+            </div>
+            <div class="hvac-box">
+              <div class="hvac-tag"><span>瞬时冷量负荷</span><span>冷机 3台开</span></div>
+              <div class="hvac-val num">{{ coolingLoad.toLocaleString() }} <small style="font-size:11px">kW</small></div>
+              <div class="hvac-foot">负荷率 78.4%</div>
+            </div>
+            <div class="hvac-box">
+              <div class="hvac-tag"><span>输配能效比 WTCOP</span><span>一级能效</span></div>
+              <div class="hvac-val num" style="color:var(--accent-mint)">{{ pumpEfficiency }}</div>
+              <div class="hvac-foot">水力平衡率 98.2%</div>
+            </div>
+          </div>
+          <!-- 供回水温差与室外湿球温度动态折线 -->
+          <div id="hvacTrendChart" style="width:100%;height:105px;margin-top:6px"></div>
+        </div>
+
+        <!-- 4. 智能灯光自控与夜景亮化 (Lighting Management) -->
+        <div class="hud-card" :style="{borderColor: currentLayer === 'lighting' ? 'var(--accent-cyan)' : ''}">
+          <div class="card-header">
+            <div class="card-title"><i></i>智能照明与立面夜景亮化</div>
+            <div class="card-badge">LIGHTING HUB</div>
+          </div>
+          <div class="lighting-modes">
+            <button class="light-mode-btn" :class="{active: lightingMode === 'daylight'}" @click="setLightingMode('daylight')">
+              <span>☀️</span> 日光自适应
+            </button>
+            <button class="light-mode-btn" :class="{active: lightingMode === 'dusk'}" @click="setLightingMode('dusk')">
+              <span>🌆</span> 黄昏迎宾
+            </button>
+            <button class="light-mode-btn" :class="{active: lightingMode === 'night'}" @click="setLightingMode('night')">
+              <span>🌃</span> 璀璨夜景
+            </button>
+            <button class="light-mode-btn" :class="{active: lightingMode === 'saving'}" @click="setLightingMode('saving')">
+              <span>🌙</span> 深夜低碳
+            </button>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;margin-top:4px">
+            <span>室外照度: <strong class="num" style="color:#fff">{{ luxLevel }} Lux</strong></span>
+            <span>亮灯节电率: <strong class="num" style="color:var(--accent-mint)">{{ lightingSavingRate }}%</strong></span>
+          </div>
+          <div class="circuit-strip">
+            <div v-for="c in 12" :key="c" class="circuit-dot" :class="{on: c <= activeCircuits}"></div>
+          </div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:3px;display:flex;justify-content:space-between">
+            <span>园区路灯回路 ({{ activeCircuits }}/12 在线开启)</span>
+            <span>立面亮化泛光已联动</span>
+          </div>
+        </div>
+
+        <!-- 5. 综合联动与实时告警事件流 -->
+        <div class="hud-card">
+          <div class="card-header">
+            <div class="card-title"><i></i>联锁自控与告警事件流</div>
+            <div class="card-badge">REALTIME EVENTS</div>
+          </div>
+          <div class="alarm-list">
+            <div v-for="evt in eventLog" :key="evt.id" class="alarm-item" :class="evt.level">
+              <div>
+                <div class="alarm-title">{{ evt.title }}</div>
+                <div style="font-size:10px;color:var(--text-muted)">{{ evt.desc }}</div>
+              </div>
+              <div class="alarm-time num">{{ evt.time }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 建筑下钻与微操弹窗 (点击建筑触发) -->
+    <div v-if="selectedBuilding" class="building-modal">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span style="color:var(--accent-cyan)">●</span>
+          <span>{{ selectedBuilding.name }} · 建筑综合运管看板</span>
+        </div>
+        <div class="modal-close" @click="selectedBuilding = null">✕</div>
+      </div>
+      <div class="modal-grid">
+        <div class="modal-box">
+          <div class="modal-box-title">总建筑面积 / 层数</div>
+          <div class="modal-box-val num">{{ selectedBuilding.area }} ㎡ <small style="font-size:12px;color:var(--text-muted)">({{ selectedBuilding.floors }} 层)</small></div>
+        </div>
+        <div class="modal-box">
+          <div class="modal-box-title">当前瞬时负荷</div>
+          <div class="modal-box-val num" style="color:var(--accent-cyan)">{{ selectedBuilding.power }} kW</div>
+        </div>
+        <div class="modal-box">
+          <div class="modal-box-title">冷量末端供温 / 压差</div>
+          <div class="modal-box-val num">{{ selectedBuilding.hvacStatus }}</div>
+        </div>
+        <div class="modal-box">
+          <div class="modal-box-title">垂直梯配置 / 状态</div>
+          <div class="modal-box-val num" style="color:var(--accent-mint)">{{ selectedBuilding.elevatorSummary }}</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px">
+        <button class="view-btn" style="background:var(--accent-blue);color:#fff" @click="selectedBuilding = null">关闭视图</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- 底部剧本演练与镜头控制栏 -->
+  <footer class="bottom-bar">
+    <div style="font-size:12px;color:var(--text-muted)">
+      <span>园区位置：未来科技智慧城 02 地块</span> · <span class="num">120,000 ㎡</span>
+    </div>
+
+    <!-- 4 大典型工况演练剧本 -->
+    <div class="scenario-strip">
+      <span class="scenario-label">工况演练：</span>
+      <button class="scenario-btn" :class="{active: currentScenario === 'morning'}" @click="runScenario('morning')">
+        早高峰通勤
+      </button>
+      <button class="scenario-btn" :class="{active: currentScenario === 'normal'}" @click="runScenario('normal')">
+        日间稳态
+      </button>
+      <button class="scenario-btn" :class="{active: currentScenario === 'dusk'}" @click="runScenario('dusk')">
+        黄昏夜景亮化
+      </button>
+      <button class="scenario-btn" :class="{active: currentScenario === 'abnormal'}" @click="runScenario('abnormal')">
+        设备联锁异常
+      </button>
+    </div>
+
+    <!-- 视角控制快捷按钮 -->
+    <div class="view-controls">
+      <button class="view-btn" @click="resetCamera('overview')">全景鸟瞰</button>
+      <button class="view-btn" @click="resetCamera('towerA')">聚焦A座</button>
+      <button class="view-btn" @click="resetCamera('energyD')">动力中心</button>
+      <button class="view-btn" @click="resetCamera('parking')">地库枢纽</button>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // 空值保护与图表安全初始化辅助函数
+  function safeInit(el, initFn) {
+    if (!el) return null;
+    try {
+      return initFn(el);
+    } catch (err) {
+      console.warn('Chart init skipped:', err);
+      return null;
+    }
+  }
+
+  // 1920×1080 视口自适应等比缩放
+  function handleScreenResize() {
+    const el = document.getElementById('screen');
+    if (!el) return;
+    const baseW = 1920;
+    const baseH = 1080;
+    const scaleX = window.innerWidth / baseW;
+    const scaleY = window.innerHeight / baseH;
+    const scale = Math.min(scaleX, scaleY);
+    el.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
+  }
+  window.addEventListener('resize', handleScreenResize);
+  window.addEventListener('DOMContentLoaded', handleScreenResize);
+
+  const app = Vue.createApp({
+    data() {
+      return {
+        qualityLabel: 'GOOD',
+        currentTimeStr: '',
+        currentLayer: 'overview', // 'overview' | 'parking' | 'elevators' | 'lighting' | 'hvac'
+        currentScenario: 'normal',
+        lightingMode: 'dusk', // 'daylight' | 'dusk' | 'night' | 'saving'
+        leftCollapsed: false,
+        rightCollapsed: false,
+        totalPower: 4820.5,
+        totalPersons: 6420,
+        greenEnergyRatio: 36.8,
+        deviceOnlineRate: 99.8,
+
+        // 停车位管理数据
+        surfaceOccupied: 382,
+        undergroundOccupied: 1656,
+        freeSpots: 412,
+        evChargingPower: 1480,
+        garageCamMode: 'all',
+        entryGateOpen: true,
+
+        // 18个代表性车位实时状态 (与3D地下车库车位模型及超声波红绿指示器1:1双向绑定)
+        parkingSlotsUI: [
+          { code: 'A01', occupied: true, isEv: false, plate: '浙A·8892D' },
+          { code: 'A02', occupied: false, isEv: false, plate: '' },
+          { code: 'A03', occupied: true, isEv: false, plate: '浙A·3105K' },
+          { code: 'A04', occupied: true, isEv: false, plate: '浙A·7741M' },
+          { code: 'A05', occupied: false, isEv: false, plate: '' },
+          { code: 'A06', occupied: true, isEv: false, plate: '浙A·9021P' },
+          { code: 'B01', occupied: true, isEv: false, plate: '浙A·5518Q' },
+          { code: 'B02', occupied: true, isEv: false, plate: '浙A·6630W' },
+          { code: 'B03', occupied: false, isEv: false, plate: '' },
+          { code: 'B04', occupied: true, isEv: false, plate: '浙A·1209H' },
+          { code: 'B05', occupied: false, isEv: false, plate: '' },
+          { code: 'B06', occupied: true, isEv: false, plate: '浙A·4482N' },
+          { code: 'EV1', occupied: true, isEv: true, plate: '浙AD·09218' },
+          { code: 'EV2', occupied: true, isEv: true, plate: '浙AD·66510' },
+          { code: 'EV3', occupied: false, isEv: true, plate: '' },
+          { code: 'EV4', occupied: true, isEv: true, plate: '浙AD·33812' },
+          { code: 'EV5', occupied: true, isEv: true, plate: '浙AD·71905' },
+          { code: 'EV6', occupied: false, isEv: true, plate: '' }
+        ],
+
+        // B1 地下智慧车库专属 3D 浮空空间标签
+        garagePins: [
+          { id: 'gp_gate', title: '北口智能道闸与信号灯', sub: '绿灯通行 · 限高2.2m', color: '#10b981', ledCls: 'green', zone: 'gate', worldPos: [-17, 4.8, -3], screenPos: { left: '34%', top: '42%' } },
+          { id: 'gp_a', title: 'A区超声波车位引导', sub: '绿灯空位可停 · 红灯有车', color: '#10b981', ledCls: 'green', zone: 'bays', worldPos: [-8, 4.5, -16], screenPos: { left: '48%', top: '32%' } },
+          { id: 'gp_b', title: 'B区标准泊位阵列', sub: '高精度车位探测器在线', color: '#f43f5e', ledCls: 'red', zone: 'bays', worldPos: [12, 4.5, -16], screenPos: { left: '62%', top: '34%' } },
+          { id: 'gp_ev', title: 'C区液冷超充专区', sub: '6桩快充中 · 蓝灯脉冲', color: '#38bdf8', ledCls: 'blue', zone: 'ev', worldPos: [12, 4.2, 16], screenPos: { left: '64%', top: '68%' } },
+          { id: 'gp_safe', title: '安全警示与消防联锁岛', sub: '限速5km/h · 消火栓/安全出口', color: '#f59e0b', ledCls: 'red', zone: 'safety', worldPos: [1, 4.2, -9], screenPos: { left: '53%', top: '46%' } }
+        ],
+
+        // 电梯群控数据
+        avgWaitTime: 22.4,
+        elevatorDailyTrips: 48200,
+        elevators: [
+          { id: 'A1', name: 'A-L01', floor: 18, dir: '↑', speed: 4.0, load: 72, status: 'normal' },
+          { id: 'A2', name: 'A-L02', floor: 12, dir: '↓', speed: 3.5, load: 45, status: 'normal' },
+          { id: 'A3', name: 'A-L03', floor: 8, dir: '↑', speed: 2.8, load: 60, status: 'normal' },
+          { id: 'A4', name: 'A-L04', floor: 1, dir: '—', speed: 0.0, load: 0, status: 'normal' },
+          { id: 'B1', name: 'B-F01', floor: 3, dir: '↑', speed: 1.5, load: 88, status: 'normal' },
+          { id: 'B2', name: 'B-F02', floor: 1, dir: '—', speed: 0.0, load: 15, status: 'normal' },
+          { id: 'C1', name: 'C-L01', floor: 5, dir: '↓', speed: 2.5, load: 30, status: 'normal' },
+          { id: 'C2', name: 'C-L02', floor: 2, dir: '↑', speed: 2.0, load: 50, status: 'normal' }
+        ],
+
+        // 暖通管理数据
+        chwSupplyTemp: 7.0,
+        chwReturnTemp: 12.2,
+        coolingLoad: 8450,
+        hvacCop: 5.32,
+        pumpEfficiency: '32.4 kW/kW',
+
+        // 智能灯光数据
+        luxLevel: 4200,
+        lightingSavingRate: 42.6,
+        activeCircuits: 10,
+
+        // 建筑列表与三维位置关联
+        buildings: [
+          { id: 'towerA', name: 'A座 · 科研主楼', shortMetric: '12梯/冷负荷42%', worldPos: [0, 24, 0], screenPos: { left: '50%', top: '35%' }, area: 68000, floors: 24, power: 2350, hvacStatus: '7.2℃ / 270 kPa', elevatorSummary: '12部客梯 / 全在线' },
+          { id: 'smartB', name: 'B座 · 制造工场', shortMetric: '4重载梯/冷负荷34%', worldPos: [-42, 8, -12], screenPos: { left: '32%', top: '48%' }, area: 32000, floors: 4, power: 1580, hvacStatus: '7.1℃ / 285 kPa', elevatorSummary: '4部货梯 / 正常' },
+          { id: 'expoC', name: 'C座 · 行政展馆', shortMetric: '6观光梯/冷负荷18%', worldPos: [38, 10, 18], screenPos: { left: '68%', top: '56%' }, area: 18000, floors: 6, power: 640, hvacStatus: '7.3℃ / 260 kPa', elevatorSummary: '6部观光梯 / 正常' },
+          { id: 'energyD', name: 'D座 · 动力中心', shortMetric: 'COP 5.32/集中冷站', worldPos: [-36, 6, 32], screenPos: { left: '26%', top: '65%' }, area: 8500, floors: 2, power: 250, hvacStatus: '中央机房 / 4冷却塔', elevatorSummary: '2部维保梯 / 待命' },
+          { id: 'parkP', name: 'P区 · 智慧地库', shortMetric: '2450泊位/83%占用', worldPos: [15, 2, -35], screenPos: { left: '58%', top: '24%' }, area: 45000, floors: 'B1-B2', power: 180, hvacStatus: '诱导通风运行中', elevatorSummary: '4部连通梯 / 顺畅' }
+        ],
+
+        selectedBuilding: null,
+
+        // 告警事件记录
+        eventLog: [
+          { id: 1, title: 'D座综合能源站能效自优化触发', desc: '冷水机组动态加卸载策略生效，COP 达到 5.32', time: '10:42:15', level: 'normal' },
+          { id: 2, title: 'P区地下充电桩超温保护巡检', desc: '320根充电桩状态正常，无超时占用', time: '10:38:20', level: 'normal' },
+          { id: 3, title: 'A座客梯 A-L03 制动器轻度升温', desc: '已联动调度分配平峰降速保护', time: '10:25:04', level: 'warning' },
+          { id: 4, title: '黄昏景观照明回路预备点亮', desc: '光照度传感器回传 4200 Lux，分时自适应启动', time: '10:12:30', level: 'normal' }
+        ]
+      };
+    },
+    mounted() {
+      handleScreenResize();
+      this.initClock();
+      this.initThreeScene();
+      this.initCharts();
+    },
+    methods: {
+      initClock() {
+        const update = () => {
+          const now = new Date();
+          this.currentTimeStr = now.toTimeString().split(' ')[0];
+        };
+        update();
+        setInterval(update, 1000);
+      },
+
+      setLayer(layerKey) {
+        this.currentLayer = layerKey;
+        if (layerKey === 'parking') {
+          this.garageCamMode = 'all';
+        }
+        if (window.switchLayerMode) {
+          window.switchLayerMode(layerKey);
+        }
+      },
+
+      focusGarageZone(zoneKey) {
+        this.currentLayer = 'parking';
+        this.garageCamMode = zoneKey;
+        if (window.focusGarageCamera) {
+          window.focusGarageCamera(zoneKey);
+        }
+      },
+
+      toggleBarrierGate() {
+        this.entryGateOpen = !this.entryGateOpen;
+        if (this. garagePins && this.garagePins[0]) {
+          this.garagePins[0].sub = this.entryGateOpen ? '绿灯通行 · 限高2.2m' : '红灯禁行 · 道闸落杆';
+          this.garagePins[0].color = this.entryGateOpen ? '#10b981' : '#f43f5e';
+          this.garagePins[0].ledCls = this.entryGateOpen ? 'green' : 'red';
+        }
+        if (window.setEntryGateState) {
+          window.setEntryGateState(this.entryGateOpen);
+        }
+      },
+
+      toggleParkingSlot(idx) {
+        const slot = this.parkingSlotsUI[idx];
+        if (!slot) return;
+        slot.occupied = !slot.occupied;
+        if (slot.occupied) {
+          slot.plate = slot.isEv ? '浙AD·8520' + idx : '浙A·691' + idx + 'K';
+          this.undergroundOccupied++;
+          this.freeSpots = Math.max(0, this.freeSpots - 1);
+        } else {
+          slot.plate = '';
+          this.undergroundOccupied = Math.max(0, this.undergroundOccupied - 1);
+          this.freeSpots++;
+        }
+        if (window.updateThreeParkingSlot) {
+          window.updateThreeParkingSlot(idx, slot.occupied);
+        }
+      },
+
+      setLightingMode(mode) {
+        this.lightingMode = mode;
+        if (mode === 'daylight') {
+          this.luxLevel = 68000;
+          this.lightingSavingRate = 58.4;
+          this.activeCircuits = 2;
+        } else if (mode === 'dusk') {
+          this.luxLevel = 4200;
+          this.lightingSavingRate = 42.6;
+          this.activeCircuits = 10;
+        } else if (mode === 'night') {
+          this.luxLevel = 120;
+          this.lightingSavingRate = 18.2;
+          this.activeCircuits = 12;
+        } else if (mode === 'saving') {
+          this.luxLevel = 80;
+          this.lightingSavingRate = 72.8;
+          this.activeCircuits = 4;
+        }
+        if (window.updateLightingInThree) {
+          window.updateLightingInThree(mode);
+        }
+      },
+
+      runScenario(scKey) {
+        this.currentScenario = scKey;
+        if (scKey === 'morning') {
+          // 早高峰
+          this.surfaceOccupied = 420;
+          this.undergroundOccupied = 1860;
+          this.freeSpots = 170;
+          this.evChargingPower = 1850;
+          this.totalPersons = 9200;
+          this.totalPower = 5680.0;
+          this.elevators.forEach(e => { e.dir = '↑'; e.load = 82; });
+          this.setLayer('parking');
+          this.eventLog.unshift({ id: Date.now(), title: '早高峰通勤工况激活', desc: '道闸出入激增，电梯群控进入满载疏散模式', time: this.currentTimeStr, level: 'normal' });
+        } else if (scKey === 'normal') {
+          // 日间稳态
+          this.surfaceOccupied = 382;
+          this.undergroundOccupied = 1656;
+          this.freeSpots = 412;
+          this.evChargingPower = 1480;
+          this.totalPersons = 6420;
+          this.totalPower = 4820.5;
+          this.elevators.forEach((e, idx) => { e.dir = idx % 2 === 0 ? '↑' : '↓'; e.load = 45; });
+          this.setLayer('overview');
+        } else if (scKey === 'dusk') {
+          // 黄昏夜景亮化
+          this.setLightingMode('night');
+          this.setLayer('lighting');
+          this.eventLog.unshift({ id: Date.now(), title: '黄昏盛典夜景亮化开启', desc: '全园区立面泛光矩阵与道路景观灯 100% 开启', time: this.currentTimeStr, level: 'normal' });
+        } else if (scKey === 'abnormal') {
+          // 设备联锁异常
+          this.elevators[2].status = 'warn';
+          this.elevators[2].load = 96;
+          this.elevators[2].speed = 1.0;
+          this.chwReturnTemp = 13.8;
+          this.eventLog.unshift({ id: Date.now(), title: '【联锁演练】A-L03 制动器过温预警', desc: '触发自适应降速，电梯自动泊停至最近楼层', time: this.currentTimeStr, level: 'danger' });
+          this.setLayer('elevators');
+        }
+      },
+
+      focusBuilding(b) {
+        this.selectedBuilding = b;
+        if (window.focusBuildingCamera) {
+          window.focusBuildingCamera(b.id);
+        }
+      },
+
+      resetCamera(targetKey) {
+        if (targetKey === 'parking' || targetKey === 'parkP') {
+          this.setLayer('parking');
+          return;
+        }
+        if (this.currentLayer === 'parking') {
+          this.currentLayer = 'overview';
+          if (window.switchLayerMode) window.switchLayerMode('overview');
+        }
+        if (window.focusBuildingCamera) {
+          window.focusBuildingCamera(targetKey);
+        }
+      },
+
+      initCharts() {
+        // 停车环形图
+        safeInit(document.getElementById('parkingDonutChart'), (el) => {
+          const chart = echarts.init(el);
+          const option = {
+            series: [{
+              type: 'pie',
+              radius: ['68%', '90%'],
+              avoidLabelOverlap: false,
+              label: { show: false },
+              data: [
+                { value: 2038, name: '已占用', itemStyle: { color: '#0284c7' } },
+                { value: 412, name: '空余', itemStyle: { color: '#10b981' } }
+              ]
+            }]
+          };
+          chart.setOption(option);
+        });
+
+        // 暖通温差折线图
+        safeInit(document.getElementById('hvacTrendChart'), (el) => {
+          const chart = echarts.init(el);
+          const times = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00'];
+          const option = {
+            grid: { left: 32, right: 12, top: 16, bottom: 20 },
+            xAxis: {
+              type: 'category',
+              data: times,
+              axisLine: { lineStyle: { color: 'rgba(56,189,248,0.2)' } },
+              axisLabel: { color: '#64748b', fontSize: 9 }
+            },
+            yAxis: {
+              type: 'value',
+              splitLine: { lineStyle: { color: 'rgba(56,189,248,0.08)' } },
+              axisLabel: { color: '#64748b', fontSize: 9 }
+            },
+            series: [
+              {
+                name: '供水',
+                type: 'line',
+                smooth: true,
+                data: [7.2, 7.1, 7.0, 7.0, 7.1, 7.0],
+                lineStyle: { color: '#38bdf8', width: 2 },
+                showSymbol: false
+              },
+              {
+                name: '回水',
+                type: 'line',
+                smooth: true,
+                data: [11.8, 12.0, 12.5, 12.2, 12.4, 12.2],
+                lineStyle: { color: '#f43f5e', width: 2 },
+                showSymbol: false
+              }
+            ]
+          };
+          chart.setOption(option);
+        });
+      }
+    }
+  });
+
+  // Three.js 三维宏观园区集成
+  app.mixin({
+    methods: {
+      initThreeScene() {
+        const self = this;
+        const container = document.getElementById('canvas-container');
+        if (!container) return;
+
+        const width = container.clientWidth || 1920;
+        const height = container.clientHeight || 960;
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x040916, 0.005);
+
+        const camera = new THREE.PerspectiveCamera(45, width / height, 1, 2000);
+        camera.position.set(110, 85, 140);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(window.devicePixelRatio || 1);
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2.05;
+        controls.minDistance = 30;
+        controls.maxDistance = 350;
+        controls.target.set(0, 10, 0);
+
+        // 灯光系统
+        const ambientLight = new THREE.AmbientLight(0x38bdf8, 0.85);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(80, 120, 80);
+        scene.add(dirLight);
+
+        const blueSpot = new THREE.PointLight(0x0ea5e9, 2.0, 220);
+        blueSpot.position.set(0, 50, 0);
+        scene.add(blueSpot);
+
+        // 宏观地面园区总群组 (切换至停车位管理时自动隐藏，展现高保真地下车库切面)
+        const campusSurfaceGroup = new THREE.Group();
+        scene.add(campusSurfaceGroup);
+
+        // 园区地表底座 (120x120m 园区)
+        const groundGeo = new THREE.PlaneGeometry(240, 240);
+        const groundMat = new THREE.MeshStandardMaterial({
+          color: 0x071124,
+          roughness: 0.8,
+          metalness: 0.2
+        });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.1;
+        campusSurfaceGroup.add(ground);
+
+        // 网格线
+        const gridHelper = new THREE.GridHelper(240, 48, 0x1e3a66, 0x0f2344);
+        gridHelper.position.y = 0.01;
+        campusSurfaceGroup.add(gridHelper);
+
+        // 环形园区主道路网与绿化带
+        const roadGroup = new THREE.Group();
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0x0b172a, roughness: 0.9 });
+        const ringRoadGeo = new THREE.RingGeometry(55, 75, 48);
+        const ringRoad = new THREE.Mesh(ringRoadGeo, roadMat);
+        ringRoad.rotation.x = -Math.PI / 2;
+        ringRoad.position.y = 0.05;
+        roadGroup.add(ringRoad);
+
+        // 十字主干道
+        const crossRoad1 = new THREE.Mesh(new THREE.PlaneGeometry(16, 220), roadMat);
+        crossRoad1.rotation.x = -Math.PI / 2;
+        crossRoad1.position.y = 0.06;
+        roadGroup.add(crossRoad1);
+
+        const crossRoad2 = new THREE.Mesh(new THREE.PlaneGeometry(220, 16), roadMat);
+        crossRoad2.rotation.x = -Math.PI / 2;
+        crossRoad2.position.y = 0.06;
+        roadGroup.add(crossRoad2);
+
+        campusSurfaceGroup.add(roadGroup);
+
+        // 景观水系
+        const waterGeo = new THREE.PlaneGeometry(36, 36);
+        const waterMat = new THREE.MeshStandardMaterial({
+          color: 0x0284c7,
+          roughness: 0.1,
+          metalness: 0.8,
+          transparent: true,
+          opacity: 0.85
+        });
+        const water = new THREE.Mesh(waterGeo, waterMat);
+        water.rotation.x = -Math.PI / 2;
+        water.position.set(38, 0.08, -38);
+        campusSurfaceGroup.add(water);
+
+        // 建筑模型群集合
+        const buildingsGroup = new THREE.Group();
+
+        // 建筑材质定义
+        const facadeGlassMat = new THREE.MeshStandardMaterial({
+          color: 0x1e3a8a,
+          roughness: 0.2,
+          metalness: 0.85,
+          transparent: true,
+          opacity: 0.88
+        });
+
+        const windowGlowMat = new THREE.MeshStandardMaterial({
+          color: 0x38bdf8,
+          emissive: 0x0284c7,
+          emissiveIntensity: 0.45,
+          roughness: 0.3
+        });
+
+        const factoryMat = new THREE.MeshStandardMaterial({
+          color: 0x1e293b,
+          roughness: 0.6,
+          metalness: 0.5
+        });
+
+        const edgeLineMat = new THREE.LineBasicMaterial({
+          color: 0x38bdf8,
+          transparent: true,
+          opacity: 0.65
+        });
+
+        // 辅助添加发光线框
+        function addEdges(mesh) {
+          const edges = new THREE.EdgesGeometry(mesh.geometry);
+          const line = new THREE.LineSegments(edges, edgeLineMat);
+          mesh.add(line);
+        }
+
+        // 1. A座 科研双子主楼 (Innovation Tower, 高度 52, 24层)
+        const towerAGroup = new THREE.Group();
+        towerAGroup.name = 'towerA';
+
+        const tower1 = new THREE.Mesh(new THREE.BoxGeometry(16, 52, 16), facadeGlassMat);
+        tower1.position.set(-6, 26, 0);
+        addEdges(tower1);
+        towerAGroup.add(tower1);
+
+        const tower2 = new THREE.Mesh(new THREE.BoxGeometry(16, 44, 16), facadeGlassMat);
+        tower2.position.set(10, 22, 0);
+        addEdges(tower2);
+        towerAGroup.add(tower2);
+
+        // 空中连廊
+        const skyBridge = new THREE.Mesh(new THREE.BoxGeometry(18, 5, 8), windowGlowMat);
+        skyBridge.position.set(2, 34, 0);
+        addEdges(skyBridge);
+        towerAGroup.add(skyBridge);
+
+        // 电梯轿厢动画模拟 (垂直井道与发光轿厢)
+        const elevatorCabin1 = new THREE.Mesh(
+          new THREE.BoxGeometry(3, 4, 3),
+          new THREE.MeshBasicMaterial({ color: 0x10b981 })
+        );
+        elevatorCabin1.position.set(-6, 15, 6);
+        towerAGroup.add(elevatorCabin1);
+
+        const elevatorCabin2 = new THREE.Mesh(
+          new THREE.BoxGeometry(3, 4, 3),
+          new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+        );
+        elevatorCabin2.position.set(10, 25, 6);
+        towerAGroup.add(elevatorCabin2);
+
+        buildingsGroup.add(towerAGroup);
+
+        // 2. B座 智能制造工场 (Smart Lab & Factory, 4层大跨度)
+        const factoryBGroup = new THREE.Group();
+        factoryBGroup.name = 'smartB';
+        factoryBGroup.position.set(-48, 0, -16);
+
+        const bBody = new THREE.Mesh(new THREE.BoxGeometry(36, 16, 26), factoryMat);
+        bBody.position.y = 8;
+        addEdges(bBody);
+        factoryBGroup.add(bBody);
+
+        // 工业采光天窗矩阵
+        for (let i = -12; i <= 12; i += 8) {
+          const skylight = new THREE.Mesh(new THREE.BoxGeometry(6, 2.5, 20), windowGlowMat);
+          skylight.position.set(i, 17, 0);
+          factoryBGroup.add(skylight);
+        }
+        buildingsGroup.add(factoryBGroup);
+
+        // 3. C座 行政与学术展示中心 (Corporate HQ & Expo, 流线型穹顶)
+        const expoCGroup = new THREE.Group();
+        expoCGroup.name = 'expoC';
+        expoCGroup.position.set(45, 0, 22);
+
+        const cBody = new THREE.Mesh(new THREE.BoxGeometry(30, 18, 22), facadeGlassMat);
+        cBody.position.y = 9;
+        addEdges(cBody);
+        expoCGroup.add(cBody);
+
+        // 穹顶玻璃展馆
+        const domeGeo = new THREE.SphereGeometry(9, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+        const domeMesh = new THREE.Mesh(domeGeo, windowGlowMat);
+        domeMesh.position.set(0, 18, 0);
+        addEdges(domeMesh);
+        expoCGroup.add(domeMesh);
+        buildingsGroup.add(expoCGroup);
+
+        // 4. D座 综合能源动力中心 (Central Energy Station, 2层动力枢纽)
+        const energyDGroup = new THREE.Group();
+        energyDGroup.name = 'energyD';
+        energyDGroup.position.set(-42, 0, 42);
+
+        const dBody = new THREE.Mesh(new THREE.BoxGeometry(26, 12, 22), factoryMat);
+        dBody.position.y = 6;
+        addEdges(dBody);
+        energyDGroup.add(dBody);
+
+        // 4台旋转冷却塔
+        const coolTowers = [];
+        for (let cx = -6; cx <= 6; cx += 12) {
+          for (let cz = -5; cz <= 5; cz += 10) {
+            const towerCylinder = new THREE.Mesh(
+              new THREE.CylinderGeometry(3, 3.5, 4, 16),
+              new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.6 })
+            );
+            towerCylinder.position.set(cx, 14, cz);
+            energyDGroup.add(towerCylinder);
+
+            // 冷却塔风扇叶片
+            const fan = new THREE.Mesh(
+              new THREE.BoxGeometry(5, 0.4, 0.8),
+              new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+            );
+            fan.position.set(cx, 16.2, cz);
+            energyDGroup.add(fan);
+            coolTowers.push(fan);
+          }
+        }
+        buildingsGroup.add(energyDGroup);
+
+        // 5. P区 地面停车广场与地库出入口 (Mobility & Parking)
+        const parkPGroup = new THREE.Group();
+        parkPGroup.name = 'parkP';
+        parkPGroup.position.set(18, 0, -42);
+
+        const parkPlaza = new THREE.Mesh(
+          new THREE.BoxGeometry(32, 1, 38),
+          new THREE.MeshStandardMaterial({ color: 0x0f2038, roughness: 0.7 })
+        );
+        parkPlaza.position.y = 0.5;
+        addEdges(parkPlaza);
+        parkPGroup.add(parkPlaza);
+
+        // 充电桩发光立柱 (12根)
+        for (let px = -10; px <= 10; px += 5) {
+          for (let pz = -12; pz <= 12; pz += 12) {
+            const charger = new THREE.Mesh(
+              new THREE.BoxGeometry(0.8, 2.2, 0.8),
+              new THREE.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 0.6 })
+            );
+            charger.position.set(px, 2, pz);
+            parkPGroup.add(charger);
+          }
+        }
+        buildingsGroup.add(parkPGroup);
+
+        campusSurfaceGroup.add(buildingsGroup);
+
+        // 地下暖通输配大管网 (红蓝流动粒子光线)
+        const pipePointsBlue = [
+          new THREE.Vector3(-42, -1.5, 42), // D座
+          new THREE.Vector3(-10, -1.5, 42),
+          new THREE.Vector3(0, -1.5, 10),   // A座
+          new THREE.Vector3(38, -1.5, 20)   // C座
+        ];
+        const bluePipeCurve = new THREE.CatmullRomCurve3(pipePointsBlue);
+        const bluePipeGeo = new THREE.TubeGeometry(bluePipeCurve, 40, 0.8, 8, false);
+        const bluePipeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true, transparent: true, opacity: 0.6 });
+        const bluePipeMesh = new THREE.Mesh(bluePipeGeo, bluePipeMat);
+        campusSurfaceGroup.add(bluePipeMesh);
+
+        // 车流动态粒子 (在园区环路上巡航)
+        const carCount = 28;
+        const carGeo = new THREE.BufferGeometry();
+        const carPositions = new Float32Array(carCount * 3);
+        const carAngles = [];
+
+        for (let i = 0; i < carCount; i++) {
+          carAngles.push(Math.random() * Math.PI * 2);
+          carPositions[i * 3] = Math.cos(carAngles[i]) * 65;
+          carPositions[i * 3 + 1] = 0.8;
+          carPositions[i * 3 + 2] = Math.sin(carAngles[i]) * 65;
+        }
+        carGeo.setAttribute('position', new THREE.BufferAttribute(carPositions, 3));
+        const carMat = new THREE.PointsMaterial({
+          color: 0xf59e0b,
+          size: 3.5,
+          transparent: true,
+          opacity: 0.95
+        });
+        const carPoints = new THREE.Points(carGeo, carMat);
+        campusSurfaceGroup.add(carPoints);
+
+        // 园区路灯柱 (带有暖黄/青蓝点光源)
+        const streetLights = [];
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+          const lx = Math.cos(a) * 54;
+          const lz = Math.sin(a) * 54;
+          const pole = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.2, 0.2, 4.5),
+            new THREE.MeshBasicMaterial({ color: 0x64748b })
+          );
+          pole.position.set(lx, 2.25, lz);
+          campusSurfaceGroup.add(pole);
+
+          const lamp = new THREE.Mesh(
+            new THREE.SphereGeometry(0.5, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xf59e0b })
+          );
+          lamp.position.set(lx, 4.5, lz);
+          campusSurfaceGroup.add(lamp);
+          streetLights.push(lamp);
+        }
+
+        // =========================================================================
+        // 地下 B1 智慧停车场高保真数字孪生空间 (undergroundGarageGroup)
+        // 包含：真实环氧车位、多部件3D汽车、超声波车位指示器(红/绿/蓝LED)、
+        //       进出口红绿交通信号指示灯+道闸、黄黑防撞立柱+减速带+限速5km/h+消防警示
+        // =========================================================================
+        const undergroundGarageGroup = new THREE.Group();
+        undergroundGarageGroup.visible = false;
+        scene.add(undergroundGarageGroup);
+
+        // 动态 Canvas 贴图生成工具
+        function makeCanvasTex(w, h, drawFn) {
+          const cvs = document.createElement('canvas');
+          cvs.width = w;
+          cvs.height = h;
+          const ctx = cvs.getContext('2d');
+          drawFn(ctx, w, h);
+          const tex = new THREE.CanvasTexture(cvs);
+          tex.anisotropy = 4;
+          return tex;
+        }
+
+        // 1. 地库环氧树脂耐磨地坪底板与标线
+        const garageFloorTex = makeCanvasTex(1024, 768, (ctx, w, h) => {
+          // 深灰耐磨金刚砂主通道基底
+          ctx.fillStyle = '#141e2e';
+          ctx.fillRect(0, 0, w, h);
+
+          // 四周环氧走道浅边线
+          ctx.strokeStyle = 'rgba(56,189,248,0.25)';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(16, 16, w - 32, h - 32);
+
+          // 中央主行车道双黄虚线与地面安全标语
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 5;
+          ctx.setLineDash([28, 18]);
+          ctx.beginPath();
+          ctx.moveTo(120, h / 2);
+          ctx.lineTo(w - 90, h / 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 车道白色导向箭头与 "限速 5km/h" 地面喷涂文字
+          ctx.fillStyle = 'rgba(248,250,252,0.75)';
+          ctx.font = 'bold 24px "Microsoft YaHei", sans-serif';
+          ctx.fillText('➔ 入口引导 ENTRY', 180, h / 2 - 28);
+          ctx.fillText('⬅ 出口方向 EXIT', 180, h / 2 + 46);
+          ctx.fillStyle = '#fbbf24';
+          ctx.fillText('⚠️ 限速 5 km/h · 注意行人', 540, h / 2 - 28);
+          ctx.fillText('⚡ 超充专区直行 ➔', 540, h / 2 + 46);
+
+          // 中央通往电梯厅的黄色人行斑马线
+          ctx.fillStyle = '#f59e0b';
+          for (let zy = 140; zy < h - 140; zy += 26) {
+            ctx.fillRect(w / 2 - 26, zy, 52, 14);
+          }
+        });
+        const garageBaseMesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(92, 64),
+          new THREE.MeshStandardMaterial({ map: garageFloorTex, roughness: 0.35, metalness: 0.3 })
+        );
+        garageBaseMesh.rotation.x = -Math.PI / 2;
+        garageBaseMesh.position.y = 0.02;
+        undergroundGarageGroup.add(garageBaseMesh);
+
+        // 地库低矮四周挡墙与安全逃生灯带
+        const perimeterMat = new THREE.MeshStandardMaterial({ color: 0x0f1a2c, roughness: 0.6 });
+        const backWall = new THREE.Mesh(new THREE.BoxGeometry(92, 5.2, 0.6), perimeterMat);
+        backWall.position.set(0, 2.6, -32);
+        undergroundGarageGroup.add(backWall);
+        const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 5.2, 64), perimeterMat);
+        rightWall.position.set(46, 2.6, 0);
+        undergroundGarageGroup.add(rightWall);
+
+        // 2. 高精度多部件 3D 汽车构建函数 (流线车身+座舱+深色挡风玻璃+四轮+LED前后车灯+车牌)
+        const wheelGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.32, 16);
+        wheelGeo.rotateZ(Math.PI / 2);
+        const wheelMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.8 });
+        const rimGeo = new THREE.CylinderGeometry(0.24, 0.24, 0.34, 12);
+        rimGeo.rotateZ(Math.PI / 2);
+        const rimMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.9, roughness: 0.2 });
+        const glassCabinMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.1, metalness: 0.9 });
+        const headLightMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe });
+        const tailLightMat = new THREE.MeshBasicMaterial({ color: 0xf43f5e });
+
+        function createRealisticCar(bodyHex, isEvCar, isSuv) {
+          const carGroup = new THREE.Group();
+          const paintMat = new THREE.MeshStandardMaterial({ color: bodyHex, roughness: 0.22, metalness: 0.75 });
+
+          // 下车体底盘与流线保险杠
+          const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.72, 4.5), paintMat);
+          chassis.position.y = 0.62;
+          carGroup.add(chassis);
+
+          // 上部流线座舱与车窗
+          const cabinLen = isSuv ? 2.9 : 2.3;
+          const cabinH = isSuv ? 0.68 : 0.56;
+          const cabinZ = isSuv ? -0.2 : -0.15;
+          const cabinGlass = new THREE.Mesh(new THREE.BoxGeometry(1.82, cabinH, cabinLen), glassCabinMat);
+          cabinGlass.position.set(0, 1.22, cabinZ);
+          carGroup.add(cabinGlass);
+
+          // 车顶金属盖
+          const roofTop = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.08, cabinLen - 0.3), paintMat);
+          roofTop.position.set(0, 1.22 + cabinH / 2 + 0.02, cabinZ);
+          carGroup.add(roofTop);
+
+          // 前大灯双矩阵 + 进气格栅
+          const hlLeft = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.08), headLightMat);
+          hlLeft.position.set(-0.68, 0.72, 2.26);
+          const hlRight = hlLeft.clone();
+          hlRight.position.x = 0.68;
+          carGroup.add(hlLeft, hlRight);
+
+          // 贯穿式红色 LED 尾灯
+          const tailBar = new THREE.Mesh(new THREE.BoxGeometry(1.88, 0.14, 0.08), tailLightMat);
+          tailBar.position.set(0, 0.76, -2.26);
+          carGroup.add(tailBar);
+
+          // 前后仿真车牌 (新能源绿牌 / 标准蓝牌)
+          const plateMat = new THREE.MeshBasicMaterial({ color: isEvCar ? 0x10b981 : 0x2563eb });
+          const plateF = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.16, 0.06), plateMat);
+          plateF.position.set(0, 0.45, 2.26);
+          const plateB = plateF.clone();
+          plateB.position.z = -2.26;
+          carGroup.add(plateF, plateB);
+
+          // 四个立体轮胎与轮毂
+          const wheelOffsets = [[-1.02, 0.42, 1.38], [1.02, 0.42, 1.38], [-1.02, 0.42, -1.38], [1.02, 0.42, -1.38]];
+          wheelOffsets.forEach(pos => {
+            const wMesh = new THREE.Mesh(wheelGeo, wheelMat);
+            wMesh.position.set(pos[0], pos[1], pos[2]);
+            const rMesh = new THREE.Mesh(rimGeo, rimMat);
+            rMesh.position.set(pos[0], pos[1], pos[2]);
+            carGroup.add(wMesh, rMesh);
+          });
+
+          return carGroup;
+        }
+
+        // 3. 构建 24 个高保真标准车位与新能源车位 + 顶棚超声波车位指示器 (红/绿/蓝LED)
+        const slotObjects3D = [];
+        const carPalette = [0x1e3a8a, 0xe2e8f0, 0x334155, 0x0284c7, 0x0f766e, 0x991b1b, 0x475569, 0x1d4ed8];
+        const stopperMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.5 });
+
+        function createParkingBay(code, x, z, rotY, isOccupied, isEv, uiIndex) {
+          const bayGroup = new THREE.Group();
+          bayGroup.position.set(x, 0, z);
+          bayGroup.rotation.y = rotY;
+
+          // 环氧车位地面贴图 (翠绿标准车位 / 深蓝超充车位 + 白色边框 + 车位编号)
+          const bayTex = makeCanvasTex(256, 512, (ctx, w, h) => {
+            ctx.fillStyle = isEv ? '#0c2d48' : '#0b3b2e';
+            ctx.fillRect(0, 0, w, h);
+            ctx.strokeStyle = '#f8fafc';
+            ctx.lineWidth = 10;
+            ctx.strokeRect(8, 8, w - 16, h - 16);
+            // 车位编号文字
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 44px "Bahnschrift", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(code, w / 2, h - 42);
+            if (isEv) {
+              ctx.fillStyle = '#38bdf8';
+              ctx.font = 'bold 28px "Microsoft YaHei", sans-serif';
+              ctx.fillText('⚡ 超充专用', w / 2, 110);
+            }
+          });
+          const padMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(3.2, 5.8),
+            new THREE.MeshStandardMaterial({ map: bayTex, roughness: 0.3, metalness: 0.2 })
+          );
+          padMesh.rotation.x = -Math.PI / 2;
+          padMesh.position.y = 0.04;
+          bayGroup.add(padMesh);
+
+          // 后轮黄黑橡胶挡车器 (车轮定位器)
+          const stopper1 = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.12, 0.18), stopperMat);
+          stopper1.position.set(-0.7, 0.08, -2.1);
+          const stopper2 = stopper1.clone();
+          stopper2.position.x = 0.7;
+          bayGroup.add(stopper1, stopper2);
+
+          // 新能源直流超充桩 (位于车位后方岛台)
+          if (isEv) {
+            const pile = new THREE.Mesh(
+              new THREE.BoxGeometry(0.65, 1.85, 0.45),
+              new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.2 })
+            );
+            pile.position.set(0, 0.95, -2.75);
+            const pileScreen = new THREE.Mesh(
+              new THREE.PlaneGeometry(0.42, 0.55),
+              new THREE.MeshBasicMaterial({ color: 0x38bdf8 })
+            );
+            pileScreen.position.set(0, 1.2, -2.51);
+            const pileLed = new THREE.Mesh(
+              new THREE.BoxGeometry(0.67, 0.1, 0.47),
+              new THREE.MeshBasicMaterial({ color: 0x10b981 })
+            );
+            pileLed.position.set(0, 1.82, -2.75);
+            bayGroup.add(pile, pileScreen, pileLed);
+          }
+
+          // 停放的高精度 3D 汽车
+          const carColor = carPalette[(uiIndex >= 0 ? uiIndex : 1) % carPalette.length];
+          const carModel = createRealisticCar(carColor, isEv, uiIndex % 3 === 0);
+          carModel.visible = isOccupied;
+          bayGroup.add(carModel);
+
+          // 顶棚吊装：高精度超声波车位探测器 + 360°红/绿/蓝高亮 LED 车位状态指示灯
+          const sensorUnit = new THREE.Group();
+          sensorUnit.position.set(0, 4.3, 2.2); // 悬吊于车位前上方桥架下
+          // 吊杆与超声波探测器盒
+          const rod = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.04, 0.04, 0.45, 8),
+            new THREE.MeshBasicMaterial({ color: 0x94a3b8 })
+          );
+          rod.position.y = 0.25;
+          const detectorBox = new THREE.Mesh(
+            new THREE.BoxGeometry(0.55, 0.16, 0.36),
+            new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7 })
+          );
+          // 双超声波探头圆筒
+          const sonarGeo = new THREE.CylinderGeometry(0.07, 0.07, 0.08, 12);
+          const sonarMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+          const s1 = new THREE.Mesh(sonarGeo, sonarMat);
+          s1.position.set(-0.14, -0.09, 0);
+          const s2 = s1.clone();
+          s2.position.x = 0.14;
+
+          // 高亮 LED 车位状态指示灯球体与光环 (红色=有车占用，绿色=空位可停，蓝色=超充中)
+          const initLedColor = isOccupied ? (isEv ? 0x38bdf8 : 0xf43f5e) : 0x10b981;
+          const ledMat = new THREE.MeshBasicMaterial({ color: initLedColor });
+          const ledBulb = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), ledMat);
+          ledBulb.position.set(0, -0.18, 0.12);
+
+          const haloRing = new THREE.Mesh(
+            new THREE.RingGeometry(0.26, 0.42, 20),
+            new THREE.MeshBasicMaterial({ color: initLedColor, side: THREE.DoubleSide, transparent: true, opacity: 0.75 })
+          );
+          haloRing.rotation.x = Math.PI / 2;
+          haloRing.position.set(0, -0.18, 0.12);
+
+          sensorUnit.add(rod, detectorBox, s1, s2, ledBulb, haloRing);
+          bayGroup.add(sensorUnit);
+
+          undergroundGarageGroup.add(bayGroup);
+
+          if (uiIndex >= 0) {
+            slotObjects3D[uiIndex] = {
+              carModel,
+              ledMat,
+              haloMat: haloRing.material,
+              isEv
+            };
+          }
+        }
+
+        // 布置 A区(北列西段6位)、B区(北列东段6位)、C区超充(南列东段6位) + 南列西段6个固定展示车位
+        for (let i = 0; i < 6; i++) {
+          const sA = self.parkingSlotsUI[i];
+          createParkingBay(sA.code, -15.5 + i * 3.4, -16.5, 0, sA.occupied, false, i);
+
+          const sB = self.parkingSlotsUI[6 + i];
+          createParkingBay(sB.code, 4.5 + i * 3.4, -16.5, 0, sB.occupied, false, 6 + i);
+
+          const sEV = self.parkingSlotsUI[12 + i];
+          createParkingBay(sEV.code, 4.5 + i * 3.4, 16.5, Math.PI, sEV.occupied, true, 12 + i);
+
+          // D区南列西段补充车位 (丰富整体视觉饱和度)
+          createParkingBay('D0' + (i + 1), -15.5 + i * 3.4, 16.5, Math.PI, i % 2 === 0, false, -1);
+        }
+
+        // 车位上方铝合金弱电桥架 (Cable Tray) 与 LED 感应灯带
+        const trayMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.85, roughness: 0.3 });
+        const stripLightMat = new THREE.MeshBasicMaterial({ color: 0xe0f2fe });
+        [-14.3, 14.3, -6.0, 6.0].forEach(tz => {
+          const tray = new THREE.Mesh(new THREE.BoxGeometry(46, 0.14, 0.45), trayMat);
+          tray.position.set(3, 4.6, tz);
+          const lightTube = new THREE.Mesh(new THREE.BoxGeometry(44, 0.06, 0.18), stripLightMat);
+          lightTube.position.set(3, 4.5, tz);
+          undergroundGarageGroup.add(tray, lightTube);
+        });
+
+        // 4. 进出口通道、龙门架红绿信号指示灯、2.2m限高杆、车牌识别一体机与电动道闸
+        const gateStationGroup = new THREE.Group();
+        gateStationGroup.position.set(-22, 0, 0);
+        undergroundGarageGroup.add(gateStationGroup);
+
+        // 龙门架立柱与黄黑防撞限高横梁 (限高 2.2m)
+        const gantryPillarMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7 });
+        [-12, 0, 12].forEach(gz => {
+          const gp = new THREE.Mesh(new THREE.BoxGeometry(0.7, 4.6, 0.7), gantryPillarMat);
+          gp.position.set(0, 2.3, gz);
+          gateStationGroup.add(gp);
+        });
+
+        // 黄黑斜纹防撞限高横梁贴图
+        const hazardBeamTex = makeCanvasTex(512, 64, (ctx, w, h) => {
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillRect(0, 0, w, h);
+          ctx.fillStyle = '#0f172a';
+          for (let sx = -64; sx < w + 64; sx += 48) {
+            ctx.beginPath();
+            ctx.moveTo(sx, 0);
+            ctx.lineTo(sx + 24, 0);
+            ctx.lineTo(sx - 12, h);
+            ctx.lineTo(sx - 36, h);
+            ctx.closePath();
+            ctx.fill();
+          }
+          // 中央限高字样
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(w / 2 - 110, 6, 220, h - 12);
+          ctx.fillStyle = '#fbbf24';
+          ctx.font = 'bold 28px "Microsoft YaHei", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('⚠️ 限高 2.2m 严禁超限', w / 2, 42);
+        });
+        const gantryBeam = new THREE.Mesh(
+          new THREE.BoxGeometry(0.65, 0.65, 25),
+          new THREE.MeshBasicMaterial({ map: hazardBeamTex })
+        );
+        gantryBeam.position.set(0, 4.3, 0);
+        gateStationGroup.add(gantryBeam);
+
+        // 入口/出口 LED 龙门信号灯牌 + 3D 红绿交通信号指示灯圆盘
+        const entryBoardTex = makeCanvasTex(512, 128, (ctx, w, h) => {
+          ctx.fillStyle = '#061326';
+          ctx.fillRect(0, 0, w, h);
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 6;
+          ctx.strokeRect(4, 4, w - 8, h - 8);
+          ctx.fillStyle = '#10b981';
+          ctx.font = 'bold 38px "Microsoft YaHei", sans-serif';
+          ctx.fillText('🟢 入口 ENTRY · 绿灯通行', 28, 56);
+          ctx.fillStyle = '#38bdf8';
+          ctx.font = 'bold 26px "Microsoft YaHei", sans-serif';
+          ctx.fillText('车牌识别自动抬杆 · 请减速慢行', 28, 102);
+        });
+        const entrySignMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.3, 1.3, 5.8),
+          new THREE.MeshBasicMaterial({ map: entryBoardTex })
+        );
+        entrySignMesh.position.set(0.25, 3.3, -6);
+        gateStationGroup.add(entrySignMesh);
+
+        // 入口信号指示灯组 (红灯+绿灯 3D 高亮灯头 + 正面立柱式三色交通信号灯箱)
+        const entryRedLampMat = new THREE.MeshBasicMaterial({ color: 0x3f1d28 });
+        const entryGreenLampMat = new THREE.MeshBasicMaterial({ color: 0x10b981 });
+        const entryRedLamp = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.18, 20), entryRedLampMat);
+        entryRedLamp.rotation.z = Math.PI / 2;
+        entryRedLamp.position.set(0.45, 3.3, -9.5);
+        const entryGreenLamp = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.18, 20), entryGreenLampMat);
+        entryGreenLamp.rotation.z = Math.PI / 2;
+        entryGreenLamp.position.set(0.45, 3.3, -2.5);
+        gateStationGroup.add(entryRedLamp, entryGreenLamp);
+
+        // 面向主视角的双联高亮度进出口信号指示灯箱 (红/黄/绿三色灯碗)
+        const trafficBox = new THREE.Group();
+        trafficBox.position.set(1.2, 3.4, -0.5);
+        trafficBox.rotation.y = Math.PI / 6;
+        const housing = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.8, 0.45), new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8 }));
+        const lampR = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), entryRedLampMat);
+        lampR.position.set(0, 0.5, 0.22);
+        const lampY = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), new THREE.MeshBasicMaterial({ color: 0xf59e0b }));
+        lampY.position.set(0, 0, 0.22);
+        const lampG = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 16), entryGreenLampMat);
+        lampG.position.set(0, -0.5, 0.22);
+        trafficBox.add(housing, lampR, lampY, lampG);
+        gateStationGroup.add(trafficBox);
+
+        // 出口 LED 龙门信号灯牌 + 绿灯通行指示器
+        const exitBoardTex = makeCanvasTex(512, 128, (ctx, w, h) => {
+          ctx.fillStyle = '#061326';
+          ctx.fillRect(0, 0, w, h);
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 6;
+          ctx.strokeRect(4, 4, w - 8, h - 8);
+          ctx.fillStyle = '#10b981';
+          ctx.font = 'bold 38px "Microsoft YaHei", sans-serif';
+          ctx.fillText('🟢 出口 EXIT · 绿灯畅通', 28, 56);
+          ctx.fillStyle = '#fbbf24';
+          ctx.font = 'bold 26px "Microsoft YaHei", sans-serif';
+          ctx.fillText('⚠️ 坡道注意车距 · 严禁逆行', 28, 102);
+        });
+        const exitSignMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.3, 1.3, 5.8),
+          new THREE.MeshBasicMaterial({ map: exitBoardTex })
+        );
+        exitSignMesh.position.set(0.25, 3.3, 6);
+        const exitGreenLamp = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.28, 0.28, 0.16, 20),
+          new THREE.MeshBasicMaterial({ color: 0x10b981 })
+        );
+        exitGreenLamp.rotation.z = Math.PI / 2;
+        exitGreenLamp.position.set(0.45, 3.3, 9.5);
+        gateStationGroup.add(exitSignMesh, exitGreenLamp);
+
+        // 中央防撞安全岛 + 车牌识别一体机(LPR) + 红白电动升降道闸杆
+        const islandMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(6.5, 0.28, 1.8),
+          new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 })
+        );
+        islandMesh.position.set(1.5, 0.14, 0);
+        gateStationGroup.add(islandMesh);
+
+        // 车牌识别高清摄像机立柱
+        const lprPost = new THREE.Mesh(
+          new THREE.BoxGeometry(0.42, 1.8, 0.42),
+          new THREE.MeshStandardMaterial({ color: 0x0284c7, metalness: 0.7 })
+        );
+        lprPost.position.set(0.5, 1.0, -0.55);
+        const lprCam = new THREE.Mesh(
+          new THREE.BoxGeometry(0.5, 0.28, 0.32),
+          new THREE.MeshBasicMaterial({ color: 0xe2e8f0 })
+        );
+        lprCam.position.set(0.5, 1.98, -0.55);
+        gateStationGroup.add(lprPost, lprCam);
+
+        // 入口电动道闸机箱与可旋转起落杆枢轴
+        const barrierBox = new THREE.Mesh(
+          new THREE.BoxGeometry(0.55, 1.35, 0.55),
+          new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.3 })
+        );
+        barrierBox.position.set(2.2, 0.8, -1.2);
+        gateStationGroup.add(barrierBox);
+
+        const entryBarrierPivot = new THREE.Group();
+        entryBarrierPivot.position.set(2.2, 1.25, -1.2);
+        entryBarrierPivot.rotation.x = -Math.PI / 2.3; // 默认绿灯抬杆放行状态
+
+        const armStripTex = makeCanvasTex(256, 32, (ctx, w, h) => {
+          for (let ax = 0; ax < w; ax += 32) {
+            ctx.fillStyle = (ax / 32) % 2 === 0 ? '#f43f5e' : '#ffffff';
+            ctx.fillRect(ax, 0, 32, h);
+          }
+        });
+        const barrierArmMesh = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12, 0.16, 4.6),
+          new THREE.MeshBasicMaterial({ map: armStripTex })
+        );
+        barrierArmMesh.position.set(0, 0, -2.3);
+        entryBarrierPivot.add(barrierArmMesh);
+        gateStationGroup.add(entryBarrierPivot);
+
+        // 出口电动道闸机箱与常开道闸杆
+        const exitBarrierBox = barrierBox.clone();
+        exitBarrierBox.position.set(2.2, 0.8, 1.2);
+        const exitBarrierArm = barrierArmMesh.clone();
+        exitBarrierArm.position.set(2.2, 3.1, 2.2);
+        exitBarrierArm.rotation.x = Math.PI / 2.4;
+        gateStationGroup.add(exitBarrierBox, exitBarrierArm);
+
+        // 出入口 3D 立体黄黑橡胶减速带 (Speed Bumps)
+        const bumpTex = makeCanvasTex(256, 32, (ctx, w, h) => {
+          for (let bx = 0; bx < w; bx += 32) {
+            ctx.fillStyle = (bx / 32) % 2 === 0 ? '#f59e0b' : '#0f172a';
+            ctx.fillRect(bx, 0, 32, h);
+          }
+        });
+        const bumpMat = new THREE.MeshBasicMaterial({ map: bumpTex });
+        [-5.5, 5.5].forEach(bz => {
+          const speedBump = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 4.8, 12), bumpMat);
+          speedBump.position.set(-18.5, 0.07, bz);
+          undergroundGarageGroup.add(speedBump);
+        });
+
+        // 5. 地下车库真实安全警示全要素还原：
+        // (a) 6 根承重方柱（下半部包裹黄黑反光防撞护角 + 柱面限速5km/h/禁止烟火警示牌 + 红色消火栓箱）
+        const pillarWarnTex = makeCanvasTex(256, 512, (ctx, w, h) => {
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(0, 0, w, h);
+          // 顶部区域编号
+          ctx.fillStyle = '#0284c7';
+          ctx.fillRect(0, 30, w, 70);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 34px "Microsoft YaHei", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('B1 智慧车库', w / 2, 76);
+
+          // 中部安全警示标语
+          ctx.fillStyle = '#fbbf24';
+          ctx.font = 'bold 26px "Microsoft YaHei", sans-serif';
+          ctx.fillText('⚠️ 限速 5 km/h', w / 2, 160);
+          ctx.fillStyle = '#f43f5e';
+          ctx.fillText('🚭 严禁烟火 · 消防通道', w / 2, 205);
+
+          // 下半部高反光黄黑斜纹防撞护角
+          for (let py = 260; py < h; py += 36) {
+            ctx.fillStyle = ((py - 260) / 36) % 2 === 0 ? '#f59e0b' : '#090d16';
+            ctx.fillRect(0, py, w, 36);
+          }
+        });
+        const pillarWarnMat = new THREE.MeshStandardMaterial({ map: pillarWarnTex, roughness: 0.4 });
+        const hydrantMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.3, metalness: 0.5 });
+
+        const pillarCoords = [
+          [-17.5, -9.2], [1.8, -9.2], [22.5, -9.2],
+          [-17.5, 9.2], [1.8, 9.2], [22.5, 9.2]
+        ];
+        pillarCoords.forEach((pt, pIdx) => {
+          const colMesh = new THREE.Mesh(new THREE.BoxGeometry(1.3, 4.8, 1.3), pillarWarnMat);
+          colMesh.position.set(pt[0], 2.4, pt[1]);
+          undergroundGarageGroup.add(colMesh);
+
+          // 承重柱旁挂载红色消防栓箱与灭火器箱
+          if (pIdx % 2 === 0) {
+            const fireBox = new THREE.Mesh(new THREE.BoxGeometry(0.38, 1.3, 0.9), hydrantMat);
+            fireBox.position.set(pt[0] + 0.85, 1.4, pt[1]);
+            undergroundGarageGroup.add(fireBox);
+          }
+        });
+
+        // (b) 独立式『限速 5 km/h』红圈白底交通标志立牌 (设于主入口车道旁)
+        const speedSignTex = makeCanvasTex(256, 256, (ctx, w, h) => {
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(w / 2, h / 2, 110, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.lineWidth = 24;
+          ctx.strokeStyle = '#e11d48';
+          ctx.stroke();
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'bold 96px "Bahnschrift", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('5', w / 2, h / 2 + 24);
+          ctx.font = 'bold 28px sans-serif';
+          ctx.fillText('km/h', w / 2, h / 2 + 64);
+        });
+        const speedPost = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 2.8, 10), gantryPillarMat);
+        speedPost.position.set(-16.0, 1.4, -9.2);
+        const speedDisc = new THREE.Mesh(
+          new THREE.CircleGeometry(0.85, 24),
+          new THREE.MeshBasicMaterial({ map: speedSignTex, side: THREE.DoubleSide })
+        );
+        speedDisc.rotation.y = Math.PI / 4;
+        speedDisc.position.set(-16.0, 2.8, -9.2);
+        undergroundGarageGroup.add(speedPost, speedDisc);
+
+        // (c) 主车道上方悬吊式 LED 余位引导屏 (正面朝向主视角) + 绿色『安全出口 EXIT』疏散指示灯箱
+        const guideScreenTex = makeCanvasTex(512, 96, (ctx, w, h) => {
+          ctx.fillStyle = '#040d1a';
+          ctx.fillRect(0, 0, w, h);
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 4;
+          ctx.strokeRect(3, 3, w - 6, h - 6);
+          ctx.fillStyle = '#10b981';
+          ctx.font = 'bold 28px "Microsoft YaHei", sans-serif';
+          ctx.fillText('⬅ A/B区 空位 04 🟢   |   ⚡ 超充区 空位 02 🔵 ➡', 16, 58);
+        });
+        const overheadGuide = new THREE.Mesh(
+          new THREE.BoxGeometry(7.2, 0.95, 0.25),
+          new THREE.MeshBasicMaterial({ map: guideScreenTex })
+        );
+        overheadGuide.position.set(-7.5, 4.2, -5.5);
+        undergroundGarageGroup.add(overheadGuide);
+
+        const exitLightTex = makeCanvasTex(256, 96, (ctx, w, h) => {
+          ctx.fillStyle = '#065f46';
+          ctx.fillRect(0, 0, w, h);
+          ctx.strokeStyle = '#34d399';
+          ctx.lineWidth = 5;
+          ctx.strokeRect(4, 4, w - 8, h - 8);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 32px "Microsoft YaHei", sans-serif';
+          ctx.fillText('🏃 安全出口 EXIT ➔', 14, 58);
+        });
+        const safeExitSign = new THREE.Mesh(
+          new THREE.BoxGeometry(2.8, 0.75, 0.2),
+          new THREE.MeshBasicMaterial({ map: exitLightTex })
+        );
+        safeExitSign.position.set(1.8, 4.1, -8.3);
+        undergroundGarageGroup.add(safeExitSign);
+
+        // (d) 车道上正在动态巡航寻位与出库的 2 辆 3D 汽车
+        const cruisingCarIn = createRealisticCar(0x38bdf8, true, false);
+        cruisingCarIn.rotation.y = Math.PI / 2;
+        cruisingCarIn.position.set(-14, 0, -3.8);
+        const cruisingCarOut = createRealisticCar(0xf8fafc, false, true);
+        cruisingCarOut.rotation.y = -Math.PI / 2;
+        cruisingCarOut.position.set(12, 0, 3.8);
+        undergroundGarageGroup.add(cruisingCarIn, cruisingCarOut);
+
+        // 屏幕投影计算 (更新浮空 3D 标签位置)
+        const projV = new THREE.Vector3();
+        function updateScreenLabels() {
+          const sw = 1920;
+          const sh = 1080;
+
+          if (undergroundGarageGroup.visible) {
+            self.garagePins.forEach(gp => {
+              projV.set(gp.worldPos[0], gp.worldPos[1], gp.worldPos[2]);
+              projV.project(camera);
+              const rawX = (projV.x * 0.5 + 0.5) * sw;
+              const rawY = (-projV.y * 0.5 + 0.5) * sh;
+              const x = Math.max(545, Math.min(1380, rawX));
+              const y = Math.max(120, Math.min(910, rawY));
+              gp.screenPos = {
+                left: x.toFixed(1) + 'px',
+                top: y.toFixed(1) + 'px'
+              };
+            });
+            return;
+          }
+
+          self.buildings.forEach(b => {
+            projV.set(b.worldPos[0], b.worldPos[1], b.worldPos[2]);
+            projV.project(camera);
+            const x = (projV.x * 0.5 + 0.5) * sw;
+            const y = (-projV.y * 0.5 + 0.5) * sh;
+            b.screenPos = {
+              left: x.toFixed(1) + 'px',
+              top: y.toFixed(1) + 'px'
+            };
+          });
+        }
+
+        // 动画渲染主循环
+        let eleY1 = 10, eleDir1 = 1;
+        let eleY2 = 30, eleDir2 = -1;
+        let targetGateRot = -Math.PI / 2.3;
+
+        function animate() {
+          requestAnimationFrame(animate);
+
+          if (undergroundGarageGroup.visible) {
+            // 道闸杆平滑起落
+            entryBarrierPivot.rotation.x += (targetGateRot - entryBarrierPivot.rotation.x) * 0.12;
+            // 地库巡航寻位车辆动画
+            if (self.entryGateOpen || cruisingCarIn.position.x > -28) {
+              cruisingCarIn.position.x += 0.08;
+              if (cruisingCarIn.position.x > 28) cruisingCarIn.position.x = -34;
+            }
+            cruisingCarOut.position.x -= 0.07;
+            if (cruisingCarOut.position.x < -34) cruisingCarOut.position.x = 28;
+          } else {
+            // 冷却塔风扇旋转
+            coolTowers.forEach(fan => {
+              fan.rotation.y += 0.08;
+            });
+
+            // 电梯轿厢平滑升降动画
+            eleY1 += 0.12 * eleDir1;
+            if (eleY1 > 42) eleDir1 = -1;
+            if (eleY1 < 4) eleDir1 = 1;
+            elevatorCabin1.position.y = eleY1;
+
+            eleY2 += 0.09 * eleDir2;
+            if (eleY2 > 38) eleDir2 = -1;
+            if (eleY2 < 4) eleDir2 = 1;
+            elevatorCabin2.position.y = eleY2;
+
+            // 道路车流粒子平移
+            const pArr = carPoints.geometry.attributes.position.array;
+            for (let i = 0; i < carCount; i++) {
+              carAngles[i] += 0.004;
+              pArr[i * 3] = Math.cos(carAngles[i]) * 65;
+              pArr[i * 3 + 2] = Math.sin(carAngles[i]) * 65;
+            }
+            carPoints.geometry.attributes.position.needsUpdate = true;
+          }
+
+          updateScreenLabels();
+          controls.update();
+          renderer.render(scene, camera);
+        }
+        animate();
+
+        // 地下智慧车库专享子视角对焦接口
+        window.focusGarageCamera = function(zoneKey) {
+          campusSurfaceGroup.visible = false;
+          undergroundGarageGroup.visible = true;
+          if (zoneKey === 'gate') {
+            // 对焦北口进出口信号指示灯、2.2m限高杆与道闸
+            controls.target.set(-19, 2.2, 0);
+            camera.position.set(-2, 11, 16);
+          } else if (zoneKey === 'bays') {
+            // 对焦 A/B区真实车位与顶棚红/绿超声波指示器
+            controls.target.set(0, 2.0, -13);
+            camera.position.set(0, 10.5, 6);
+          } else if (zoneKey === 'ev') {
+            // 对焦 C区新能源超充车位与充电桩
+            controls.target.set(11, 1.8, 14);
+            camera.position.set(11, 10.5, -4);
+          } else if (zoneKey === 'safety') {
+            // 对焦防撞护角立柱、限速5km/h标志牌、斑马线与消火栓
+            controls.target.set(-6, 2.0, -4);
+            camera.position.set(8, 10.0, 12);
+          } else {
+            // 地库全景高保真鸟瞰视角 (完整呈现左侧进出口信号灯/道闸 + 中部车位指示器 + 安全警示)
+            controls.target.set(-1, 1.2, 0);
+            camera.position.set(-2, 34, 42);
+          }
+        };
+
+        // 入口道闸与红绿信号指示灯联动控制
+        window.setEntryGateState = function(isOpen) {
+          targetGateRot = isOpen ? -Math.PI / 2.3 : 0;
+          entryGreenLampMat.color.setHex(isOpen ? 0x10b981 : 0x13382c);
+          entryRedLampMat.color.setHex(isOpen ? 0x3f1d28 : 0xf43f5e);
+        };
+
+        // 单个车位 3D 汽车与顶棚超声波红/绿/蓝指示灯实时切换
+        window.updateThreeParkingSlot = function(idx, isOccupied) {
+          const item = slotObjects3D[idx];
+          if (!item) return;
+          item.carModel.visible = isOccupied;
+          const nextHex = isOccupied ? (item.isEv ? 0x38bdf8 : 0xf43f5e) : 0x10b981;
+          item.ledMat.color.setHex(nextHex);
+          item.haloMat.color.setHex(nextHex);
+        };
+
+        // 外部镜头控制与图层切换接口
+        window.switchLayerMode = function(layerKey) {
+          if (layerKey === 'parking') {
+            window.focusGarageCamera('all');
+          } else {
+            campusSurfaceGroup.visible = true;
+            undergroundGarageGroup.visible = false;
+            if (layerKey === 'elevators') {
+              controls.target.set(0, 26, 0);
+              camera.position.set(38, 38, 48);
+            } else if (layerKey === 'lighting') {
+              controls.target.set(0, 10, 0);
+              camera.position.set(100, 80, 120);
+            } else if (layerKey === 'hvac') {
+              controls.target.set(-20, 5, 20);
+              camera.position.set(-60, 50, 90);
+            } else {
+              // overview
+              controls.target.set(0, 10, 0);
+              camera.position.set(110, 85, 140);
+            }
+          }
+        };
+
+        window.focusBuildingCamera = function(targetKey) {
+          if (targetKey === 'towerA') {
+            controls.target.set(0, 26, 0);
+            camera.position.set(40, 36, 45);
+          } else if (targetKey === 'smartB') {
+            controls.target.set(-48, 8, -16);
+            camera.position.set(-15, 28, 20);
+          } else if (targetKey === 'expoC') {
+            controls.target.set(45, 9, 22);
+            camera.position.set(75, 25, 55);
+          } else if (targetKey === 'energyD') {
+            controls.target.set(-42, 6, 42);
+            camera.position.set(-70, 28, 75);
+          } else if (targetKey === 'parkP' || targetKey === 'parking') {
+            controls.target.set(18, 2, -42);
+            camera.position.set(45, 26, -15);
+          } else {
+            controls.target.set(0, 10, 0);
+            camera.position.set(110, 85, 140);
+          }
+        };
+
+        window.updateLightingInThree = function(mode) {
+          if (mode === 'daylight') {
+            ambientLight.color.setHex(0xa5f3fc);
+            ambientLight.intensity = 1.4;
+            dirLight.intensity = 1.8;
+            streetLights.forEach(l => l.material.color.setHex(0x475569));
+          } else if (mode === 'dusk') {
+            ambientLight.color.setHex(0x38bdf8);
+            ambientLight.intensity = 0.85;
+            dirLight.intensity = 0.9;
+            streetLights.forEach(l => l.material.color.setHex(0xf59e0b));
+          } else if (mode === 'night') {
+            ambientLight.color.setHex(0x1e3a8a);
+            ambientLight.intensity = 0.45;
+            dirLight.intensity = 0.35;
+            blueSpot.intensity = 3.5;
+            streetLights.forEach(l => l.material.color.setHex(0x38bdf8));
+          } else if (mode === 'saving') {
+            ambientLight.color.setHex(0x0f172a);
+            ambientLight.intensity = 0.3;
+            dirLight.intensity = 0.2;
+            streetLights.forEach((l, idx) => {
+              l.material.color.setHex(idx % 2 === 0 ? 0xf59e0b : 0x1e293b);
+            });
+          }
+        };
+      }
+    }
+  });
+
+  app.mount('#screen');
+})();
+</script>
+</body>
+</html>
