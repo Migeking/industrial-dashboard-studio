@@ -234,8 +234,17 @@ def workflow(page,base,fixture,results):
 
 
 def blank_workflow(page,base,results):
+    # Compatibility only: import a genuine V2 assembly document. New blank
+    # authoring is independently exercised by studio_screen_check.py.
+    code="import {nativeBlank,nativeTemplate} from './packages/runtime/studio/native-model.mjs';const doc=nativeBlank();const sample=nativeTemplate('05');doc.source=sample.source;doc.mappings=sample.mappings;process.stdout.write(JSON.stringify(doc));"
+    legacy=OUT/'legacy-v2-blank.json'
+    legacy.write_bytes(subprocess.check_output(['node','--input-type=module','-e',code],cwd=ROOT))
+    def open_legacy_blank():
+        page.locator('.project-menu summary').click()
+        page.locator('.project-menu input[type=file]').set_input_files(legacy)
+        expect(page.locator('.native-host')).to_be_visible()
     page.goto(base)
-    choose_scene(page,'blank')
+    open_legacy_blank()
     page.get_by_role('button',name='四池与回流组合',exact=True).click()
     for label,value in [('位置 X',40),('位置 Y',300),('宽度',1100)]:
         field=page.get_by_label(label,exact=True);field.fill(str(value));field.press('Tab')
@@ -273,7 +282,7 @@ def blank_workflow(page,base,results):
     page.screenshot(path=str(OUT/'blank-components-published.png'))
     results.append({'check':'blank-assembly-copy-rename-rebind-publish-reopen','status':'passed'})
     page.goto(base)
-    choose_scene(page,'blank')
+    open_legacy_blank()
     page.get_by_role('button',name='泵组管网组合',exact=True).click()
     publish(page)
     expect(page.get_by_role('status')).to_contain_text('已发布')

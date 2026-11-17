@@ -17,7 +17,7 @@ async function read() {
     return JSON.parse(await fs.readFile(store, "utf8"));
   } catch (e) {
     if (e.code !== "ENOENT") throw e;
-    return { draft: template(), versions: [], active: null };
+    return { draft: template("blank"), versions: [], active: null };
   }
 }
 let writes = Promise.resolve();
@@ -52,10 +52,15 @@ const files = new Map(
     "/model.mjs": "studio/model.mjs",
     "/widgets.mjs": "studio/widgets.mjs",
     "/tag-manager.mjs": "studio/tag-manager.mjs",
+    "/packages/components/studio/screen-symbols.mjs": "../../packages/components/studio/screen-symbols.mjs",
+    "/packages/runtime/studio/screen-model.mjs": "../../packages/runtime/studio/screen-model.mjs",
+    "/packages/runtime/studio/screen-renderer.mjs": "../../packages/runtime/studio/screen-renderer.mjs",
+    "/screen-inspector.mjs": "studio/screen-inspector.mjs",
     "/packages/components/studio/native-data.mjs": "../../packages/components/studio/native-data.mjs",
     "/packages/runtime/studio/native-model.mjs": "../../packages/runtime/studio/native-model.mjs",
     "/packages/runtime/studio/native-renderer.mjs": "../../packages/runtime/studio/native-renderer.mjs",
     "/lib/interact.js": "studio/lib/interact.min.js",
+    "/lib/x6.js": "../../vendor/x6.min.js",
     "/lib/vue.js": "../../vendor/vue.global.prod.js",
     "/lib/three.js": "../../vendor/three.min.js",
     "/lib/echarts.js": "../../vendor/echarts.min.js",
@@ -90,6 +95,7 @@ async function offline(doc, payload, receivedAt) {
     "/lib/three.js",
     "/lib/campus.js",
     "/lib/interact.js",
+    "/lib/x6.js",
   ]) {
     const script = await content(p);
     html = html.replace(
@@ -98,7 +104,7 @@ async function offline(doc, payload, receivedAt) {
     );
   }
   const modules = await Promise.all(
-    ["/packages/components/studio/native-data.mjs", "/packages/runtime/studio/native-model.mjs", "/model.mjs", "/widgets.mjs", "/tag-manager.mjs", "/packages/runtime/studio/native-renderer.mjs", "/app.mjs"].map(content),
+    ["/packages/components/studio/native-data.mjs", "/packages/runtime/studio/native-model.mjs", "/packages/components/studio/screen-symbols.mjs", "/packages/runtime/studio/screen-model.mjs", "/model.mjs", "/widgets.mjs", "/tag-manager.mjs", "/packages/runtime/studio/native-renderer.mjs", "/packages/runtime/studio/screen-renderer.mjs", "/screen-inspector.mjs", "/app.mjs"].map(content),
   );
   const code = modules
     .map((m) =>

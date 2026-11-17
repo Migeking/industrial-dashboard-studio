@@ -17,6 +17,10 @@ import { Widget } from "./widgets.mjs";
 import { TagManager } from "./tag-manager.mjs";
 import { isNative, nativeTypes, nativeSlots, nativeSlotMappings, nativeBranch, cloneNativeBranch, nativeRecipes, nativeRecipe, nativeBlank } from "../../../packages/runtime/studio/native-model.mjs";
 import { NativeStage } from "../../../packages/runtime/studio/native-renderer.mjs";
+import { isScreen, blankScreen, copyScreenSelection } from "../../../packages/runtime/studio/screen-model.mjs";
+import { screenSymbols } from "../../../packages/components/studio/screen-symbols.mjs";
+import { ScreenStage } from "../../../packages/runtime/studio/screen-renderer.mjs";
+import { ScreenInspector } from "./screen-inspector.mjs";
 const offline = window.OFFLINE;
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const kindNames = {
@@ -54,7 +58,7 @@ async function boot() {
     offline || (await api(viewer ? "/api/published" : "/api/draft"));
   document.getElementById("app").classList.toggle("editor-shell", !viewer);
   Vue.createApp({
-    components: { Widget, TagManager, NativeStage },
+    components: { Widget, TagManager, NativeStage, ScreenStage, ScreenInspector },
     setup() {
       const {
         ref,
@@ -74,15 +78,56 @@ async function boot() {
         message = ref("");
       const editing = computed(() => !viewer && !preview.value),
         sel = computed(() =>
-          doc.value.nodes.find((n) => n.id === ids.value.at(-1)),
+          [...doc.value.nodes,...(isScreen(doc.value)?doc.value.pipes:[])].find((n) => n.id === ids.value.at(-1)),
         );
+      const screen = computed(()=>isScreen(doc.value)), screenTool = ref("select"), libraryTab = ref("symbols");
+      const screenItems = computed(()=>[...doc.value.nodes,...(screen.value?doc.value.pipes:[])]);
+      function newScreen() {
+        snapshot();
+        const next=blankScreen(); next.source=clone(doc.value.source); next.mappings=clone(doc.value.mappings);
+        doc.value=next; ids.value=[]; screenTool.value="select"; libraryTab.value="symbols"; goStep("canvas");
+        message.value="已新建空白画面，连接与点表已保留；可撤销恢复原画面。";
+      }
+      function screenSelect(selected) { ids.value=selected; }
+      function screenGeometry(change) {
+        const n=doc.value.nodes.find((n)=>n.id===change.id); if(!n||n.locked)return;
+        for(const key of ["x","y","w","h","angle"])if(change[key]!==undefined&&Number.isFinite(change[key]))n[key]=change[key];
+        n.w=Math.max(16,Math.min(1920,n.w)); n.h=Math.max(16,Math.min(1080,n.h));
+        n.x=Math.max(0,Math.min(1920-n.w,n.x)); n.y=Math.max(0,Math.min(1080-n.h,n.y));
+      }
+      function screenInsert(n) {doc.value.nodes.push(n);ids.value=[n.id];inspectorTab.value="appearance";}
+      function screenPipe(pipe) {const index=doc.value.pipes.findIndex((p)=>p.id===pipe.id);if(index<0)doc.value.pipes.push(pipe);else doc.value.pipes[index]=pipe;}
+      function setScreenTool(tool) {screenTool.value=tool;if(tool==="pipe")ids.value=[];}
+      function screenDrag(event,symbol) {event.dataTransfer.setData("application/x-scada-symbol",symbol);}
+      function screenCommand({key,step=1,file}) {
+        if(key==="undo")return undo(); if(key==="redo")return redo();
+        if(key==="image")return loadImage(file);
+        const selected=doc.value.nodes.filter((n)=>ids.value.includes(n.id)), movable=selected.filter((n)=>!n.locked);
+        if(!selected.length&&!ids.value.some((id)=>doc.value.pipes.some((p)=>p.id===id)))return;
+        snapshot();
+        if(key==="copy"){ids.value=copyScreenSelection(doc.value,ids.value,()=>crypto.randomUUID());message.value="已复制；新设备的测点绑定为空，请独立选择。";return;}
+        if(key==="delete"){const removed=new Set(movable.map((n)=>n.id));doc.value.nodes=doc.value.nodes.filter((n)=>!removed.has(n.id));doc.value.pipes=doc.value.pipes.filter((p)=>!ids.value.includes(p.id)&&!removed.has(p.source.nodeId)&&!removed.has(p.target.nodeId));ids.value=[];return;}
+        if(key==="lock"){const value=!selected.every((n)=>n.locked);selected.forEach((n)=>n.locked=value);return;}
+        if(key==="rotate"){movable.forEach((n)=>n.angle=(n.angle+90)%360);return;}
+        if(key==="group"){const id=crypto.randomUUID();movable.forEach((n)=>n.group=id);return;}
+        if(key==="ungroup"){movable.forEach((n)=>delete n.group);return;}
+        if(key==="front"||key==="back"){const values=doc.value.nodes.map((n)=>n.z);movable.forEach((n)=>n.z=key==="front"?Math.max(...values)+1:Math.min(...values)-1);return;}
+        if(!movable.length)return;
+        const box={x:Math.min(...movable.map((n)=>n.x)),y:Math.min(...movable.map((n)=>n.y)),right:Math.max(...movable.map((n)=>n.x+n.w)),bottom:Math.max(...movable.map((n)=>n.y+n.h))};
+        for(const n of movable){
+          if(key==="left")n.x=box.x;if(key==="right")n.x=box.right-n.w;if(key==="center")n.x=(box.x+box.right-n.w)/2;
+          if(key==="top")n.y=box.y;if(key==="bottom")n.y=box.bottom-n.h;if(key==="middle")n.y=(box.y+box.bottom-n.h)/2;
+        }
+        if(["horizontal","vertical"].includes(key)&&movable.length>=3){const axis=key==="horizontal"?"x":"y",dimension=axis==="x"?"w":"h",sorted=[...movable].sort((a,b)=>a[axis]-b[axis]);const gap=(sorted.at(-1)[axis]+sorted.at(-1)[dimension]-sorted[0][axis]-sorted.reduce((sum,n)=>sum+n[dimension],0))/(sorted.length-1);let position=sorted[0][axis];for(const n of sorted){n[axis]=position;position+=n[dimension]+gap;}}
+        if(key.startsWith("Arrow")){const dx=key==="ArrowLeft"?-Math.min(step,box.x):key==="ArrowRight"?Math.min(step,1920-box.right):0,dy=key==="ArrowUp"?-Math.min(step,box.y):key==="ArrowDown"?Math.min(step,1080-box.bottom):0;movable.forEach((n)=>{n.x+=dx;n.y+=dy;});}
+      }
       const nativeRects = ref({}), collapsed = ref([]), layerSearch = ref("");
       const native = computed(() => isNative(doc.value));
       const legacyTypes = Object.fromEntries(Object.entries(types).filter(([k]) => !nativeTypes.has(k)));
       const descendants = (n) => native.value ? nativeBranch(doc.value, n.id) : [n];
       const hasBindings = (n) => n && descendants(n).some((child) => mapped(child));
       const nativeBindingTargets = computed(() => sel.value ? descendants(sel.value).filter((n) => mapped(n)) : []);
-      const nodeCount = computed(() => native.value ? doc.value.nodes.filter((n) => n.editable).length : doc.value.nodes.length);
+      const nodeCount = computed(() => native.value ? doc.value.nodes.filter((n) => n.editable).length : screenItems.value.length);
       function parentChain(n) {
         const result = []; let p = n.parentId;
         while (p) { const parent = doc.value.nodes.find((x) => x.id === p); if (!parent) break; result.push(parent); p = parent.parentId; }
@@ -215,7 +260,7 @@ async function boot() {
         }
       });
       const bindingNodes = computed(() =>
-        doc.value.nodes.filter((n) => mapped(n)),
+        screenItems.value.filter((n) => mapped(n)),
       );
       const bindingIssues = computed(() =>
         bindingNodes.value.filter((n) => bindingProblem(n, doc.value.mappings)),
@@ -239,13 +284,13 @@ async function boot() {
       );
       function selectBinding(n) {
         preview.value = false;
-        activeStep.value = "bind";
+        activeStep.value = screen.value ? "canvas" : "bind";
         inspectorTab.value = "binding";
         ids.value = [n.id];
       }
       function goStep(key) {
         dialog.value = "";
-        activeStep.value = key;
+        activeStep.value = screen.value && key==="bind" ? "canvas" : key;
         preview.value = key === "preview";
         if (key === "bind") {
           inspectorTab.value = "binding";
@@ -418,6 +463,7 @@ async function boot() {
         input.value = n[key];
       }
       function action(key) {
+        if(screen.value)return screenCommand({key});
         const ns = selectedNodes(),
           movable = ns.filter((n) => !n.locked);
         if (!ns.length) return;
@@ -536,6 +582,7 @@ async function boot() {
                 mappings: clone(doc.value.mappings),
               };
         ids.value = [];
+        screenTool.value="select"; libraryTab.value="symbols";
         chosenTemplate.value = key;
         collapsed.value = doc.value.nodes.filter((n) => native.value && n.editable && expandable(n)).map((n) => n.id);
         goStep("canvas");
@@ -749,7 +796,7 @@ async function boot() {
           snapshot();
           Object.assign(doc.value, clone(config.value));
           dialog.value = "";
-          goStep("bind");
+          if(screen.value){preview.value=false;activeStep.value="canvas";inspectorTab.value="binding";}else goStep("bind");
           message.value = "数据配置已应用，已返回画布。请选择当前组件的测点";
         });
       }
@@ -957,6 +1004,11 @@ async function boot() {
           snapshot();
           doc.value = value;
           ids.value = [];
+          preview.value = false;
+          activeStep.value = "canvas";
+          inspectorTab.value = "appearance";
+          screenTool.value = "select";
+          document.querySelector(".project-menu")?.removeAttribute("open");
         });
       function loadImage(file) {
         if (!file || !sel.value) return;
@@ -969,6 +1021,7 @@ async function boot() {
         reader.readAsDataURL(file);
       }
       return {
+        screen,screenSymbols,screenTool,libraryTab,screenItems,newScreen,screenSelect,screenGeometry,screenInsert,screenPipe,setScreenTool,screenDrag,screenCommand,
         native, legacyTypes, nativeRecipes, addNative, nativeSelect, nativeMove, nativePatch, nativeRects, rectValue, rectDraft, rectInputValue, startRect, chosenDataMode, nodeCount, pipePoints, updatePipe,
         navigatorNodes, depth, expandable, collapsed, toggleTree, layerSearch, hasBindings, nativeBindingTargets, nativeSlots, nativeSlotMappings, nativeBinding, nativeReadback,
         activeStep,

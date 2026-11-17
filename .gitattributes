@@ -1,0 +1,2 @@
+# Keep the vendored engine byte-identical to its pinned npm release.
+vendor/x6.min.js -text -diff

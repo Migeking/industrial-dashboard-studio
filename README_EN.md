@@ -2,9 +2,9 @@
 
 > Offline-first productization workspace for industrial dashboards · 30 ready-to-run templates + reusable runtime + SCADA designer + 6 deliverable Skills
 
-Run `node apps/scada-designer/server.mjs` to start the dashboard studio with layout editing, data mapping, read-only OPC UA / Modbus bridges, and versioned publishing. See the [studio guide](apps/scada-designer/README.md).
+Run `node apps/scada-designer/server.mjs` to start the screen designer. New projects open on an empty canvas with independent pumps, valves, tanks, instruments, trends, and port-based pipes. Bind read-only OPC UA / Modbus / REST data, then publish. See the [studio guide](apps/scada-designer/README.md).
 
-Scenes 01 and 05 now have V2 editable templates with their original process graphics, equipment and charts, a shared object renderer, named data slots, reusable assemblies and offline publishing. **Two templates** have migrated; the original gallery still contains 30 scenes. See the [01/05 acceptance record](docs/acceptance/editor-v2-01-05.md).
+The first integrated blank-canvas milestone now covers independent symbols, attached pipes, same-workspace binding, save/reopen, publishing, and offline export. A tank/three-pump/two-valve screen was authored from scratch through the production UI; see [acceptance evidence](docs/acceptance/screen-designer.md) and the [remaining roadmap](docs/plans/scada-screen-designer.md). General rule forms, a user symbol library, multiple screens, and a complete cockpit widget set remain planned. The original gallery still contains 30 scenes; legacy V1/V2 projects remain supported. Further template migration is paused.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -41,7 +41,8 @@ Scenes 01 and 05 now have V2 editable templates with their original process grap
 | Entry | Preview |
 |------|------|
 | **Showcase landscape entry (All 30 Scenarios)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
-| **SCADA scenario designer** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
+| **Blank-canvas screen designer** Start the service, then open `http://127.0.0.1:8099/` | ![screen-designer](docs/screenshots/studio-screen-designer.png) |
+| **Legacy static SCADA designer** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
 <details open>
 <summary><b>Expand: All 29 scenario categories & screenshots</b></summary>
@@ -522,7 +523,7 @@ open apps/scada-designer/index.html
 | --- | --- |
 | ![01 V2](docs/screenshots/01-studio-native.png) | ![05 V2](docs/screenshots/05-studio-native.png) |
 
-These screenshots show the V2 renderer. Select 01 or 05, explicitly keep the current connection or load demo data, then edit, bind and publish. A blank page can use KPI cards, dual-axis charts, equipment cards and process assemblies. Real connections remain read-only; control panels operate only on local demo data.
+These screenshots show the V2 renderer. Select 01 or 05, explicitly keep the current connection or load demo data, then edit, bind and publish. Its blank page uses existing scene fragments; independent drawing is planned in the replacement designer. Real connections remain read-only; control panels operate only on local demo data.
 
 <details>
 <summary><b>Showcase multi-resolution fit (expand)</b></summary>

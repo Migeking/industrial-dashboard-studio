@@ -1,4 +1,6 @@
 import { nativeTemplate, nativeTypes, nativeProblem, validateNative } from "../../../packages/runtime/studio/native-model.mjs";
+import { blankScreen, isScreen, isScreenItem, screenProblem, validateScreen } from "../../../packages/runtime/studio/screen-model.mjs";
+import { screenSlots } from "../../../packages/components/studio/screen-symbols.mjs";
 export const types = {
   element: "工艺对象",
   trend: "多序列趋势",
@@ -17,6 +19,7 @@ export const fans = ["NW", "SW", "NE", "SE"].map((corner, index) => ({
   index,
 }));
 export const mapped = (value) => {
+  if (isScreenItem(value)) return !!screenSlots(value).length;
   if (typeof value === "object" && nativeTypes.has(value.type)) return !!value.slots?.length;
   return ["kpi", "chart", "status", "flow", "campus", "table"].includes(typeof value === "object" ? value.type : value);
 };
@@ -53,6 +56,7 @@ export function compatibleMappings(type, mappings) {
   return mappings.filter((m) => kinds[type]?.includes(m.kind));
 }
 export function bindingProblem(n, mappings) {
+  if (isScreenItem(n)) return screenProblem(n, mappings);
   if (nativeTypes.has(n.type)) return nativeProblem(n, mappings);
   if (n.type === "campus") return campusProblem(n, mappings);
   if (!mapped(n.type) || (n.type === "table" && n.binding === "*")) return "";
@@ -144,6 +148,7 @@ export function node(type, id, binding = "") {
   };
 }
 export function template(key = "01") {
+  if (key === "blank") return blankScreen();
   return ["01", "05"].includes(key) ? nativeTemplate(key) : legacyTemplate(key);
 }
 export function legacyTemplate(key = "01") {
@@ -282,7 +287,7 @@ export function validate(doc, publishing) {
     throw Error(msg);
   };
   if (
-    ![1, 2].includes(doc?.schemaVersion) ||
+    (!isScreen(doc) && ![1, 2].includes(doc?.schemaVersion)) ||
     !Array.isArray(doc.nodes) ||
     !Array.isArray(doc.mappings) ||
     !doc.title?.trim()
@@ -330,6 +335,7 @@ export function validate(doc, publishing) {
     ids.add(m.id);
   }
   if (doc.schemaVersion === 2) return validateNative(doc, publishing);
+  if (isScreen(doc)) return validateScreen(doc, publishing);
   const nodes = new Set();
   for (const n of doc.nodes) {
     if (

@@ -2,9 +2,9 @@
 
 > 工业大屏产品化工作区 · 30 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 6 个可交付 Skill
 
-运行 `node apps/scada-designer/server.mjs` 启动配置工作台，支持模板拖拽、点位映射、OPC UA / Modbus 只读桥接和版本发布。详见 [配置工作台说明](apps/scada-designer/README.md)。
+运行 `node apps/scada-designer/server.mjs` 启动画面设计器。新项目默认空白，可独立摆放泵、阀、池体、仪表与趋势，连接设备端口，并绑定 OPC UA / Modbus / REST 等只读数据后发布。详见 [操作说明](apps/scada-designer/README.md)。
 
-01 生物处理与 05 回流泵站已升级为 V2 可编辑模板，保留原版工艺、设备及图表；支持对象树、命名测点插槽、跨模板组件复用与离线发布。当前已迁移 **2 套**，原作品总数仍为 30 套。见 [01/05 实测与操作路径](docs/acceptance/editor-v2-01-05.md)。
+当前已完成新设计器的首个贯通版本：空白作图、独立图元、端口连管、移动跟随、同区选点、保存重开、发布及离线导出；从零搭建一池三泵两阀并通过正式界面回归。见 [新画布验收](docs/acceptance/screen-designer.md) 与 [后续方案](docs/plans/scada-screen-designer.md)。通用规则、我的图元、多画面导航和完整驾驶舱组件仍待后续实现。原作品保持 30 套；01/05 的旧 V2 项目继续兼容，暂停按模板数量迁移。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -41,7 +41,8 @@
 | 入口 | 预览 |
 |------|------|
 | **Showcase 横屏互动入口 (30 套全量)** `apps/showcase/index.html` | ![showcase](docs/screenshots/showcase.png) |
-| **SCADA 场景设计器** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
+| **空白画面设计器** 启动服务后打开 `http://127.0.0.1:8099/` | ![screen-designer](docs/screenshots/studio-screen-designer.png) |
+| **旧版静态 SCADA 设计器** `apps/scada-designer/index.html` | ![scada-designer](docs/screenshots/scada-designer.png) |
 
 <details open>
 <summary><b>展开查看 30 套场景全量分类与截图</b></summary>
@@ -533,7 +534,7 @@ open apps/scada-designer/index.html
 | --- | --- |
 | ![01 V2](docs/screenshots/01-studio-native.png) | ![05 V2](docs/screenshots/05-studio-native.png) |
 
-原版展示入口继续保留；以上是 V2 渲染结果。启动工作台后选择 01 或 05，明确选择演示样本或保留当前连接，再完成“编辑画布 → 数据绑定 → 预览发布”。空白画布可插入指标卡、双轴趋势、设备卡及工艺组合件。
+原版展示入口继续保留；以上是 V2 渲染结果。当前原型可选择 01 或 05，明确选择演示样本或保留当前连接，再完成“编辑画布 → 数据绑定 → 预览发布”。其空白页仅可插入既有场景片段；真正从零绘图的能力按新方案建设。
 
 <details>
 <summary><b>Showcase 多分辨率适配（点击展开）</b></summary>
