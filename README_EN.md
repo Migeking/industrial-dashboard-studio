@@ -2,6 +2,8 @@
 
 > Offline-first productization workspace for industrial dashboards · 30 ready-to-run templates + reusable runtime + SCADA designer + 6 deliverable Skills
 
+Run `node apps/scada-designer/server.mjs` to start the dashboard studio with layout editing, data mapping, read-only OPC UA / Modbus bridges, and versioned publishing. See the [studio guide](apps/scada-designer/README.md).
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
 [![Offline Ready](https://img.shields.io/badge/offline-ready-brightgreen)](docs/offline-delivery.md)

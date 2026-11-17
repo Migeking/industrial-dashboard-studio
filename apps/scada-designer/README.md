@@ -1,0 +1,69 @@
+# 工业可视化配置工作台
+
+在仓库根目录运行 `node apps/scada-designer/server.mjs`（使用 Node 24 验证）。打开 [本地编辑器](http://127.0.0.1:8099/)，发布后可打开[展示端](http://127.0.0.1:8099/view)。旧版静态设计器保留原有入口和导出格式。新版编辑器、发布服务和展示端使用同一份 v1 页面配置。
+
+## 配置一个站点
+
+1. 选择 01 生物处理、05 回流泵站、30 园区能源中心或空白画布。切换模板可撤销。样板页面初始读本地 JSON，页眉标注来源。
+2. 在“数据连接”选择本地 JSON、CSV、REST 或 WebSocket。REST 从服务端发起只读 GET，WebSocket 在浏览器接收 JSON 消息。REST Bearer 凭据可在启动服务前设置 `STUDIO_API_ORIGIN` 和 `STUDIO_API_TOKEN`，令牌仅发往指定来源。WebSocket 首版接受可直接订阅的地址。
+3. 点击“读取样本”。选业务测点，填写字段路径或从样本候选中选择。数组行可用根路径、标识字段和匹配值选择，例：根路径 `points`、标识字段 `id`、匹配值 `LT01`、数值路径 `value`。相对于同一行填写源时间（ISO 8601 或 Unix 毫秒）及质量路径。缺少源时间配置时以接收时间判断新鲜度；固定样本明确标注来源。CSV 表格可绑定类型“行数据集”，路径填 `$`。
+4. 点击“应用数据配置”，选中组件并指定业务测点。状态、流程和风机动画绑定布尔运行反馈，告警、手自动等其他语义可以用指标卡或数据表展示。数值支持倍率、偏移和小数位；枚举换算使用 JSON 对象，如 `{"ON":true,"OFF":false}`。绑定无效或陈旧时显示质量，曲线留空。
+5. 点击组件库添加组件；拖标题移动，拖右下角缩放。Shift 多选后可以左对齐、顶对齐、成组、调整层次。园区模型支持能源中心四台风机、设备特写和全景。模型资产版本与对象编号在发布时检查。
+6. 预览，保存草稿，然后发布。展示端重新打开或刷新后读取当前版本。“版本”可切换最近五次发布记录；切换版本只改变展示端当前指针。编辑器支持导入、导出项目 JSON，保存到本地文件。离线演示导出一个 HTML，内含依赖、页面配置和当前样本，使用浏览器直接打开。动态曲线从打开页面起采样。
+
+一个页面配置一条共享采集连接，多组件订阅同一个样本。需要聚合多套系统时由上游网关提供快照。默认监听本机，项目状态保存在 `works/studio/project.json`，内含草稿和最近五个发布版本。设置 `STUDIO_PORT`、`STUDIO_DATA_DIR` 可启动另一个独立项目实例。单实例服务串行执行保存和发布，先写临时文件，再原子替换。备份或迁移时复制该 JSON 和对应版本的程序。现场配置和读数应保存在被 Git 忽略的 `works/`。
+
+## OPC UA 与 Modbus TCP
+
+桥接程序独立读取协议，对外提供只读 HTTP 快照。每个桥接实例服务一条协议连接，多个浏览器共享采样。桥接只实现协议读取。安装 `python -m pip install -r apps/scada-designer/bridge-requirements.txt`。下列字段为配置格式示例，接入时使用站点点表。
+
+```json
+{
+  "protocol": "opcua",
+  "endpoint": "opc.tcp://127.0.0.1:49320",
+  "interval": 3,
+  "points": [
+    {"id":"run","label":"运行反馈","kind":"boolean","nodeId":"ns=2;s=Device.Run"}
+  ]
+}
+```
+
+按需通过环境变量 `STUDIO_UA_USER`、`STUDIO_UA_PASSWORD` 设置账号。桥接保留源时间和质量。OPC UA 返回坏质量时，点值为空，其他测点继续独立更新。
+
+```json
+{
+  "protocol": "modbus",
+  "host": "127.0.0.1",
+  "port": 502,
+  "unitId": 1,
+  "interval": 3,
+  "points": [
+    {"id":"run","label":"运行反馈","kind":"boolean","function":2,"address":1},
+    {"id":"level","label":"液位原码","kind":"number","function":4,"address":2,"format":"uint16","unit":"原码","rawMin":4000,"rawMax":20000}
+  ]
+}
+```
+
+地址使用协议零基偏移。支持 FC01～FC04，寄存器类型可选 uint16、int16、uint32、int32、float32；多字寄存器按点表填写字节排列，如 `CDAB`。数字量沿用协议逻辑值。4000～20000 原码按站点工程量程换算，量程未知时按原码显示。可选原码边界以外的值保存在快照的 `raw`，业务值标记无效。Modbus 协议读取时间作为接收时间。协议读数反映网关提供的数据，通信成功本身不能判定物理设备状态。
+
+把站点配置放入 `works/field/`，在单独终端运行：
+
+```powershell
+python -X utf8 apps/scada-designer/bridge.py works/field/opcua.json --port 8101
+python -X utf8 apps/scada-designer/bridge.py works/field/modbus.json --port 8102
+```
+
+在编辑器选择 REST，填入 `http://127.0.0.1:8101/snapshot` 或 `http://127.0.0.1:8102/snapshot`，点击“读取样本 → 从桥接点表生成映射 → 应用数据配置”。生成映射将替换当前点位列表，按新的业务编号绑定组件。桥接在 45 秒无 HTTP 读取后释放协议连接，下次访问会唤醒采集；建立会话期间返回 503，持续展示页面会自动重试。上游返回某个点无效和整个连接中断分别显示。
+
+## 本地验收
+
+```powershell
+node tests/studio_model_check.mjs
+python -X utf8 tests/studio_check.py
+node skills/industrial-dashboard/scripts/validate-dashboard.js scenarios
+python -X utf8 tests/interaction_check.py
+```
+
+浏览器测试使用独立临时服务和目录，覆盖换源、拖拽、缩放、撤销、版本回退、数据异常、横屏和离线三维页面。场景回归引用原项目本地的私有测试场景，新工作树运行完整回归时需使用同一份本地测试资源。
+
+运行时沿用仓库 Vue 3、ECharts、Three.js，拖拽依赖固定为 interact.js 1.10.28，许可见 `studio/lib/INTERACT-LICENSE.txt`。首版选择原生 ES 模块和 Vue 响应式状态来复用离线资源，将初始计划中的 TypeScript、Vite、Pinia 留待组件规模增加后评估。服务和浏览器入口可直接运行。

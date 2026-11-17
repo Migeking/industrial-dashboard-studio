@@ -2,6 +2,8 @@
 
 > 工业大屏产品化工作区 · 30 套离线可运行样板 + 可复用运行时 + SCADA 设计器 + 6 个可交付 Skill
 
+运行 `node apps/scada-designer/server.mjs` 启动配置工作台，支持模板拖拽、点位映射、OPC UA / Modbus 只读桥接和版本发布。详见 [配置工作台说明](apps/scada-designer/README.md)。
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
 [![Offline Ready](https://img.shields.io/badge/offline-ready-brightgreen)](docs/offline-delivery.md)
