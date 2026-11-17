@@ -274,6 +274,12 @@ open apps/scada-designer/index.html
 - **Full Linkage System**: floor selector, controlled zones (Grid A~H), mechanical equipment, operating scripts, industrial drawers, and alarm banners 100% synchronized.
 - **File**: `scenarios/building-automation/22-智能楼宇自控与空间微气候数字孪生.html`
 
+- **Detailed assets and rendering (2026-11)**: CC0 leather seating and plant models, scanned wood/fabric/stone color, normal and roughness maps, HDR environment reflections, SSAO contact shadows and FXAA antialiasing. Interior close-ups include a ceiling and light panels; equipment and campus views add structural details. Fine/fast rendering, immersive views, close-ups and an independent thermal overlay preserve the DDC demo. The approximately 16 MB local asset bundle works offline over file:// and HTTP; sources and checksums are in `assets/models/building22/manifest.json`. This is a conceptual model, not surveyed as-built geometry or certified AAA visual quality.
+
+| Boardroom close-up | IDC rack details |
+|---|---|
+| ![22-office-detail](docs/screenshots/states/22-office-detail.png) | ![22-engine-detail](docs/screenshots/states/22-engine-detail.png) |
+
 <details open>
 <summary><b>View Scenario 22 multi-level spatial digital twin gallery</b></summary>
 
@@ -461,8 +467,11 @@ open apps/scada-designer/index.html
 ---
 
 ### 30 Smart Campus Multi-Building Operations Digital Twin
-- **Positioning**: Macro-scale digital operations platform for multi-building enterprise campuses and high-tech parks.
-- **Key Features**: Campus 3D digital sandbox, 4-dimensional synergistic operations (smart parking guidance, elevator group control, intelligent lighting, and central HVAC energy balance), with carbon footprint dual-control monitoring.
+- **Positioning**: An offline conceptual campus for demonstrating parking, elevator, lighting and HVAC operations, with explicit demo status.
+- **Architecture and surroundings (2026-11)**: Twin research towers with floor-by-floor curtain walls, mullions, shading fins, a skybridge, entrance canopy and rooftop equipment; a manufacturing block with rooflights and loading bays; an exhibition centre with a ribbed glass dome; an energy centre with four cooling cells, fans, louvers and pipework; solar parking canopies and a garage ramp. Separated roads and pedestrian space include planting beds, trees, a reflection pool, pergola, benches, lights, vehicles and people.
+- **Rendering**: Local HDR reflections and scanned asphalt, concrete and grass surface maps, soft shadows, SSAO contact shading and FXAA, with GPU instancing for repeated parts. Fine/fast rendering, immersive viewing and building close-ups are available.
+- **Demo interactions**: Eighteen representative bays synchronize vehicles and detector LEDs; the entry barrier updates its signal and display. Five garage cameras reveal ceiling services, ventilation, fire equipment and a lift lobby. Four representative A-building lift shafts synchronize cabin and floor positions, and A-L03 stops during the fault scenario. Four lighting presets change windows, outline lights and path lighting. An explicit supply/return overlay branches from D to A, B and C, with reverse flow markers.
+- **Scope**: Conceptual geometry and demonstration data, without a live site connection or physical device commands. Screenshots do not establish surveyed geometry, certified AAA quality or equipment acceptance. The approximately 10 MB self-contained bundle supports file:// and local HTTP; asset sources, licenses and SHA-256 values are in `assets/models/campus30/`.
 - **File**: `scenarios/building-automation/30-智慧园区多建筑集群运营管控数字孪生.html`
 
 <details open>
@@ -471,6 +480,22 @@ open apps/scada-designer/index.html
 | Campus Multi-Building Digital Twin Overview (1920×1080) |
 | :---: |
 | ![30-main](docs/screenshots/30-smart-campus-multi-building.png) |
+
+| Research facade | Energy centre |
+| :---: | :---: |
+| ![30-facade](docs/screenshots/states/30-research-facade.png) | ![30-energy](docs/screenshots/states/30-energy-centre.png) |
+
+| B1 garage | Entry barrier and signal |
+| :---: | :---: |
+| ![30-parking](docs/screenshots/states/30-parking-layer.png) | ![30-gate](docs/screenshots/states/30-garage-gate-closed.png) |
+
+| Night lighting | HVAC supply/return overlay |
+| :---: | :---: |
+| ![30-night](docs/screenshots/states/30-lighting-night.png) | ![30-hvac](docs/screenshots/states/30-hvac-layer.png) |
+
+| Lift cutaway and stopped cabin | Immersive view |
+| :---: | :---: |
+| ![30-elevator](docs/screenshots/states/30-alarm-scenario.png) | ![30-immersive](docs/screenshots/states/30-immersive-campus.png) |
 
 </details>
 
