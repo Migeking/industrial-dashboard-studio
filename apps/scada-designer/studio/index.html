@@ -15,6 +15,7 @@
         dirty ? "有未保存修改" : "草稿已保存"
       }}</small>
       <button @click="undo" :disabled="!undoCount">撤销</button>
+      <button @click="redo" :disabled="!redoCount">重做</button>
       <button @click="save(false)" :disabled="saving">保存草稿</button>
       <button @click="versions">版本</button>
       <details class="project-menu">
@@ -63,7 +64,7 @@
               ? sceneOptions.find((s) => s.key === doc.template)?.name ||
                 "自定义场景"
               : step.key === "canvas"
-                ? doc.nodes.length + " 个组件"
+                ? nodeCount + " 个对象"
                 : step.key === "bind"
                   ? bindingIssues.length
                     ? bindingIssues.length + " 个组件待绑定"
@@ -107,11 +108,16 @@
               ><span>{{ scene.description }}</span></span
             >
           </button>
+          <label v-if="['01','05'].includes(chosenTemplate)" class="template-data-choice">模板数据
+            <select aria-label="模板数据" v-model="chosenDataMode"><option value="keep">保留当前连接与点表</option><option value="demo">载入原版演示数据</option></select>
+          </label>
           <p class="muted">
             {{
               chosenTemplate === "30-demo"
                 ? "此演示会载入本地样本和设备绑定，可撤销恢复。"
-                : "使用场景会替换画布，保留现有数据连接，可撤销。"
+                : ['01','05'].includes(chosenTemplate) && chosenDataMode === 'demo'
+                  ? "会替换画布并载入原版演示数据，可撤销恢复。"
+                  : "使用场景会替换画布，保留现有数据连接，可撤销。"
             }}
           </p>
           <button class="primary wide" @click="replace(chosenTemplate)">
@@ -130,12 +136,16 @@
           <template v-if="activeStep === 'canvas'">
             <h2>添加组件</h2>
             <div class="tools component-library">
-              <button v-for="(label, type) in types" @click="add(type)">
+              <button v-if="!native" v-for="(label, type) in legacyTypes" @click="add(type)">
                 {{ label }}
               </button>
             </div>
+            <template v-if="native || !doc.nodes.length">
+              <h2>工艺组件与组合</h2>
+              <div class="tools component-library"><button v-for="recipe in nativeRecipes" @click="addNative(recipe.key)">{{recipe.label}}</button></div>
+            </template>
             <h2>
-              画布组件 <small>{{ doc.nodes.length }}</small>
+              画布对象 <small>{{ nodeCount }}</small>
             </h2>
           </template>
           <template v-else>
@@ -153,22 +163,25 @@
             </h2>
             <p class="muted">选择组件，在右侧选测点，画布立即显示结果。</p>
           </template>
+          <input v-if="native" aria-label="查找画布对象" placeholder="查找设备、指标或文字" v-model="layerSearch" />
           <button
             class="layer"
             v-for="n in activeStep === 'bind'
               ? bindingNodes
-              : [...doc.nodes].reverse()"
+              : navigatorNodes"
             :key="n.id"
             :class="{ active: ids.includes(n.id) }"
             @click="activeStep === 'bind' ? selectBinding(n) : pick(n, $event)"
             :data-layer="n.id"
+            :style="{paddingLeft: (9 + depth(n)*12) + 'px'}"
           >
+            <span v-if="expandable(n)" class="tree-toggle" role="button" :aria-label="(collapsed.includes(n.id)?'展开 ':'收起 ')+n.title" @click.stop="toggleTree(n)">{{collapsed.includes(n.id)?'▸':'▾'}}</span>
             <span>{{ n.locked ? "▣ " : "" }}{{ n.title }}</span
             ><small
               :class="{ 'needs-binding': bindingProblem(n, doc.mappings) }"
               >{{ types[n.type] }} ·
               {{
-                mapped(n.type)
+                mapped(n)
                   ? bindingProblem(n, doc.mappings)
                     ? "待绑定"
                     : "已绑定"
@@ -205,7 +218,7 @@
               ? "展示效果与发布页面一致"
               : sel
                 ? "已选中：" + sel.title
-                : "点击组件编辑 · 拖动标题移动 · 拖动右下角缩放"
+                : native ? "直接拖动对象 · Shift 多选 · Alt 选择设备内文字" : "点击组件编辑 · 拖动标题移动 · 拖动右下角缩放"
           }}</small
           ><button v-if="preview" @click="goStep('canvas')">返回编辑</button>
         </div>
@@ -215,13 +228,14 @@
               @pointerdown.self="ids = []"
             :style="{ transform: 'translate(-50%,-50%) scale(' + zoom + ')' }"
           >
-            <div class="board-title">
+            <native-stage v-if="native" :key="doc.template+':'+sourceVersion" :doc="doc" :points="points" :selected="ids" :editing="editing" :sequence="sequence" :clock="clock" :connection="connection" @select="nativeSelect" @patch="nativePatch" @start="snapshot" @move="nativeMove" @geometry="nativeRects=$event"></native-stage>
+            <div v-if="!native" class="board-title">
               <span>运行监视</span>
               <h1>{{ doc.title }}</h1>
               <small>{{ connection }}</small>
             </div>
             <section
-              v-for="n in doc.nodes"
+              v-for="n in native ? [] : doc.nodes"
               :key="sourceVersion + '-' + n.id + '-' + n.type"
               class="panel"
               :class="{
@@ -306,7 +320,7 @@
               >
                 外观与布局</button
               ><button
-                v-if="mapped(sel.type)"
+                v-if="hasBindings(sel)"
                 role="tab"
                 :aria-selected="inspectorTab === 'binding'"
                 @click="selectBinding(sel)"
@@ -315,14 +329,24 @@
               </button>
             </div>
             <div
-              v-if="inspectorTab === 'binding' && mapped(sel.type)"
+              v-if="inspectorTab === 'binding' && hasBindings(sel)"
               class="binding-inspector"
             >
               <small>数据来源 · {{ sourceTitle }}</small
               ><button class="source-link" @click="openConfig">
                 管理连接与点位
               </button>
-              <template v-if="sel.type !== 'campus'">
+              <template v-if="native">
+                <fieldset v-for="target in nativeBindingTargets" :key="target.id" class="native-binding-target"><legend>{{target.title}}</legend>
+                  <label v-for="slot in nativeSlots(target)">{{slot.label}}
+                    <select :aria-label="slot.label+' · 绑定测点'" :value="target.bindings[slot.key]||''" @change="nativeBinding(target,slot.key,$event.target.value)">
+                      <option value="">请选择测点</option><option v-for="m in nativeSlotMappings(slot,doc.mappings)" :value="m.id">{{m.label}} · {{m.unit||kindNames[m.kind]}}</option>
+                    </select><small>{{nativeReadback(target,slot)}}</small>
+                  </label>
+                </fieldset>
+                <p class="muted">历史序列使用含 time、value 的行数据集；选择数值点时，从接入时开始采样。</p>
+              </template>
+              <template v-else-if="sel.type !== 'campus'">
                 <label
                   >绑定测点<select
                     aria-label="当前组件测点"
@@ -489,10 +513,27 @@
                   }}<input
                     type="number"
                     :aria-label="name"
-                    :value="sel[key]"
+                  :value="rectInputValue(sel,key)"
+                    @focus="startRect(sel,key,$event)"
+                    @input="rectDraft.value=$event.target.value"
                     @change="setRect(sel, key, $event.target)"
+                    @blur="rectDraft.id=''"
                 /></label>
               </div>
+              <template v-if="native">
+                <template v-for="(part,i) in sel.content"><label v-if="typeof part==='string'">文字内容<input :aria-label="sel.content.filter(p=>typeof p==='string').length===1?'文字内容':'文字片段 '+(i+1)" :value="part" @focus="snapshot" @input="sel.content[i]=$event.target.value" /></label></template>
+                <div class="pair"><label>字号<input aria-label="字号" type="number" min="8" max="120" :value="parseInt(sel.style.fontSize)||''" @focus="snapshot" @input="sel.style.fontSize=$event.target.value+'px'" /></label><label>文字颜色<input aria-label="文字颜色" type="color" :value="sel.style.color||'#f2f7fa'" @focus="snapshot" @input="sel.style.color=$event.target.value;sel.style.fill=$event.target.value" /></label></div>
+                <label>背景颜色<input aria-label="背景颜色" type="color" :value="sel.style.background||'#0b1622'" @focus="snapshot" @input="sel.style.background=$event.target.value" /></label>
+                <label v-if="sel.attrs.class?.split(' ').includes('kpi')">指标强调色<input aria-label="指标强调色" type="color" :value="sel.style['--kpi']||'#36c2ff'" @focus="snapshot" @input="sel.style['--kpi']=$event.target.value" /></label>
+                <template v-if="sel.type==='trend'">
+                  <fieldset v-for="s in sel.chart.series"><legend>{{s.name}}</legend>
+                    <label>序列名称<input v-model="s.name" aria-label="序列名称" @focus="snapshot" /></label>
+                    <label>显示方式<select v-model="s.type" @focus="snapshot"><option value="line">折线</option><option value="bar">柱状</option></select></label>
+                    <label>坐标轴<select v-model.number="s.axis" @focus="snapshot"><option :value="0">左轴</option><option :value="1">右轴</option></select></label>
+                  </fieldset>
+                </template>
+                <p class="muted">选择组内文字、管道或设备可继续编辑；预览时可操作工况和设备面板。</p>
+              </template>
               <label v-if="sel.type === 'chart'"
                 >样式<select
                   aria-label="图表样式"
@@ -542,6 +583,7 @@
                 >
               </template>
               <h2>排列与操作</h2>
+              <template v-if="native && pipePoints.length"><h2>管道转折点</h2><div class="pair" v-for="(p,i) in pipePoints"><label>X<input type="number" :aria-label="'转折点 '+(i+1)+' X'" :value="p.x" @change="updatePipe(i,'x',$event.target.value)" /></label><label>Y<input type="number" :aria-label="'转折点 '+(i+1)+' Y'" :value="p.y" @change="updatePipe(i,'y',$event.target.value)" /></label></div></template>
               <small class="muted">Shift 多选后可对齐、成组。</small>
               <div class="tools">
                 <button
@@ -562,7 +604,7 @@
                 </button>
               </div>
               <button
-                v-if="mapped(sel.type)"
+                v-if="hasBindings(sel)"
                 class="primary wide"
                 @click="openCampusOrBinding(sel)"
               >

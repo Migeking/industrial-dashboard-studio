@@ -1,7 +1,7 @@
-﻿编号,类别,批次,阶段,原场景,源文件,源文件SHA256,共用能力,本模板验证重点,V2状态
-01,A 数据与工艺驾驶舱,首批,P2,A²/O 脱氮除磷精准调控驾驶舱,scenarios/water-treatment/01-A2O脱氮除磷精准调控驾驶舱.html,1355e58ebca4b2ccc1ead6531803cb3628af074c791e37b98544bc90eda65d88,卡片、列表、多序列图表、SVG工艺、工况动作,精细布局、四池双回流、双轴历史趋势,待实现
+编号,类别,批次,阶段,原场景,源文件,源文件SHA256,共用能力,本模板验证重点,V2状态
+01,A 数据与工艺驾驶舱,首批,P2,A²/O 脱氮除磷精准调控驾驶舱,scenarios/water-treatment/01-A2O脱氮除磷精准调控驾驶舱.html,1355e58ebca4b2ccc1ead6531803cb3628af074c791e37b98544bc90eda65d88,卡片、列表、多序列图表、SVG工艺、工况动作,精细布局、四池双回流、双轴历史趋势,首轮已实现并验收，见 docs/acceptance/editor-v2-01-05.md
 02,A 数据与工艺驾驶舱,第二批,P4,关键机组预测性维护驾驶舱,scenarios/predictive-maintenance/02-关键机组预测性维护驾驶舱.html,6d7a6592a7df0b9377197ab117d4b9bd38c777e7ebbcdca567894697277f760e,卡片、列表、多序列图表、三维容器、对象选择,机组三维与看板组合、频谱/RUL、诊断信息,待实现
-05,B 二维工艺SCADA,首批,P2,污泥回流泵站 SCADA 综合监控与操作终端,scenarios/water-treatment/05-污泥回流泵站SCADA操作终端.html,aefe815d96201810b52d6c80fc9048287e31a730081103284321326187c53195,SVG设备与端口管道、设备面板、卡片/图表、命名插槽,泵阀管网、模拟模式/控制与保护,待实现
+05,B 二维工艺SCADA,首批,P2,污泥回流泵站 SCADA 综合监控与操作终端,scenarios/water-treatment/05-污泥回流泵站SCADA操作终端.html,aefe815d96201810b52d6c80fc9048287e31a730081103284321326187c53195,SVG设备与端口管道、设备面板、卡片/图表、命名插槽,泵阀管网、模拟模式/控制与保护,首轮已实现并验收，见 docs/acceptance/editor-v2-01-05.md
 07,B 二维工艺SCADA,第二批,P4,A²/O 生化脱氮除磷工段 经典上位监控系统 [WinCC / TIA 风格],scenarios/water-treatment/07-A2O脱氮除磷经典上位SCADA.html,cf4d6eefaaa2e6461e4da60953ad784f754a773e0c706f97a6cc383fdd85b17e,SVG设备与端口管道、设备面板、棒图、动作,经典外观参数化、SBO与操作记录演示,待实现
 17,C 底图与状态叠加,首批,P3,17 · 污水处理沉淀单元 2.5D 上位画面,scenarios/water-treatment/17-污水处理沉淀单元2.5D上位画面.html,80106eb854816f2a3d3ba1fb1bf80f862b6158ac7a4c951d9c17e153acf57738,底图容器、热点、标签、状态层、镜头预设,独立业务热点、全景/近景、对象换绑,待实现
 15,C 底图与状态叠加,第二批,P4,连续分离工艺 · 浅色驾驶舱,scenarios/process-control/15-连续分离工艺驾驶舱.html,a2447e55554ca7ceb02618485752367286ae19a993f34c6bc4c1403a4e43fa78,底图容器、热点、标签、状态层、卡片/图表,不同底图和浅色外观共用实现,待实现

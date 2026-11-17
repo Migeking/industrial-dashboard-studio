@@ -1,4 +1,7 @@
+import { nativeTemplate, nativeTypes, nativeProblem, validateNative } from "../../../packages/runtime/studio/native-model.mjs";
 export const types = {
+  element: "工艺对象",
+  trend: "多序列趋势",
   text: "文本",
   image: "图片",
   kpi: "指标卡",
@@ -13,8 +16,10 @@ export const fans = ["NW", "SW", "NE", "SE"].map((corner, index) => ({
   label: "能源中心 " + (index + 1) + " 号冷却风机",
   index,
 }));
-export const mapped = (type) =>
-  ["kpi", "chart", "status", "flow", "campus", "table"].includes(type);
+export const mapped = (value) => {
+  if (typeof value === "object" && nativeTypes.has(value.type)) return !!value.slots?.length;
+  return ["kpi", "chart", "status", "flow", "campus", "table"].includes(typeof value === "object" ? value.type : value);
+};
 export function protocolMappings(rows, protocol, previous) {
   return rows.map((r) => ({
     id: r.id,
@@ -48,6 +53,7 @@ export function compatibleMappings(type, mappings) {
   return mappings.filter((m) => kinds[type]?.includes(m.kind));
 }
 export function bindingProblem(n, mappings) {
+  if (nativeTypes.has(n.type)) return nativeProblem(n, mappings);
   if (n.type === "campus") return campusProblem(n, mappings);
   if (!mapped(n.type) || (n.type === "table" && n.binding === "*")) return "";
   if (!mappings.some((m) => m.id === n.binding)) return "请选择测点";
@@ -138,6 +144,9 @@ export function node(type, id, binding = "") {
   };
 }
 export function template(key = "01") {
+  return ["01", "05"].includes(key) ? nativeTemplate(key) : legacyTemplate(key);
+}
+export function legacyTemplate(key = "01") {
   if (key === "30-demo") return campusExample();
   const doc = {
     schemaVersion: 1,
@@ -273,7 +282,7 @@ export function validate(doc, publishing) {
     throw Error(msg);
   };
   if (
-    doc?.schemaVersion !== 1 ||
+    ![1, 2].includes(doc?.schemaVersion) ||
     !Array.isArray(doc.nodes) ||
     !Array.isArray(doc.mappings) ||
     !doc.title?.trim()
@@ -320,6 +329,7 @@ export function validate(doc, publishing) {
       fail("测点编号、类型、路径或换算参数无效");
     ids.add(m.id);
   }
+  if (doc.schemaVersion === 2) return validateNative(doc, publishing);
   const nodes = new Set();
   for (const n of doc.nodes) {
     if (
@@ -510,6 +520,7 @@ export function csv(text) {
 }
 export function at(data, path) {
   if (!path || path === "$") return data;
+  if (data != null && Object.hasOwn(data, path)) return data[path];
   return path
     .split(".")
     .reduce(

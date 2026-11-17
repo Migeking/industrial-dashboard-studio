@@ -52,6 +52,9 @@ const files = new Map(
     "/model.mjs": "studio/model.mjs",
     "/widgets.mjs": "studio/widgets.mjs",
     "/tag-manager.mjs": "studio/tag-manager.mjs",
+    "/packages/components/studio/native-data.mjs": "../../packages/components/studio/native-data.mjs",
+    "/packages/runtime/studio/native-model.mjs": "../../packages/runtime/studio/native-model.mjs",
+    "/packages/runtime/studio/native-renderer.mjs": "../../packages/runtime/studio/native-renderer.mjs",
     "/lib/interact.js": "studio/lib/interact.min.js",
     "/lib/vue.js": "../../vendor/vue.global.prod.js",
     "/lib/three.js": "../../vendor/three.min.js",
@@ -73,6 +76,7 @@ async function offline(doc, payload, receivedAt) {
     url: "",
     pollMs: 1000,
     maxAgeMs: doc.source.maxAgeMs,
+    demo: doc.source.demo === true,
   };
   let html = await content("/");
   const windowlessCss = await content("/studio.css");
@@ -94,7 +98,7 @@ async function offline(doc, payload, receivedAt) {
     );
   }
   const modules = await Promise.all(
-    ["/model.mjs", "/widgets.mjs", "/tag-manager.mjs", "/app.mjs"].map(content),
+    ["/packages/components/studio/native-data.mjs", "/packages/runtime/studio/native-model.mjs", "/model.mjs", "/widgets.mjs", "/tag-manager.mjs", "/packages/runtime/studio/native-renderer.mjs", "/app.mjs"].map(content),
   );
   const code = modules
     .map((m) =>

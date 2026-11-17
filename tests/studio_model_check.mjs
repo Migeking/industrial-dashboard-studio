@@ -3,6 +3,7 @@ import {
   csv,
   normalize,
   template,
+  legacyTemplate,
   validate,
   node,
   importNorthbound,
@@ -13,7 +14,7 @@ import {
   campusBindings,
   campusState,
 } from "../apps/scada-designer/studio/model.mjs";
-const doc = template(),
+const doc = legacyTemplate(),
   time = 1700000000000,
   m = doc.mappings[0];
 const legacyCampus = template("30");

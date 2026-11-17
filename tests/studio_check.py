@@ -15,12 +15,25 @@ from studio_workflow_check import workflow_inspector
 ROOT = Path(__file__).resolve().parents[1]
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
+def load_legacy(page, base, folder, key):
+    """Keep exercising genuine V1 documents after the template gallery moves to V2."""
+    source="import {legacyTemplate} from './apps/scada-designer/studio/model.mjs';process.stdout.write(JSON.stringify(legacyTemplate('"+key+"')));"
+    data=subprocess.check_output(['node','--input-type=module','-e',source],cwd=ROOT)
+    file=Path(folder)/('legacy-'+key+'.json')
+    file.write_bytes(data)
+    page.goto(base)
+    menu=page.locator('.project-menu')
+    if menu.get_attribute('open') is None:menu.locator('summary').click()
+    menu.locator('input[type=file]').set_input_files(file)
+    menu.locator('summary').click()
+    expect(page.locator('.number').first).to_be_visible()
+
 def exercise(page, base, folder):
     errors = []
     page.on("pageerror", lambda error: errors.append(str(error)))
-    page.goto(base)
+    load_legacy(page,base,folder,'01')
     expect(page.locator(".number").first).to_have_text("820.00")
-    choose_scene(page,"05")
+    load_legacy(page,base,folder,'05')
     expect(page.locator(".number").first).to_have_text("3.82")
     panel = page.locator(".panel").first
     title = panel.locator("h3").bounding_box()
@@ -170,7 +183,7 @@ def template_workflow(page, base, folder):
             {"id":"DI_10002","kind":"boolean","label":"运行反馈","value":False,"quality":"good","receivedAt":int(time.time()*1000)},
             {"id":"AI_30003","kind":"number","label":"液位原码","unit":"原码","value":17800,"quality":"good","receivedAt":int(time.time()*1000)}]}))
     page.goto(base)
-    choose_scene(page,"05")
+    load_legacy(page,base,folder,'05')
     open_data(page)
     page.get_by_label("来源",exact=True).select_option("modbus")
     page.get_by_label("Modbus 主机").fill("127.0.0.1")

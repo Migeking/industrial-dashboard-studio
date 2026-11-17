@@ -4,6 +4,8 @@
 
 运行 `node apps/scada-designer/server.mjs` 启动配置工作台，支持模板拖拽、点位映射、OPC UA / Modbus 只读桥接和版本发布。详见 [配置工作台说明](apps/scada-designer/README.md)。
 
+01 生物处理与 05 回流泵站已升级为 V2 可编辑模板，保留原版工艺、设备及图表；支持对象树、命名测点插槽、跨模板组件复用与离线发布。当前已迁移 **2 套**，原作品总数仍为 30 套。见 [01/05 实测与操作路径](docs/acceptance/editor-v2-01-05.md)。
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
 [![Offline Ready](https://img.shields.io/badge/offline-ready-brightgreen)](docs/offline-delivery.md)
@@ -524,6 +526,14 @@ open apps/scada-designer/index.html
 - 适合：快速拼装新场景、客户现场参数化配置
 
 ![SCADA Designer](docs/screenshots/scada-designer.png)
+
+### V2 配置工作台 `apps/scada-designer/server.mjs`
+
+| 01 · V2 生物处理 | 05 · V2 回流泵站 |
+| --- | --- |
+| ![01 V2](docs/screenshots/01-studio-native.png) | ![05 V2](docs/screenshots/05-studio-native.png) |
+
+原版展示入口继续保留；以上是 V2 渲染结果。启动工作台后选择 01 或 05，明确选择演示样本或保留当前连接，再完成“编辑画布 → 数据绑定 → 预览发布”。空白画布可插入指标卡、双轴趋势、设备卡及工艺组合件。
 
 <details>
 <summary><b>Showcase 多分辨率适配（点击展开）</b></summary>
