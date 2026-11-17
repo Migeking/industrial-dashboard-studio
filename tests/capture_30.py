@@ -1,91 +1,89 @@
+"""Archive scene 30's visual states, scaled viewports and offline Showcase."""
+import json
 from pathlib import Path
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 ROOT = Path(__file__).resolve().parents[1]
-CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-SCENE = ROOT / "scenarios" / "building-automation" / "30-智慧园区多建筑集群运营管控数字孪生.html"
-SCREENSHOTS = ROOT / "docs" / "screenshots"
-STATES = SCREENSHOTS / "states"
+CHROME = r'C:\Program Files\Google\Chrome\Application\chrome.exe'
+SCENE = ROOT / 'scenarios/building-automation/30-智慧园区多建筑集群运营管控数字孪生.html'
+SCREENSHOTS = ROOT / 'docs/screenshots'
+STATES = SCREENSHOTS / 'states'
+
 
 def run():
-    SCREENSHOTS.mkdir(parents=True, exist_ok=True)
     STATES.mkdir(parents=True, exist_ok=True)
+    (ROOT / 'works/scene30').mkdir(parents=True, exist_ok=True)
+    errors, external_requests = [], []
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True, executable_path=CHROME)
+        page = browser.new_page(viewport={'width': 1920, 'height': 1080})
+        page.on('pageerror', lambda error: errors.append(str(error)))
+        page.on('console', lambda msg: errors.append(msg.text) if msg.type == 'error' else None)
+        page.on('request', lambda req: external_requests.append(req.url) if req.url.startswith(('http://', 'https://')) else None)
+        page.route('http://**/*', lambda route: route.abort())
+        page.route('https://**/*', lambda route: route.abort())
+        page.goto(SCENE.as_uri(), wait_until='networkidle')
+        page.locator('#canvas-container[data-assets-state="ready"]').wait_for(timeout=30000)
+        page.wait_for_timeout(500)
+        page.screenshot(path=str(SCREENSHOTS / '30-smart-campus-multi-building.png'))
+        baseline = page.evaluate('window.getCampusDiagnostics()')
 
-    errors = []
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True, executable_path=CHROME)
-        page = browser.new_page(viewport={"width": 1920, "height": 1080})
-        page.on("console", lambda msg: errors.append(msg.text) if msg.type == "error" else None)
-        page.route("http://**/*", lambda route: route.abort())
-        page.route("https://**/*", lambda route: route.abort())
+        def shot(name):
+            page.wait_for_timeout(350)
+            page.screenshot(path=str(STATES / ('30-' + name + '.png')))
 
-        # 1. 打开 30 号场景并等待渲染
-        page.goto(SCENE.as_uri(), wait_until="networkidle")
-        page.wait_for_timeout(1500)
-        assert page.locator("#screen").count() == 1
-        assert page.locator("#canvas-container canvas").count() == 1
+        page.get_by_role('button', name='沉浸观景', exact=True).click()
+        expect(page.locator('.hud-wrapper-right')).to_be_hidden()
+        shot('immersive-campus')
+        page.get_by_role('button', name='恢复面板', exact=True).click()
+        page.get_by_role('button', name='聚焦A座', exact=True).click(); shot('research-facade')
+        page.get_by_role('button', name='动力中心', exact=True).click(); shot('energy-centre')
+        page.get_by_role('button', name='停车位管理', exact=True).click(); shot('parking-layer')
+        for label, name in [('进出口信号灯与道闸', 'garage-gate'), ('超声波车位指示器特写', 'garage-bays'), ('新能源超充专区', 'garage-ev'), ('安全警示与消防岛', 'garage-safety')]:
+            page.get_by_role('button', name=label, exact=True).click(); shot(name)
+        page.get_by_role('button', name='进出口信号灯与道闸', exact=True).click()
+        page.get_by_role('button', name='落杆禁行', exact=True).click(); shot('garage-gate-closed')
+        page.get_by_role('button', name='抬杆放行', exact=True).click()
+        page.get_by_role('button', name='电梯群控', exact=True).click(); shot('elevators-layer')
+        page.get_by_role('button', name='智能灯光', exact=True).click()
+        for label, name in [('日光自适应', 'lighting-daylight'), ('黄昏迎宾', 'lighting-dusk'), ('璀璨夜景', 'lighting-night'), ('深夜低碳', 'lighting-saving')]:
+            page.get_by_role('button', name=label, exact=True).click(); shot(name)
+        page.get_by_role('button', name='黄昏迎宾', exact=True).click()
+        page.get_by_role('button', name='集中暖通', exact=True).click(); shot('hvac-layer')
+        page.get_by_role('button', name='综合全景', exact=True).click()
+        page.locator('.pin-marker strong').filter(has_text='A座 · 科研主楼').click()
+        expect(page.get_by_role('dialog')).to_be_visible(); shot('building-modal')
+        page.get_by_role('button', name='关闭建筑看板', exact=True).click()
+        page.get_by_role('button', name='设备联锁异常', exact=True).click(); shot('alarm-scenario')
+        page.get_by_role('button', name='日间稳态', exact=True).click()
 
-        # 捕获主场景全景图
-        page.screenshot(path=str(SCREENSHOTS / "30-smart-campus-multi-building.png"))
-        print("[通过] 捕获主场景全景图 -> 30-smart-campus-multi-building.png")
+        scaled = []
+        for width, height in [(1366, 768), (3840, 2160)]:
+            page.set_viewport_size({'width': width, 'height': height})
+            page.wait_for_function('(size) => Math.abs(document.querySelector("#screen").getBoundingClientRect().width - Math.min(size[0] / 1920, size[1] / 1080) * 1920) < 1', arg=[width, height])
+            box = page.locator('#screen').bounding_box()
+            assert box and abs(box['width'] - min(width / 1920, height / 1080) * 1920) < 1
+            assert box['x'] >= -1 and box['y'] >= -1
+            shot(f'viewport-{width}x{height}')
+            scaled.append({'viewport': [width, height], 'screen': box})
 
-        # 2. 切换至【停车位管理】图层
-        page.get_by_role("button", name="停车位管理").click()
-        page.wait_for_timeout(1000)
-        page.screenshot(path=str(STATES / "30-parking-layer.png"))
-        print("[通过] 捕获停车位管理图层特写 -> states/30-parking-layer.png")
-
-        # 3. 切换至【电梯群控】图层
-        page.get_by_role("button", name="电梯群控").click()
-        page.wait_for_timeout(1000)
-        page.screenshot(path=str(STATES / "30-elevators-layer.png"))
-        print("[通过] 捕获电梯垂直交通群控特写 -> states/30-elevators-layer.png")
-
-        # 4. 切换至【智能灯光】图层，并激活【璀璨夜景】
-        page.get_by_role("button", name="智能灯光").click()
-        page.get_by_role("button", name="璀璨夜景").click()
-        page.wait_for_timeout(1000)
-        page.screenshot(path=str(STATES / "30-lighting-night.png"))
-        print("[通过] 捕获璀璨夜景亮化模式特写 -> states/30-lighting-night.png")
-
-        # 5. 切换至【集中暖通】图层
-        page.get_by_role("button", name="集中暖通").click()
-        page.wait_for_timeout(1000)
-        page.screenshot(path=str(STATES / "30-hvac-layer.png"))
-        print("[通过] 捕获集中暖通冷热源管网特写 -> states/30-hvac-layer.png")
-
-        # 6. 点击 A座 浮空标签激活建筑微操弹窗
-        page.locator(".pin-marker strong").filter(has_text="A座 · 科研主楼").click()
-        page.wait_for_timeout(600)
-        page.locator(".building-modal").wait_for()
-        page.screenshot(path=str(STATES / "30-building-modal.png"))
-        print("[通过] 捕获A座建筑下钻综合微操弹窗特写 -> states/30-building-modal.png")
-
-        # 7. 关闭弹窗并运行【设备联锁异常】剧本
-        page.locator(".modal-close").click()
-        page.wait_for_timeout(400)
-        page.get_by_role("button", name="设备联锁异常").click()
-        page.wait_for_timeout(800)
-        page.screenshot(path=str(STATES / "30-alarm-scenario.png"))
-        print("[通过] 捕获设备联锁异常演练工况特写 -> states/30-alarm-scenario.png")
-
-        # 8. 刷新 Showcase 体验包截图 (选择第 30 号场景)
-        showcase = browser.new_page(viewport={"width": 1440, "height": 900})
-        showcase.route("http://**/*", lambda route: route.abort())
-        showcase.route("https://**/*", lambda route: route.abort())
-        showcase.goto((ROOT / "apps" / "showcase" / "index.html").as_uri(), wait_until="networkidle")
+        showcase = browser.new_page(viewport={'width': 1440, 'height': 900})
+        showcase.on('pageerror', lambda error: errors.append(str(error)))
+        showcase.route('http://**/*', lambda route: route.abort())
+        showcase.route('https://**/*', lambda route: route.abort())
+        showcase.goto((ROOT / 'apps/showcase/index.html').as_uri(), wait_until='networkidle')
         card = showcase.locator('.card[data-src*="30-"]')
-        card.scroll_into_view_if_needed()
-        card.click()
-        showcase.locator("#stageTitle").filter(has_text="智慧园区多建筑集群运营管控数字孪生").wait_for()
-        showcase.wait_for_timeout(2000)
-        showcase.screenshot(path=str(SCREENSHOTS / "showcase.png"))
-        print("[通过] 刷新 Showcase 体验包总览图 -> showcase.png")
-
+        card.scroll_into_view_if_needed(); card.click()
+        showcase.frame_locator('iframe').locator('#canvas-container[data-assets-state="ready"]').wait_for(timeout=30000)
+        showcase.screenshot(path=str(SCREENSHOTS / 'showcase.png'))
+        showcase.screenshot(path=str(SCREENSHOTS / '30-showcase.png'))
+        assert not errors, errors
+        assert not external_requests, external_requests
+        report = {'offline': True, 'errors': errors, 'externalRequests': external_requests, 'baseline': baseline, 'scaledViewports': scaled}
+        (ROOT / 'works/scene30/visual-verification.json').write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding='utf-8')
         browser.close()
+    print('[通过] 场景 30 全图层、工况特写、横屏缩放与 Showcase 已归档；无外网请求或运行错误。')
 
-    assert not errors, f"控制台发生错误: {errors}"
-    print("[全部通过] 30号场景交互演练与超清截图自动化归档成功！")
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     run()

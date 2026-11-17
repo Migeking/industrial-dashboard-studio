@@ -1,6 +1,7 @@
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from scene_25_check import assert_scene_25
+from scene_30_check import assert_scene_30
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,7 +17,7 @@ def run_case(page, relative_path, action, assertion):
     page.wait_for_timeout(300)
     assertion(page)
     assert page.locator("#screen").count() == 1
-    assert page.evaluate("document.querySelector('#screen').getBoundingClientRect().width") > 1300
+    page.wait_for_function("document.querySelector('#screen').getBoundingClientRect().width > 1300")
     assert not errors, f"控制台错误: {errors}"
     print(f"[通过] {relative_path}")
 
@@ -362,7 +363,18 @@ with sync_playwright() as playwright:
 
     def assert_building_automation_22_interaction(p):
         assert p.locator("#threeViewport canvas").count() == 1
+        p.locator('#threeViewport[data-assets-state="ready"]').wait_for(timeout=60000)
         assert p.locator(".echart-container canvas").count() == 2
+        p.get_by_role("button", name="精细画质", exact=True).click()
+        assert p.get_by_role("button", name="流畅画质", exact=True).get_attribute("aria-pressed") == "false"
+        p.get_by_role("button", name="流畅画质", exact=True).click()
+        p.get_by_role("button", name="空间近景", exact=True).click()
+        assert p.get_by_role("button", name="返回监控", exact=True).get_attribute("aria-pressed") == "true"
+        p.get_by_role("button", name="显示温度场", exact=True).click()
+        assert p.get_by_role("button", name="隐藏温度场", exact=True).get_attribute("aria-pressed") == "true"
+        p.get_by_role("button", name="隐藏温度场", exact=True).click()
+        p.get_by_role("button", name="返回监控", exact=True).click()
+        p.get_by_role("button", name="复位视角", exact=True).click()
         assert p.locator(".alarm-banner").is_visible()
         p.locator(".handle-btn").click()
         p.wait_for_timeout(300)
@@ -623,6 +635,13 @@ with sync_playwright() as playwright:
         "water-treatment/28-曝气鼓风机就地控制屏.html",
         lambda p: None,
         assert_blower_local_panel_28,
+    )
+
+    run_case(
+        page,
+        "building-automation/30-智慧园区多建筑集群运营管控数字孪生.html",
+        lambda p: None,
+        assert_scene_30,
     )
 
     showcase = browser.new_page(viewport={"width": 1440, "height": 900})

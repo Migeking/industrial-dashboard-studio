@@ -1,0 +1,102 @@
+{
+  "three_version": "r128",
+  "license": "https://polyhaven.com/license",
+  "assets": [
+    "https://polyhaven.com/a/asphalt_02",
+    "https://polyhaven.com/a/concrete_floor_painted",
+    "https://polyhaven.com/a/aerial_grass_rock",
+    "https://polyhaven.com/a/kloppenheim_06_puresky"
+  ],
+  "files": {
+    "https://api.polyhaven.com/files/aerial_grass_rock": {
+      "sha256": "b4fc59bf78a2ea9c1ce18eaa46e004b98b89f37bdac38d18e6ceac4fd8cb5344",
+      "bytes": 29769
+    },
+    "https://api.polyhaven.com/files/asphalt_02": {
+      "sha256": "1249520977b7ba990db96a9b4dea2d7d5b8ff6d70c61a7d348310e92f68130d2",
+      "bytes": 27252
+    },
+    "https://api.polyhaven.com/files/concrete_floor_painted": {
+      "sha256": "21802823e691ca0f8268bf8fd922a4b77805cd0561d47c8f4defb2cab0daf839",
+      "bytes": 31572
+    },
+    "https://api.polyhaven.com/files/kloppenheim_06_puresky": {
+      "sha256": "26e2f3f27c2d1a610dcb6296639d3f7cfc994e37ae3c3105a9bd2d0a263cf6e6",
+      "bytes": 2126
+    },
+    "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kloppenheim_06_puresky_1k.hdr": {
+      "sha256": "206c67e3a1b992282821cf06662bdd69bbb4915c1c4444a66338a40d6a7d4e34",
+      "bytes": 1173154
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_diff_1k.jpg": {
+      "sha256": "57b8041bfe0d0f01430e4dbaad45e7ddddf0a9fc97317f90dbc51f7b0d9e1b5d",
+      "bytes": 666655
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_nor_gl_1k.jpg": {
+      "sha256": "1aa3e23bff453f152e089b9f83aa36b4901651e019f7e2ca01d5331a9bbbda78",
+      "bytes": 904956
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_grass_rock/aerial_grass_rock_rough_1k.jpg": {
+      "sha256": "b9f3f76aba74007f708333c0dbe73c52eb83ea0c4187a13e2e994f888a25114a",
+      "bytes": 362214
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_diff_1k.jpg": {
+      "sha256": "1aa5ce99f58a625c71d48cfc3e68b65ca85ccb00f39e045c0a928608a0ea25ed",
+      "bytes": 731707
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_nor_gl_1k.jpg": {
+      "sha256": "42a1c381b53204e83a982db2864479a30bc127bbdeebb1006f8ee51bff099df3",
+      "bytes": 1240122
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/asphalt_02/asphalt_02_rough_1k.jpg": {
+      "sha256": "70ba3edc65525eb4dc366cf010ca7ae0bd34e0251ff0225c2dad627a873d0712",
+      "bytes": 544032
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor_painted/concrete_floor_painted_diff_1k.jpg": {
+      "sha256": "f99ff99ed191e924d3bcbf4f345bb9973467ae18dceddee34bc013f01702c358",
+      "bytes": 665654
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor_painted/concrete_floor_painted_nor_gl_1k.jpg": {
+      "sha256": "b32425acf0b2aefca1c6bf7eed08d988f5c27a21eb75bd26ab1fd2b64903d4c6",
+      "bytes": 855350
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/concrete_floor_painted/concrete_floor_painted_rough_1k.jpg": {
+      "sha256": "2bd547b54210fa2ffd48d212c0d461c8b0f7bd6fb57797c2f114dc5ca552fee9",
+      "bytes": 478481
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/LICENSE": {
+      "sha256": "7dddf7c5b8fd10ee654db8857d75d104b5557889aa5a91fc4ca545ea7c07062f",
+      "bytes": 1081
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/loaders/RGBELoader.js": {
+      "sha256": "f6ba8cf5df528f1fd38b749d46cd7799a40b80d4eb1a5c5c072d31b1eae7f816",
+      "bytes": 12572
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/math/SimplexNoise.js": {
+      "sha256": "eaab4ae3184e1a74a4983ffe8e4afe828e63fe4f837717cc44cb5e68727e4d3d",
+      "bytes": 14696
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/postprocessing/Pass.js": {
+      "sha256": "1b6d53b6dc4eafd45a2b9e21d68a4e3dea33c7de92c408d36993282ee0514cfa",
+      "bytes": 1499
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/postprocessing/SSAOPass.js": {
+      "sha256": "19134f19e564199311962acfab4bbaf17284ed93eebb5697305805aeb76f6db0",
+      "bytes": 12292
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/shaders/CopyShader.js": {
+      "sha256": "6b5da4fe3b410286974590885f82fe4a446f25c728f7d6c888e2a2a331333949",
+      "bytes": 606
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/shaders/FXAAShader.js": {
+      "sha256": "0ea1d37b0b4568fd26aad86e9abd5c6fc77021c04a7cff5326517ae819c96e41",
+      "bytes": 46034
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/shaders/SSAOShader.js": {
+      "sha256": "5d83ca46be72857c56dc8d2ba778cef4b77da58412aac8e84a872c0fb2ccab8e",
+      "bytes": 6515
+    }
+  },
+  "source_sha256": "cb709b78ace94249daeae4fa16ead57745bc5ba35238f179fe999d9f45f0ad0e",
+  "bundle_sha256": "424ff41f0abfea88104e30ea0996b97e49ea7c4558b8e0bd8834e2c8b22752dc"
+}
