@@ -127,6 +127,51 @@ def source_recovery(page, base):
     assert page.request.post(base+"/api/publish",data={**draft,"schemaVersion":2}).status==400
     assert page.request.get(base+"/api/published").json()["title"]=="revision 5"
 
+def template_workflow(page, base, folder):
+    page.route("**/api/protocol/sample", lambda route: route.fulfill(json={
+        "protocol":"modbus", "points":[
+            {"id":"DI_10002","kind":"boolean","label":"运行反馈","value":False,"quality":"good","receivedAt":int(time.time()*1000)},
+            {"id":"AI_30003","kind":"number","label":"液位原码","unit":"原码","value":17800,"quality":"good","receivedAt":int(time.time()*1000)}]}))
+    page.goto(base)
+    page.get_by_label("切换模板").select_option("05")
+    page.get_by_role("button",name="数据连接",exact=True).click()
+    page.get_by_label("来源",exact=True).select_option("modbus")
+    page.get_by_label("Modbus 主机").fill("127.0.0.1")
+    file=Path(folder)/"mapping.json"
+    file.write_text(json.dumps({"mappings":[
+        dict(type="DI",address=10002,dataType="BOOL",point_alias="运行反馈",status="active"),
+        dict(type="AI",address=30003,dataType="UINT16",point_alias="液位原码",status="active")]}),"utf8")
+    page.get_by_label("导入北向 JSON 点表").set_input_files(file)
+    page.get_by_role("button",name="读取样本",exact=True).click()
+    expect(page.get_by_text("已读取 2 个测点",exact=False)).to_be_visible()
+    page.get_by_label("测点",exact=True).select_option("1")
+    page.get_by_label("业务编号",exact=True).fill("levelRaw")
+    page.get_by_role("button",name="应用数据配置",exact=True).click()
+    modal=page.get_by_role("dialog")
+    expect(modal).to_contain_text("还有 6 个组件需要绑定")
+    assert modal.get_by_role("button",name="发布",exact=True).is_disabled()
+    for id in ['n0','n1','n2','n4']:
+        modal.get_by_label("组件测点 "+id,exact=True).select_option("levelRaw")
+    for id in ['n3','n5']:
+        select=modal.get_by_label("组件测点 "+id,exact=True)
+        assert "液位原码" not in select.inner_text()
+        select.select_option("DI_10002")
+    expect(modal).to_contain_text("绑定已完成")
+    expect(modal.locator('[data-binding-id="n0"]')).to_contain_text("17800 原码")
+    modal.get_by_role("button",name="预览页面",exact=True).click()
+    page.get_by_role("button",name="发布",exact=True).click()
+    expect(page.get_by_role("status")).to_contain_text("已发布")
+    expect(page.get_by_role("link",name="查看展示页面",exact=False)).to_be_visible()
+    page.goto(base+"/view")
+    expect(page.locator(".number").first).to_have_text("17800")
+    expect(page.locator(".state")).to_have_text("停止")
+    page.goto(base)
+    page.get_by_label("切换模板").select_option("01")
+    page.get_by_role("button",name="数据连接",exact=True).click()
+    expect(page.get_by_label("来源",exact=True)).to_have_value("modbus")
+    expect(page.get_by_label("Modbus 主机")).to_have_value("127.0.0.1")
+    page.get_by_role("button",name="关闭",exact=True).click()
+
 def main():
     with tempfile.TemporaryDirectory() as folder:
         with socket.socket() as sock:
@@ -146,6 +191,7 @@ def main():
                 browser=pw.chromium.launch(executable_path=CHROME if Path(CHROME).exists() else None)
                 exercise(browser.new_page(viewport={"width":1440,"height":900}),base,folder)
                 source_recovery(browser.new_page(),base)
+                template_workflow(browser.new_page(),base,folder)
                 browser.close()
         finally:
             proc.terminate()

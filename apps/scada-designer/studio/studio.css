@@ -328,3 +328,68 @@ fieldset small {
   display: block;
   overflow-wrap: anywhere;
 }
+
+.workflow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 8px 18px;
+  background: #15272d;
+  border-bottom: 1px solid #395158;
+}
+.workflow small {
+  margin-left: auto;
+  color: #adc7c2;
+}
+.binding-list {
+  max-height: 54vh;
+  overflow: auto;
+}
+.binding-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(100px, 0.7fr);
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #395158;
+  padding: 8px 0;
+}
+.binding-error {
+  color: #ffd4a3;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 16px;
+}
+.sample-table {
+  max-height: 180px;
+  overflow: auto;
+}
+.sample-table table {
+  font-size: 13px;
+}
+.toast a {
+  background: #d1eddd;
+  color: #13332b;
+  margin-left: 8px;
+}
+@media (max-width: 1000px) {
+  .binding-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  header {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 54px;
+    padding: 8px;
+  }
+}
+
+.empty-state {
+  margin: 10vh auto;
+  max-width: 600px;
+  padding: 24px;
+}

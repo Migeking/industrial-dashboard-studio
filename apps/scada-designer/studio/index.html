@@ -10,18 +10,39 @@
   <body>
     <div id="app" v-cloak>
       <header v-if="!viewer">
-        <b>工业可视化工作台</b><span class="grow">{{doc.title}}</span
-        ><button v-if="editing" @click="openConfig">数据连接</button
-        ><button @click="preview=!preview">{{preview?'返回编辑':'预览'}}</button
+        <b>工业可视化工作台</b><span class="grow">{{doc.title}}</span>
+        <small>{{dirty?'有未保存修改':'草稿已保存'}}</small
         ><template v-if="editing"
-          ><button @click="save(false)">保存草稿</button
-          ><button class="primary" @click="save(true)">发布</button
+          ><button @click="save(false)" :disabled="saving">保存草稿</button
           ><button @click="versions">版本</button
           ><a href="/view" target="_blank" rel="noopener"
             >展示端 ↗</a
           ></template
         >
+        <button
+          v-if="!dialog"
+          class="primary"
+          @click="save(true)"
+          :disabled="saving"
+        >
+          发布
+        </button>
       </header>
+      <nav v-if="!viewer" class="workflow" aria-label="搭建流程">
+        <template v-if="editing"
+          ><span>选择模板 →</span><button @click="openConfig">数据连接</button
+          ><span>→</span
+          ><button @click="openBindings">
+            绑定测点<span v-if="bindingIssues.length">
+              · {{bindingIssues.length}} 项待完成</span
+            ></button
+          ><span>→</span></template
+        >
+        <button @click="preview=!preview">{{preview?'返回编辑':'预览'}}</button>
+        <small v-if="editing"
+          >{{['json','csv'].includes(doc.source.kind)?'正在使用本地样本':connection}}</small
+        >
+      </nav>
       <div class="workspace" :class="{presentation:!editing}">
         <aside v-if="editing">
           <h2>场景模板</h2>
@@ -100,7 +121,11 @@
             ><label v-if="mapped(sel.type)"
               >业务测点<select v-model="sel.binding" @focus="snapshot">
                 <option v-if="sel.type==='table'" value="*">全部测点</option>
-                <option v-for="m in doc.mappings" :value="m.id">
+                <option value="" disabled>请选择测点</option>
+                <option
+                  v-for="m in compatibleMappings(sel.type,doc.mappings)"
+                  :value="m.id"
+                >
                   {{m.label}} · {{m.id}}
                 </option>
               </select></label
@@ -149,17 +174,27 @@
         </aside>
       </div>
       <div
-        v-if="editing&&message"
+        v-if="!viewer&&message"
         role="status"
         class="toast"
         @click="message=''"
       >
-        {{message}} ×
+        {{message}}
+        <a v-if="published" href="/view" target="_blank" rel="noopener"
+          >查看展示页面 ↗</a
+        >
+        ×
       </div>
       <div v-if="dialog" class="shade">
-        <section class="dialog">
+        <section
+          class="dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dialog-title"
+        >
           <header>
-            <b>{{dialog==='data'?'数据连接与点位映射':'发布版本'}}</b
+            <b id="dialog-title"
+              >{{dialog==='data'?'数据连接与点位映射':dialog==='bindings'?'绑定组件测点':'发布版本'}}</b
             ><button @click="dialog=''">关闭</button>
           </header>
           <template v-if="dialog==='data'"
@@ -331,14 +366,41 @@
                 ><button @click="readSample" :disabled="protocolBusy">
                   {{protocolBusy?'正在连接…':'读取样本'}}</button
                 ><button
-                  v-if="Array.isArray(sample?.points)&&sample.points.every(p=>p.id&&p.kind)"
+                  v-if="!['opcua','modbus'].includes(config.source.kind)&&Array.isArray(sample?.points)&&sample.points.every(p=>p.id&&p.kind)"
                   @click="bridgeMappings"
                 >
                   从桥接点表生成映射
                 </button>
-                <pre>
-{{sample===null?'等待读取':JSON.stringify(sample,null,2).slice(0,12000)}}</pre
+                <template
+                  v-if="sample&&['opcua','modbus'].includes(config.source.kind)"
                 >
+                  <p>
+                    已读取 {{sample.points.length}}
+                    个测点，映射已生成。点击“应用数据配置”继续绑定组件。
+                  </p>
+                  <div class="sample-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>测点</th>
+                          <th>读数</th>
+                          <th>质量</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="p in sample.points">
+                          <td>{{p.label||p.id}}</td>
+                          <td>{{p.value===null?'—':p.value}} {{p.unit}}</td>
+                          <td>{{p.quality==='good'?'有效':'无效'}}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </template>
+                <details v-else>
+                  <summary>{{sample===null?'等待读取样本':'原始样本'}}</summary>
+                  <pre>{{JSON.stringify(sample,null,2).slice(0,12000)}}</pre>
+                </details>
               </div>
               <div>
                 <label
@@ -399,10 +461,67 @@
                 ></template>
               </div>
             </div>
-            <button class="primary" @click="applyConfig">
+            <button
+              class="primary"
+              @click="applyConfig"
+              :disabled="protocolBusy"
+            >
               应用数据配置
             </button></template
           >
+          <template v-else-if="dialog==='bindings'">
+            <p>
+              为每个组件选择对应业务测点，可同时核对名称、读数与单位。运行状态组件请绑定运行反馈。
+            </p>
+            <p v-if="bindingIssues.length" role="alert">
+              还有 {{bindingIssues.length}} 个组件需要绑定。
+            </p>
+            <p v-else>
+              绑定已完成，可预览并发布。数据异常会在展示端按质量标注。
+            </p>
+            <div class="binding-list">
+              <div
+                v-for="n in bindingNodes"
+                :key="n.id"
+                class="binding-row"
+                :data-binding-id="n.id"
+              >
+                <label
+                  >组件名称<input
+                    v-model="n.title"
+                    :aria-label="'组件名称 '+n.id"
+                /></label>
+                <label
+                  >{{types[n.type]}}测点<select
+                    v-model="n.binding"
+                    :aria-label="'组件测点 '+n.id"
+                  >
+                    <option value="">请选择测点</option>
+                    <option v-if="n.type==='table'" value="*">全部测点</option>
+                    <option
+                      v-for="m in compatibleMappings(n.type,doc.mappings)"
+                      :value="m.id"
+                    >
+                      {{m.label}} · {{m.unit||kindNames[m.kind]}}
+                    </option>
+                  </select></label
+                >
+                <small :class="{'binding-error':bindingProblem(n,doc.mappings)}"
+                  >{{bindingProblem(n,doc.mappings)||bindingValue(n)}}</small
+                >
+              </div>
+            </div>
+            <div class="dialog-actions">
+              <button @click="dialog='';preview=true">预览页面</button
+              ><button
+                class="primary"
+                @click="save(true)"
+                :disabled="saving||bindingIssues.length>0"
+              >
+                发布
+              </button>
+            </div>
+          </template>
           <template v-else
             ><p v-if="!versionInfo.versions.length">尚无发布版本</p>
             <p v-for="v in versionInfo.versions">

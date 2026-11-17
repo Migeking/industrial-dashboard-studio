@@ -15,6 +15,24 @@ export const fans = ["NW", "SW", "NE", "SE"].map((corner, index) => ({
 }));
 export const mapped = (type) =>
   ["kpi", "chart", "status", "flow", "campus", "table"].includes(type);
+export function compatibleMappings(type, mappings) {
+  const kinds = {
+    kpi: ["number", "boolean", "text"],
+    chart: ["number"],
+    status: ["boolean"],
+    flow: ["boolean"],
+    campus: ["boolean"],
+    table: ["dataset"],
+  };
+  return mappings.filter((m) => kinds[type]?.includes(m.kind));
+}
+export function bindingProblem(n, mappings) {
+  if (!mapped(n.type) || (n.type === "table" && n.binding === "*")) return "";
+  if (!mappings.some((m) => m.id === n.binding)) return "请选择测点";
+  return compatibleMappings(n.type, mappings).some((m) => m.id === n.binding)
+    ? ""
+    : "测点类型不匹配";
+}
 const specs = [
   ["flow", "进水流量", "m³/h", 820],
   ["oxygen", "好氧池溶解氧", "mg/L", 2.4],

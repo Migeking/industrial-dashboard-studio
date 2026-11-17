@@ -7,10 +7,24 @@ import {
   node,
   importNorthbound,
   validateConnection,
+  compatibleMappings,
+  bindingProblem,
 } from "../apps/scada-designer/studio/model.mjs";
 const doc = template(),
   time = 1700000000000,
   m = doc.mappings[0];
+assert.equal(bindingProblem(doc.nodes[0], doc.mappings), "");
+assert.equal(
+  bindingProblem({ ...doc.nodes[0], binding: "missing" }, doc.mappings),
+  "请选择测点",
+);
+assert.equal(
+  bindingProblem({ ...doc.nodes[0], type: "status" }, doc.mappings),
+  "测点类型不匹配",
+);
+assert(
+  compatibleMappings("status", doc.mappings).every((m) => m.kind === "boolean"),
+);
 const registers = importNorthbound({
   mappings: [
     {

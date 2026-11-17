@@ -54,22 +54,23 @@ export const Widget = {
       if (!chart) return;
       chart.setOption({
         animation: false,
-        grid: { left: 68, right: 25, top: 14, bottom: 32 },
+        grid: { left: 82, right: 25, top: 14, bottom: 34 },
+        tooltip: { trigger: "axis" },
         xAxis: {
           type: "category",
           data: history.map((h) => h[0]),
-          axisLabel: { color: "#a3b5bb" },
+          axisLabel: { color: "#a3b5bb", fontSize: 17 },
         },
         yAxis: {
           type: "value",
           scale: true,
-          axisLabel: { color: "#a3b5bb" },
+          axisLabel: { color: "#a3b5bb", fontSize: 17 },
           splitLine: { lineStyle: { color: "#304953" } },
         },
         series: [
           {
             type: props.n.series || "line",
-            showSymbol: history.length < 2,
+            showSymbol: history.filter((h) => h[1] != null).length < 2,
             data: history.map((h) => h[1]),
             itemStyle: { color: "#61ddbf" },
             connectNulls: false,

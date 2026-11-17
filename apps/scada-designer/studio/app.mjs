@@ -8,10 +8,18 @@ import {
   csv,
   normalize,
   importNorthbound,
+  compatibleMappings,
+  bindingProblem,
 } from "./model.mjs";
 import { Widget } from "./widgets.mjs";
 const offline = window.OFFLINE;
 const clone = (v) => JSON.parse(JSON.stringify(v));
+const kindNames = {
+  number: "数值",
+  boolean: "开关量",
+  text: "文本",
+  dataset: "数据表",
+};
 async function api(url, data) {
   const r = await fetch(
     url,
@@ -73,6 +81,44 @@ async function boot() {
         mappingIndex = ref(0),
         sample = ref(null),
         versionInfo = ref({ versions: [] });
+      const sampleSource = ref("");
+      const lastSaved = ref(JSON.stringify(initial)),
+        saving = ref(false),
+        published = ref(false);
+      const dirty = computed(
+        () => JSON.stringify(doc.value) !== lastSaved.value,
+      );
+      const bindingNodes = computed(() =>
+        doc.value.nodes.filter((n) => mapped(n.type)),
+      );
+      const bindingIssues = computed(() =>
+        bindingNodes.value.filter((n) => bindingProblem(n, doc.value.mappings)),
+      );
+      function openBindings() {
+        snapshot();
+        dialog.value = "bindings";
+      }
+      function bindingValue(n) {
+        if (n.type === "table" && n.binding === "*") return "全部测点";
+        const m = doc.value.mappings.find((m) => m.id === n.binding),
+          p = points.value[n.binding];
+        if (!m || !p) return "等待读取";
+        const label = {
+          good: "有效",
+          bad: "无效",
+          stale: "过期",
+          offline: "离线",
+        }[p.quality];
+        const value =
+          p.quality !== "good"
+            ? "—"
+            : typeof p.value === "number"
+              ? p.value.toFixed(m.precision)
+              : Array.isArray(p.value)
+                ? p.value.length + " 行"
+                : String(p.value);
+        return value + " " + (m.unit || "") + " · " + label;
+      }
       const history = [],
         undoCount = ref(0);
       let stop = () => {},
@@ -174,8 +220,13 @@ async function boot() {
       }
       function replace(key) {
         snapshot();
-        doc.value = template(key);
+        doc.value = {
+          ...template(key),
+          source: clone(doc.value.source),
+          mappings: clone(doc.value.mappings),
+        };
         ids.value = [];
+        message.value = "模板已切换，数据连接已保留。请检查组件绑定";
       }
       async function guarded(fn) {
         try {
@@ -185,10 +236,26 @@ async function boot() {
         }
       }
       function save(publish) {
+        if (saving.value) return;
+        if (publish && bindingIssues.value.length) {
+          openBindings();
+          message.value =
+            "请完成 " + bindingIssues.value.length + " 个组件的测点绑定";
+          return;
+        }
         return guarded(async () => {
-          validate(doc.value, publish);
-          await api(publish ? "/api/publish" : "/api/draft", doc.value);
-          message.value = publish ? "已发布" : "草稿已保存";
+          saving.value = true;
+          try {
+            const value = clone(doc.value);
+            validate(value, publish);
+            await api(publish ? "/api/publish" : "/api/draft", value);
+            lastSaved.value = JSON.stringify(value);
+            published.value = publish;
+            if (publish) dialog.value = "";
+            message.value = publish ? "已发布，可打开展示端核对" : "草稿已保存";
+          } finally {
+            saving.value = false;
+          }
         });
       }
       async function versions() {
@@ -333,6 +400,8 @@ async function boot() {
               )
                 throw Error("连接配置已变化，请重新读取样本");
               sample.value = value;
+              sampleSource.value = JSON.stringify(source);
+              if (["opcua", "modbus"].includes(source.kind)) bridgeMappings();
               return;
             } catch (error) {
               if (!error.message.includes("协议连接建立中") || attempt === 39)
@@ -362,19 +431,32 @@ async function boot() {
           scale: 1,
           offset: 0,
           precision: r.unit === "原码" ? 0 : 2,
+          ...config.value.mappings.find(
+            (m) =>
+              (m.keyField === "id" && m.keyValue === r.id) || m.id === r.id,
+          ),
         }));
         config.value.mappings = mappings;
         mappingIndex.value = 0;
       }
       function applyConfig() {
         return guarded(async () => {
+          const native = ["opcua", "modbus"].includes(config.value.source.kind);
+          if (native) {
+            if (
+              !sample.value ||
+              sampleSource.value !== JSON.stringify(config.value.source)
+            )
+              throw Error("请读取当前连接配置的样本，再应用数据配置");
+            bridgeMappings();
+          }
           const updated = { ...doc.value, ...config.value };
           validate(updated, false);
           if (["csv", "json"].includes(config.value.source.kind))
             await once(config.value.source);
           snapshot();
           Object.assign(doc.value, clone(config.value));
-          dialog.value = "";
+          dialog.value = bindingIssues.value.length ? "bindings" : "";
           message.value = "数据配置已应用";
         });
       }
@@ -593,6 +675,16 @@ async function boot() {
         reader.readAsDataURL(file);
       }
       return {
+        kindNames,
+        saving,
+        published,
+        dirty,
+        bindingNodes,
+        bindingIssues,
+        openBindings,
+        bindingValue,
+        compatibleMappings,
+        bindingProblem,
         types,
         fans,
         mapped,
@@ -661,4 +753,16 @@ async function boot() {
     },
   }).mount("#app");
 }
-boot().catch((e) => (document.body.textContent = e.message));
+boot().catch((e) => {
+  const section = document.createElement("section");
+  section.className = "empty-state";
+  const title = document.createElement("h1");
+  title.textContent = "页面暂时无法打开";
+  const detail = document.createElement("p");
+  detail.textContent = e.message;
+  const link = document.createElement("a");
+  link.href = "/";
+  link.textContent = "返回配置工作台";
+  section.append(title, detail, link);
+  document.body.replaceChildren(section);
+});
