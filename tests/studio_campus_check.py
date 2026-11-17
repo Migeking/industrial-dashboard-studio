@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 from playwright.sync_api import expect
+from studio_ui import choose_scene, publish, project_action
 
 def campus_flow(page,base,folder,capture_dir=None):
     errors=[]
@@ -9,7 +10,7 @@ def campus_flow(page,base,folder,capture_dir=None):
     page.goto(base)
     # The explicit demo replaces the current source; undo restores the user's source.
     original=page.request.get(base+'/api/draft').json()['source']
-    page.get_by_label('切换模板',exact=True).select_option('30-demo')
+    choose_scene(page,'30-demo')
     expect(page.get_by_role('status')).to_contain_text('本地联动演示')
     page.get_by_role('button',name='撤销',exact=True).click()
     with page.expect_response(lambda response:response.url==base+'/api/draft' and response.request.method=='POST'):
@@ -19,8 +20,8 @@ def campus_flow(page,base,folder,capture_dir=None):
     assert page.request.post(base+'/api/draft',data=fixture).ok
     page.reload()
     page.locator('.panel').first.click(position={'x':12,'y':12})
-    page.get_by_role('button',name='配置三维设备',exact=True).click()
-    modal=page.get_by_role('dialog')
+    page.get_by_role('button',name='配置数据绑定 →',exact=True).click()
+    modal=page.locator('.inspector')
     ids=['D.FAN.NW','D.FAN.SW','D.FAN.NE','D.FAN.SE']
     for i,id in enumerate(ids):
         if i:modal.locator('[data-entity="'+id+'"] input[type=checkbox]').check()
@@ -30,12 +31,11 @@ def campus_flow(page,base,folder,capture_dir=None):
     if capture_dir:
         Path(capture_dir).mkdir(parents=True,exist_ok=True)
         page.screenshot(path=str(Path(capture_dir)/'configuration.png'))
-    modal.get_by_role('button',name='完成配置',exact=True).click()
     def status(id,value):
         expect(page.locator('[data-device="'+id+'"]')).to_have_attribute('data-state',value)
     for id,value in zip(ids,['运行','停止','故障','运行']):status(id,value)
     canvas=page.locator('.host canvas')
-    page.wait_for_function("document.querySelector('.host canvas').dataset.rotations")
+    page.wait_for_function("document.querySelector('.host canvas').dataset.states==='运行,停止,故障,运行'")
     before=canvas.get_attribute('data-rotations')
     page.wait_for_timeout(500)
     after=canvas.get_attribute('data-rotations')
@@ -43,11 +43,12 @@ def campus_flow(page,base,folder,capture_dir=None):
     assert a[0]!=b[0] and a[1]==b[1] and a[2]==b[2] and a[3]!=b[3],(a,b)
     expect(page.locator('[data-object="D.FAN.NW"]')).to_contain_text('42.5 Hz')
     page.locator('[data-device="D.FAN.NE"]').click()
+    page.get_by_role('tab',name='外观与布局',exact=True).click()
     expect(page.get_by_label('设备',exact=True)).to_have_value('D.FAN.NE')
     page.get_by_label('镜头',exact=True).select_option('equipment')
     expect(page.locator('[data-object="D.FAN.NE"]')).to_be_visible()
     page.get_by_label('镜头',exact=True).select_option('energy')
-    page.get_by_role('button',name='发布',exact=True).click()
+    publish(page)
     expect(page.get_by_role('status')).to_contain_text('已发布')
     published=page.request.get(base+'/api/published').json()
     assert len(published['nodes'][0]['entities'])==4
@@ -83,7 +84,7 @@ def campus_flow(page,base,folder,capture_dir=None):
     expect(page.locator('[data-object="D.FAN.NW"]')).to_contain_text('42.5 Hz')
     # Export embeds the same object bindings and renderer.
     with page.expect_download() as result:
-        page.get_by_role('button',name='导出离线演示',exact=True).click()
+        project_action(page,'导出离线演示')
     target=Path(folder)/'campus.html';result.value.save_as(target)
     page.goto(target.as_uri())
     for id,value in zip(ids,['运行','运行','故障','运行']):status(id,value)

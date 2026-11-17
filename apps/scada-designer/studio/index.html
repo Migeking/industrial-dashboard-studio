@@ -8,99 +8,239 @@
     <link rel="stylesheet" href="/studio.css" />
   </head>
   <body>
-    <div id="app" v-cloak>
-      <header v-if="!viewer">
-        <b>工业可视化工作台</b><span class="grow">{{doc.title}}</span>
-        <small>{{dirty?'有未保存修改':'草稿已保存'}}</small
-        ><template v-if="editing"
-          ><button @click="save(false)" :disabled="saving">保存草稿</button
-          ><button @click="versions">版本</button
-          ><a href="/view" target="_blank" rel="noopener"
-            >展示端 ↗</a
-          ></template
-        >
-        <button
-          v-if="!dialog"
-          class="primary"
-          @click="save(true)"
-          :disabled="saving"
-        >
-          发布
-        </button>
-      </header>
-      <nav v-if="!viewer" class="workflow" aria-label="搭建流程">
-        <template v-if="editing"
-          ><span>选择模板 →</span><button @click="openConfig">数据连接</button
-          ><span>→</span
-          ><button @click="openBindings">
-            绑定测点<span v-if="bindingIssues.length">
-              · {{bindingIssues.length}} 项待完成</span
-            ></button
-          ><span>→</span></template
-        >
-        <button @click="preview=!preview">{{preview?'返回编辑':'预览'}}</button>
-        <small v-if="editing"
-          >{{['json','csv'].includes(doc.source.kind)?'正在使用本地样本':connection}}</small
-        >
-      </nav>
-      <div class="workspace" :class="{presentation:!editing}">
-        <aside v-if="editing">
-          <h2>场景模板</h2>
-          <select
-            aria-label="切换模板"
-            :value="doc.template"
-            @change="replace($event.target.value)"
-          >
-            <option value="01">01 · A²/O 生物处理</option>
-            <option value="05">05 · 污泥回流泵站</option>
-            <option value="30">30 · 园区能源中心</option>
-            <option value="30-demo">30 · 三维设备联动（演示）</option>
-            <option value="blank">空白画布</option>
-          </select>
-          <h2>组件库</h2>
-          <div class="tools">
-            <button v-for="(label,type) in types" @click="add(type)">
-              {{label}}
-            </button>
-          </div>
-          <h2>图层</h2>
-          <button
-            class="layer"
-            v-for="n in [...doc.nodes].reverse()"
-            :class="{active:ids.includes(n.id)}"
-            @click="pick(n,$event)"
-          >
-            {{n.locked?'▣ ':''}}{{n.title}}
-          </button>
-          <h2>项目文件</h2>
+  <div id="app" v-cloak>
+    <header v-if="!viewer" class="studio-header">
+      <b>工业可视化工作台</b><span class="project-title">{{ doc.title }}</span>
+      <small class="save-state">{{
+        dirty ? "有未保存修改" : "草稿已保存"
+      }}</small>
+      <button @click="undo" :disabled="!undoCount">撤销</button>
+      <button @click="save(false)" :disabled="saving">保存草稿</button>
+      <button @click="versions">版本</button>
+      <details class="project-menu">
+        <summary>项目文件</summary>
+        <div>
           <button @click="exportDoc">导出配置</button>
           <label class="button"
             >导入配置<input
               type="file"
               accept=".json"
-              @change="importDoc($event.target.files[0]);$event.target.value=''" /></label
-          ><button @click="runExport">导出离线演示</button>
-        </aside>
-        <main ref="stage">
+              @change="
+                importDoc($event.target.files[0]);
+                $event.target.value = '';
+              "
+          /></label>
+          <button @click="runExport">导出离线演示</button>
+          <a href="/view" target="_blank" rel="noopener">打开展示端 ↗</a>
+        </div>
+      </details>
+      <button v-if="!preview" class="primary" @click="goStep('preview')">
+        预览发布
+      </button>
+      <button
+        v-else
+        class="primary"
+        @click="save(true)"
+        :disabled="saving || bindingIssues.length > 0"
+      >
+        发布
+      </button>
+    </header>
+    <nav v-if="!viewer" class="workflow" aria-label="搭建流程">
+      <button
+        v-for="(step, i) in steps"
+        :key="step.key"
+        :aria-label="step.label"
+        :class="{ current: activeStep === step.key }"
+        :aria-current="activeStep === step.key ? 'step' : undefined"
+        @click="goStep(step.key)"
+      >
+        <span class="step-number">{{ i + 1 }}</span
+        ><span
+          ><b>{{ step.label }}</b
+          ><small>{{
+            step.key === "scene"
+              ? sceneOptions.find((s) => s.key === doc.template)?.name ||
+                "自定义场景"
+              : step.key === "canvas"
+                ? doc.nodes.length + " 个组件"
+                : step.key === "bind"
+                  ? bindingIssues.length
+                    ? bindingIssues.length + " 个组件待绑定"
+                    : "绑定已完成"
+                  : "检查效果并发布"
+          }}</small></span
+        >
+      </button>
+      <div class="workflow-source">
+        <span>{{ sourceTitle }}</span
+        ><small>{{ connection }}</small>
+      </div>
+    </nav>
+    <div
+      class="workspace"
+      :class="{ presentation: viewer, review: preview && !viewer }"
+    >
+      <aside v-if="editing" class="navigator" aria-label="场景与组件">
+        <template v-if="activeStep === 'scene'">
+          <h2>选择一个起点</h2>
+          <p class="muted">先选场景，再按需要调整画布。</p>
+          <button
+            v-for="scene in sceneOptions"
+            :key="scene.key"
+            class="scene-option"
+            :class="{ active: chosenTemplate === scene.key }"
+            :aria-pressed="chosenTemplate === scene.key"
+            @click="chosenTemplate = scene.key"
+            :aria-label="'选择场景 ' + scene.key"
+          >
+            <span class="scene-code">{{
+              scene.key === "blank"
+                ? "＋"
+                : scene.key === "30-demo"
+                  ? "30"
+                  : scene.key
+            }}</span
+            ><span
+              ><small>{{ scene.kind }}</small
+              ><b>{{ scene.name }}</b
+              ><span>{{ scene.description }}</span></span
+            >
+          </button>
+          <p class="muted">
+            {{
+              chosenTemplate === "30-demo"
+                ? "此演示会载入本地样本和设备绑定，可撤销恢复。"
+                : "使用场景会替换画布，保留现有数据连接，可撤销。"
+            }}
+          </p>
+          <button class="primary wide" @click="replace(chosenTemplate)">
+            使用该场景
+          </button>
+        </template>
+        <template v-else>
+          <div class="scene-summary">
+            <small>当前场景</small
+            ><b>{{
+              sceneOptions.find((s) => s.key === doc.template)?.name ||
+              "自定义场景"
+            }}</b
+            ><button @click="goStep('scene')">更换场景</button>
+          </div>
+          <template v-if="activeStep === 'canvas'">
+            <h2>添加组件</h2>
+            <div class="tools component-library">
+              <button v-for="(label, type) in types" @click="add(type)">
+                {{ label }}
+              </button>
+            </div>
+            <h2>
+              画布组件 <small>{{ doc.nodes.length }}</small>
+            </h2>
+          </template>
+          <template v-else>
+            <div class="source-summary">
+              <small>页面数据连接</small><b>{{ sourceTitle }}</b
+              ><span>{{ doc.mappings.length }} 个测点 · {{ connection }}</span
+              ><button @click="openConfig">数据连接</button>
+            </div>
+            <h2>
+              逐个绑定组件
+              <small
+                >{{ bindingNodes.length - bindingIssues.length }} /
+                {{ bindingNodes.length }}</small
+              >
+            </h2>
+            <p class="muted">选择组件，在右侧选测点，画布立即显示结果。</p>
+          </template>
+          <button
+            class="layer"
+            v-for="n in activeStep === 'bind'
+              ? bindingNodes
+              : [...doc.nodes].reverse()"
+            :key="n.id"
+            :class="{ active: ids.includes(n.id) }"
+            @click="activeStep === 'bind' ? selectBinding(n) : pick(n, $event)"
+            :data-layer="n.id"
+          >
+            <span>{{ n.locked ? "▣ " : "" }}{{ n.title }}</span
+            ><small
+              :class="{ 'needs-binding': bindingProblem(n, doc.mappings) }"
+              >{{ types[n.type] }} ·
+              {{
+                mapped(n.type)
+                  ? bindingProblem(n, doc.mappings)
+                    ? "待绑定"
+                    : "已绑定"
+                  : "静态内容"
+              }}</small
+            >
+          </button>
+          <p v-if="!doc.nodes.length" class="muted">
+            画布还是空的，从上方添加一个组件。
+          </p>
+          <button
+            v-if="activeStep === 'canvas'"
+            class="primary wide next-action"
+            @click="goStep('bind')"
+          >
+            下一步：数据绑定 →
+          </button>
+          <button
+            v-else
+            class="primary wide next-action"
+            @click="goStep('preview')"
+          >
+            下一步：预览发布 →
+          </button>
+        </template>
+      </aside>
+      <div class="canvas-workspace">
+        <div v-if="!viewer" class="canvas-toolbar">
+          <b>{{ preview ? "页面预览" : "场景画布" }}</b
+          ><span>1920 × 1080</span
+          ><span>{{ Math.round(zoom * 100) }}% · 自适应</span
+          ><small>{{
+            preview
+              ? "展示效果与发布页面一致"
+              : sel
+                ? "已选中：" + sel.title
+                : "点击组件编辑 · 拖动标题移动 · 拖动右下角缩放"
+          }}</small
+          ><button v-if="preview" @click="goStep('canvas')">返回编辑</button>
+        </div>
+        <main ref="stage" @pointerdown.self="ids = []">
           <div
             class="board"
-            :style="{transform:'translate(-50%,-50%) scale('+zoom+')'}"
+              @pointerdown.self="ids = []"
+            :style="{ transform: 'translate(-50%,-50%) scale(' + zoom + ')' }"
           >
             <div class="board-title">
               <span>运行监视</span>
-              <h1>{{doc.title}}</h1>
-              <small>{{connection}}</small>
+              <h1>{{ doc.title }}</h1>
+              <small>{{ connection }}</small>
             </div>
             <section
               v-for="n in doc.nodes"
-              :key="sourceVersion+'-'+n.id+'-'+n.type"
+              :key="sourceVersion + '-' + n.id + '-' + n.type"
               class="panel"
-              :class="{chosen:editing&&ids.includes(n.id)}"
+              :class="{
+                chosen: editing && ids.includes(n.id),
+                'pending-binding':
+                  editing &&
+                  activeStep === 'bind' &&
+                  bindingProblem(n, doc.mappings),
+              }"
               :data-id="n.id"
-              :style="{left:n.x+'px',top:n.y+'px',width:n.w+'px',height:n.h+'px'}"
-              @pointerdown="pick(n,$event)"
+              :style="{
+                left: n.x + 'px',
+                top: n.y + 'px',
+                width: n.w + 'px',
+                height: n.h + 'px',
+              }"
+              @pointerdown="pick(n, $event)"
             >
-              <h3 class="node-title">{{n.title}}</h3>
+              <h3 class="node-title">{{ n.title }}</h3>
               <widget
                 :n="n"
                 :point="points[n.binding]"
@@ -108,392 +248,549 @@
                 :mappings="doc.mappings"
                 :sequence="sequence"
                 :editing="editing"
-                @entity="selectEntity(n,$event)"
-              ></widget
-              ><i v-if="editing&&!n.locked" class="handle"></i>
+                @entity="selectEntity(n, $event)"
+              ></widget>
+              <i v-if="editing && !n.locked" class="handle"></i>
             </section>
+            <div v-if="!doc.nodes.length && editing" class="canvas-empty">
+              <b>从一个组件开始</b
+              ><span>在左侧添加组件，或选择一个现成场景。</span
+              ><button @click="goStep('scene')">选择场景</button>
+            </div>
           </div>
         </main>
-        <aside v-if="editing">
-          <h2>页面属性</h2>
-          <label>名称<input v-model="doc.title" @focus="snapshot" /></label
-          ><button @click="undo" :disabled="!undoCount">撤销</button>
-          <template v-if="sel"
-            ><h2>组件属性</h2>
-            <label>标题<input v-model="sel.title" @focus="snapshot" /></label
-            ><label v-if="mapped(sel.type)&&sel.type!=='campus'"
-              >业务测点<select v-model="sel.binding" @focus="snapshot">
-                <option v-if="sel.type==='table'" value="*">全部测点</option>
-                <option value="" disabled>请选择测点</option>
-                <option
-                  v-for="m in compatibleMappings(sel.type,doc.mappings)"
-                  :value="m.id"
-                >
-                  {{m.label}} · {{m.id}}
-                </option>
-              </select></label
-            >
-            <label v-if="sel.type==='chart'"
-              >样式<select v-model="sel.series" @focus="snapshot">
-                <option value="line">趋势线</option>
-                <option value="bar">柱状图</option>
-              </select></label
-            >
-            <label v-if="sel.type==='text'"
-              >内容<textarea v-model="sel.text" @focus="snapshot"></textarea>
-            </label>
-            <label v-if="sel.type==='flow'"
-              >工段（英文逗号分隔）<input v-model="sel.steps" @focus="snapshot"
-            /></label>
-            <label v-if="sel.type==='image'" class="button"
-              >载入本地图片<input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                @change="loadImage($event.target.files[0])"
-            /></label>
-            <template v-if="sel.type==='campus'"
-              ><button @click="openCampus(sel)">配置三维设备</button
-              ><label
-                >设备<select aria-label="设备" v-model="sel.entity" @focus="snapshot">
-                  <option v-for="f in fans" :value="f.id">{{f.label}}</option>
-                </select></label
-              ><label
-                >镜头<select aria-label="镜头" v-model="sel.camera" @focus="snapshot">
-                  <option value="equipment">设备特写</option>
-                  <option value="energy">能源中心</option>
-                  <option value="overview">园区全景</option>
-                </select></label
-              ></template
-            >
-            <h2>排布</h2>
-            <small>Shift 多选 · 拖动标题移动</small>
-            <div class="tools">
-              <button
-                v-for="(label,key) in {copy:'复制',delete:'删除',front:'置顶',back:'置底',left:'左对齐',top:'顶对齐',lock:'锁定 / 解锁',group:'成组',ungroup:'解组'}"
-                @click="action(key)"
-              >
-                {{label}}
-              </button>
-            </div></template
-          >
-        </aside>
       </div>
-      <div
-        v-if="!viewer&&message"
-        role="status"
-        class="toast"
-        @click="message=''"
-      >
-        {{message}}
-        <a v-if="published" href="/view" target="_blank" rel="noopener"
-          >查看展示页面 ↗</a
-        >
-        ×
-      </div>
-      <div v-if="dialog" class="shade">
-        <section
-          class="dialog"
-          :class="{'tag-dialog':dialog==='data'&&['opcua','modbus'].includes(config.source.kind)}"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="dialog-title"
-        >
-          <header>
-            <b id="dialog-title"
-              >{{dialog==='data'?'设备与点位设置':dialog==='bindings'?'绑定组件测点':dialog==='campus'?'三维设备绑定':'发布版本'}}</b
-            ><button @click="dialog=''">关闭</button>
-          </header>
-          <template
-            v-if="dialog==='data'&&['opcua','modbus'].includes(config.source.kind)"
-          >
-            <tag-manager
-              :config="config"
-              :sample="sample"
-              :sample-source="sampleSource"
-              :busy="protocolBusy"
-              :path="browsePath"
-              :results="browseResults"
-              :next-offset="browseNext"
-              :notice="message"
-              @kind-change="sourceKindChanged"
-              @browse="browseProtocol"
-              @read="readSample"
-              @finish="finishTags"
-            ></tag-manager>
-          </template>
-          <template v-else-if="dialog==='data'"
-            ><div class="columns">
-              <div>
-                <label
-                  >来源<select
-                    aria-label="来源"
-                    v-model="config.source.kind"
-                    @change="sourceKindChanged"
-                    :disabled="protocolBusy"
-                  >
-                    <option value="json">本地 JSON</option>
-                    <option value="csv">本地 CSV</option>
-                    <option value="rest">REST / 工业协议桥接</option>
-                    <option value="ws">WebSocket JSON</option>
-                    <option value="opcua">OPC UA</option>
-                    <option value="modbus">Modbus TCP</option>
-                  </select></label
-                >
-                <template v-if="['csv','json'].includes(config.source.kind)"
-                  ><label
-                    >样本内容<textarea
-                      rows="5"
-                      v-model="config.source.data"
-                    ></textarea></label
-                  ><label class="button"
-                    >从文件载入<input
-                      type="file"
-                      @change="fileData($event.target.files[0])" /></label
-                ></template>
-                <label v-else
-                  >接口 URL<input
-                    v-model="config.source.url"
-                    placeholder="http://127.0.0.1:8101/snapshot"
-                /></label>
-                <label
-                  >刷新周期（ms）<input
-                    type="number"
-                    min="200"
-                    v-model.number="config.source.pollMs" /></label
-                ><label
-                  >最大数据年龄（ms）<input
-                    type="number"
-                    min="1"
-                    v-model.number="config.source.maxAgeMs" /></label
-                ><button @click="readSample" :disabled="protocolBusy">
-                  {{protocolBusy?'正在连接…':'读取样本'}}</button
-                ><button
-                  v-if="!['opcua','modbus'].includes(config.source.kind)&&Array.isArray(sample?.points)&&sample.points.every(p=>p.id&&p.kind)"
-                  @click="bridgeMappings"
-                >
-                  从桥接点表生成映射
-                </button>
-                <details>
-                  <summary>{{sample===null?'等待读取样本':'原始样本'}}</summary>
-                  <pre>{{JSON.stringify(sample,null,2).slice(0,12000)}}</pre>
-                </details>
-              </div>
-              <div>
-                <label
-                  >测点<select aria-label="测点" v-model.number="mappingIndex">
-                    <option v-for="(m,i) in config.mappings" :value="i">
-                      {{m.label}} · {{m.id}}
-                    </option>
-                  </select></label
-                ><button @click="addMap">新增测点</button>
-                <button
-                  v-if="currentMap"
-                  @click="config.mappings.splice(mappingIndex,1);mappingIndex=0"
-                >
-                  移除测点
-                </button>
-                <template v-if="currentMap"
-                  ><div class="pair">
-                    <label>业务编号<input v-model="currentMap.id" /></label
-                    ><label>显示名称<input v-model="currentMap.label" /></label>
-                  </div>
-                  <label
-                    >数值路径（$ 表示整条记录）<input
-                      v-model="currentMap.path"
-                      list="field-paths" /></label
-                  ><datalist id="field-paths">
-                    <option v-for="p in paths" :value="p"></option>
-                  </datalist>
-                  <div class="pair">
-                    <label
-                      >类型<select v-model="currentMap.kind">
-                        <option value="number">数值</option>
-                        <option value="boolean">布尔</option>
-                        <option value="text">文本</option>
-                        <option value="dataset">行数据集</option>
-                      </select></label
-                    ><label>单位<input v-model="currentMap.unit" /></label>
-                  </div>
-                  <details>
-                    <summary>换算、行筛选与质量</summary>
-                    <div class="pair">
-                      <label
-                        v-for="(name,k) in {scale:'倍率',offset:'偏移',precision:'小数位'}"
-                        >{{name}}<input
-                          type="number"
-                          v-model.number="currentMap[k]"
-                      /></label>
-                    </div>
-                    <label
-                      v-for="(name,k) in {root:'根路径',keyField:'行标识字段',keyValue:'匹配值',timePath:'源时间字段',qualityPath:'质量字段'}"
-                      >{{name}}<input
-                        v-model="currentMap[k]"
-                        list="field-paths" /></label
-                    ><label
-                      >枚举换算 JSON<input
-                        :value="JSON.stringify(currentMap.enumMap||{})"
-                        @change="setEnum($event.target.value)"
-                    /></label></details
-                ></template>
-              </div>
+      <aside v-if="!viewer" class="inspector" aria-label="当前配置">
+        <template v-if="preview">
+          <h2>发布检查</h2>
+          <p class="muted">先确认画面和数据，再发布到展示端。</p>
+          <div class="review-item">
+            <b>场景画布</b
+            ><span>{{ doc.nodes.length }} 个组件 · 1920 × 1080</span>
+          </div>
+          <div class="review-item">
+            <b>数据来源</b><span>{{ sourceTitle }}</span
+            ><small>{{ connection }}</small
+            ><small v-if="['json', 'csv'].includes(doc.source.kind)"
+              >当前为本地样本，发布后仍显示样本数据。</small
+            >
+          </div>
+          <div class="review-item">
+            <b>组件绑定</b
+            ><span>{{
+              bindingIssues.length
+                ? "还有 " + bindingIssues.length + " 个组件待绑定"
+                : "所有组件绑定已完成"
+            }}</span
+            ><button v-for="n in bindingIssues" @click="selectBinding(n)">
+              去绑定：{{ n.title }}
+            </button>
+          </div>
+          <div v-if="invalidPoints" class="quality-note">
+            {{ invalidPoints }} 个测点当前无有效读数，展示端会保留质量提示。
+          </div>
+          <button class="wide" @click="goStep('bind')">检查数据绑定</button>
+<p v-if="published" class="publish-success">发布成功，展示端已更新。</p>
+        </template>
+        <template v-else>
+          <template v-if="sel">
+            <div class="inspector-heading">
+              <small>当前组件 · {{ types[sel.type] }}</small
+              ><b>{{ sel.title }}</b>
             </div>
-            <button
-              class="primary"
-              @click="applyConfig"
-              :disabled="protocolBusy"
-            >
-              应用数据配置
-            </button></template
-          >
-          <template v-else-if="dialog==='bindings'">
-            <p>
-              为每个组件选择对应业务测点，可同时核对名称、读数与单位。运行状态组件请绑定运行反馈。
-            </p>
-            <p v-if="bindingIssues.length" role="alert">
-              还有 {{bindingIssues.length}} 个组件需要绑定。
-            </p>
-            <p v-else>
-              绑定已完成，可预览并发布。数据异常会在展示端按质量标注。
-            </p>
-            <div class="binding-list">
-              <div
-                v-for="n in bindingNodes"
-                :key="n.id"
-                class="binding-row"
-                :data-binding-id="n.id"
+            <div class="inspector-tabs" role="tablist" aria-label="组件设置">
+              <button
+                role="tab"
+                :aria-selected="inspectorTab === 'appearance'"
+                @click="inspectorTab = 'appearance'"
               >
+                外观与布局</button
+              ><button
+                v-if="mapped(sel.type)"
+                role="tab"
+                :aria-selected="inspectorTab === 'binding'"
+                @click="selectBinding(sel)"
+              >
+                数据绑定
+              </button>
+            </div>
+            <div
+              v-if="inspectorTab === 'binding' && mapped(sel.type)"
+              class="binding-inspector"
+            >
+              <small>数据来源 · {{ sourceTitle }}</small
+              ><button class="source-link" @click="openConfig">
+                管理连接与点位
+              </button>
+              <template v-if="sel.type !== 'campus'">
                 <label
-                  >组件名称<input
-                    v-model="n.title"
-                    :aria-label="'组件名称 '+n.id"
-                /></label>
-                <label v-if="n.type!=='campus'"
-                  >{{types[n.type]}}测点<select
-                    v-model="n.binding"
-                    :aria-label="'组件测点 '+n.id"
+                  >绑定测点<select
+                    aria-label="当前组件测点"
+                    v-model="sel.binding"
+                    @focus="snapshot"
                   >
                     <option value="">请选择测点</option>
-                    <option v-if="n.type==='table'" value="*">全部测点</option>
+                    <option v-if="sel.type === 'table'" value="*">
+                      全部测点
+                    </option>
                     <option
-                      v-for="m in compatibleMappings(n.type,doc.mappings)"
+                      v-for="m in compatibleMappings(sel.type, doc.mappings)"
                       :value="m.id"
                     >
-                      {{m.label}} · {{m.unit||kindNames[m.kind]}}
+                      {{ m.label || m.id }} · {{ m.unit || kindNames[m.kind] }}
                     </option>
                   </select></label
                 >
-                <button v-else @click="openCampus(n)">
-                  配置 {{campusBindings(n).length}} 台三维设备
-                </button>
-                <small :class="{'binding-error':bindingProblem(n,doc.mappings)}"
-                  >{{bindingProblem(n,doc.mappings)||bindingValue(n)}}</small
+                <p
+                  v-if="!compatibleMappings(sel.type, doc.mappings).length"
+                  class="quality-note"
                 >
-              </div>
-            </div>
-            <div class="dialog-actions">
-              <button @click="dialog='';preview=true">预览页面</button
-              ><button
-                class="primary"
-                @click="save(true)"
-                :disabled="saving||bindingIssues.length>0"
-              >
-                发布
-              </button>
-            </div>
-          </template>
-          <template v-else-if="dialog==='campus'&&campusNode">
-            <p>
-              勾选要接入的设备，分别选择运行反馈。故障反馈和数值标签可按需配置。
-            </p>
-            <div class="campus-config">
-              <fieldset v-for="fan in fans" :key="fan.id" :data-entity="fan.id">
-                <label class="campus-enabled"
-                  ><input
-                    type="checkbox"
-                    :aria-label="'接入 '+fan.label"
-                    :checked="!!campusEntry(fan.id)"
-                    @change="toggleCampus(fan.id,$event.target.checked)"
-                  />{{fan.label}}</label
+                  当前点表没有适合此组件的测点。请在“管理连接与点位”中添加{{
+                    sel.type === "chart"
+                      ? "数值"
+                      : sel.type === "status" || sel.type === "flow"
+                        ? "开关量"
+                        : "对应类型"
+                  }}测点。
+                </p>
+                <div
+                  class="binding-readback"
+                  :class="{ invalid: bindingProblem(sel, doc.mappings) }"
                 >
-                <div v-if="campusEntry(fan.id)" class="campus-fields">
-                  <label
-                    >运行反馈<select
-                      :aria-label="'运行反馈 '+fan.id"
-                      v-model="campusEntry(fan.id).run"
-                    >
-                      <option value="">请选择</option>
-                      <option
-                        v-for="m in doc.mappings.filter(m=>m.kind==='boolean')"
-                        :value="m.id"
-                      >
-                        {{m.label}}
-                      </option>
-                    </select></label
-                  >
-                  <label
-                    >故障反馈<select
-                      :aria-label="'故障反馈 '+fan.id"
-                      v-model="campusEntry(fan.id).fault"
-                    >
-                      <option value="">未配置</option>
-                      <option
-                        v-for="m in doc.mappings.filter(m=>m.kind==='boolean')"
-                        :value="m.id"
-                      >
-                        {{m.label}}
-                      </option>
-                    </select></label
-                  >
-                  <label
-                    >数值标签<select
-                      :aria-label="'数值标签 '+fan.id"
-                      v-model="campusEntry(fan.id).value"
-                    >
-                      <option value="">未配置</option>
-                      <option
-                        v-for="m in doc.mappings.filter(m=>m.kind==='number')"
-                        :value="m.id"
-                      >
-                        {{m.label}} · {{m.unit}}
-                      </option>
-                    </select></label
-                  >
-                  <small
-                    >当前状态 ·
-                    {{campusState(campusEntry(fan.id),points)}}</small
-                  >
+                  <small>{{
+                    bindingProblem(sel, doc.mappings) ? "待处理" : "当前读数"
+                  }}</small
+                  ><b>{{
+                    bindingProblem(sel, doc.mappings) || bindingValue(sel)
+                  }}</b>
                 </div>
-              </fieldset>
-            </div>
-            <p v-if="bindingProblem(campusNode,doc.mappings)" role="alert">
-              {{bindingProblem(campusNode,doc.mappings)}}
-            </p>
-            <div class="dialog-actions">
-              <button @click="dialog='bindings'">返回组件绑定</button
-              ><button
-                class="primary"
-                :disabled="!!bindingProblem(campusNode,doc.mappings)"
-                @click="dialog=''"
+                <p v-if="['flow', 'status'].includes(sel.type)" class="muted">
+                  选择设备的运行反馈：真表示运行，假表示停止；质量异常时显示未知。
+                </p>
+              </template>
+              <template v-else>
+                <p class="muted">勾选设备后分别绑定测点，画布立即反馈。</p>
+                <fieldset
+                  v-for="fan in fans"
+                  :key="fan.id"
+                  :data-entity="fan.id"
+                  class="device-binding"
+                >
+                  <label class="campus-enabled"
+                    ><input
+                      type="checkbox"
+                      :aria-label="'接入 ' + fan.label"
+                      :checked="!!campusEntry(fan.id)"
+                      @change="toggleCampus(fan.id, $event.target.checked)"
+                    />{{ fan.label }}</label
+                  >
+                  <template v-if="campusEntry(fan.id)">
+                    <label
+                      >运行反馈<select
+                        :aria-label="'运行反馈 ' + fan.id"
+                        :value="campusEntry(fan.id).run"
+                        @change="
+                          setCampusField(fan.id, 'run', $event.target.value)
+                        "
+                      >
+                        <option value="">请选择开关量</option>
+                        <option
+                          v-for="m in doc.mappings.filter(
+                            (m) => m.kind === 'boolean',
+                          )"
+                          :value="m.id"
+                        >
+                          {{ m.label || m.id }}
+                        </option>
+                      </select></label
+                    >
+                    <label
+                      >故障反馈 <small>可选</small
+                      ><select
+                        :aria-label="'故障反馈 ' + fan.id"
+                        :value="campusEntry(fan.id).fault || ''"
+                        @change="
+                          setCampusField(fan.id, 'fault', $event.target.value)
+                        "
+                      >
+                        <option value="">未配置</option>
+                        <option
+                          v-for="m in doc.mappings.filter(
+                            (m) => m.kind === 'boolean',
+                          )"
+                          :value="m.id"
+                        >
+                          {{ m.label || m.id }}
+                        </option>
+                      </select></label
+                    >
+                    <label
+                      >数值标签 <small>可选</small
+                      ><select
+                        :aria-label="'数值标签 ' + fan.id"
+                        :value="campusEntry(fan.id).value || ''"
+                        @change="
+                          setCampusField(fan.id, 'value', $event.target.value)
+                        "
+                      >
+                        <option value="">未配置</option>
+                        <option
+                          v-for="m in doc.mappings.filter(
+                            (m) => m.kind === 'number',
+                          )"
+                          :value="m.id"
+                        >
+                          {{ m.label || m.id }} · {{ m.unit }}
+                        </option>
+                      </select></label
+                    >
+                    <small
+                      >当前状态 ·
+                      {{ campusState(campusEntry(fan.id), points) }}</small
+                    >
+                  </template>
+                </fieldset>
+                <p
+                  v-if="bindingProblem(sel, doc.mappings)"
+                  class="quality-note"
+                  role="alert"
+                >
+                  {{ bindingProblem(sel, doc.mappings) }}
+                </p>
+              </template>
+              <button
+                v-if="!bindingProblem(sel, doc.mappings)"
+                class="primary wide"
+                @click="nextBinding"
               >
-                完成配置
+                {{
+                  bindingIssues.some((n) => n.id !== sel.id)
+                    ? "绑定下一个待处理组件 →"
+                    : "完成绑定，预览页面 →"
+                }}
               </button>
             </div>
+            <template v-else>
+              <label
+                >标题<input
+                  aria-label="标题"
+                  v-model="sel.title"
+                  @focus="snapshot"
+              /></label>
+              <div class="pair">
+                <label
+                  v-for="(name, key) in {
+                    x: '位置 X',
+                    y: '位置 Y',
+                    w: '宽度',
+                    h: '高度',
+                  }"
+                  >{{ name
+                  }}<input
+                    type="number"
+                    :aria-label="name"
+                    :value="sel[key]"
+                    @change="setRect(sel, key, $event.target)"
+                /></label>
+              </div>
+              <label v-if="sel.type === 'chart'"
+                >样式<select
+                  aria-label="图表样式"
+                  v-model="sel.series"
+                  @focus="snapshot"
+                >
+                  <option value="line">趋势线</option>
+                  <option value="bar">柱状图</option>
+                </select></label
+              >
+              <label v-if="sel.type === 'text'"
+                >内容<textarea v-model="sel.text" @focus="snapshot"></textarea>
+              </label>
+              <label v-if="sel.type === 'flow'"
+                >工段（英文逗号分隔）<input
+                  v-model="sel.steps"
+                  @focus="snapshot"
+              /></label>
+              <label v-if="sel.type === 'image'" class="button"
+                >载入本地图片<input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  @change="loadImage($event.target.files[0])"
+              /></label>
+              <template v-if="sel.type === 'campus'">
+                <label
+                  >设备<select
+                    aria-label="设备"
+                    v-model="sel.entity"
+                    @focus="snapshot"
+                  >
+                    <option v-for="f in fans" :value="f.id">
+                      {{ f.label }}
+                    </option>
+                  </select></label
+                >
+                <label
+                  >镜头<select
+                    aria-label="镜头"
+                    v-model="sel.camera"
+                    @focus="snapshot"
+                  >
+                    <option value="equipment">设备特写</option>
+                    <option value="energy">能源中心</option>
+                    <option value="overview">园区全景</option>
+                  </select></label
+                >
+              </template>
+              <h2>排列与操作</h2>
+              <small class="muted">Shift 多选后可对齐、成组。</small>
+              <div class="tools">
+                <button
+                  v-for="(label, key) in {
+                    copy: '复制',
+                    delete: '删除',
+                    front: '置顶',
+                    back: '置底',
+                    left: '左对齐',
+                    top: '顶对齐',
+                    lock: '锁定 / 解锁',
+                    group: '成组',
+                    ungroup: '解组',
+                  }"
+                  @click="action(key)"
+                >
+                  {{ label }}
+                </button>
+              </div>
+              <button
+                v-if="mapped(sel.type)"
+                class="primary wide"
+                @click="openCampusOrBinding(sel)"
+              >
+                配置数据绑定 →
+              </button>
+            </template>
           </template>
           <template v-else
-            ><p v-if="!versionInfo.versions.length">尚无发布版本</p>
-            <p v-for="v in versionInfo.versions">
-              {{new Date(v.time).toLocaleString()}} · {{v.title}}
-              <button
-                :disabled="versionInfo.active===v.id"
-                @click="rollback(v.id)"
-              >
-                {{versionInfo.active===v.id?'当前展示':'回退至此版'}}
-              </button>
-            </p></template
+            ><h2>页面设置</h2>
+            <label
+              >名称<input
+                aria-label="名称"
+                v-model="doc.title"
+                @focus="snapshot"
+            /></label>
+            <p class="inspector-empty">
+              点击画布或左侧列表中的组件，在这里编辑外观和数据。
+            </p>
+            <button class="wide" @click="goStep('bind')">
+              查看待绑定组件
+            </button></template
           >
-        </section>
-      </div>
+        </template>
+      </aside>
     </div>
+
+    <div v-if="!viewer && message && !dialog" role="status" class="status-message">
+      <span>{{message}}</span><a v-if="published" href="/view" target="_blank" rel="noopener">查看展示页面 ↗</a><button @click="message=''" aria-label="关闭提示">×</button>
+    </div>
+    <div v-if="dialog" class="shade">
+      <section
+        class="dialog"
+        :class="{
+          'tag-dialog':
+            dialog === 'data' &&
+            ['opcua', 'modbus'].includes(config.source.kind),
+        }"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dialog-title"
+      >
+        <header>
+          <b id="dialog-title">{{
+            dialog === "data" ? "数据连接与点位" : "发布版本"
+          }}</b
+          ><button @click="dialog = ''">关闭</button>
+        </header>
+        <p v-if="dialog === 'data'" class="connection-context">
+          {{ doc.title
+          }}<span> › {{ sel?.title || "页面共享数据" }} › 数据连接</span
+          ><small>完成后返回当前组件，继续绑定测点。</small>
+        </p>
+        <p v-if="dialog==='data'&&message" role="alert" class="quality-note">{{message}}</p>
+        <template
+          v-if="
+            dialog === 'data' &&
+            ['opcua', 'modbus'].includes(config.source.kind)
+          "
+        >
+          <tag-manager
+            :config="config"
+            :sample="sample"
+            :sample-source="sampleSource"
+            :busy="protocolBusy"
+            :path="browsePath"
+            :results="browseResults"
+            :next-offset="browseNext"
+            :notice="message"
+            @kind-change="sourceKindChanged"
+            @browse="browseProtocol"
+            @read="readSample"
+            @finish="finishTags"
+          ></tag-manager>
+        </template>
+        <template v-else-if="dialog === 'data'"
+          ><div class="columns">
+            <div>
+              <label
+                >来源<select
+                  aria-label="来源"
+                  v-model="config.source.kind"
+                  @change="sourceKindChanged"
+                  :disabled="protocolBusy"
+                >
+                  <option value="json">本地 JSON</option>
+                  <option value="csv">本地 CSV</option>
+                  <option value="rest">REST / 工业协议桥接</option>
+                  <option value="ws">WebSocket JSON</option>
+                  <option value="opcua">OPC UA</option>
+                  <option value="modbus">Modbus TCP</option>
+                </select></label
+              >
+              <template v-if="['csv', 'json'].includes(config.source.kind)"
+                ><label
+                  >样本内容<textarea
+                    rows="5"
+                    v-model="config.source.data"
+                  ></textarea></label
+                ><label class="button"
+                  >从文件载入<input
+                    type="file"
+                    @change="fileData($event.target.files[0])" /></label
+              ></template>
+              <label v-else
+                >接口 URL<input
+                  v-model="config.source.url"
+                  placeholder="http://127.0.0.1:8101/snapshot"
+              /></label>
+              <label
+                >刷新周期（ms）<input
+                  type="number"
+                  min="200"
+                  v-model.number="config.source.pollMs" /></label
+              ><label
+                >最大数据年龄（ms）<input
+                  type="number"
+                  min="1"
+                  v-model.number="config.source.maxAgeMs" /></label
+              ><button @click="readSample" :disabled="protocolBusy">
+                {{ protocolBusy ? "正在连接…" : "读取样本" }}</button
+              ><button
+                v-if="
+                  !['opcua', 'modbus'].includes(config.source.kind) &&
+                  Array.isArray(sample?.points) &&
+                  sample.points.every((p) => p.id && p.kind)
+                "
+                @click="bridgeMappings"
+              >
+                从桥接点表生成映射
+              </button>
+              <details>
+                <summary>
+                  {{ sample === null ? "等待读取样本" : "原始样本" }}
+                </summary>
+                <pre>{{ JSON.stringify(sample, null, 2).slice(0, 12000) }}</pre>
+              </details>
+            </div>
+            <div>
+              <label
+                >测点<select aria-label="测点" v-model.number="mappingIndex">
+                  <option v-for="(m, i) in config.mappings" :value="i">
+                    {{ m.label }} · {{ m.id }}
+                  </option>
+                </select></label
+              ><button @click="addMap">新增测点</button>
+              <button
+                v-if="currentMap"
+                @click="
+                  config.mappings.splice(mappingIndex, 1);
+                  mappingIndex = 0;
+                "
+              >
+                移除测点
+              </button>
+              <template v-if="currentMap"
+                ><div class="pair">
+                  <label>业务编号<input v-model="currentMap.id" /></label
+                  ><label>显示名称<input v-model="currentMap.label" /></label>
+                </div>
+                <label
+                  >数值路径（$ 表示整条记录）<input
+                    v-model="currentMap.path"
+                    list="field-paths" /></label
+                ><datalist id="field-paths">
+                  <option v-for="p in paths" :value="p"></option>
+                </datalist>
+                <div class="pair">
+                  <label
+                    >类型<select v-model="currentMap.kind">
+                      <option value="number">数值</option>
+                      <option value="boolean">布尔</option>
+                      <option value="text">文本</option>
+                      <option value="dataset">行数据集</option>
+                    </select></label
+                  ><label>单位<input v-model="currentMap.unit" /></label>
+                </div>
+                <details>
+                  <summary>换算、行筛选与质量</summary>
+                  <div class="pair">
+                    <label
+                      v-for="(name, k) in {
+                        scale: '倍率',
+                        offset: '偏移',
+                        precision: '小数位',
+                      }"
+                      >{{ name
+                      }}<input type="number" v-model.number="currentMap[k]"
+                    /></label>
+                  </div>
+                  <label
+                    v-for="(name, k) in {
+                      root: '根路径',
+                      keyField: '行标识字段',
+                      keyValue: '匹配值',
+                      timePath: '源时间字段',
+                      qualityPath: '质量字段',
+                    }"
+                    >{{ name
+                    }}<input
+                      v-model="currentMap[k]"
+                      list="field-paths" /></label
+                  ><label
+                    >枚举换算 JSON<input
+                      :value="JSON.stringify(currentMap.enumMap || {})"
+                      @change="setEnum($event.target.value)"
+                  /></label></details
+              ></template>
+            </div>
+          </div>
+          <button class="primary" @click="applyConfig" :disabled="protocolBusy">
+            应用数据配置
+          </button></template
+        >
+        <template v-else
+          ><p v-if="!versionInfo.versions.length">尚无发布版本</p>
+          <p v-for="v in versionInfo.versions">
+            {{ new Date(v.time).toLocaleString() }} · {{ v.title }}
+            <button
+              :disabled="versionInfo.active === v.id"
+              @click="rollback(v.id)"
+            >
+              {{ versionInfo.active === v.id ? "当前展示" : "回退至此版" }}
+            </button>
+          </p></template
+        >
+      </section>
+    </div>
+  </div>
     <script src="/lib/vue.js"></script>
     <script src="/lib/echarts.js"></script>
     <script src="/lib/three.js"></script>

@@ -604,7 +604,7 @@ export const TagManager = {
       @click="$emit('finish')"
       :disabled="busy || !points.length"
     >
-      完成并绑定
+      完成并返回画布
     </button>
   </footer>
 </div>

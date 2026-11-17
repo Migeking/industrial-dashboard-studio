@@ -50,6 +50,7 @@ const viewer = !!offline || location.pathname === "/view";
 async function boot() {
   const initial =
     offline || (await api(viewer ? "/api/published" : "/api/draft"));
+  document.getElementById("app").classList.toggle("editor-shell", !viewer);
   Vue.createApp({
     components: { Widget, TagManager },
     setup() {
@@ -73,6 +74,47 @@ async function boot() {
         sel = computed(() =>
           doc.value.nodes.find((n) => n.id === ids.value.at(-1)),
         );
+      const activeStep = ref("canvas"),
+        inspectorTab = ref("appearance"),
+        chosenTemplate = ref(initial.template);
+      const sceneOptions = [
+        {
+          key: "01",
+          name: "A²/O 生物处理",
+          description: "工艺流程、运行指标与趋势",
+          kind: "工艺监视",
+        },
+        {
+          key: "05",
+          name: "污泥回流泵站",
+          description: "泵组状态、液位与回流流量",
+          kind: "泵站监视",
+        },
+        {
+          key: "30",
+          name: "园区能源中心",
+          description: "三维设备、运行反馈与特写",
+          kind: "三维场景",
+        },
+        {
+          key: "30-demo",
+          name: "三维设备联动演示",
+          description: "自带四台风机的本地样本与绑定",
+          kind: "本地演示",
+        },
+        {
+          key: "blank",
+          name: "空白画布",
+          description: "从组件库开始搭建页面",
+          kind: "自由搭建",
+        },
+      ];
+      const steps = [
+        { key: "scene", label: "选择场景" },
+        { key: "canvas", label: "编辑画布" },
+        { key: "bind", label: "数据绑定" },
+        { key: "preview", label: "预览发布" },
+      ];
       const raw = shallowRef(null),
         received = ref(0),
         clock = ref(Date.now()),
@@ -91,29 +133,77 @@ async function boot() {
       const dirty = computed(
         () => JSON.stringify(doc.value) !== lastSaved.value,
       );
+      watch(dirty, (value) => {
+        if (value && published.value) {
+          published.value = false;
+          message.value = "页面有新修改，发布后才会更新展示端";
+        }
+      });
       const bindingNodes = computed(() =>
         doc.value.nodes.filter((n) => mapped(n.type)),
       );
       const bindingIssues = computed(() =>
         bindingNodes.value.filter((n) => bindingProblem(n, doc.value.mappings)),
       );
-      function openBindings() {
-        snapshot();
-        dialog.value = "bindings";
+      const sourceTitle = computed(
+        () =>
+          ({
+            json: "本地 JSON 样本",
+            csv: "本地 CSV 样本",
+            rest: "REST 接口",
+            ws: "WebSocket",
+            opcua: "OPC UA",
+            modbus: "Modbus TCP",
+          })[doc.value.source.kind],
+      );
+      const invalidPoints = computed(
+        () =>
+          doc.value.mappings.filter(
+            (m) => points.value[m.id]?.quality !== "good",
+          ).length,
+      );
+      function selectBinding(n) {
+        preview.value = false;
+        activeStep.value = "bind";
+        inspectorTab.value = "binding";
+        ids.value = [n.id];
       }
-      const campusId = ref("");
+      function goStep(key) {
+        dialog.value = "";
+        activeStep.value = key;
+        preview.value = key === "preview";
+        if (key === "bind") {
+          inspectorTab.value = "binding";
+          if (!sel.value || !mapped(sel.value.type))
+            ids.value = [
+              (bindingIssues.value[0] || bindingNodes.value[0])?.id,
+            ].filter(Boolean);
+        } else if (key === "canvas") inspectorTab.value = "appearance";
+      }
+      function openBindings() {
+        goStep("bind");
+      }
+      function nextBinding() {
+        const pending = bindingIssues.value.find((n) => n.id !== sel.value?.id);
+        if (pending) selectBinding(pending);
+        else goStep("preview");
+      }
       const campusNode = computed(() =>
-        doc.value.nodes.find((n) => n.id === campusId.value),
+        sel.value?.type === "campus" ? sel.value : null,
       );
       function openCampus(n) {
         snapshot();
-        ids.value = [n.id];
-        campusId.value = n.id;
-        n.entities = clone(campusBindings(n));
-        dialog.value = "campus";
+        selectBinding(n);
+        if (!n.entities) n.entities = clone(campusBindings(n));
+      }
+      function openCampusOrBinding(n) {
+        if (n.type === "campus") openCampus(n);
+        else selectBinding(n);
       }
       function toggleCampus(entity, enabled) {
         const n = campusNode.value;
+        snapshot();
+        if (!n.entities) n.entities = clone(campusBindings(n));
         if (enabled) {
           n.entities.push({ entity, run: "", fault: "", value: "" });
           if (n.entities.length > 1) n.camera = "energy";
@@ -122,7 +212,14 @@ async function boot() {
           n.entity = n.entities[0].entity;
       }
       const campusEntry = (id) =>
-        campusNode.value?.entities.find((e) => e.entity === id);
+        campusNode.value &&
+        campusBindings(campusNode.value).find((e) => e.entity === id);
+      function setCampusField(entity, key, value) {
+        const n = campusNode.value;
+        snapshot();
+        if (!n.entities) n.entities = clone(campusBindings(n));
+        n.entities.find((e) => e.entity === entity)[key] = value;
+      }
       function selectEntity(n, id) {
         if (editing.value && n.entity !== id) {
           snapshot();
@@ -149,11 +246,15 @@ async function boot() {
         const value =
           p.quality !== "good"
             ? "—"
-            : typeof p.value === "number"
-              ? p.value.toFixed(m.precision)
-              : Array.isArray(p.value)
-                ? p.value.length + " 行"
-                : String(p.value);
+            : ["flow", "status"].includes(n.type)
+              ? p.value
+                ? "运行"
+                : "停止"
+              : typeof p.value === "number"
+                ? p.value.toFixed(m.precision)
+                : Array.isArray(p.value)
+                  ? p.value.length + " 行"
+                  : String(p.value);
         return value + " " + (m.unit || "") + " · " + label;
       }
       const history = [],
@@ -193,23 +294,41 @@ async function boot() {
       }
       const selectedNodes = () =>
         doc.value.nodes.filter((n) => ids.value.includes(n.id));
+      watch(
+        () => sel.value?.id,
+        async () => {
+          await nextTick();
+          const inspector = document.querySelector(".inspector");
+          if (inspector) inspector.scrollTop = 0;
+          document
+            .querySelector(".navigator .layer.active")
+            ?.scrollIntoView({ block: "nearest" });
+        },
+      );
       function add(type) {
         snapshot();
-        const n = node(
-          type,
-          crypto.randomUUID(),
-          type === "table"
-            ? "*"
-            : doc.value.mappings.find(
-                (m) =>
-                  m.kind ===
-                  (["flow", "status", "campus"].includes(type)
-                    ? "boolean"
-                    : "number"),
-              )?.id || "",
-        );
+        const n = node(type, crypto.randomUUID(), type === "table" ? "*" : "");
         doc.value.nodes.push(n);
         ids.value = [n.id];
+        inspectorTab.value = "appearance";
+      }
+      function setRect(n, key, input) {
+        const value = Number(input.value);
+        if (!Number.isFinite(value)) {
+          input.value = n[key];
+          return;
+        }
+        snapshot();
+        const max = {
+          x: 1920 - n.w,
+          y: 1080 - n.h,
+          w: 1920 - n.x,
+          h: 1080 - n.y,
+        }[key];
+        n[key] = Math.round(
+          Math.max(key === "w" || key === "h" ? 100 : 0, Math.min(max, value)),
+        );
+        input.value = n[key];
       }
       function action(key) {
         const ns = selectedNodes(),
@@ -266,6 +385,8 @@ async function boot() {
                 mappings: clone(doc.value.mappings),
               };
         ids.value = [];
+        chosenTemplate.value = key;
+        goStep("canvas");
         message.value =
           key === "30-demo"
             ? "已载入本地联动演示，可撤销恢复原页面"
@@ -474,8 +595,9 @@ async function boot() {
             await once(config.value.source);
           snapshot();
           Object.assign(doc.value, clone(config.value));
-          dialog.value = bindingIssues.value.length ? "bindings" : "";
-          message.value = "数据配置已应用";
+          dialog.value = "";
+          goStep("bind");
+          message.value = "数据配置已应用，已返回画布。请选择当前组件的测点";
         });
       }
       function addMap() {
@@ -693,6 +815,19 @@ async function boot() {
         reader.readAsDataURL(file);
       }
       return {
+        activeStep,
+        inspectorTab,
+        chosenTemplate,
+        sceneOptions,
+        steps,
+        openCampusOrBinding,
+        sourceTitle,
+        invalidPoints,
+        goStep,
+        selectBinding,
+        nextBinding,
+        setRect,
+        setCampusField,
         campusNode,
         openCampus,
         toggleCampus,

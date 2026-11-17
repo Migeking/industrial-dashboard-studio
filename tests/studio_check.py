@@ -9,6 +9,8 @@ import time
 from urllib.request import urlopen
 from playwright.sync_api import sync_playwright, expect
 from studio_campus_check import campus_flow
+from studio_ui import choose_scene, open_data, publish, project_action
+from studio_workflow_check import workflow_inspector
 
 ROOT = Path(__file__).resolve().parents[1]
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
@@ -18,7 +20,7 @@ def exercise(page, base, folder):
     page.on("pageerror", lambda error: errors.append(str(error)))
     page.goto(base)
     expect(page.locator(".number").first).to_have_text("820.00")
-    page.get_by_label("切换模板").select_option("05")
+    choose_scene(page,"05")
     expect(page.locator(".number").first).to_have_text("3.82")
     panel = page.locator(".panel").first
     title = panel.locator("h3").bounding_box()
@@ -38,7 +40,7 @@ def exercise(page, base, folder):
     expect(page.locator(".panel")).to_have_count(8)
     page.get_by_role("button",name="撤销",exact=True).click()
     expect(page.locator(".panel")).to_have_count(7)
-    page.get_by_role("button",name="数据连接",exact=True).click()
+    open_data(page)
     data = json.loads(page.get_by_label("样本内容").input_value())
     data["otherLevel"]=0
     page.get_by_label("样本内容").fill(json.dumps(data))
@@ -47,14 +49,15 @@ def exercise(page, base, folder):
     page.get_by_label("数值路径",exact=False).fill("otherLevel")
     page.get_by_role("button",name="应用数据配置").click()
     expect(page.locator(".number").first).to_have_text("0.00")
-    page.get_by_role("button",name="发布",exact=True).click()
+    publish(page)
     expect(page.get_by_role("status")).to_contain_text("已发布")
     page.reload()
     expect(page.locator(".number").first).to_have_text("0.00")
+    page.get_by_role("button",name="编辑画布",exact=True).click()
     page.get_by_label("名称",exact=True).fill("第二版")
     page.get_by_role("button",name="保存草稿").click()
     assert page.request.get(base+"/api/published").json()["title"]!="第二版"
-    page.get_by_role("button",name="发布",exact=True).click()
+    publish(page)
     page.get_by_role("button",name="版本",exact=True).click()
     page.get_by_role("button",name="回退至此版").click()
     expect(page.locator(".dialog button:disabled")).to_have_count(1)
@@ -66,11 +69,10 @@ def exercise(page, base, folder):
         box=page.locator(".board").bounding_box()
         page.wait_for_function("Math.abs(document.querySelector('.board').getBoundingClientRect().width - Math.min(innerWidth,innerHeight*16/9))<2")
     page.goto(base)
-    page.get_by_label("切换模板").select_option("30")
+    choose_scene(page,"30")
     expect(page.locator(".host canvas")).to_have_count(1,timeout=20000)
-    page.get_by_role("button",name="导出离线演示").wait_for()
     with page.expect_download() as result:
-        page.get_by_role("button",name="导出离线演示").click()
+        project_action(page,"导出离线演示")
     dest=Path(folder)/"offline.html"
     result.value.save_as(dest)
     requests=[]
@@ -140,7 +142,7 @@ def tag_browser_flow(page, base):
         route.fulfill(json=data)
     page.route('**/api/opcua/browse',browse)
     page.goto(base)
-    page.get_by_role('button',name='数据连接',exact=True).click()
+    open_data(page)
     page.get_by_label('来源',exact=True).select_option('opcua')
     page.get_by_role('button',name='连接并浏览',exact=True).click()
     page.get_by_role('button',name='▸ 设备一',exact=True).click()
@@ -165,8 +167,8 @@ def template_workflow(page, base, folder):
             {"id":"DI_10002","kind":"boolean","label":"运行反馈","value":False,"quality":"good","receivedAt":int(time.time()*1000)},
             {"id":"AI_30003","kind":"number","label":"液位原码","unit":"原码","value":17800,"quality":"good","receivedAt":int(time.time()*1000)}]}))
     page.goto(base)
-    page.get_by_label("切换模板").select_option("05")
-    page.get_by_role("button",name="数据连接",exact=True).click()
+    choose_scene(page,"05")
+    open_data(page)
     page.get_by_label("来源",exact=True).select_option("modbus")
     page.get_by_label("Modbus 主机").fill("127.0.0.1")
     file=Path(folder)/"mapping.json"
@@ -179,28 +181,32 @@ def template_workflow(page, base, folder):
     page.locator(".tag-selected tbody tr").filter(has_text="液位原码").click()
     page.locator(".tag-properties").get_by_text("高级设置",exact=True).click()
     page.get_by_label("业务编号",exact=True).fill("levelRaw")
-    page.get_by_role("button",name="完成并绑定",exact=True).click()
-    modal=page.get_by_role("dialog")
-    expect(modal).to_contain_text("还有 6 个组件需要绑定")
-    assert modal.get_by_role("button",name="发布",exact=True).is_disabled()
-    for id in ['n0','n1','n2','n4']:
-        modal.get_by_label("组件测点 "+id,exact=True).select_option("levelRaw")
-    for id in ['n3','n5']:
-        select=modal.get_by_label("组件测点 "+id,exact=True)
-        assert "液位原码" not in select.inner_text()
-        select.select_option("DI_10002")
-    expect(modal).to_contain_text("绑定已完成")
-    expect(modal.locator('[data-binding-id="n0"]')).to_contain_text("17800 原码")
-    modal.get_by_role("button",name="预览页面",exact=True).click()
-    page.get_by_role("button",name="发布",exact=True).click()
+    page.get_by_role("button",name="完成并返回画布",exact=True).click()
+    expect(page.get_by_role("dialog")).to_have_count(0)
+    expect(page.get_by_role('button',name='数据绑定',exact=True)).to_have_attribute('aria-current','step')
+    expect(page.locator('.navigator')).to_contain_text('1 / 7')
+    page.locator('.studio-header').get_by_role('button',name='预览发布',exact=True).click()
+    assert page.locator('.studio-header').get_by_role('button',name='发布',exact=True).is_disabled()
+    page.get_by_role('button',name='检查数据绑定',exact=True).click()
+    for id in ['n0','n1','n2','n4','n3','n5']:
+        page.locator('[data-layer="'+id+'"]').click()
+        select=page.get_by_label('当前组件测点',exact=True)
+        if id in ['n3','n5']:
+            assert '液位原码' not in select.inner_text()
+            select.select_option('DI_10002')
+        else:select.select_option('levelRaw')
+    expect(page.locator('.binding-readback')).to_contain_text('停止')
+    page.locator('[data-layer="n0"]').click()
+    expect(page.locator('.binding-readback')).to_contain_text('17800 原码')
+    publish(page)
     expect(page.get_by_role("status")).to_contain_text("已发布")
     expect(page.get_by_role("link",name="查看展示页面",exact=False)).to_be_visible()
     page.goto(base+"/view")
     expect(page.locator(".number").first).to_have_text("17800")
     expect(page.locator(".state")).to_have_text("停止")
     page.goto(base)
-    page.get_by_label("切换模板").select_option("01")
-    page.get_by_role("button",name="数据连接",exact=True).click()
+    choose_scene(page,"01")
+    open_data(page)
     expect(page.get_by_label("来源",exact=True)).to_have_value("modbus")
     expect(page.get_by_label("Modbus 主机")).to_have_value("127.0.0.1")
     page.get_by_role("button",name="关闭",exact=True).click()
@@ -227,6 +233,7 @@ def main():
                 source_recovery(browser.new_page(),base)
                 template_workflow(browser.new_page(),base,folder)
                 campus_flow(browser.new_page(viewport={"width":1920,"height":1080}),base,folder)
+                workflow_inspector(browser.new_page(viewport={"width":1920,"height":1080}),base)
                 browser.close()
         finally:
             proc.terminate()

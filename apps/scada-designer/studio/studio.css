@@ -295,17 +295,6 @@ th {
   background: #102329;
   padding: 10px;
 }
-.toast {
-  position: fixed;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #d1eddd;
-  color: #13332b;
-  padding: 10px 18px;
-  z-index: 8;
-  cursor: pointer;
-}
 
 .protocol-list {
   max-height: 260px;
@@ -342,27 +331,6 @@ fieldset small {
   margin-left: auto;
   color: #adc7c2;
 }
-.binding-list {
-  max-height: 54vh;
-  overflow: auto;
-}
-.binding-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(100px, 0.7fr);
-  align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid #395158;
-  padding: 8px 0;
-}
-.binding-error {
-  color: #ffd4a3;
-}
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding-top: 16px;
-}
 .sample-table {
   max-height: 180px;
   overflow: auto;
@@ -370,16 +338,7 @@ fieldset small {
 .sample-table table {
   font-size: 13px;
 }
-.toast a {
-  background: #d1eddd;
-  color: #13332b;
-  margin-left: 8px;
-}
 @media (max-width: 1000px) {
-  .binding-row {
-    grid-template-columns: 1fr;
-    gap: 0;
-  }
   header {
     flex-wrap: wrap;
     height: auto;
@@ -752,10 +711,6 @@ fieldset small {
 .campus-controls button[data-state="故障"] {
   color: #ffcf87;
 }
-.campus-config {
-  max-height: 55vh;
-  overflow: auto;
-}
 .campus-enabled {
   display: flex;
   align-items: center;
@@ -765,12 +720,619 @@ fieldset small {
   width: 18px;
   margin: 0;
 }
-.campus-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
-  align-items: end;
+
+/* Keep the editing desk distinct from the monitor page inside the canvas. */
+.editor-shell {
+  color: #243b4a;
+  background: #f3f6f8;
+  font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
 }
-.campus-fields small {
-  grid-column: 1/-1;
+.editor-shell .studio-header {
+  height: 58px;
+  background: #fff;
+  border-bottom: 1px solid #d6dfe5;
+  gap: 10px;
+}
+.studio-header b {
+  font-size: 17px;
+  color: #174b5c;
+  white-space: nowrap;
+}
+.project-title {
+  border-left: 1px solid #d6dfe5;
+  padding-left: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.save-state {
+  margin-left: auto;
+  color: #697d89;
+  white-space: nowrap;
+}
+.editor-shell .studio-header button,
+.editor-shell .project-menu summary,
+.editor-shell .project-menu a,
+.editor-shell .project-menu .button,
+.editor-shell aside button,
+.editor-shell aside a,
+.editor-shell aside .button,
+.editor-shell .canvas-toolbar button {
+  color: #314e5e;
+  background: #fff;
+  border: 1px solid #c9d5dd;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.editor-shell button:hover {
+  filter: brightness(0.97);
+}
+.editor-shell button:disabled {
+  cursor: default;
+}
+.editor-shell button:focus-visible,
+.editor-shell summary:focus-visible,
+.editor-shell input:focus-visible,
+.editor-shell select:focus-visible {
+  outline: 2px solid #087f85;
+  outline-offset: 2px;
+}
+.editor-shell .studio-header .primary,
+.editor-shell aside .primary {
+  background: #087f85;
+  color: #fff;
+  border-color: #087f85;
+}
+.project-menu {
+  position: relative;
+  white-space: nowrap;
+}
+.project-menu summary {
+  list-style: none;
+  padding: 7px 10px;
+}
+.project-menu > div {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  width: 185px;
+  padding: 8px;
+  z-index: 3;
+  background: #fff;
+  box-shadow: 0 5px 24px #203b4a26;
+  border: 1px solid #cad6de;
+}
+.project-menu button,
+.project-menu .button,
+.project-menu a {
+  width: 100%;
+  text-align: left;
+  margin: 2px 0;
+}
+.editor-shell .workflow {
+  flex-wrap: nowrap;
+  padding: 0 18px;
+  gap: 8px;
+  height: 76px;
+  flex: none;
+  background: #f5f8fa;
+  border-bottom: 1px solid #d4dfe5;
+}
+.workflow > button {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-width: 165px;
+  height: 62px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  color: #59707f;
+  padding: 7px 14px;
+}
+.workflow > button.current {
+  border-bottom-color: #087f85;
+  color: #086e76;
+  background: #e4f1f2;
+}
+.step-number {
+  font:
+    600 19px Consolas,
+    monospace;
+  color: #718794;
+}
+.workflow .current .step-number {
+  color: #087f85;
+}
+.workflow b {
+  display: block;
+  font-size: 14px;
+}
+.workflow button small {
+  display: block;
+  margin-top: 3px;
+  color: #6d808d;
+  font-size: 12px;
+}
+.workflow-source {
+  margin-left: auto;
+  max-width: 320px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+.workflow-source span,
+.workflow-source small {
+  display: block;
+  color: #607986;
+  font-size: 12px;
+  margin: 3px 0;
+}
+.editor-shell .workspace {
+  grid-template-columns: 240px minmax(0, 1fr) 310px;
+}
+.editor-shell .workspace.review {
+  grid-template-columns: minmax(0, 1fr) 310px;
+}
+.editor-shell .workspace.presentation {
+  grid-template-columns: 1fr;
+}
+.editor-shell aside {
+  padding: 18px 16px;
+  background: #fff;
+  color: #314d5c;
+}
+.editor-shell .navigator {
+  border-right: 1px solid #d6dfe5;
+}
+.editor-shell .inspector {
+  border-left: 1px solid #d6dfe5;
+}
+.editor-shell aside h2 {
+  color: #314d5c;
+  margin: 18px 0 10px;
+  font-size: 13px;
+}
+.editor-shell aside h2:first-child {
+  margin-top: 0;
+}
+.editor-shell aside h2 small {
+  float: right;
+  color: #6e8491;
+  font-weight: 400;
+}
+.editor-shell aside label {
+  color: #405d6d;
+  font-size: 12px;
+  margin: 12px 0;
+}
+.editor-shell aside input,
+.editor-shell aside select,
+.editor-shell aside textarea {
+  background: #fff;
+  color: #263f50;
+  border-color: #b9cbd6;
+  font-size: 13px;
+  min-height: 34px;
+}
+.editor-shell aside .pair {
+  gap: 10px;
+}
+.editor-shell aside .pair label {
+  margin: 3px 0;
+}
+.muted {
+  color: #6a7e8a;
+  line-height: 1.65;
+  font-size: 12px;
+}
+.wide {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+}
+.scene-summary {
+  border-bottom: 1px solid #dae3e9;
+  padding-bottom: 16px;
+}
+.scene-summary > small,
+.scene-summary > b {
+  display: block;
+  margin-bottom: 7px;
+}
+.scene-summary > small,
+.source-summary small {
+  color: #738894;
+  font-size: 12px;
+}
+.scene-summary > button {
+  font-size: 12px;
+  padding: 4px 9px;
+}
+.editor-shell .scene-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  padding: 12px 9px;
+  width: 100%;
+  margin: 7px 0;
+  border: 1px solid #d9e3e9;
+}
+.editor-shell .scene-option.active {
+  border-color: #087f85;
+  background: #eaf5f5;
+}
+.scene-code {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 40px;
+  border-right: 1px solid #c8d9df;
+  font:
+    600 20px Consolas,
+    monospace;
+  color: #087f85;
+  padding-right: 8px;
+}
+.scene-option b,
+.scene-option small,
+.scene-option > span > span {
+  display: block;
+}
+.scene-option b {
+  font-size: 13px;
+  margin: 3px 0;
+}
+.scene-option small,
+.scene-option > span > span {
+  font-size: 11px;
+  color: #6d8390;
+  line-height: 1.5;
+}
+.editor-shell .layer {
+  padding: 10px;
+  margin: 4px 0;
+  border: 1px solid transparent;
+  background: #f5f8fa;
+}
+.layer > span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.layer > small {
+  display: block;
+  font-size: 11px;
+  color: #758996;
+  margin-top: 5px;
+}
+.editor-shell .layer.active {
+  background: #e8f4f3;
+  border-color: #4b9698;
+}
+.layer small.needs-binding {
+  color: #986212;
+}
+.source-summary {
+  padding: 14px 0;
+  border-bottom: 1px solid #d9e2e8;
+}
+.source-summary > b,
+.source-summary > span {
+  display: block;
+  margin-top: 6px;
+}
+.source-summary > span {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  color: #6d818c;
+}
+.source-summary > button {
+  margin-top: 12px;
+  width: 100%;
+}
+.next-action {
+  margin-top: 20px;
+}
+.canvas-workspace {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.canvas-workspace > main {
+  flex: 1;
+  min-height: 0;
+}
+.canvas-toolbar {
+  height: 43px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  color: #617886;
+  font-size: 12px;
+  border-bottom: 1px solid #d6e0e6;
+}
+.canvas-toolbar b {
+  color: #355262;
+}
+.canvas-toolbar small {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.canvas-toolbar button {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+.editor-shell .canvas-workspace > main {
+  background: #dce4e9;
+  background-image: radial-gradient(#afc1cc 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.editor-shell .board {
+  color: #e4eeee;
+  box-shadow: 0 3px 24px #30495726;
+}
+.editor-shell .chosen {
+  border-color: #73d8e7;
+  outline: 3px solid #73d8e780;
+}
+.editor-shell .pending-binding:not(.chosen) {
+  border-color: #b58d4f;
+  border-style: dashed;
+}
+.inspector-heading {
+  padding-bottom: 14px;
+}
+.inspector-heading small {
+  color: #748995;
+  font-size: 12px;
+}
+.inspector-heading b {
+  display: block;
+  font-size: 15px;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+}
+.inspector-tabs {
+  display: flex;
+  gap: 5px;
+  border-bottom: 1px solid #d6e1e7;
+  margin-bottom: 14px;
+}
+.editor-shell .inspector-tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 9px 8px;
+  background: transparent;
+  font-size: 13px;
+}
+.editor-shell .inspector-tabs button[aria-selected="true"] {
+  color: #087f85;
+  border-bottom-color: #087f85;
+}
+.binding-inspector > small {
+  font-size: 12px;
+  color: #738996;
+}
+.editor-shell .source-link {
+  display: block;
+  font-size: 12px;
+  margin: 8px 0 16px;
+}
+.binding-readback {
+  border-left: 3px solid #359c95;
+  background: #edf6f4;
+  padding: 12px;
+  margin: 14px 0;
+}
+.binding-readback small {
+  color: #69847d;
+  font-size: 12px;
+}
+.binding-readback b {
+  display: block;
+  margin-top: 6px;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.binding-readback.invalid {
+  background: #fbf5e9;
+  border-color: #b88732;
+}
+.editor-shell .device-binding {
+  margin: 10px 0;
+  padding: 10px;
+  border-color: #d1dfe6;
+  background: #f7fafb;
+}
+.device-binding .campus-enabled {
+  font-weight: 600;
+  font-size: 12px;
+  align-items: flex-start;
+}
+.editor-shell .device-binding input[type="checkbox"] {
+  min-height: 0;
+  height: 16px;
+  width: 16px;
+  accent-color: #087f85;
+  flex: none;
+}
+.device-binding > small {
+  color: #60817c;
+}
+.device-binding label small {
+  color: #7f919b;
+  font-size: 11px;
+}
+.quality-note {
+  border-left: 3px solid #b88b37;
+  background: #fbf5e9;
+  color: #815e25;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.65;
+  margin: 12px 0;
+}
+.inspector-empty {
+  padding: 22px 0;
+  color: #728894;
+  line-height: 1.9;
+  font-size: 13px;
+}
+.review-item {
+  padding: 16px 0;
+  border-bottom: 1px solid #d9e3e8;
+}
+.review-item b,
+.review-item span,
+.review-item small {
+  display: block;
+  margin-bottom: 7px;
+}
+.review-item span,
+.review-item small {
+  color: #6b8390;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.review-item button {
+  display: block;
+  margin-top: 8px;
+  width: 100%;
+  text-align: left;
+}
+.publish-success {
+  background: #eaf6f0;
+  padding: 12px;
+  color: #226952;
+  line-height: 2;
+}
+.canvas-empty {
+  position: absolute;
+  inset: 250px 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 24px;
+  font-size: 30px;
+  color: #a9c4c9;
+}
+.connection-context {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 12px;
+  color: #4f6e7e;
+  background: #e7eff4;
+  border-bottom: 1px solid #ccdce6;
+  flex: none;
+}
+.connection-context span {
+  color: #6c8392;
+}
+.connection-context small {
+  display: block;
+  margin-top: 4px;
+}
+.status-message {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px;
+  background: #e5f1ec;
+  color: #27664f;
+  border-top: 1px solid #c1d8cb;
+  font-size: 13px;
+}
+.status-message > span {
+  flex: 1;
+}
+.status-message > button,
+.status-message > a {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 4px 8px;
+}
+.editor-shell .dialog:not(.tag-dialog) {
+  background: #f7f9fb;
+  color: #2c495b;
+  border-color: #a2b7c4;
+  box-shadow: 0 12px 60px #132c4055;
+}
+.editor-shell .dialog:not(.tag-dialog) > header {
+  background: #28465b;
+  color: #fff;
+  padding: 0 12px;
+  margin: -16px -16px 0;
+}
+.editor-shell .dialog:not(.tag-dialog) label {
+  color: #405d6d;
+}
+.editor-shell .dialog:not(.tag-dialog) input,
+.editor-shell .dialog:not(.tag-dialog) select,
+.editor-shell .dialog:not(.tag-dialog) textarea {
+  background: #fff;
+  color: #294659;
+  border-color: #b8cbd8;
+}
+.editor-shell .dialog:not(.tag-dialog) pre {
+  background: #e7eef3;
+  color: #365568;
+}
+.editor-shell .dialog:not(.tag-dialog) > .primary {
+  background: #087f85;
+  color: #fff;
+  border-color: #087f85;
+}
+.editor-shell .dialog:not(.tag-dialog) button {
+  font-size: 13px;
+}
+.editor-shell .dialog:not(.tag-dialog) .connection-context {
+  margin: 0 -16px 12px;
+}
+@media (max-width: 1400px) {
+  .editor-shell .workspace {
+    grid-template-columns: 218px minmax(0, 1fr) 290px;
+  }
+  .editor-shell .workspace.review {
+    grid-template-columns: minmax(0, 1fr) 290px;
+  }
+  .workflow > button {
+    min-width: 148px;
+    padding: 7px 10px;
+  }
+  .project-title {
+    max-width: 220px;
+  }
+}
+@media (max-width: 1000px) {
+  .editor-shell .workspace {
+    grid-template-columns: 185px minmax(300px, 1fr) 260px;
+    overflow: auto;
+  }
+  .workflow-source,
+  .project-title {
+    display: none;
+  }
+  .workflow > button {
+    min-width: 130px;
+  }
+  .editor-shell .studio-header {
+    min-height: 58px;
+    height: auto;
+    padding: 8px 12px;
+  }
 }

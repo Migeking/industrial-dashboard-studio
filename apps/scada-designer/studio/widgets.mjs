@@ -261,6 +261,7 @@ export const Widget = {
               renderer.domElement.dataset.rotations = asset.fans
                 .map((f) => f.rotation.y.toFixed(3))
                 .join(",");
+              renderer.domElement.dataset.states = previousStates.join(",");
               lastProjection = t;
             }
             frame = requestAnimationFrame(render);
