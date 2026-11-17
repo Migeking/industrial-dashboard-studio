@@ -48,11 +48,59 @@ export function compatibleMappings(type, mappings) {
   return mappings.filter((m) => kinds[type]?.includes(m.kind));
 }
 export function bindingProblem(n, mappings) {
+  if (n.type === "campus") return campusProblem(n, mappings);
   if (!mapped(n.type) || (n.type === "table" && n.binding === "*")) return "";
   if (!mappings.some((m) => m.id === n.binding)) return "请选择测点";
   return compatibleMappings(n.type, mappings).some((m) => m.id === n.binding)
     ? ""
     : "测点类型不匹配";
+}
+export function campusBindings(n) {
+  return (
+    n.entities || [{ entity: n.entity, run: n.binding, fault: "", value: "" }]
+  );
+}
+export function campusProblem(n, mappings) {
+  if (
+    n.assetVersion !== 1 ||
+    !fans.some((f) => f.id === n.entity) ||
+    !["equipment", "energy", "overview"].includes(n.camera)
+  )
+    return "三维对象或镜头无效";
+  const entries = campusBindings(n),
+    ids = new Set();
+  if (!entries.length) return "请至少配置一台三维设备";
+  for (const entry of entries) {
+    const fan = fans.find((f) => f.id === entry.entity);
+    if (!fan || ids.has(entry.entity)) return "三维对象编号无效或重复";
+    ids.add(entry.entity);
+    for (const [key, kind, label] of [
+      ["run", "boolean", "运行反馈"],
+      ["fault", "boolean", "故障反馈"],
+      ["value", "number", "数值标签"],
+    ]) {
+      if (key !== "run" && !entry[key]) continue;
+      if (!mappings.some((m) => m.id === entry[key] && m.kind === kind))
+        return (
+          fan.label +
+          " " +
+          label +
+          "需要绑定" +
+          (kind === "boolean" ? "开关量" : "数值") +
+          "测点"
+        );
+    }
+  }
+  return "";
+}
+export function campusState(binding, points) {
+  if (!binding) return "未配置";
+  const fault = points[binding.fault],
+    run = points[binding.run];
+  if (fault?.quality === "good" && fault.value === true) return "故障";
+  if ((binding.fault && fault?.quality !== "good") || run?.quality !== "good")
+    return "未知";
+  return run.value === true ? "运行" : "停止";
 }
 const specs = [
   ["flow", "进水流量", "m³/h", 820],
@@ -90,6 +138,7 @@ export function node(type, id, binding = "") {
   };
 }
 export function template(key = "01") {
+  if (key === "30-demo") return campusExample();
   const doc = {
     schemaVersion: 1,
     template: key,
@@ -170,6 +219,53 @@ export function template(key = "01") {
   );
   add("status", "pump", "回流泵状态", 1130, 425, 726, 262);
   add("table", "*", "工艺测点", 1130, 715, 726, 300);
+  return doc;
+}
+export function campusExample() {
+  const doc = template("30");
+  doc.template = "30-demo";
+  doc.title = "园区能源中心 · 联动演示";
+  const data = {
+    run1: true,
+    run2: false,
+    run3: true,
+    run4: true,
+    fault3: true,
+    reading: 42.5,
+  };
+  const names = {
+    run1: "1号风机运行反馈",
+    run2: "2号风机运行反馈",
+    run3: "3号风机运行反馈",
+    run4: "4号风机运行反馈",
+    fault3: "3号风机故障反馈",
+    reading: "1号风机频率",
+  };
+  doc.source.data = JSON.stringify(data, null, 2);
+  doc.mappings = Object.entries(data).map(([id, value]) => ({
+    id,
+    label: names[id],
+    kind: typeof value,
+    path: id,
+    unit: id === "reading" ? "Hz" : "",
+    precision: 1,
+    scale: 1,
+    offset: 0,
+  }));
+  doc.nodes = [
+    {
+      ...doc.nodes[0],
+      w: 1800,
+      binding: "run1",
+      camera: "energy",
+      entities: fans.map((f, i) => ({
+        entity: f.id,
+        run: "run" + (i + 1),
+        fault: i === 2 ? "fault3" : "",
+        value: i === 0 ? "reading" : "",
+      })),
+    },
+  ];
   return doc;
 }
 export function validate(doc, publishing) {
@@ -253,24 +349,37 @@ export function validate(doc, publishing) {
       !/^data:image\/(png|jpeg|webp);base64,/i.test(n.image)
     )
       fail("请使用本地 PNG、JPEG 或 WebP 图片");
+    if (
+      n.type === "campus" &&
+      n.entities !== undefined &&
+      (!Array.isArray(n.entities) ||
+        !n.entities.every(
+          (e) =>
+            e &&
+            typeof e.entity === "string" &&
+            typeof e.run === "string" &&
+            ["fault", "value"].every(
+              (k) => e[k] === undefined || typeof e[k] === "string",
+            ),
+        ))
+    )
+      fail("三维设备配置格式无效");
     if (!publishing || !mapped(n.type)) continue;
+    if (n.type === "campus") {
+      const problem = campusProblem(n, doc.mappings);
+      if (problem) fail(problem);
+      continue;
+    }
     const m = doc.mappings.find((p) => p.id === n.binding);
     if (n.type === "table" && n.binding === "*") continue;
     if (!m) fail(n.title + " 缺少有效绑定");
     if (
-      (["status", "flow", "campus"].includes(n.type) && m.kind !== "boolean") ||
+      (["status", "flow"].includes(n.type) && m.kind !== "boolean") ||
       (n.type === "chart" && m.kind !== "number") ||
       (n.type === "table" && m.kind !== "dataset") ||
       (n.type === "kpi" && m.kind === "dataset")
     )
       fail(n.title + " 绑定类型不匹配");
-    if (
-      n.type === "campus" &&
-      (n.assetVersion !== 1 ||
-        !fans.some((f) => f.id === n.entity) ||
-        !["equipment", "overview"].includes(n.camera))
-    )
-      fail(n.title + " 三维对象或镜头无效");
   }
   return doc;
 }

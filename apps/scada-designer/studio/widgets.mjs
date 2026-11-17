@@ -1,7 +1,8 @@
-import { fans } from "./model.mjs";
+import { fans, campusBindings, campusState } from "./model.mjs";
 export const Widget = {
-  props: ["n", "point", "points", "mappings", "sequence"],
-  setup(props) {
+  props: ["n", "point", "points", "mappings", "sequence", "editing"],
+  emits: ["entity"],
+  setup(props, { emit }) {
     const { ref, computed, watch, onMounted, onBeforeUnmount } = Vue;
     const host = ref(),
       failure = ref("");
@@ -14,6 +15,43 @@ export const Widget = {
       asset,
       prev = 0;
     const history = [];
+    const activeEntity = ref(props.n.entity),
+      viewCamera = ref(props.n.camera),
+      labelPositions = ref({});
+    let pickHandler;
+    const entityRows = computed(() =>
+      campusBindings(props.n)
+        .map((binding) => ({
+          binding,
+          fan: fans.find((f) => f.id === binding.entity),
+          state: campusState(binding, props.points),
+        }))
+        .filter((r) => r.fan),
+    );
+    watch(
+      () => props.n.entity,
+      (id) => {
+        activeEntity.value = id;
+      },
+    );
+    watch(
+      () => props.n.camera,
+      (value) => {
+        viewCamera.value = value;
+      },
+    );
+    function focusEntity(id) {
+      activeEntity.value = id;
+      viewCamera.value = "equipment";
+      if (props.editing) emit("entity", id);
+    }
+    function entityValue(binding) {
+      const m = props.mappings.find((m) => m.id === binding.value);
+      return binding.value
+        ? formatted(props.points[binding.value], m) + " " + (m?.unit || "")
+        : "";
+    }
+
     const state = computed(() =>
       props.point?.quality === "good"
         ? props.point.value
@@ -134,23 +172,97 @@ export const Widget = {
           scene.add(light);
           asset = Campus30.create(renderer, scene, root);
           asset.setLighting("daylight");
-          function render(t) {
-            const f = fans.find((v) => v.id === props.n.entity),
-              fan = f && asset.fans[f.index];
-            if (fan) {
-              const p = fan.position;
-              if (props.n.camera === "overview") {
-                camera.position.set(98, 105, 136);
-                camera.lookAt(0, 15, 0);
-              } else {
-                camera.position.set(p.x + 15, p.y + 15, p.z + 19);
-                camera.lookAt(p.x, p.y - 1, p.z);
+          const colors = {
+            运行: 0x33a77e,
+            停止: 0x647f89,
+            故障: 0xe2a448,
+            未知: 0x8a9298,
+            未配置: 0x8a9298,
+          };
+          const materials = asset.fans.map((fan, index) => {
+            fan.userData.entityId = fans[index].id;
+            const copies = new Map();
+            fan.traverse((mesh) => {
+              mesh.userData.entityId = fans[index].id;
+              if (mesh.material) {
+                if (!copies.has(mesh.material))
+                  copies.set(mesh.material, mesh.material.clone());
+                mesh.material = copies.get(mesh.material);
               }
-              if (state.value === "运行")
-                fan.rotation.y += Math.min(0.1, (t - prev) / 1000) * 3;
+            });
+            return [...copies.values()];
+          });
+          const ray = new T.Raycaster(),
+            pointer = new T.Vector2();
+          pickHandler = (e) => {
+            const rect = renderer.domElement.getBoundingClientRect();
+            pointer.set(
+              ((e.clientX - rect.left) / rect.width) * 2 - 1,
+              (-(e.clientY - rect.top) / rect.height) * 2 + 1,
+            );
+            ray.setFromCamera(pointer, camera);
+            const hit = ray.intersectObjects(asset.fans, true)[0];
+            if (hit) focusEntity(hit.object.userData.entityId);
+          };
+          renderer.domElement.addEventListener("pointerup", pickHandler);
+          const previousStates = [];
+          let lastProjection = 0;
+          function render(t) {
+            const selected =
+                fans.find((f) => f.id === activeEntity.value) || fans[0],
+              position = asset.fans[selected.index].position;
+            if (viewCamera.value === "overview") {
+              camera.position.set(98, 105, 136);
+              camera.lookAt(0, 15, 0);
+            } else if (viewCamera.value === "energy") {
+              camera.position.set(-8, 56, 90);
+              camera.lookAt(-47, 12, 39);
+            } else {
+              camera.position.set(
+                position.x + 15,
+                position.y + 15,
+                position.z + 19,
+              );
+              camera.lookAt(position.x, position.y - 1, position.z);
             }
+            const bindings = campusBindings(props.n);
+            asset.fans.forEach((fan, index) => {
+              const binding = bindings.find((b) => b.entity === fans[index].id),
+                status = campusState(binding, props.points);
+              if (status === "运行")
+                fan.rotation.y += Math.min(0.1, (t - prev) / 1000) * 3;
+              if (previousStates[index] !== status) {
+                materials[index].forEach((mat) =>
+                  mat.color.setHex(colors[status]).convertSRGBToLinear(),
+                );
+                previousStates[index] = status;
+              }
+            });
             prev = t;
             renderer.render(scene, camera);
+            if (t - lastProjection > 150) {
+              const positions = {};
+              asset.fans.forEach((fan, index) => {
+                const p = fan.getWorldPosition(new T.Vector3());
+                p.y += 4;
+                p.project(camera);
+                if (
+                  p.z > -1 &&
+                  p.z < 1 &&
+                  Math.abs(p.x) < 0.95 &&
+                  Math.abs(p.y) < 0.95
+                )
+                  positions[fans[index].id] = {
+                    left: (p.x + 1) * 50 + "%",
+                    top: (1 - p.y) * 50 + "%",
+                  };
+              });
+              labelPositions.value = positions;
+              renderer.domElement.dataset.rotations = asset.fans
+                .map((f) => f.rotation.y.toFixed(3))
+                .join(",");
+              lastProjection = t;
+            }
             frame = requestAnimationFrame(render);
           }
           frame = requestAnimationFrame(render);
@@ -179,10 +291,27 @@ export const Widget = {
         resources.forEach((r) => r.dispose());
         scene.environment?.dispose();
       }
+      if (pickHandler)
+        renderer?.domElement.removeEventListener("pointerup", pickHandler);
       renderer?.dispose();
       renderer?.forceContextLoss();
     });
-    return { host, failure, state, formatted, mapping, rows, labels, fans };
+    return {
+      host,
+      failure,
+      state,
+      formatted,
+      mapping,
+      rows,
+      labels,
+      fans,
+      entityRows,
+      activeEntity,
+      viewCamera,
+      labelPositions,
+      focusEntity,
+      entityValue,
+    };
   },
   template: `<div class="widget">
  <template v-if="n.type==='kpi'"><strong class="number">{{formatted(point,mapping)}}</strong> <span>{{mapping?.unit}}</span></template>
@@ -190,6 +319,7 @@ export const Widget = {
  <p v-if="n.type==='text'">{{n.text}}</p><img v-if="n.type==='image'&&n.image" :src="n.image" :alt="n.title">
  <svg v-if="n.type==='flow'" viewBox="0 0 900 125"><path d="M80 64 H820" :stroke="state==='运行'?'#5adbb9':'#6e838a'" stroke-width="9"/><g v-for="(step,i) in n.steps.split(',').slice(0,6)" :transform="'translate('+((i+.5)*900/Math.min(6,n.steps.split(',').length))+',64)'"><rect x="-65" y="-32" width="130" height="64" rx="5" fill="#203b45" stroke="#76b8aa"/><text text-anchor="middle" y="9" fill="white" font-size="24">{{step}}</text></g></svg>
  <div class="data-table" v-if="n.type==='table'"><table v-if="rows?.length"><thead><tr><th v-for="(_,k) in rows[0]">{{k}}</th></tr></thead><tbody><tr v-for="r in rows"><td v-for="(_,k) in rows[0]">{{r[k]}}</td></tr></tbody></table><span v-else>暂无有效行</span></div>
- <div v-if="['chart','campus'].includes(n.type)" ref="host" class="host"></div><small v-if="failure">{{failure}}</small>
- <footer v-if="['campus','flow','status','kpi','chart'].includes(n.type)">{{n.type==='campus'?fans.find(f=>f.id===n.entity)?.label+' · '+state+' · ':''}}{{mapping?.label||n.binding}} · {{labels[point?.quality]||'未知'}}</footer></div>`,
+ <div v-if="['chart','campus'].includes(n.type)" ref="host" class="host"></div><div v-if="n.type==='campus'" class="campus-labels"><button v-for="row in entityRows.filter(r=>labelPositions[r.fan.id])" :key="row.fan.id" :style="labelPositions[row.fan.id]" :data-object="row.fan.id" :data-state="row.state" @click="focusEntity(row.fan.id)">{{row.fan.label}} · {{row.state}}<br><span v-if="row.binding.value">{{entityValue(row.binding)}}</span></button></div>
+ <div v-if="n.type==='campus'" class="campus-controls"><button @click="viewCamera='energy'">能源中心</button><button @click="viewCamera='overview'">园区全景</button><button v-for="row in entityRows" :data-device="row.fan.id" :data-state="row.state" @click="focusEntity(row.fan.id)">{{row.fan.label}} · {{row.state}}</button></div><small v-if="failure">{{failure}}</small>
+ <footer v-if="['flow','status','kpi','chart'].includes(n.type)">{{mapping?.label||n.binding}} · {{labels[point?.quality]||'未知'}}</footer></div>`,
 };

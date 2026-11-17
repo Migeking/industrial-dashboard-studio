@@ -715,3 +715,62 @@ fieldset small {
   color: #627987;
   border-bottom: 1px solid #d4dde4;
 }
+
+.campus-labels {
+  position: absolute;
+  inset: 0 0 27px;
+  pointer-events: none;
+}
+.campus-labels button {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  pointer-events: auto;
+  font-size: 18px;
+  background: #142e39ed;
+  border-color: #87b5b5;
+  padding: 7px 12px;
+}
+.campus-labels button[data-state="故障"] {
+  border-color: #e2a448;
+  color: #ffdb93;
+}
+.campus-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  pointer-events: auto;
+}
+.campus-controls button {
+  font-size: 16px;
+  padding: 5px 8px;
+  background: #173440ed;
+}
+.campus-controls button[data-state="故障"] {
+  color: #ffcf87;
+}
+.campus-config {
+  max-height: 55vh;
+  overflow: auto;
+}
+.campus-enabled {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.campus-enabled input {
+  width: 18px;
+  margin: 0;
+}
+.campus-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  align-items: end;
+}
+.campus-fields small {
+  grid-column: 1/-1;
+}

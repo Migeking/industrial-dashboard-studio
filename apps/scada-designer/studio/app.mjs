@@ -10,6 +10,8 @@ import {
   protocolMappings,
   compatibleMappings,
   bindingProblem,
+  campusBindings,
+  campusState,
 } from "./model.mjs";
 import { Widget } from "./widgets.mjs";
 import { TagManager } from "./tag-manager.mjs";
@@ -99,7 +101,41 @@ async function boot() {
         snapshot();
         dialog.value = "bindings";
       }
+      const campusId = ref("");
+      const campusNode = computed(() =>
+        doc.value.nodes.find((n) => n.id === campusId.value),
+      );
+      function openCampus(n) {
+        snapshot();
+        ids.value = [n.id];
+        campusId.value = n.id;
+        n.entities = clone(campusBindings(n));
+        dialog.value = "campus";
+      }
+      function toggleCampus(entity, enabled) {
+        const n = campusNode.value;
+        if (enabled) {
+          n.entities.push({ entity, run: "", fault: "", value: "" });
+          if (n.entities.length > 1) n.camera = "energy";
+        } else n.entities = n.entities.filter((b) => b.entity !== entity);
+        if (n.entities.length && !n.entities.some((b) => b.entity === n.entity))
+          n.entity = n.entities[0].entity;
+      }
+      const campusEntry = (id) =>
+        campusNode.value?.entities.find((e) => e.entity === id);
+      function selectEntity(n, id) {
+        if (editing.value && n.entity !== id) {
+          snapshot();
+          n.entity = id;
+        }
+      }
       function bindingValue(n) {
+        if (n.type === "campus")
+          return (
+            campusBindings(n).length +
+            " 台设备 · " +
+            (bindingProblem(n, doc.value.mappings) || "已绑定")
+          );
         if (n.type === "table" && n.binding === "*") return "全部测点";
         const m = doc.value.mappings.find((m) => m.id === n.binding),
           p = points.value[n.binding];
@@ -221,13 +257,19 @@ async function boot() {
       }
       function replace(key) {
         snapshot();
-        doc.value = {
-          ...template(key),
-          source: clone(doc.value.source),
-          mappings: clone(doc.value.mappings),
-        };
+        doc.value =
+          key === "30-demo"
+            ? template(key)
+            : {
+                ...template(key),
+                source: clone(doc.value.source),
+                mappings: clone(doc.value.mappings),
+              };
         ids.value = [];
-        message.value = "模板已切换，数据连接已保留。请检查组件绑定";
+        message.value =
+          key === "30-demo"
+            ? "已载入本地联动演示，可撤销恢复原页面"
+            : "模板已切换，数据连接已保留。请检查组件绑定";
       }
       async function guarded(fn) {
         try {
@@ -651,6 +693,13 @@ async function boot() {
         reader.readAsDataURL(file);
       }
       return {
+        campusNode,
+        openCampus,
+        toggleCampus,
+        campusEntry,
+        campusBindings,
+        campusState,
+        selectEntity,
         kindNames,
         saving,
         published,

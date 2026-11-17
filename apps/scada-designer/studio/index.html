@@ -54,6 +54,7 @@
             <option value="01">01 · A²/O 生物处理</option>
             <option value="05">05 · 污泥回流泵站</option>
             <option value="30">30 · 园区能源中心</option>
+            <option value="30-demo">30 · 三维设备联动（演示）</option>
             <option value="blank">空白画布</option>
           </select>
           <h2>组件库</h2>
@@ -106,6 +107,8 @@
                 :points="points"
                 :mappings="doc.mappings"
                 :sequence="sequence"
+                :editing="editing"
+                @entity="selectEntity(n,$event)"
               ></widget
               ><i v-if="editing&&!n.locked" class="handle"></i>
             </section>
@@ -118,7 +121,7 @@
           <template v-if="sel"
             ><h2>组件属性</h2>
             <label>标题<input v-model="sel.title" @focus="snapshot" /></label
-            ><label v-if="mapped(sel.type)"
+            ><label v-if="mapped(sel.type)&&sel.type!=='campus'"
               >业务测点<select v-model="sel.binding" @focus="snapshot">
                 <option v-if="sel.type==='table'" value="*">全部测点</option>
                 <option value="" disabled>请选择测点</option>
@@ -149,13 +152,15 @@
                 @change="loadImage($event.target.files[0])"
             /></label>
             <template v-if="sel.type==='campus'"
+              ><button @click="openCampus(sel)">配置三维设备</button
               ><label
-                >设备<select v-model="sel.entity" @focus="snapshot">
+                >设备<select aria-label="设备" v-model="sel.entity" @focus="snapshot">
                   <option v-for="f in fans" :value="f.id">{{f.label}}</option>
                 </select></label
               ><label
-                >镜头<select v-model="sel.camera" @focus="snapshot">
+                >镜头<select aria-label="镜头" v-model="sel.camera" @focus="snapshot">
                   <option value="equipment">设备特写</option>
+                  <option value="energy">能源中心</option>
                   <option value="overview">园区全景</option>
                 </select></label
               ></template
@@ -195,7 +200,7 @@
         >
           <header>
             <b id="dialog-title"
-              >{{dialog==='data'?'设备与点位设置':dialog==='bindings'?'绑定组件测点':'发布版本'}}</b
+              >{{dialog==='data'?'设备与点位设置':dialog==='bindings'?'绑定组件测点':dialog==='campus'?'三维设备绑定':'发布版本'}}</b
             ><button @click="dialog=''">关闭</button>
           </header>
           <template
@@ -362,7 +367,7 @@
                     v-model="n.title"
                     :aria-label="'组件名称 '+n.id"
                 /></label>
-                <label
+                <label v-if="n.type!=='campus'"
                   >{{types[n.type]}}测点<select
                     v-model="n.binding"
                     :aria-label="'组件测点 '+n.id"
@@ -377,6 +382,9 @@
                     </option>
                   </select></label
                 >
+                <button v-else @click="openCampus(n)">
+                  配置 {{campusBindings(n).length}} 台三维设备
+                </button>
                 <small :class="{'binding-error':bindingProblem(n,doc.mappings)}"
                   >{{bindingProblem(n,doc.mappings)||bindingValue(n)}}</small
                 >
@@ -390,6 +398,84 @@
                 :disabled="saving||bindingIssues.length>0"
               >
                 发布
+              </button>
+            </div>
+          </template>
+          <template v-else-if="dialog==='campus'&&campusNode">
+            <p>
+              勾选要接入的设备，分别选择运行反馈。故障反馈和数值标签可按需配置。
+            </p>
+            <div class="campus-config">
+              <fieldset v-for="fan in fans" :key="fan.id" :data-entity="fan.id">
+                <label class="campus-enabled"
+                  ><input
+                    type="checkbox"
+                    :aria-label="'接入 '+fan.label"
+                    :checked="!!campusEntry(fan.id)"
+                    @change="toggleCampus(fan.id,$event.target.checked)"
+                  />{{fan.label}}</label
+                >
+                <div v-if="campusEntry(fan.id)" class="campus-fields">
+                  <label
+                    >运行反馈<select
+                      :aria-label="'运行反馈 '+fan.id"
+                      v-model="campusEntry(fan.id).run"
+                    >
+                      <option value="">请选择</option>
+                      <option
+                        v-for="m in doc.mappings.filter(m=>m.kind==='boolean')"
+                        :value="m.id"
+                      >
+                        {{m.label}}
+                      </option>
+                    </select></label
+                  >
+                  <label
+                    >故障反馈<select
+                      :aria-label="'故障反馈 '+fan.id"
+                      v-model="campusEntry(fan.id).fault"
+                    >
+                      <option value="">未配置</option>
+                      <option
+                        v-for="m in doc.mappings.filter(m=>m.kind==='boolean')"
+                        :value="m.id"
+                      >
+                        {{m.label}}
+                      </option>
+                    </select></label
+                  >
+                  <label
+                    >数值标签<select
+                      :aria-label="'数值标签 '+fan.id"
+                      v-model="campusEntry(fan.id).value"
+                    >
+                      <option value="">未配置</option>
+                      <option
+                        v-for="m in doc.mappings.filter(m=>m.kind==='number')"
+                        :value="m.id"
+                      >
+                        {{m.label}} · {{m.unit}}
+                      </option>
+                    </select></label
+                  >
+                  <small
+                    >当前状态 ·
+                    {{campusState(campusEntry(fan.id),points)}}</small
+                  >
+                </div>
+              </fieldset>
+            </div>
+            <p v-if="bindingProblem(campusNode,doc.mappings)" role="alert">
+              {{bindingProblem(campusNode,doc.mappings)}}
+            </p>
+            <div class="dialog-actions">
+              <button @click="dialog='bindings'">返回组件绑定</button
+              ><button
+                class="primary"
+                :disabled="!!bindingProblem(campusNode,doc.mappings)"
+                @click="dialog=''"
+              >
+                完成配置
               </button>
             </div>
           </template>

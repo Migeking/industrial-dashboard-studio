@@ -10,10 +10,57 @@ import {
   compatibleMappings,
   bindingProblem,
   protocolMappings,
+  campusBindings,
+  campusState,
 } from "../apps/scada-designer/studio/model.mjs";
 const doc = template(),
   time = 1700000000000,
   m = doc.mappings[0];
+const legacyCampus = template("30");
+assert.equal(campusBindings(legacyCampus.nodes[0])[0].run, "fan");
+const entityBinding = {
+  entity: "D.FAN.NW",
+  run: "fan",
+  fault: "pump",
+  value: "level",
+};
+assert.equal(
+  campusState(entityBinding, {
+    fan: { quality: "good", value: true },
+    pump: { quality: "good", value: false },
+  }),
+  "运行",
+);
+assert.equal(
+  campusState(entityBinding, {
+    fan: { quality: "good", value: true },
+    pump: { quality: "good", value: true },
+  }),
+  "故障",
+);
+assert.equal(
+  campusState(entityBinding, {
+    fan: { quality: "bad", value: null },
+    pump: { quality: "good", value: false },
+  }),
+  "未知",
+);
+assert.equal(
+  campusState(entityBinding, {
+    fan: { quality: "good", value: true },
+    pump: { quality: "bad", value: null },
+  }),
+  "未知",
+);
+legacyCampus.nodes[0].entities = [
+  entityBinding,
+  { ...entityBinding, entity: "D.FAN.SW" },
+];
+validate(legacyCampus, true);
+legacyCampus.nodes[0].entities[1].run = "level";
+assert.throws(() => validate(legacyCampus, true), /运行反馈/);
+legacyCampus.nodes[0].entities = [null];
+assert.throws(() => validate(legacyCampus, false), /格式/);
 const nativeMaps = protocolMappings(
   [{ id: "AI1", kind: "number", unit: "原码", label: "液位" }],
   "modbus",
@@ -98,7 +145,8 @@ const native = template("blank");
 native.source.kind = "modbus";
 native.source.connection = modbus;
 validate(native, true);
-for (const key of ["01", "05", "30", "blank"]) validate(template(key), true);
+for (const key of ["01", "05", "30", "30-demo", "blank"])
+  validate(template(key), true);
 const read = (data, mapping, now = time) =>
   normalize(data, mapping, time, 5000, now);
 assert.equal(read({ flow: 0 }, m).value, 0);

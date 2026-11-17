@@ -8,6 +8,7 @@ import tempfile
 import time
 from urllib.request import urlopen
 from playwright.sync_api import sync_playwright, expect
+from studio_campus_check import campus_flow
 
 ROOT = Path(__file__).resolve().parents[1]
 CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
@@ -225,6 +226,7 @@ def main():
                 tag_browser_flow(browser.new_page(),base)
                 source_recovery(browser.new_page(),base)
                 template_workflow(browser.new_page(),base,folder)
+                campus_flow(browser.new_page(viewport={"width":1920,"height":1080}),base,folder)
                 browser.close()
         finally:
             proc.terminate()
