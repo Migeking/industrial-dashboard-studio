@@ -9,10 +9,25 @@ import {
   validateConnection,
   compatibleMappings,
   bindingProblem,
+  protocolMappings,
 } from "../apps/scada-designer/studio/model.mjs";
 const doc = template(),
   time = 1700000000000,
   m = doc.mappings[0];
+const nativeMaps = protocolMappings(
+  [{ id: "AI1", kind: "number", unit: "原码", label: "液位" }],
+  "modbus",
+  [],
+);
+const customized = { ...nativeMaps[0], id: "level", unit: "m", scale: 0.001 };
+const regenerated = protocolMappings(
+  [{ id: "AI1", kind: "number", unit: "原码", label: "液位" }],
+  "modbus",
+  [customized],
+);
+assert.equal(regenerated[0].id, "level");
+assert.equal(regenerated[0].scale, 0.001);
+assert.equal(regenerated[0].unit, "m");
 assert.equal(bindingProblem(doc.nodes[0], doc.mappings), "");
 assert.equal(
   bindingProblem({ ...doc.nodes[0], binding: "missing" }, doc.mappings),

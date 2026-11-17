@@ -127,6 +127,37 @@ def source_recovery(page, base):
     assert page.request.post(base+"/api/publish",data={**draft,"schemaVersion":2}).status==400
     assert page.request.get(base+"/api/published").json()["title"]=="revision 5"
 
+def tag_browser_flow(page, base):
+    def browse(route):
+        req=route.request.post_data_json
+        if not req.get('nodeId'):
+            data={'nodes':[{'nodeId':'ns=2;s=Device','label':'设备一','folder':True}], 'nextOffset':None}
+        elif req.get('offset'):
+            data={'nodes':[{'nodeId':'ns=2;s=P101','label':'P101','kind':'boolean','dataType':'Boolean'}], 'nextOffset':None}
+        else:
+            data={'nodes':[{'nodeId':'ns=2;s=P001','label':'P001','kind':'boolean','dataType':'Boolean'},{'nodeId':'ns=2;s=P002','label':'P002','kind':'boolean','dataType':'Boolean'}], 'nextOffset':100}
+        route.fulfill(json=data)
+    page.route('**/api/opcua/browse',browse)
+    page.goto(base)
+    page.get_by_role('button',name='数据连接',exact=True).click()
+    page.get_by_label('来源',exact=True).select_option('opcua')
+    page.get_by_role('button',name='连接并浏览',exact=True).click()
+    page.get_by_role('button',name='▸ 设备一',exact=True).click()
+    page.get_by_label('全选当前标签').check()
+    page.get_by_role('button',name='添加所选 →',exact=True).click()
+    expect(page.locator('.tag-selected tbody tr')).to_have_count(2)
+    assert page.get_by_label('选择标签 P001',exact=True).is_disabled()
+    assert not page.get_by_label('全选当前标签').is_checked()
+    page.get_by_role('button',name='加载更多',exact=True).click()
+    page.get_by_label('搜索服务器标签').fill('P101')
+    page.get_by_label('选择标签 P101',exact=True).check()
+    page.get_by_role('button',name='添加所选 →',exact=True).click()
+    expect(page.locator('.tag-selected tbody tr')).to_have_count(3)
+    page.get_by_label('移除选择 P001',exact=True).check()
+    page.get_by_role('button',name='移除',exact=True).click()
+    expect(page.locator('.tag-selected tbody tr')).to_have_count(2)
+    page.get_by_role('button',name='关闭',exact=True).click()
+
 def template_workflow(page, base, folder):
     page.route("**/api/protocol/sample", lambda route: route.fulfill(json={
         "protocol":"modbus", "points":[
@@ -142,11 +173,12 @@ def template_workflow(page, base, folder):
         dict(type="DI",address=10002,dataType="BOOL",point_alias="运行反馈",status="active"),
         dict(type="AI",address=30003,dataType="UINT16",point_alias="液位原码",status="active")]}),"utf8")
     page.get_by_label("导入北向 JSON 点表").set_input_files(file)
-    page.get_by_role("button",name="读取样本",exact=True).click()
-    expect(page.get_by_text("已读取 2 个测点",exact=False)).to_be_visible()
-    page.get_by_label("测点",exact=True).select_option("1")
+    page.get_by_role("button",name="试读点位",exact=True).click()
+    expect(page.locator(".tag-selected")).to_contain_text("17800")
+    page.locator(".tag-selected tbody tr").filter(has_text="液位原码").click()
+    page.locator(".tag-properties").get_by_text("高级设置",exact=True).click()
     page.get_by_label("业务编号",exact=True).fill("levelRaw")
-    page.get_by_role("button",name="应用数据配置",exact=True).click()
+    page.get_by_role("button",name="完成并绑定",exact=True).click()
     modal=page.get_by_role("dialog")
     expect(modal).to_contain_text("还有 6 个组件需要绑定")
     assert modal.get_by_role("button",name="发布",exact=True).is_disabled()
@@ -190,6 +222,7 @@ def main():
             with sync_playwright() as pw:
                 browser=pw.chromium.launch(executable_path=CHROME if Path(CHROME).exists() else None)
                 exercise(browser.new_page(viewport={"width":1440,"height":900}),base,folder)
+                tag_browser_flow(browser.new_page(),base)
                 source_recovery(browser.new_page(),base)
                 template_workflow(browser.new_page(),base,folder)
                 browser.close()

@@ -51,6 +51,7 @@ const files = new Map(
     "/app.mjs": "studio/app.mjs",
     "/model.mjs": "studio/model.mjs",
     "/widgets.mjs": "studio/widgets.mjs",
+    "/tag-manager.mjs": "studio/tag-manager.mjs",
     "/lib/interact.js": "studio/lib/interact.min.js",
     "/lib/vue.js": "../../vendor/vue.global.prod.js",
     "/lib/three.js": "../../vendor/three.min.js",
@@ -93,7 +94,7 @@ async function offline(doc, payload, receivedAt) {
     );
   }
   const modules = await Promise.all(
-    ["/model.mjs", "/widgets.mjs", "/app.mjs"].map(content),
+    ["/model.mjs", "/widgets.mjs", "/tag-manager.mjs", "/app.mjs"].map(content),
   );
   const code = modules
     .map((m) =>

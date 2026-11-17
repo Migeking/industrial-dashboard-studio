@@ -33,13 +33,15 @@ async def browse(config):
         parent = client.get_node(config.get("nodeId") or "i=85")
         children = await parent.get_children()
         result = []
-        for child in children[:500]:
+        offset = max(0, int(config.get("offset", 0)))
+        for child in children[offset:offset+100]:
             node_class = await child.read_node_class()
             name = (await child.read_display_name()).Text
             item = {"nodeId": child.nodeid.to_string(), "label": name,
                     "folder": node_class == ua.NodeClass.Object}
             if node_class == ua.NodeClass.Variable:
                 dtype = await child.read_data_type_as_variant_type()
+                item["dataType"] = dtype.name
                 rank = await child.read_value_rank()
                 if rank == -1:
                     if dtype == ua.VariantType.Boolean:
@@ -52,7 +54,8 @@ async def browse(config):
                     elif dtype == ua.VariantType.String:
                         item["kind"] = "text"
             result.append(item)
-        return {"nodes": result, "truncated": len(children) > 500}
+        return {"nodes": result, "total": len(children),
+                "nextOffset": offset+100 if offset+100 < len(children) else None}
 
 async def ua_samples(config, publish, active):
     from asyncua import Client

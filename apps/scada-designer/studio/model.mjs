@@ -15,6 +15,27 @@ export const fans = ["NW", "SW", "NE", "SE"].map((corner, index) => ({
 }));
 export const mapped = (type) =>
   ["kpi", "chart", "status", "flow", "campus", "table"].includes(type);
+export function protocolMappings(rows, protocol, previous) {
+  return rows.map((r) => ({
+    id: r.id,
+    label: r.label || r.id,
+    unit: r.unit || "",
+    kind: r.kind,
+    path: "value",
+    root: "points",
+    keyField: "id",
+    keyValue: r.id,
+    timePath: protocol === "opcua" ? "timestamp" : "receivedAt",
+    fallbackTimePath: "receivedAt",
+    qualityPath: "quality",
+    scale: 1,
+    offset: 0,
+    precision: r.unit === "原码" ? 0 : 2,
+    ...previous.find(
+      (m) => (m.keyField === "id" && m.keyValue === r.id) || m.id === r.id,
+    ),
+  }));
+}
 export function compatibleMappings(type, mappings) {
   const kinds = {
     kpi: ["number", "boolean", "text"],

@@ -7,11 +7,12 @@ import {
   validate,
   csv,
   normalize,
-  importNorthbound,
+  protocolMappings,
   compatibleMappings,
   bindingProblem,
 } from "./model.mjs";
 import { Widget } from "./widgets.mjs";
+import { TagManager } from "./tag-manager.mjs";
 const offline = window.OFFLINE;
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const kindNames = {
@@ -48,7 +49,7 @@ async function boot() {
   const initial =
     offline || (await api(viewer ? "/api/published" : "/api/draft"));
   Vue.createApp({
-    components: { Widget },
+    components: { Widget, TagManager },
     setup() {
       const {
         ref,
@@ -310,54 +311,33 @@ async function boot() {
                   points: [],
                 };
       }
-      async function browseProtocol(entry, backIndex) {
+      const browseNext = ref(null);
+      async function browseProtocol(entry, backIndex, append = false) {
         if (protocolBusy.value) return;
+        message.value = "";
         protocolBusy.value = true;
         await guarded(async () => {
           const path =
             backIndex != null
               ? browsePath.value.slice(0, backIndex)
-              : entry
-                ? [...browsePath.value, entry]
-                : [];
+              : append
+                ? browsePath.value
+                : entry
+                  ? entry.path || [...browsePath.value, entry]
+                  : [];
           const result = await api("/api/opcua/browse", {
             endpoint: config.value.source.connection.endpoint,
             nodeId: path.at(-1)?.nodeId,
+            offset: append ? browseNext.value : 0,
           });
           browsePath.value = path;
-          browseResults.value = result.nodes;
-          if (result.truncated)
-            message.value = "该目录超过 500 个节点，请选择更小的目录";
+          browseResults.value = append
+            ? [...browseResults.value, ...result.nodes]
+            : result.nodes;
+          browseNext.value = result.nextOffset ?? null;
         });
         protocolBusy.value = false;
       }
-      function selectUa(entry) {
-        const points = config.value.source.connection.points;
-        if (points.some((p) => p.nodeId === entry.nodeId)) return;
-        points.push({
-          id: "UA_" + crypto.randomUUID(),
-          label: entry.label,
-          kind: entry.kind,
-          nodeId: entry.nodeId,
-        });
-      }
-      function addRegister() {
-        config.value.source.connection.points.push({
-          id: "MB_" + crypto.randomUUID(),
-          label: "新测点",
-          kind: "number",
-          function: 4,
-          address: 0,
-          format: "uint16",
-        });
-      }
-      const importRegisters = (file) =>
-        guarded(async () => {
-          if (file)
-            config.value.source.connection.points = importNorthbound(
-              JSON.parse(await file.text()),
-            );
-        });
       async function once(s) {
         if (s.kind === "json") return JSON.parse(s.data);
         if (s.kind === "csv") return csv(s.data);
@@ -388,6 +368,7 @@ async function boot() {
       }
       async function readSample() {
         if (protocolBusy.value) return;
+        message.value = "";
         protocolBusy.value = true;
         await guarded(async () => {
           sample.value = null;
@@ -415,29 +396,24 @@ async function boot() {
       function bridgeMappings() {
         const rows = sample.value?.points;
         if (!Array.isArray(rows)) return;
-        const mappings = rows.map((r) => ({
-          id: r.id,
-          label: r.label || r.id,
-          unit: r.unit || "",
-          kind: r.kind,
-          path: "value",
-          root: "points",
-          keyField: "id",
-          keyValue: r.id,
-          timePath:
-            sample.value.protocol === "opcua" ? "timestamp" : "receivedAt",
-          fallbackTimePath: "receivedAt",
-          qualityPath: "quality",
-          scale: 1,
-          offset: 0,
-          precision: r.unit === "原码" ? 0 : 2,
-          ...config.value.mappings.find(
-            (m) =>
-              (m.keyField === "id" && m.keyValue === r.id) || m.id === r.id,
-          ),
-        }));
-        config.value.mappings = mappings;
+        config.value.mappings = protocolMappings(
+          rows,
+          sample.value.protocol,
+          config.value.mappings,
+        );
         mappingIndex.value = 0;
+      }
+      async function finishTags() {
+        if (
+          !sample.value ||
+          sampleSource.value !== JSON.stringify(config.value.source)
+        )
+          await readSample();
+        if (
+          sample.value &&
+          sampleSource.value === JSON.stringify(config.value.source)
+        )
+          await applyConfig();
       }
       function applyConfig() {
         return guarded(async () => {
@@ -707,6 +683,7 @@ async function boot() {
         currentMap,
         mappingIndex,
         sample,
+        sampleSource,
         paths,
         versionInfo,
         undoCount,
@@ -726,9 +703,8 @@ async function boot() {
         browsePath,
         sourceKindChanged,
         browseProtocol,
-        selectUa,
-        addRegister,
-        importRegisters,
+        finishTags,
+        browseNext,
         applyConfig,
         bridgeMappings,
         addMap,

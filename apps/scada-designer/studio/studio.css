@@ -393,3 +393,325 @@ fieldset small {
   max-width: 600px;
   padding: 24px;
 }
+
+/* Industrial tag configuration uses a desktop-style directory and property grid. */
+.tag-dialog {
+  width: min(1280px, 96vw);
+  height: min(840px, 94vh);
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  color: #263744;
+  background: #eef1f4;
+  border: 1px solid #9baab6;
+  border-radius: 5px;
+  box-shadow: 0 12px 60px #0007;
+}
+.tag-dialog > header {
+  padding: 0 16px;
+  height: 50px;
+  background: #28465b;
+  border: 0;
+  color: white;
+}
+.tag-manager {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+.tag-manager label {
+  color: #344955;
+  margin: 0;
+  font-size: 12px;
+}
+.tag-manager input,
+.tag-manager select,
+.tag-manager textarea {
+  color: #24333e;
+  background: #fff;
+  border: 1px solid #b8c5ce;
+  border-radius: 3px;
+  font-size: 13px;
+  padding: 6px 8px;
+  margin: 4px 0 0;
+}
+.tag-manager input:focus,
+.tag-manager select:focus,
+.tag-manager textarea:focus {
+  outline: 2px solid #76b3dc;
+  outline-offset: 0;
+}
+.tag-manager input[readonly],
+.tag-manager textarea[readonly] {
+  background: #f3f5f7;
+  color: #536572;
+}
+.tag-manager button,
+.tag-manager .button {
+  color: #293f4c;
+  background: #f8fafb;
+  border: 1px solid #b6c3cd;
+  border-radius: 3px;
+  padding: 6px 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.tag-manager button:hover {
+  background: #e5f1fa;
+  border-color: #82afd0;
+}
+.tag-manager .primary {
+  color: white;
+  background: #226ba0;
+  border-color: #226ba0;
+}
+.tag-manager .primary:hover {
+  background: #1b5987;
+}
+.tag-connection {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  padding: 12px 14px;
+  border-bottom: 1px solid #bcc8d1;
+  background: #e5ebef;
+}
+.tag-connection .endpoint {
+  flex: 1;
+  min-width: 140px;
+}
+.tag-connection .short {
+  width: 92px;
+  flex: none;
+}
+.tag-workspace {
+  display: grid;
+  grid-template-columns: 210px minmax(270px, 1fr) 250px;
+  min-height: 0;
+  flex: 1;
+  gap: 1px;
+  background: #bcc8d1;
+  border-top: 1px solid white;
+}
+.tag-workspace.modbus-tags {
+  grid-template-columns: minmax(270px, 1fr) 270px;
+}
+.tag-workspace aside {
+  background: #f4f6f8;
+  padding: 0;
+  color: #304553;
+  min-height: 0;
+  min-width: 0;
+}
+.tag-manager h2 {
+  font-size: 13px;
+  color: #304553;
+  margin: 0;
+  padding: 10px 12px;
+  background: #e8edf1;
+  border-bottom: 1px solid #c4ced5;
+}
+.tag-tree {
+  display: flex;
+  flex-direction: column;
+}
+.tag-tree-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 6px 0;
+}
+.tag-tree-scroll button {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tag-tree-scroll p,
+.tag-properties > p {
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.tag-manager .active {
+  background: #d8eafb;
+  color: #173e59;
+}
+.tag-tables {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: #bdc9d1;
+  min-width: 0;
+}
+.tag-browser,
+.tag-selected {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: white;
+}
+.tag-tools {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #f3f6f8;
+  padding: 7px 10px;
+  border-bottom: 1px solid #c5ced5;
+  min-height: 42px;
+}
+.tag-tools b {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tag-tools input {
+  min-width: 70px;
+  flex: 1;
+  margin: 0;
+}
+.tag-tools .button {
+  margin: 0;
+}
+.tag-tools .button input {
+  display: none;
+}
+.tag-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.tag-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12px;
+  color: #263b49;
+}
+.tag-scroll th {
+  position: sticky;
+  top: 0;
+  background: #e9eef2;
+  z-index: 1;
+  color: #4a5e6b;
+  font-weight: 500;
+}
+.tag-scroll td,
+.tag-scroll th {
+  padding: 7px 9px;
+  border-right: 1px solid #e1e7eb;
+  border-bottom: 1px solid #e1e7eb;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.tag-scroll th:first-child {
+  width: 32px;
+}
+.tag-scroll tbody tr:hover {
+  background: #eff6fb;
+}
+.tag-scroll tbody tr.active {
+  background: #d8eafb;
+}
+.tag-manager input[type="checkbox"] {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  accent-color: #2474ac;
+}
+.tag-scroll small {
+  color: #6b7e88;
+}
+.tag-table-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: #5e727e;
+  background: #f5f7f9;
+}
+.tag-properties {
+  overflow: auto;
+}
+.tag-properties fieldset {
+  border: 0;
+  padding: 12px;
+  margin: 0;
+}
+.tag-properties label {
+  display: block;
+  margin-bottom: 12px;
+}
+.tag-properties details {
+  border-top: 1px solid #ccd6dd;
+  margin-top: 12px;
+  padding-top: 10px;
+}
+.tag-properties summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.tag-properties small {
+  color: #657a87;
+  font-size: 11px;
+  margin-bottom: 12px;
+}
+.tag-footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 9px;
+  background: #e5ebf0;
+  border-top: 1px solid #bac7d0;
+  padding: 10px 14px;
+  min-height: 54px;
+}
+.tag-footer span {
+  flex: 1;
+  color: #526976;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 1050px) {
+  .tag-workspace {
+    grid-template-columns: 170px minmax(230px, 1fr) 220px;
+  }
+  .tag-connection {
+    gap: 7px;
+    padding: 8px;
+  }
+  .tag-connection .short {
+    width: 75px;
+  }
+  .tag-tools {
+    flex-wrap: wrap;
+  }
+}
+
+.tag-scroll th:first-child {
+  width: 38px;
+}
+.tag-manager .system-folders {
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #627987;
+  border-bottom: 1px solid #d4dde4;
+}
