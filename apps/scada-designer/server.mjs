@@ -77,7 +77,7 @@ async function offline(doc, payload, receivedAt) {
   let html = await content("/");
   const windowlessCss = await content("/studio.css");
   html = html.replace(
-    '<link rel="stylesheet" href="/studio.css">',
+    /<link rel="stylesheet" href="\/studio\.css"\s*\/?>/,
     () => "<style>" + windowlessCss + "</style>",
   );
   for (const p of [

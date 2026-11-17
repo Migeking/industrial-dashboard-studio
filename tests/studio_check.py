@@ -80,6 +80,9 @@ def exercise(page, base, folder):
     page.goto(dest.as_uri())
     expect(page.locator(".host canvas")).to_have_count(1,timeout=20000)
     expect(page.locator(".board-title small")).to_have_text("离线演示快照")
+    expect(page.locator(".board")).to_have_css("width","1920px")
+    expect(page.locator(".board")).to_have_css("height","1080px")
+    expect(page.locator('link[rel="stylesheet"]')).to_have_count(0)
     assert not requests and not errors,(requests,errors)
 
 def source_recovery(page, base):
