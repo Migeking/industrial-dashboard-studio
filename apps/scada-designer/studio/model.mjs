@@ -147,13 +147,15 @@ export function validate(doc, publishing) {
   const s = doc.source;
   if (
     !s ||
-    !["json", "csv", "rest", "ws"].includes(s.kind) ||
+    !["json", "csv", "rest", "ws", "opcua", "modbus"].includes(s.kind) ||
     !Number.isFinite(s.pollMs) ||
     s.pollMs < 200 ||
     !Number.isFinite(s.maxAgeMs) ||
     s.maxAgeMs <= 0
   )
     fail("数据源参数无效");
+  if (["opcua", "modbus"].includes(s.kind))
+    validateConnection(s.connection, s.kind);
   if (publishing && ["rest", "ws"].includes(s.kind)) {
     const url = new URL(s.url);
     if (
@@ -232,6 +234,95 @@ export function validate(doc, publishing) {
       fail(n.title + " 三维对象或镜头无效");
   }
   return doc;
+}
+
+export function validateConnection(c, kind) {
+  if (!c || !Array.isArray(c.points) || !c.points.length)
+    throw Error("请先选择协议测点");
+  if (kind === "opcua") {
+    const url = new URL(c.endpoint);
+    if (url.protocol !== "opc.tcp:" || url.username || url.password)
+      throw Error("OPC UA 地址无效");
+  } else if (
+    !c.host ||
+    !Number.isInteger(c.port) ||
+    c.port < 1 ||
+    c.port > 65535 ||
+    !Number.isInteger(c.unitId) ||
+    c.unitId < 0 ||
+    c.unitId > 255
+  )
+    throw Error("Modbus 连接参数无效");
+  const ids = new Set();
+  for (const p of c.points) {
+    if (
+      !/^[\w.-]+$/.test(p.id) ||
+      ids.has(p.id) ||
+      !["number", "boolean", "text"].includes(p.kind)
+    )
+      throw Error("协议测点编号或类型无效");
+    ids.add(p.id);
+    if (kind === "opcua") {
+      if (typeof p.nodeId !== "string" || !p.nodeId)
+        throw Error("OPC UA 节点编号缺失");
+      continue;
+    }
+    const sizes = { uint16: 2, int16: 2, uint32: 4, int32: 4, float32: 4 };
+    if (
+      ![1, 2, 3, 4].includes(p.function) ||
+      !Number.isInteger(p.address) ||
+      p.address < 0 ||
+      p.address > 65535
+    )
+      throw Error("Modbus 功能码或零基地址无效");
+    if (p.function <= 2) {
+      if (p.kind !== "boolean") throw Error("位测点需使用布尔类型");
+    } else {
+      const size = sizes[p.format];
+      const order = p.order || "ABCD".slice(0, size);
+      if (
+        p.kind !== "number" ||
+        !size ||
+        [...order].sort().join("") !== "ABCD".slice(0, size) ||
+        p.address + size / 2 > 65536
+      )
+        throw Error("寄存器格式或字序无效");
+    }
+    if (
+      (p.rawMin != null || p.rawMax != null) &&
+      (!Number.isFinite(p.rawMin) ||
+        !Number.isFinite(p.rawMax) ||
+        p.rawMin > p.rawMax)
+    )
+      throw Error("原码边界无效");
+  }
+}
+
+export function importNorthbound(data) {
+  if (!Array.isArray(data.mappings))
+    throw Error("请导入北向 mappings JSON 点表");
+  const bases = { DO: 1, DI: 10001, AI: 30001, AO: 40001 };
+  const functions = { DO: 1, DI: 2, AI: 4, AO: 3 };
+  return data.mappings
+    .filter((p) => p.status === "active")
+    .map((p) => {
+      const bit = ["DO", "DI"].includes(p.type);
+      if (
+        !Object.hasOwn(bases, p.type) ||
+        (bit ? p.dataType !== "BOOL" : p.dataType !== "UINT16")
+      )
+        throw Error("点表包含不支持的类型，请使用手工配置");
+      return {
+        id: p.type + "_" + p.address,
+        label: p.point_alias,
+        kind: bit ? "boolean" : "number",
+        function: functions[p.type],
+        address: p.address - bases[p.type],
+        ...(bit
+          ? {}
+          : { format: "uint16", unit: "原码", rawMin: 4000, rawMax: 20000 }),
+      };
+    });
 }
 export function csv(text) {
   const rows = [];

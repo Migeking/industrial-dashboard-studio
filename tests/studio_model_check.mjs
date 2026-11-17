@@ -5,10 +5,70 @@ import {
   template,
   validate,
   node,
+  importNorthbound,
+  validateConnection,
 } from "../apps/scada-designer/studio/model.mjs";
 const doc = template(),
   time = 1700000000000,
   m = doc.mappings[0];
+const registers = importNorthbound({
+  mappings: [
+    {
+      status: "active",
+      type: "DI",
+      dataType: "BOOL",
+      address: 10002,
+      point_alias: "运行反馈",
+    },
+    {
+      status: "active",
+      type: "AI",
+      dataType: "UINT16",
+      address: 30003,
+      point_alias: "液位原码",
+    },
+    { status: "disabled", type: "DI", address: 10004 },
+  ],
+});
+assert.equal(registers.length, 2);
+assert.equal(registers[0].address, 1);
+assert.equal(registers[0].function, 2);
+assert.equal(registers[1].address, 2);
+assert.equal(registers[1].rawMin, 4000);
+const modbus = { host: "127.0.0.1", port: 502, unitId: 1, points: registers };
+validateConnection(modbus, "modbus");
+assert.throws(
+  () =>
+    validateConnection(
+      {
+        ...modbus,
+        points: [{ ...registers[1], format: "float32", order: "AABC" }],
+      },
+      "modbus",
+    ),
+  /字序/,
+);
+assert.throws(
+  () =>
+    validateConnection(
+      { ...modbus, points: [{ ...registers[1], function: 6 }] },
+      "modbus",
+    ),
+  /功能码/,
+);
+const ua = {
+  endpoint: "opc.tcp://127.0.0.1:49320",
+  points: [{ id: "run", nodeId: "ns=2;s=Run", kind: "boolean" }],
+};
+validateConnection(ua, "opcua");
+assert.throws(
+  () => validateConnection({ ...ua, endpoint: "http://127.0.0.1" }, "opcua"),
+  /地址/,
+);
+const native = template("blank");
+native.source.kind = "modbus";
+native.source.connection = modbus;
+validate(native, true);
 for (const key of ["01", "05", "30", "blank"]) validate(template(key), true);
 const read = (data, mapping, now = time) =>
   normalize(data, mapping, time, 5000, now);

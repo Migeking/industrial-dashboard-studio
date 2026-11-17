@@ -5,6 +5,7 @@ import json
 import math
 import os
 import struct
+import sys
 import threading
 import time
 from datetime import datetime, timezone
@@ -21,6 +22,37 @@ def point(tag, value=None, quality="bad", source_time=None):
             "unit": tag.get("unit", ""), "value": value if quality == "good" else None,
             "quality": quality, "timestamp": source_time.isoformat() if source_time else None,
             "receivedAt": stamp()}
+
+async def browse(config):
+    from asyncua import Client, ua
+    client = Client(config["endpoint"], timeout=10)
+    if os.getenv("STUDIO_UA_USER"):
+        client.set_user(os.environ["STUDIO_UA_USER"])
+        client.set_password(os.environ.get("STUDIO_UA_PASSWORD", ""))
+    async with client:
+        parent = client.get_node(config.get("nodeId") or "i=85")
+        children = await parent.get_children()
+        result = []
+        for child in children[:500]:
+            node_class = await child.read_node_class()
+            name = (await child.read_display_name()).Text
+            item = {"nodeId": child.nodeid.to_string(), "label": name,
+                    "folder": node_class == ua.NodeClass.Object}
+            if node_class == ua.NodeClass.Variable:
+                dtype = await child.read_data_type_as_variant_type()
+                rank = await child.read_value_rank()
+                if rank == -1:
+                    if dtype == ua.VariantType.Boolean:
+                        item["kind"] = "boolean"
+                    elif dtype in [ua.VariantType.SByte, ua.VariantType.Byte,
+                                   ua.VariantType.Int16, ua.VariantType.UInt16,
+                                   ua.VariantType.Int32, ua.VariantType.UInt32,
+                                   ua.VariantType.Float, ua.VariantType.Double]:
+                        item["kind"] = "number"
+                    elif dtype == ua.VariantType.String:
+                        item["kind"] = "text"
+            result.append(item)
+        return {"nodes": result, "truncated": len(children) > 500}
 
 async def ua_samples(config, publish, active):
     from asyncua import Client
@@ -85,6 +117,11 @@ async def modbus_samples(config, publish, active):
         client.close()
 
 async def run(config, port):
+    # Validate the selected dependency before announcing an HTTP listener.
+    if config["protocol"] == "opcua":
+        import asyncua
+    else:
+        import pymodbus.client.sync
     tags = config["points"]
     if not tags or len({t["id"] for t in tags}) != len(tags):
         raise ValueError("Provide distinct point IDs")
@@ -116,6 +153,7 @@ async def run(config, port):
             pass
     server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
+    print(json.dumps({"port": server.server_port}), flush=True)
     sampler = {"opcua": ua_samples, "modbus": modbus_samples}[protocol]
     try:
         while True:
@@ -139,7 +177,17 @@ async def run(config, port):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("config", type=Path)
+    parser.add_argument("config", type=Path, nargs="?")
     parser.add_argument("--port", type=int, default=8101)
+    parser.add_argument("--browse", action="store_true")
+    parser.add_argument("--managed", action="store_true")
     args = parser.parse_args()
-    asyncio.run(run(json.loads(args.config.read_text(encoding="utf-8-sig")), args.port))
+    if args.managed:
+        def parent_lifetime():
+            sys.stdin.read()
+            os._exit(0)
+        threading.Thread(target=parent_lifetime, daemon=True).start()
+    if args.browse:
+        print(json.dumps(asyncio.run(browse(json.load(sys.stdin))), ensure_ascii=False))
+    else:
+        asyncio.run(run(json.loads(args.config.read_text(encoding="utf-8-sig")), args.port))

@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { template, validate, csv } from "./studio/model.mjs";
+import { browseNodes, protocolSample } from "./protocol.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url)),
   root = path.resolve(here, "../..");
@@ -164,6 +165,10 @@ http
       }
       if (req.method === "POST") {
         const data = await body(req);
+        if (p === "/api/opcua/browse")
+          return send(200, await browseNodes(data));
+        if (p === "/api/protocol/sample")
+          return send(200, await protocolSample(data, dir));
         if (p === "/api/sample") {
           const url = new URL(data.url);
           if (

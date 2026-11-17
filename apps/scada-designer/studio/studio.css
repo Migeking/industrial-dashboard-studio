@@ -306,3 +306,25 @@ th {
   z-index: 8;
   cursor: pointer;
 }
+
+.protocol-list {
+  max-height: 260px;
+  overflow: auto;
+  margin: 10px 0;
+}
+.protocol-row {
+  margin: 4px 0;
+}
+.protocol-row button {
+  text-align: left;
+  width: 100%;
+}
+fieldset {
+  border: 1px solid #426168;
+  margin: 8px 0;
+  min-width: 0;
+}
+fieldset small {
+  display: block;
+  overflow-wrap: anywhere;
+}

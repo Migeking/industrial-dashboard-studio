@@ -166,11 +166,18 @@
             ><div class="columns">
               <div>
                 <label
-                  >来源<select aria-label="来源" v-model="config.source.kind">
+                  >来源<select
+                    aria-label="来源"
+                    v-model="config.source.kind"
+                    @change="sourceKindChanged"
+                    :disabled="protocolBusy"
+                  >
                     <option value="json">本地 JSON</option>
                     <option value="csv">本地 CSV</option>
                     <option value="rest">REST / 工业协议桥接</option>
                     <option value="ws">WebSocket JSON</option>
+                    <option value="opcua">OPC UA</option>
+                    <option value="modbus">Modbus TCP</option>
                   </select></label
                 >
                 <template v-if="['csv','json'].includes(config.source.kind)"
@@ -184,11 +191,133 @@
                       type="file"
                       @change="fileData($event.target.files[0])" /></label
                 ></template>
+                <template v-else-if="config.source.kind==='opcua'">
+                  <label
+                    >OPC UA 地址<input
+                      v-model="config.source.connection.endpoint"
+                      :disabled="protocolBusy"
+                  /></label>
+                  <button @click="browseProtocol()" :disabled="protocolBusy">
+                    浏览节点
+                  </button>
+                  <div class="protocol-list">
+                    <button
+                      v-if="browsePath.length"
+                      @click="browseProtocol(null,browsePath.length-1)"
+                      :disabled="protocolBusy"
+                    >
+                      返回上级
+                    </button>
+                    <p>
+                      {{browsePath.map(p=>p.label).join(' / ') || 'Objects'}}
+                    </p>
+                    <div
+                      v-for="entry in browseResults"
+                      :key="entry.nodeId"
+                      class="protocol-row"
+                    >
+                      <button
+                        v-if="entry.folder"
+                        @click="browseProtocol(entry)"
+                        :disabled="protocolBusy"
+                      >
+                        {{entry.label}} ›
+                      </button>
+                      <button
+                        v-else-if="entry.kind"
+                        @click="selectUa(entry)"
+                        :disabled="protocolBusy||config.source.connection.points.some(p=>p.nodeId===entry.nodeId)"
+                      >
+                        {{entry.label}} +
+                      </button>
+                      <small v-else>{{entry.label}} · 暂不支持该类型</small>
+                    </div>
+                  </div>
+                </template>
+                <template v-else-if="config.source.kind==='modbus'">
+                  <label
+                    >Modbus 主机<input v-model="config.source.connection.host"
+                  /></label>
+                  <div class="pair">
+                    <label
+                      >端口<input
+                        type="number"
+                        v-model.number="config.source.connection.port" /></label
+                    ><label
+                      >单元 ID<input
+                        type="number"
+                        v-model.number="config.source.connection.unitId"
+                    /></label>
+                  </div>
+                  <label class="button"
+                    >导入北向 JSON 点表<input
+                      type="file"
+                      accept=".json"
+                      @change="importRegisters($event.target.files[0]);$event.target.value=''"
+                  /></label>
+                  <button @click="addRegister">新增寄存器</button>
+                  <small
+                    >北向表按 DO 00001、DI 10001、AI 30001、AO 40001
+                    转为零基地址。</small
+                  >
+                </template>
                 <label v-else
                   >接口 URL<input
                     v-model="config.source.url"
                     placeholder="http://127.0.0.1:8101/snapshot"
                 /></label>
+                <div
+                  v-if="['opcua','modbus'].includes(config.source.kind)"
+                  class="protocol-list"
+                >
+                  <h2>已选测点 · {{config.source.connection.points.length}}</h2>
+                  <fieldset
+                    v-for="(point,i) in config.source.connection.points"
+                    :key="point.id"
+                  >
+                    <label>测点名称<input v-model="point.label" /></label>
+                    <small v-if="point.nodeId">{{point.nodeId}}</small>
+                    <template v-else>
+                      <label
+                        >读取功能<select
+                          v-model.number="point.function"
+                          @change="point.kind=point.function<=2?'boolean':'number'"
+                        >
+                          <option :value="1">FC01 线圈</option>
+                          <option :value="2">FC02 离散输入</option>
+                          <option :value="3">FC03 保持寄存器</option>
+                          <option :value="4">FC04 输入寄存器</option>
+                        </select></label
+                      >
+                      <label
+                        >零基地址<input
+                          type="number"
+                          min="0"
+                          v-model.number="point.address"
+                      /></label>
+                      <template v-if="point.function>2"
+                        ><label
+                          >数据格式<select v-model="point.format">
+                            <option
+                              v-for="f in ['uint16','int16','uint32','int32','float32']"
+                              :value="f"
+                            >
+                              {{f}}
+                            </option>
+                          </select></label
+                        ><label
+                          >字序<input
+                            v-model="point.order"
+                            placeholder="默认 AB / ABCD" /></label
+                      ></template>
+                    </template>
+                    <button
+                      @click="config.source.connection.points.splice(i,1)"
+                    >
+                      移除该点
+                    </button>
+                  </fieldset>
+                </div>
                 <label
                   >刷新周期（ms）<input
                     type="number"
@@ -199,7 +328,8 @@
                     type="number"
                     min="1"
                     v-model.number="config.source.maxAgeMs" /></label
-                ><button @click="readSample">读取样本</button
+                ><button @click="readSample" :disabled="protocolBusy">
+                  {{protocolBusy?'正在连接…':'读取样本'}}</button
                 ><button
                   v-if="Array.isArray(sample?.points)&&sample.points.every(p=>p.id&&p.kind)"
                   @click="bridgeMappings"

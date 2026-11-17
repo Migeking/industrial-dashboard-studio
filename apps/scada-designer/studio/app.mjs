@@ -7,6 +7,7 @@ import {
   validate,
   csv,
   normalize,
+  importNorthbound,
 } from "./model.mjs";
 import { Widget } from "./widgets.mjs";
 const offline = window.OFFLINE;
@@ -212,11 +213,90 @@ async function boot() {
         sample.value = null;
         dialog.value = "data";
         message.value = "";
+        browsePath.value = [];
+        browseResults.value = [];
       }
+      const protocolBusy = ref(false),
+        browseResults = ref([]),
+        browsePath = ref([]);
+      function sourceKindChanged() {
+        sample.value = null;
+        browseResults.value = [];
+        browsePath.value = [];
+        const s = config.value.source;
+        if (
+          ["opcua", "modbus"].includes(s.kind) &&
+          s.connection?.protocol !== s.kind
+        )
+          s.connection =
+            s.kind === "opcua"
+              ? {
+                  protocol: s.kind,
+                  endpoint: "opc.tcp://127.0.0.1:49320",
+                  points: [],
+                }
+              : {
+                  protocol: s.kind,
+                  host: "",
+                  port: 502,
+                  unitId: 1,
+                  points: [],
+                };
+      }
+      async function browseProtocol(entry, backIndex) {
+        if (protocolBusy.value) return;
+        protocolBusy.value = true;
+        await guarded(async () => {
+          const path =
+            backIndex != null
+              ? browsePath.value.slice(0, backIndex)
+              : entry
+                ? [...browsePath.value, entry]
+                : [];
+          const result = await api("/api/opcua/browse", {
+            endpoint: config.value.source.connection.endpoint,
+            nodeId: path.at(-1)?.nodeId,
+          });
+          browsePath.value = path;
+          browseResults.value = result.nodes;
+          if (result.truncated)
+            message.value = "该目录超过 500 个节点，请选择更小的目录";
+        });
+        protocolBusy.value = false;
+      }
+      function selectUa(entry) {
+        const points = config.value.source.connection.points;
+        if (points.some((p) => p.nodeId === entry.nodeId)) return;
+        points.push({
+          id: "UA_" + crypto.randomUUID(),
+          label: entry.label,
+          kind: entry.kind,
+          nodeId: entry.nodeId,
+        });
+      }
+      function addRegister() {
+        config.value.source.connection.points.push({
+          id: "MB_" + crypto.randomUUID(),
+          label: "新测点",
+          kind: "number",
+          function: 4,
+          address: 0,
+          format: "uint16",
+        });
+      }
+      const importRegisters = (file) =>
+        guarded(async () => {
+          if (file)
+            config.value.source.connection.points = importNorthbound(
+              JSON.parse(await file.text()),
+            );
+        });
       async function once(s) {
         if (s.kind === "json") return JSON.parse(s.data);
         if (s.kind === "csv") return csv(s.data);
         if (s.kind === "rest") return api("/api/sample", { url: s.url });
+        if (["opcua", "modbus"].includes(s.kind))
+          return api("/api/protocol/sample", s);
         return new Promise((ok, no) => {
           const ws = new WebSocket(s.url);
           const timer = setTimeout(() => {
@@ -239,11 +319,30 @@ async function boot() {
           };
         });
       }
-      const readSample = () =>
-        guarded(async () => {
+      async function readSample() {
+        if (protocolBusy.value) return;
+        protocolBusy.value = true;
+        await guarded(async () => {
           sample.value = null;
-          sample.value = await once(config.value.source);
+          const source = clone(config.value.source);
+          for (let attempt = 0; attempt < 40; attempt++) {
+            try {
+              const value = await once(source);
+              if (
+                JSON.stringify(source) !== JSON.stringify(config.value.source)
+              )
+                throw Error("连接配置已变化，请重新读取样本");
+              sample.value = value;
+              return;
+            } catch (error) {
+              if (!error.message.includes("协议连接建立中") || attempt === 39)
+                throw error;
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          }
         });
+        protocolBusy.value = false;
+      }
       function bridgeMappings() {
         const rows = sample.value?.points;
         if (!Array.isArray(rows)) return;
@@ -347,7 +446,8 @@ async function boot() {
           } catch (e) {
             fail(e);
           }
-          if (!closed && s.kind === "rest") timer = setTimeout(poll, s.pollMs);
+          if (!closed && ["rest", "opcua", "modbus"].includes(s.kind))
+            timer = setTimeout(poll, s.pollMs);
         }
         function connect() {
           if (closed) return;
@@ -529,6 +629,14 @@ async function boot() {
         rollback,
         openConfig,
         readSample,
+        protocolBusy,
+        browseResults,
+        browsePath,
+        sourceKindChanged,
+        browseProtocol,
+        selectUa,
+        addRegister,
+        importRegisters,
         applyConfig,
         bridgeMappings,
         addMap,
