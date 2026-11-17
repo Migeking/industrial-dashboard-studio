@@ -1,0 +1,163 @@
+{
+  "license": "https://polyhaven.com/license",
+  "three_version": "r128",
+  "assets": [
+    "https://polyhaven.com/a/modern_arm_chair_01",
+    "https://polyhaven.com/a/potted_plant_04",
+    "https://polyhaven.com/a/rosewood_veneer_02",
+    "https://polyhaven.com/a/dirty_carpet",
+    "https://polyhaven.com/a/terrazzo_tiles",
+    "https://polyhaven.com/a/lebombo"
+  ],
+  "files": {
+    "https://api.polyhaven.com/files/dirty_carpet": {
+      "bytes": 25880,
+      "sha256": "69163571a8950baf5618ef54e380ceb52c81639acf71415ae0dc5908d80675fc"
+    },
+    "https://api.polyhaven.com/files/modern_arm_chair_01": {
+      "bytes": 62889,
+      "sha256": "13a1c5f53d18afd5213cd40949dec6d20d5c896dd17a86c87f4ec5f93a6de53b"
+    },
+    "https://api.polyhaven.com/files/potted_plant_04": {
+      "bytes": 30185,
+      "sha256": "302f57049f55cfdf1364156e6b9ec6b63d212e9b7b04b5db830073f4aedd4b1b"
+    },
+    "https://api.polyhaven.com/files/rosewood_veneer_02": {
+      "bytes": 29555,
+      "sha256": "d00ae1743f48b3afd4b00de9e81ee29816f20c453ca45e0e27efa699889fb280"
+    },
+    "https://api.polyhaven.com/files/terrazzo_tiles": {
+      "bytes": 33250,
+      "sha256": "e3d74f2f49b2a5985f220d6d9d8906cf0968ae2a88fc87ab603aef6792fcb3ad"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/lebombo_1k.hdr": {
+      "bytes": 1476953,
+      "sha256": "a02c9615adeba91a753c3e4737c3ce7a719273df822eeaa85d24982bd43c9ecb"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/modern_arm_chair_01/modern_arm_chair_01_1k.gltf": {
+      "bytes": 5121,
+      "sha256": "d31be520add2603447b43acedbdacf9516866f7c89e9ea9230c9edbac9cc6e6a"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/potted_plant_04/potted_plant_04_1k.gltf": {
+      "bytes": 7081,
+      "sha256": "b3a3bc3e97da75844999c4da07b7104b6c023f729a7c045979929b9504184339"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/modern_arm_chair_01/modern_arm_chair_01.bin": {
+      "bytes": 240728,
+      "sha256": "8755f2f498c0bb165660379d1b045465751c16bbeaf553c8dd76bb14c16d1ff6"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/potted_plant_04/potted_plant_04.bin": {
+      "bytes": 241800,
+      "sha256": "158c1d27503d4845eb3573f00c01ae3f4f77f1d6ca8754c67bf1762745946f7f"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modern_arm_chair_01/modern_arm_chair_01_legs_arm_1k.jpg": {
+      "bytes": 577931,
+      "sha256": "c76b65200a52cf649a865baf7f879dc34277b923edaac7ec8164eaf7c51c935d"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modern_arm_chair_01/modern_arm_chair_01_legs_diff_1k.jpg": {
+      "bytes": 460937,
+      "sha256": "6291421a8db6cd9bbbc8c141aa087465d698427249f813d24c6e5ccdbf0bf536"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modern_arm_chair_01/modern_arm_chair_01_legs_nor_gl_1k.jpg": {
+      "bytes": 560864,
+      "sha256": "af328e8530884907cf0d38a675338bb4e2b03c56ed2d21eb5abf505bb67c11de"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modern_arm_chair_01/modern_arm_chair_01_pillow_arm_1k.jpg": {
+      "bytes": 321223,
+      "sha256": "fec333290ddfd70e78428251874d30d5410d6d0a956dd84922b0d3f3596e4b7a"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modern_arm_chair_01/modern_arm_chair_01_pillow_diff_1k.jpg": {
+      "bytes": 228851,
+      "sha256": "f1935436b460ad5c03ac7ff9d1e1b4aaedcdc9a503d79c257beb8cdac2e9e1f7"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modern_arm_chair_01/modern_arm_chair_01_pillow_nor_gl_1k.jpg": {
+      "bytes": 302377,
+      "sha256": "2717b9d22e1d3533e3c7436a0230b00b1d25bf396246679825c8db08edaba0a8"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/potted_plant_04/potted_plant_04_arm_1k.jpg": {
+      "bytes": 478413,
+      "sha256": "7f3288345570ef700c851ea382ed267490ffc8c901ccc31f2ec5507e4d098e48"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/potted_plant_04/potted_plant_04_diff_1k.jpg": {
+      "bytes": 577545,
+      "sha256": "8693a971557fbafb12a24a2e23c1a04ab6b04ecdc4d26808c5ad3516a4971f24"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/potted_plant_04/potted_plant_04_nor_gl_1k.jpg": {
+      "bytes": 817786,
+      "sha256": "66e4627f6691a2d8104a6c53a39b41daddbd5bad8103e73f372c39166a3dcb07"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/dirty_carpet/dirty_carpet_diff_1k.jpg": {
+      "bytes": 978020,
+      "sha256": "b0ef2b248cb7dfa1d33f1b2215fb3b83e815527d4091a2c3a423bdcd63bef60a"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/dirty_carpet/dirty_carpet_nor_gl_1k.jpg": {
+      "bytes": 1089297,
+      "sha256": "ba96f6f098ac64456f4cc310469200ff702596a9070d2553f990da8f7b86d29f"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/dirty_carpet/dirty_carpet_rough_1k.jpg": {
+      "bytes": 434062,
+      "sha256": "a2e13692bd7e5af9875150130ce9904c11879e693e70753d417b93121cf65be4"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rosewood_veneer_02/rosewood_veneer_02_diff_1k.jpg": {
+      "bytes": 641315,
+      "sha256": "f4085bf7554ff14ed8b8a39154dbeef12c12b66f7ceec763963d7be0c7fd6a40"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rosewood_veneer_02/rosewood_veneer_02_nor_gl_1k.jpg": {
+      "bytes": 368723,
+      "sha256": "3d186abe4523a805172fb8417f46aab34edcd3d8f3546400bc3e567dd099b21e"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rosewood_veneer_02/rosewood_veneer_02_rough_1k.jpg": {
+      "bytes": 511348,
+      "sha256": "558c1bd6676b6601e907e03e2173cfcb83d2885a201ea09a0377c81ca8f6abfc"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/terrazzo_tiles/terrazzo_tiles_diff_1k.jpg": {
+      "bytes": 1166107,
+      "sha256": "462e3e719cda0472a33152523cf5ca2fc660e1c5869348be1609ba3dca12a2ef"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/terrazzo_tiles/terrazzo_tiles_nor_gl_1k.jpg": {
+      "bytes": 77954,
+      "sha256": "56bbe2d960b47ddb2dc538be2953a1ad07083b017cdada1cdc7958421a6cfcd9"
+    },
+    "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/terrazzo_tiles/terrazzo_tiles_rough_1k.jpg": {
+      "bytes": 459022,
+      "sha256": "cf0cb8525674adeb7da551ed1846c8c4edfd0377a35c6fe94d5f1cb2142c6152"
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/LICENSE": {
+      "bytes": 1081,
+      "sha256": "7dddf7c5b8fd10ee654db8857d75d104b5557889aa5a91fc4ca545ea7c07062f"
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/loaders/GLTFLoader.js": {
+      "bytes": 96550,
+      "sha256": "5c15967ba830918a9caea6338712c994c354bccd4edc4569bde411c3ec06a3e6"
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/loaders/RGBELoader.js": {
+      "bytes": 12572,
+      "sha256": "f6ba8cf5df528f1fd38b749d46cd7799a40b80d4eb1a5c5c072d31b1eae7f816"
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/math/SimplexNoise.js": {
+      "bytes": 14696,
+      "sha256": "eaab4ae3184e1a74a4983ffe8e4afe828e63fe4f837717cc44cb5e68727e4d3d"
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/postprocessing/Pass.js": {
+      "bytes": 1499,
+      "sha256": "1b6d53b6dc4eafd45a2b9e21d68a4e3dea33c7de92c408d36993282ee0514cfa"
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/postprocessing/SSAOPass.js": {
+      "bytes": 12292,
+      "sha256": "19134f19e564199311962acfab4bbaf17284ed93eebb5697305805aeb76f6db0"
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/shaders/CopyShader.js": {
+      "bytes": 606,
+      "sha256": "6b5da4fe3b410286974590885f82fe4a446f25c728f7d6c888e2a2a331333949"
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/shaders/FXAAShader.js": {
+      "bytes": 46034,
+      "sha256": "0ea1d37b0b4568fd26aad86e9abd5c6fc77021c04a7cff5326517ae819c96e41"
+    },
+    "https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/js/shaders/SSAOShader.js": {
+      "bytes": 6515,
+      "sha256": "5d83ca46be72857c56dc8d2ba778cef4b77da58412aac8e84a872c0fb2ccab8e"
+    }
+  },
+  "bundle_sha256": "9b78b73bcf1ea85c87ce84e3d3cc53988116900f9c7f976a12fb5695d6d05996"
+}
