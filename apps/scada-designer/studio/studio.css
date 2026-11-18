@@ -1366,3 +1366,51 @@ fieldset small {
     padding: 8px 12px;
   }
 }
+
+
+/* Keep the point table in the same work context, with a scrollable result area. */
+.screen-slot-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.screen-inspector .screen-slot-feedback .point-readback { margin: 0; }
+.screen-point-dialog {
+  box-sizing: border-box;
+  width: min(780px, calc(100vw - 40px));
+  max-height: calc(100vh - 56px);
+  padding: 20px;
+  color: #244352;
+  border: 1px solid #b6c9d4;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 16px 40px #17334240;
+}
+.screen-point-dialog::backdrop { background: #102a3e70; }
+.screen-point-dialog header,
+.screen-point-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.screen-point-dialog header { min-height: 0; padding: 0; background: transparent; border: 0; }
+.screen-point-dialog header h2 { margin: 0; font-size: 19px; color: #1e3c49; }
+.screen-point-dialog header p { margin: 6px 0 12px; color: #526d7b; }
+.screen-point-dialog footer { margin-top: 12px; }
+.screen-point-dialog footer span { flex: 1; }
+.screen-point-results {
+  max-height: min(420px, 53vh);
+  overflow: auto;
+  border: 1px solid #d4e0e6;
+}
+.screen-point-results table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.screen-point-results th, .screen-point-results td { padding: 8px 10px; text-align: left; }
+.screen-point-results th { position: sticky; top: 0; background: #eef4f7; color: #304e5d; }
+.screen-point-results td { border-top: 1px solid #e1eaef; overflow-wrap: anywhere; }
+.screen-point-results td:first-child { width: 43%; }
+.screen-point-results td small { display: block; color: #526d7b; margin-top: 2px; }
+
+.review-item .screen-review-issue { display: grid; gap: 4px; margin-top: 8px; }
+.review-item .screen-review-issue small { color: #745331; }

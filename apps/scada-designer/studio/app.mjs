@@ -17,7 +17,7 @@ import { Widget } from "./widgets.mjs";
 import { TagManager } from "./tag-manager.mjs";
 import { isNative, nativeTypes, nativeSlots, nativeSlotMappings, nativeBranch, cloneNativeBranch, nativeRecipes, nativeRecipe, nativeBlank } from "../../../packages/runtime/studio/native-model.mjs";
 import { NativeStage } from "../../../packages/runtime/studio/native-renderer.mjs";
-import { isScreen, blankScreen, copyScreenSelection,validateScreenAsset } from "../../../packages/runtime/studio/screen-model.mjs";
+import { isScreen, blankScreen, copyScreenSelection,validateScreenAsset,screenAssetProblem } from "../../../packages/runtime/studio/screen-model.mjs";
 import { screenSymbols } from "../../../packages/components/studio/screen-symbols.mjs";
 import { ScreenStage } from "../../../packages/runtime/studio/screen-renderer.mjs";
 import { ScreenInspector } from "./screen-inspector.mjs";
@@ -130,7 +130,12 @@ async function boot() {
         const selected=doc.value.nodes.filter((n)=>ids.value.includes(n.id)), movable=selected.filter((n)=>!n.locked);
         if(!selected.length&&!ids.value.some((id)=>doc.value.pipes.some((p)=>p.id===id)))return;
         snapshot();
-        if(key==="copy"){ids.value=copyScreenSelection(doc.value,ids.value,()=>crypto.randomUUID());message.value="已复制；新设备的测点绑定为空，请独立选择。";return;}
+        if (key === "copy" || key === "copy-bound") {
+          const keepBindings = key === "copy-bound";
+          ids.value = copyScreenSelection(doc.value, ids.value, () => crypto.randomUUID(), keepBindings);
+          message.value = keepBindings ? "已复制，副本使用相同测点。" : "已复制；新设备的测点绑定为空，请独立选择。";
+          return;
+        }
         if(key==="delete"){const removed=new Set(movable.map((n)=>n.id));doc.value.nodes=doc.value.nodes.filter((n)=>!removed.has(n.id));doc.value.pipes=doc.value.pipes.filter((p)=>!ids.value.includes(p.id)&&!removed.has(p.source.nodeId)&&!removed.has(p.target.nodeId));ids.value=[];return;}
         if(key==="lock"){const value=!selected.every((n)=>n.locked);selected.forEach((n)=>n.locked=value);return;}
         if(key==="rotate"){movable.forEach((n)=>n.angle=(n.angle+90)%360);return;}
@@ -284,15 +289,22 @@ async function boot() {
           message.value = "页面有新修改，发布后才会更新展示端";
         }
       });
-      const bindingNodes = computed(() =>
-        (screen.value?screenPageItems(project.value):screenItems.value).filter((n) => mapped(n)||screen.value&&n.action&&n.action.type!=="none"),
-      );
-      const bindingReason=(n)=>bindingProblem(n,doc.value.mappings)||(screen.value?screenActionProblem(n,project.value):'');
-      const bindingIssueLabel=(n)=>(screen.value&&screenActionProblem(n,project.value)&&!bindingProblem(n,doc.value.mappings)?'去配置：':'去绑定：')+n.title;
-
-      const bindingIssues = computed(() =>
-        bindingNodes.value.filter((n) => bindingProblem(n, doc.value.mappings)||screen.value&&screenActionProblem(n,project.value)),
-      );
+      function reviewIssue(n) {
+        const binding = bindingProblem(n, doc.value.mappings);
+        if (binding) return { tab: "binding", reason: binding };
+        if (!screen.value) return null;
+        const asset = screenAssetProblem(n);
+        if (asset) return { tab: "appearance", reason: asset };
+        const action = screenActionProblem(n, project.value);
+        return action ? { tab: "action", reason: action } : null;
+      }
+      const bindingNodes = computed(() => {
+        const items = screen.value ? screenPageItems(project.value) : screenItems.value;
+        return items.filter((n) => mapped(n) || (screen.value && (screenAssetProblem(n) || n.action?.type && n.action.type !== "none")));
+      });
+      const bindingReason = (n) => reviewIssue(n)?.reason || "";
+      const bindingIssueLabel = (n) => (reviewIssue(n)?.tab === "binding" ? "去绑定：" : "去配置：") + n.title;
+      const bindingIssues = computed(() => bindingNodes.value.filter(bindingReason));
       const sourceTitle = computed(
         () =>
           ({
@@ -314,7 +326,7 @@ async function boot() {
         if(screen.value)switchScreenPage(screenPageForNode(project.value,n.id));
         preview.value = false;
         activeStep.value = screen.value ? "canvas" : "bind";
-        inspectorTab.value = screen.value&&!bindingProblem(n,doc.value.mappings)&&screenActionProblem(n,project.value)?"action":"binding";
+        inspectorTab.value = reviewIssue(n)?.tab || "binding";
         ids.value = [n.id];
       }
       function goStep(key) {
@@ -633,7 +645,7 @@ async function boot() {
         if (publish && bindingIssues.value.length) {
           openBindings();
           message.value =
-            "请完成 " + bindingIssues.value.length + (screen.value?" 个元素的测点或交互配置":" 个组件的测点绑定");
+            "请完成 " + bindingIssues.value.length + (screen.value?" 个元素的测点、外观或交互配置":" 个组件的测点绑定");
           return;
         }
         return guarded(async () => {
@@ -961,7 +973,12 @@ async function boot() {
           n.y += dy;
         });
       }
+      function closeProjectMenuOutside(event) {
+        const menu = document.querySelector(".project-menu[open]");
+        if (menu && !menu.contains(event.target)) menu.open = false;
+      }
       onMounted(() => {
+        if (!viewer) document.addEventListener("pointerdown", closeProjectMenuOutside, true);
         if (native.value) collapsed.value = doc.value.nodes.filter((n) => n.editable && expandable(n)).map((n) => n.id);
         clockId = setInterval(() => (clock.value = Date.now()), 500);
         observer = new ResizeObserver(
@@ -1001,6 +1018,7 @@ async function boot() {
         }
       });
       onBeforeUnmount(() => {
+        if (!viewer) document.removeEventListener("pointerdown", closeProjectMenuOutside, true);
         stop();
         clearInterval(clockId);
         observer?.disconnect();

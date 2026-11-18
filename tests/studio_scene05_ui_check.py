@@ -366,6 +366,61 @@ def exercise(page, base, source_url, browser):
     assert not requests and not errors, (requests, errors)
     local.close()
 
+    # Reuse an actual bound 05 branch, including the uploaded image, on a new page.
+    select(pumps[0])
+    page.locator(f'[data-layer="{valves[0]}"]').click(modifiers=["Shift"])
+    page.get_by_role("tab", name="我的图元", exact=True).click()
+    field("我的图元名称", "05 单泵出水支路")
+    page.get_by_role("button", name="保存选中为图元", exact=True).click()
+    with page.expect_download() as library_download:
+        page.get_by_role("button", name="导出图元", exact=True).click()
+    library_file = OUT / "pump-discharge.symbol.json"
+    library_download.value.save_as(library_file)
+    symbol = json.loads(library_file.read_text("utf-8"))
+    assert len(symbol["nodes"]) == 2 and len(symbol["pipes"]) == 1
+    assert all(not row["bindings"] for row in symbol["nodes"] + symbol["pipes"])
+    assert next(row for row in symbol["nodes"] if row["symbol"] == "checkValve")["image"].startswith("data:image/png;")
+    page.get_by_role("button", name="移除图元", exact=True).click()
+    page.get_by_role("button", name="新建画面", exact=True).click()
+    expect(page.locator(".screen-empty")).to_be_visible()
+    page.get_by_role("tab", name="我的图元", exact=True).click()
+    page.get_by_label("导入我的图元", exact=True).set_input_files(library_file)
+    page.get_by_role("button", name="放置 05 单泵出水支路", exact=True).click()
+    page.mouse.click(*point(600, 450))
+    expect(page.locator(".x6-node")).to_have_count(2)
+    expect(page.locator(".x6-edge")).to_have_count(1)
+    with page.expect_response(lambda r: r.url == base + "/api/draft" and r.request.method == "POST") as reused_save:
+        page.get_by_role("button", name="保存草稿", exact=True).click()
+    child_draft = reused_save.value
+    assert child_draft.ok, child_draft.text()
+    child = page.request.get(base + "/api/draft").json()["pages"][-1]
+    pump_copy = next(row for row in child["nodes"] if row["symbol"] == "pump")
+    valve_copy = next(row for row in child["nodes"] if row["symbol"] == "checkValve")
+    pipe_copy = child["pipes"][0]
+    assert pump_copy["id"] != pumps[0] and valve_copy["id"] != valves[0]
+    assert not pump_copy["bindings"] and not pipe_copy["bindings"]
+    assert pipe_copy["source"] == {"nodeId": pump_copy["id"], "portId": "right"}
+    assert pipe_copy["target"] == {"nodeId": valve_copy["id"], "portId": "left"}
+    assert valve_copy["image"] == next(row for row in symbol["nodes"] if row["symbol"] == "checkValve")["image"]
+    assert pump_copy["params"]["appearance"] == "monitor"
+    page.get_by_role("tab", name="图层", exact=False).click()
+    page.locator(f'[data-layer="{pump_copy["id"]}"]').click(modifiers=["Alt"])
+    page.get_by_role("tab", name="动态与测点", exact=True).click()
+    for label, suffix in [("运行反馈", "run"), ("故障反馈", "fault"), ("运行数值", "hz"), ("工作模式", "mode")]:
+        page.get_by_label(label + " · 绑定测点", exact=True).select_option(f"P-03.{suffix}")
+    bind(pipe_copy["id"], {"流动状态": "P-03.flow"})
+    expect(cell(pump_copy["id"])).to_have_attribute("data-state", "停止")
+    expect(cell(valve_copy["id"]).locator("image")).to_have_attribute("visibility", "visible")
+    page.screenshot(path=str(OUT / "07-reused-pump-branch.png"))
+    page.get_by_role("button", name="预览发布", exact=True).click()
+    page.get_by_role("button", name="发布", exact=True).click()
+    expect(page.get_by_role("status")).to_contain_text("已发布")
+    page.goto(base + "/view?page=" + child["id"])
+    expect(cell(pump_copy["id"])).to_have_attribute("data-state", "停止")
+    expect(cell(valve_copy["id"]).locator("image")).to_have_attribute("visibility", "visible")
+    expect(page.locator(".x6-edge")).to_have_count(1)
+    assert not errors, errors
+
     original = browser.new_page(viewport={"width": 1920, "height": 1080})
     original.goto(ORIGINAL.as_uri())
     expect(original.locator(".schematic-svg .pump-shell")).to_have_count(4)
@@ -387,6 +442,7 @@ def exercise(page, base, source_url, browser):
               "mappedPoints": len(doc["mappings"]),
               "bindings": sum(len(n["bindings"]) for n in doc["nodes"] + doc["pipes"]),
               "statesVerified": ["running", "stopped", "fault", "zero", "bad", "recovered"],
+              "reusedBranch": {"nodes": 2, "pipes": 1, "retainedImage": True, "reboundTo": "P-03"},
               "referenceSchematic": reference, "offlineHttpRequests": requests, "errors": errors}
     (OUT / "results.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), "utf-8")
     print(json.dumps(result, ensure_ascii=False))

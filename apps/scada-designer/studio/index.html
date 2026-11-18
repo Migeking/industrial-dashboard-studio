@@ -315,12 +315,13 @@
             <b>组件绑定</b
             ><span>{{
               bindingIssues.length
-                ? "还有 " + bindingIssues.length + " 个组件待绑定"
-                : "所有组件绑定已完成"
+                ? "还有 " + bindingIssues.length + (screen ? " 个组件待配置" : " 个组件待绑定")
+                : screen ? "测点、外观资源与交互检查通过" : "所有组件绑定已完成"
             }}</span
-            ><button v-for="n in bindingIssues" @click="selectBinding(n)">
-              {{bindingIssueLabel(n)}}
-            </button>
+            ><div class="screen-review-issue" v-for="n in bindingIssues" :key="n.id">
+              <button @click="selectBinding(n)">{{bindingIssueLabel(n)}}</button>
+              <small v-if="screen">{{bindingReason(n)}}</small>
+            </div>
           </div>
           <div v-if="invalidPoints" class="quality-note">
             {{ invalidPoints }} 个测点当前无有效读数，展示端会保留质量提示。

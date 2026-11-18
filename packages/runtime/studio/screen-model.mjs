@@ -122,6 +122,11 @@ export function screenProblem(n, mappings) {
   }
   return "";
 }
+export function screenAssetProblem(n) {
+  return n.params?.appearance === "picture" && !n.image
+    ? "尚未载入设备图片"
+    : "";
+}
 export function validateScreen(doc, publishing, project = doc) {
   if (
     !isScreen(doc) ||
@@ -348,8 +353,8 @@ export function validateScreen(doc, publishing, project = doc) {
         (n.symbol === "image" || screenAppearanceOptions(n.symbol).picture)
       )
         validateScreenAsset(n.image);
-      if (publishing && n.params.appearance === "picture" && !n.image)
-        throw Error(n.title + " 尚未载入设备图片");
+      const assetProblem = screenAssetProblem(n);
+      if (publishing && assetProblem) throw Error(n.title + " " + assetProblem);
     } else {
       if (
         !Array.isArray(n.vertices) ||
@@ -538,7 +543,12 @@ export function screenDisplay(n, points, mappings, key = "value") {
         : "—",
   };
 }
-export function copyScreenSelection(doc, selected, idFactory) {
+export function copyScreenSelection(
+  doc,
+  selected,
+  idFactory,
+  keepBindings = false,
+) {
   const originals = doc.nodes.filter((n) => selected.includes(n.id)),
     remap = new Map(originals.map((n) => [n.id, idFactory()])),
     groups = new Map();
@@ -568,7 +578,7 @@ export function copyScreenSelection(doc, selected, idFactory) {
     const c = JSON.parse(JSON.stringify(n));
     c.id = remap.get(n.id);
     c.title += " 副本";
-    c.bindings = {};
+    if (!keepBindings) c.bindings = {};
     c.locked = false;
     c.x += dx;
     c.y += dy;
@@ -582,7 +592,7 @@ export function copyScreenSelection(doc, selected, idFactory) {
     ...JSON.parse(JSON.stringify(p)),
     id: idFactory(),
     title: p.title + " 副本",
-    bindings: {},
+    bindings: keepBindings ? { ...p.bindings } : {},
     source: p.source.nodeId
       ? { ...p.source, nodeId: remap.get(p.source.nodeId) }
       : { x: p.source.x + dx, y: p.source.y + dy },

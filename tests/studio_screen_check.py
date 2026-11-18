@@ -191,6 +191,14 @@ def exercise(page,base,fixture_url,browser):
 
     # Copying through the UI must require deliberate binding for a new device.
     select(pumps[0]);page.get_by_role('tab',name='外观',exact=True).click()
+    page.get_by_role('button',name='带测点复制',exact=True).click()
+    kept=save();copied_bound=next(n for n in kept['nodes'] if '副本' in n['title'])
+    assert copied_bound['bindings']==next(n for n in kept['nodes'] if n['id']==pumps[0])['bindings']
+    expect(node(copied_bound['id'])).to_have_attribute('data-state','运行')
+    page.get_by_role('button',name='撤销',exact=True).click()
+    assert not any('副本' in n['title'] for n in save()['nodes'])
+    select(pumps[0])
+    record('带测点复制明确保留绑定，独立设备 ID 与撤销正常')
     page.get_by_role('button',name='复制',exact=True).click()
     copied=save();copy=next(n for n in copied['nodes'] if '副本' in n['title'])
     assert copy['bindings']=={}
