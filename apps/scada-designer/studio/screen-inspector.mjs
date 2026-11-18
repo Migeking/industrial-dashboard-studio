@@ -33,6 +33,56 @@ export const ScreenInspector = {
   setup(props, { emit }) {
     const search = Vue.ref("");
     const endpointError = Vue.ref("");
+    const waypointError = Vue.ref("");
+    Vue.watch(
+      () => props.item.id,
+      () => {
+        waypointError.value = "";
+        endpointError.value = "";
+        search.value = "";
+      },
+    );
+    function setWaypoints(points) {
+      if (
+        points.some(
+          ({ x, y }) =>
+            !Number.isFinite(x) ||
+            !Number.isFinite(y) ||
+            x < 0 ||
+            x > 1920 ||
+            y < 0 ||
+            y > 1080,
+        )
+      ) {
+        waypointError.value = "转折点须在画布范围内：X 0～1920，Y 0～1080";
+        return;
+      }
+      emit("start");
+      props.item.vertices = points;
+      waypointError.value = "";
+    }
+    function changeWaypoint(index, axis, event) {
+      const point = props.item.vertices[index];
+      setWaypoints(
+        props.item.vertices.map((p, i) =>
+          i === index ? { ...p, [axis]: event.target.valueAsNumber } : p,
+        ),
+      );
+      event.target.value = props.item.vertices[index]?.[axis] ?? point[axis];
+    }
+    function addWaypoint() {
+      const points = props.item.vertices;
+      const from =
+        points.at(-1) || screenEndpointPosition(props.doc, props.item.source);
+      const to = screenEndpointPosition(props.doc, props.item.target);
+      setWaypoints([
+        ...points,
+        {
+          x: Math.round((from.x + to.x) / 2),
+          y: Math.round((from.y + to.y) / 2),
+        },
+      ]);
+    }
     const endpointNodes = Vue.computed(() =>
       props.doc.nodes.filter((n) => screenPorts(n).length),
     );
@@ -155,6 +205,10 @@ export const ScreenInspector = {
       screenChartKinds,
       screenTableKinds,
       endpointError,
+      waypointError,
+      setWaypoints,
+      changeWaypoint,
+      addWaypoint,
       endpointNodes,
       endPorts,
       setEndpoint,
@@ -214,8 +268,16 @@ export const ScreenInspector = {
       <template v-else>
         <p class="muted">端点：{{doc.nodes.find(n=>n.id===item.source.nodeId)?.title||'开放端'}} → {{doc.nodes.find(n=>n.id===item.target.nodeId)?.title||'开放端'}}。拖动端点手柄或在下方重新连接。</p>
         <p v-if="endpointError" role="alert" class="definition-error">{{endpointError}}</p><fieldset class="definition-card" v-for="(label,key) in {source:'起点',target:'终点'}"><legend>{{label}}</legend><label>连接元素<select :aria-label="label+'元素'" :value="item[key].nodeId||''" @change="endpointNode(key,$event.target.value)"><option value="">开放端（未连接）</option><option v-for="n in endpointNodes" :value="n.id">{{n.title}}</option></select></label><label v-if="item[key].nodeId">连接点<select :aria-label="label+'连接点'" :value="item[key].portId" @change="setEndpoint(key,{nodeId:item[key].nodeId,portId:$event.target.value})"><option v-for="p in endPorts(key)" :value="p.id">{{p.label}}</option></select></label><div v-else class="pair"><label>X<input type="number" :aria-label="label+' X'" :value="item[key].x" @change="setEndpoint(key,{...item[key],x:Number($event.target.value)})" /></label><label>Y<input type="number" :aria-label="label+' Y'" :value="item[key].y" @change="setEndpoint(key,{...item[key],y:Number($event.target.value)})" /></label></div></fieldset>
+        <details class="definition-card"><summary>转折点 · {{item.vertices.length}}</summary>
+          <p v-if="waypointError" role="alert" class="definition-error">{{waypointError}}</p>
+          <div class="pair" v-for="(point,i) in item.vertices" :key="i">
+            <label v-for="axis in ['x','y']">转折 {{i+1}} {{axis.toUpperCase()}}<input type="number" :aria-label="'转折 '+(i+1)+' '+axis.toUpperCase()" :value="point[axis]" @change="changeWaypoint(i,axis,$event)" /></label>
+            <button @click="setWaypoints(item.vertices.filter((_,j)=>j!==i))">移除转折 {{i+1}}</button>
+          </div><button @click="addWaypoint">添加转折点</button>
+        </details>
         <div class="pair"><label>管道颜色<input type="color" aria-label="管道颜色" v-model="item.style.color" @focus="$emit('start')" /></label><label>管道宽度<input type="number" min="1" max="30" aria-label="管道宽度" v-model.number="item.style.width" @focus="$emit('start')" /></label></div>
         <div class="pair"><label>箭头<select aria-label="管道箭头" :value="item.style.arrow||'none'" @focus="$emit('start')" @change="item.style.arrow=$event.target.value"><option value="none">无</option><option value="forward">起点到终点</option><option value="reverse">终点到起点</option><option value="both">双向</option></select></label><label>流动方向<select aria-label="管道流动方向" :value="item.style.flowDirection||'forward'" @focus="$emit('start')" @change="item.style.flowDirection=$event.target.value"><option value="forward">起点到终点</option><option value="reverse">终点到起点</option></select></label></div>
+        <label>流动颜色<input type="color" aria-label="管道流动颜色" :value="item.style.flowColor||'#36c2ff'" @change="$emit('start');item.style.flowColor=$event.target.value" /></label>
         <p class="muted">在画布选中管道后拖动管段或转折点；“动态与测点”可绑定流动状态。</p>
       </template>
       <h2>排列与操作</h2><div class="tools"><button v-for="(label,key) in item.type==='pipe'?{delete:'删除'}:{copy:'复制',delete:'删除',rotate:'旋转 90°',lock:'锁定 / 解锁',front:'置顶',back:'置底',left:'左对齐',top:'顶对齐',right:'右对齐',bottom:'底对齐',center:'水平居中',middle:'垂直居中',horizontal:'横向等距',vertical:'纵向等距',group:'成组',ungroup:'解组'}" @click="$emit('action',{key})">{{label}}</button></div>

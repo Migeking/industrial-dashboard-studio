@@ -96,6 +96,12 @@ async function boot() {
       function addPage(){snapshot();const page=addScreenPage(project.value,crypto.randomUUID());switchScreenPage(page.id);preview.value=false;activeStep.value="canvas";message.value="已添加空白画面，连接、点表和我的图元共用。";}
       function pageAction(key,value){try{if(key==="rename"){if(!value?.trim())throw Error("请填写画面名称");snapshot();doc.value.title=value.trim();}else if(key==="home"){snapshot();project.value.defaultPageId=activePageId.value;}else if(key==="remove"){removeScreenPage(clone(project.value),activePageId.value);snapshot();removeScreenPage(project.value,activePageId.value);switchScreenPage("main");}message.value="画面设置已更新";}catch(e){message.value=e.message;}}
       const screenItems = computed(()=>[...doc.value.nodes,...(screen.value?doc.value.pipes:[])]);
+      function screenLayerName(item) {
+        if (item.type !== "pipe" || item.title !== "工艺管道") return item.title;
+        const label = (end) => doc.value.nodes.find((node) => node.id === end.nodeId)?.title ||
+          ("开放端 (" + Math.round(end.x) + ", " + Math.round(end.y) + ")");
+        return label(item.source) + " → " + label(item.target);
+      }
       function newScreen() {
         if(screen.value)return addPage();
         snapshot();
@@ -1036,7 +1042,7 @@ async function boot() {
         reader.readAsDataURL(file);
       }
       return {
-        screen,screenSymbols,screenTool,libraryTab,screenItems,newScreen,screenSelect,screenGeometry,screenInsert,screenPipe,setScreenTool,screenDrag,screenCommand,screenLibraryPlace,screenView,screenThemes,setScreenTheme,project,pages,activePageId,publishedUrl,bindingReason,bindingIssueLabel,switchScreenPage,addPage,pageAction,
+        screen,screenSymbols,screenTool,libraryTab,screenItems,screenLayerName,newScreen,screenSelect,screenGeometry,screenInsert,screenPipe,setScreenTool,screenDrag,screenCommand,screenLibraryPlace,screenView,screenThemes,setScreenTheme,project,pages,activePageId,publishedUrl,bindingReason,bindingIssueLabel,switchScreenPage,addPage,pageAction,
         native, legacyTypes, nativeRecipes, addNative, nativeSelect, nativeMove, nativePatch, nativeRects, rectValue, rectDraft, rectInputValue, startRect, chosenDataMode, nodeCount, pipePoints, updatePipe,
         navigatorNodes, depth, expandable, collapsed, toggleTree, layerSearch, hasBindings, nativeBindingTargets, nativeSlots, nativeSlotMappings, nativeBinding, nativeReadback,
         activeStep,

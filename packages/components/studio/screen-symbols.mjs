@@ -30,6 +30,14 @@ export const screenSymbols = {
       slot("value", "开度", ["number"]),
     ],
   },
+  checkValve: {
+    label: "止回阀",
+    prefix: "CV",
+    w: 100,
+    h: 60,
+    ports: ["left", "right"],
+    slots: [],
+  },
   tank: {
     label: "水箱 / 池体",
     prefix: "T",
@@ -350,6 +358,29 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
     },
     text("caption", 75, 119),
     text("state", 75, 138, 15),
+  ]);
+  artwork("checkValve", [
+    transparent(100, 60),
+    {
+      tagName: "path",
+      selector: "stubs",
+      attrs: {
+        d: "M0 30H30M70 30H100",
+        fill: "none",
+        stroke: "#547185",
+        strokeWidth: 4,
+      },
+    },
+    {
+      tagName: "path",
+      selector: "body",
+      attrs: {
+        d: "M30 12L65 30L30 48Z M70 10V50",
+        fill: "#e5edf2",
+        stroke: "#547185",
+        strokeWidth: 3,
+      },
+    },
   ]);
   artwork("tank", [
     transparent(220, 300),

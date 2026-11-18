@@ -376,6 +376,8 @@ export function validateScreen(doc, publishing, project = doc) {
       if (
         !n.style ||
         !/^#[\da-f]{6}$/i.test(n.style.color) ||
+        (n.style.flowColor !== undefined &&
+          !/^#[\da-f]{6}$/i.test(n.style.flowColor)) ||
         !Number.isFinite(n.style.width) ||
         n.style.width < 1 ||
         n.style.width > 30

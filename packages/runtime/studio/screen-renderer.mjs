@@ -48,6 +48,29 @@ class ScreenGraph {
     this.drawing = null;
     const { Graph, Selection, Transform, Snapline } = window.X6;
     registerScreenSymbols(window.X6, (node) => this.chartElement(node));
+    Graph.registerEdge(
+      "screen-pipe",
+      {
+        inherit: "edge",
+        markup: [
+          { tagName: "path", selector: "wrap" },
+          { tagName: "path", selector: "line" },
+          { tagName: "path", selector: "flow" },
+        ],
+        attrs: {
+          wrap: {
+            connection: true,
+            fill: "none",
+            stroke: "transparent",
+            strokeWidth: 14,
+            cursor: "pointer",
+          },
+          line: { connection: true, fill: "none", strokeLinecap: "round" },
+          flow: { connection: true, fill: "none", pointerEvents: "none" },
+        },
+      },
+      true,
+    );
     this.graph = new Graph({
       container: host,
       width: 1920,
@@ -78,7 +101,8 @@ class ScreenGraph {
         allowEdge: false,
         allowLoop: false,
         connectionPoint: "anchor",
-        snap: { radius: 16 },
+        // Use the port under the pointer. Grid-rounded proximity can choose a neighboring junction port.
+        snap: false,
         router: { name: "orth", args: { padding: 20 } },
         connector: { name: "rounded", args: { radius: 5 } },
         validateMagnet: () =>
@@ -103,7 +127,7 @@ class ScreenGraph {
         },
         createEdge: () =>
           this.graph.createEdge({
-            shape: "edge",
+            shape: "screen-pipe",
             zIndex: 0,
             attrs: {
               line: {
@@ -567,7 +591,7 @@ class ScreenGraph {
           this.projections.delete(n.id);
           cell = graph.addEdge({
             id: n.id,
-            shape: "edge",
+            shape: "screen-pipe",
             source,
             target,
             vertices: n.vertices,
@@ -742,6 +766,11 @@ class ScreenGraph {
             },
             quality: { text: screenQualityLabels[reading.quality] },
           };
+        } else if (n.symbol === "checkValve") {
+          attrs = {
+            body: { fill: n.style.fill, stroke: n.style.stroke },
+            stubs: { stroke: n.style.stroke },
+          };
         } else if (n.symbol === "junction")
           attrs = { body: { fill: n.style.fill, stroke: n.style.stroke } };
         else if (["rect", "ellipse", "text", "button"].includes(n.symbol)) {
@@ -879,7 +908,12 @@ class ScreenGraph {
             strokeWidth: n.style.width,
             sourceMarker: null,
             targetMarker: null,
-            strokeDasharray: flowing ? "12 8" : "",
+          },
+          flow: {
+            stroke: flowing ? n.style.flowColor || "#36c2ff" : "none",
+            strokeWidth: Math.max(1, n.style.width * 0.46),
+            strokeDasharray: "12 8",
+            strokeLinecap: "round",
             class: flowing ? "screen-pipe-flow" : "",
             style: {
               animationDirection:
