@@ -338,6 +338,7 @@ export const ScreenInspector = {
             <button @click="setWaypoints(item.vertices.filter((_,j)=>j!==i))">移除转折 {{i+1}}</button>
           </div><button @click="addWaypoint">添加转折点</button>
         </details>
+        <label>管道外观<select aria-label="管道外观" :value="item.style.appearance||'classic'" @focus="$emit('start')" @change="item.style.appearance=$event.target.value"><option v-for="(label,key) in screenAppearanceOptions('pipe')" :key="key" :value="key">{{label}}</option></select></label>
         <div class="pair"><label>管道颜色<input type="color" aria-label="管道颜色" v-model="item.style.color" @focus="$emit('start')" /></label><label>管道宽度<input type="number" min="1" max="30" aria-label="管道宽度" v-model.number="item.style.width" @focus="$emit('start')" /></label></div>
         <div class="pair"><label>箭头<select aria-label="管道箭头" :value="item.style.arrow||'none'" @focus="$emit('start')" @change="item.style.arrow=$event.target.value"><option value="none">无</option><option value="forward">起点到终点</option><option value="reverse">终点到起点</option><option value="both">双向</option></select></label><label>流动方向<select aria-label="管道流动方向" :value="item.style.flowDirection||'forward'" @focus="$emit('start')" @change="item.style.flowDirection=$event.target.value"><option value="forward">起点到终点</option><option value="reverse">终点到起点</option></select></label></div>
         <label>流动颜色<input type="color" aria-label="管道流动颜色" :value="item.style.flowColor||'#36c2ff'" @change="$emit('start');item.style.flowColor=$event.target.value" /></label>

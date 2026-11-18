@@ -75,7 +75,17 @@ def exercise(page,base,url,browser):
     page.get_by_role('button',name='＋ 添加画面',exact=True).click();expect(page.locator('.screen-empty')).to_be_visible();b_id=page.locator('.screen-page-nav [aria-current=page]').get_attribute('data-page-id')
     page.locator('.screen-page-menu summary').click();field('当前画面名称','供水运行驾驶舱');page.get_by_role('button',name='设为首页',exact=True).click()
     theme('monitor-light');theme('process-gray');theme('cockpit-dark')
-    title=place('text',40,35,1250,80,'驾驶舱标题');field('文字内容','供水运行驾驶舱  /  本地模拟');field('字号',42);page.get_by_label('文字对齐',exact=True).select_option('left')
+    purpose=page.get_by_label('画面用途',exact=True)
+    purpose.select_option('cockpit')
+    expect(page.get_by_label('画面主题',exact=True)).to_have_value('cockpit-dark')
+    expect(page.locator('[data-palette-section]').first).to_have_attribute('data-palette-section','widgets')
+    expect(page.locator('.x6-node,.x6-edge')).to_have_count(0)
+    page.get_by_role('button',name='撤销',exact=True).click()
+    expect(purpose).to_have_value('process')
+    page.get_by_role('button',name='重做',exact=True).click()
+    expect(purpose).to_have_value('cockpit')
+    checks.append({'check':'空白驾驶舱启用深色主题和组件优先图元库，可撤销重做','status':'passed'})
+    title=place('text',40,35,1250,80,'驾驶舱标题');expect(page.get_by_label('字号',exact=True)).to_have_value('40');field('文字内容','供水运行驾驶舱  /  本地模拟');field('字号',42);page.get_by_label('文字对齐',exact=True).select_option('left')
     status=place('status',1430,20,220,120,'P-101');field('状态成立文字','运行');field('状态释放文字','停止');bind(status,{'状态信号':'P101.run','故障反馈':'P101.fault'})
     back=place('button',1680,50,200,60,'工艺监控');action(back,'main')
     kpis=[]
@@ -93,6 +103,8 @@ def exercise(page,base,url,browser):
     gauge=place('gauge',1460,690,390,300,'主泵频率');field('仪表上限',60);bind(gauge,{'显示数值':'P101.hz'});assert option(gauge)['series'][0]['data'][0]['value']==38.5
     action(back,'main');nav('main');forward=place('button',1600,60,230,65,'运行驾驶舱');action(forward,b_id);nav(b_id)
     final=save();assert len(final['pages'])==1 and len(final['pages'][0]['nodes'])==15;assert final['defaultPageId']==b_id
+    assert final['canvas']['purpose']=='process' and final['pages'][0]['canvas']['purpose']=='cockpit'
+    assert all(n['style']['fontSize']==48 for n in final['pages'][0]['nodes'] if n['id'] in kpis)
     page.screenshot(path=str(OUT/'B-editor.png'));checks.append({'check':'B 从空白逐个创建六指标、双轴趋势、柱图、环图、状态、设备表、事件表、仪表和导航；字段/名称/轴可改','status':'passed'})
 
     # Preview and published mode share the authored configuration.

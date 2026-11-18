@@ -144,11 +144,10 @@ export const screenSymbols = {
 export const pipeSlots = [slot("run", "流动状态", ["boolean"])];
 export function screenAppearanceOptions(symbol) {
   if (
-    !["pump", "fan", "valve", "tank", "readout", "checkValve"].includes(symbol)
+    !["pump", "fan", "valve", "tank", "readout", "checkValve", "junction", "pipe"].includes(symbol)
   )
     return {};
-  const options = { classic: "经典平面" };
-  if (symbol !== "checkValve") options.detailed = "精细平面";
+  const options = { classic: "经典平面", detailed: "精细平面" };
   if (["pump", "fan", "readout"].includes(symbol)) options.monitor = "监控铭牌";
   if (symbol === "tank") options.monitor = "监控液位";
   if (["pump", "fan", "valve", "checkValve"].includes(symbol))
@@ -375,8 +374,8 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
       text("state", 85, 158, 15),
       badgeBox("frequencyBox", -47, 29, 92, 29),
       badgeBox("modeBox", 50, 121, 70, 24),
-      text("frequencyBadge", -1, 49, 15),
-      text("modeBadge", 85, 138, 15),
+      text("frequencyBadge", -1, 49, 19),
+      text("modeBadge", 85, 138, 17),
     ]);
   artwork("valve", [
     transparent(150, 140),

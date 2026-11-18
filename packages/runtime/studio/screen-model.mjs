@@ -8,6 +8,7 @@ import {
 } from "../../components/studio/screen-symbols.mjs";
 import { validateScreenRules } from "./screen-dynamics.mjs";
 import { validateScreenWidget } from "./screen-widgets.mjs";
+import { screenPurposes } from "./screen-themes.mjs";
 
 export const isScreen = (doc) =>
   doc?.format === "screen-document" && doc?.version === 1;
@@ -143,6 +144,8 @@ export function validateScreen(doc, publishing, project = doc) {
     )
   )
     throw Error("画面主题无效");
+  if (doc.canvas.purpose !== undefined && !Object.hasOwn(screenPurposes, doc.canvas.purpose))
+    throw Error("画面用途无效");
   if (doc.pages !== undefined) {
     if (!Array.isArray(doc.pages)) throw Error("项目画面列表无效");
     const pageIds = new Set(["main"]),
@@ -389,6 +392,8 @@ export function validateScreen(doc, publishing, project = doc) {
       if (
         !n.style ||
         !/^#[\da-f]{6}$/i.test(n.style.color) ||
+        (n.style.appearance !== undefined &&
+          !Object.hasOwn(screenAppearanceOptions("pipe"), n.style.appearance)) ||
         (n.style.flowColor !== undefined &&
           !/^#[\da-f]{6}$/i.test(n.style.flowColor)) ||
         !Number.isFinite(n.style.width) ||

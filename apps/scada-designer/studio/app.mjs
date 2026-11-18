@@ -26,7 +26,12 @@ import {placeScreenSymbol} from "../../../packages/runtime/studio/screen-library
 import {useScreenViewport,ScreenViewportTools,ScreenRulers} from "./screen-viewport.mjs";
 import {screenPages,screenPageView,addScreenPage,screenPageForNode,screenPageItems,removeScreenPage,screenActionProblem} from "../../../packages/runtime/studio/screen-pages.mjs";
 import {ScreenPageNavigator} from "./screen-pages.mjs";
-import {screenThemes,applyScreenTheme,applyScreenNodeTheme} from "../../../packages/runtime/studio/screen-themes.mjs";
+import {screenThemes,screenPurposes,applyScreenPurpose,applyScreenTheme,applyScreenNodeTheme,applyScreenNodeDefaults} from "../../../packages/runtime/studio/screen-themes.mjs";
+const screenPaletteGroups = {
+  devices: { label: "独立设备图元", symbols: ["pump", "valve", "checkValve", "tank", "fan", "junction"] },
+  measurements: { label: "数据与素材", symbols: ["readout", "trend", "image"] },
+  widgets: { label: "驾驶舱组件", symbols: ["status", "barGauge", "gauge", "barChart", "pieChart", "table", "events", "button"] },
+};
 const offline = window.OFFLINE;
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const kindNames = {
@@ -88,6 +93,10 @@ async function boot() {
           [...doc.value.nodes,...(isScreen(doc.value)?doc.value.pipes:[])].find((n) => n.id === ids.value.at(-1)),
         );
       const screen = computed(()=>isScreen(doc.value)), screenTool = ref("select"), libraryTab = ref("symbols");
+      const screenPaletteSections = computed(() => {
+        const preset = screenPurposes[doc.value.canvas?.purpose] || screenPurposes.process;
+        return preset.groups.map((key) => ({ key, ...screenPaletteGroups[key] }));
+      });
       const screenView=useScreenViewport(stage,screen,editing,zoom);
       const pages=computed(()=>screen.value?screenPages(project.value):[]),publishedUrl=computed(()=>"/view"+(screen.value&&activePageId.value!=="main"?"?page="+encodeURIComponent(activePageId.value):""));
       if(screen.value&&!pages.value.some(p=>p.id===activePageId.value))activePageId.value=project.value.defaultPageId||'main';
@@ -110,6 +119,12 @@ async function boot() {
         message.value="已新建空白画面，连接与点表已保留；可撤销恢复原画面。";
       }
       function setScreenTheme(id){try{snapshot();applyScreenTheme(doc.value,id);}catch(e){message.value=e.message;}}
+      function setScreenPurpose(purpose) {
+        if (!Object.hasOwn(screenPurposes, purpose) || screenItems.value.length) return;
+        if (doc.value.canvas.purpose === purpose) return;
+        snapshot();
+        applyScreenPurpose(doc.value, purpose);
+      }
       function screenSelect(selected) { ids.value=selected; }
       function screenGeometry(change) {
         const n=doc.value.nodes.find((n)=>n.id===change.id); if(!n||n.locked)return;
@@ -118,8 +133,17 @@ async function boot() {
         n.w=Math.max(16,Math.min(1920,n.w)); n.h=Math.max(16,Math.min(1080,n.h));
         n.x=Math.max(0,Math.min(1920-n.w,n.x)); n.y=Math.max(0,Math.min(1080-n.h,n.y));
       }
-      function screenInsert(n) {if(doc.value.canvas.theme)applyScreenNodeTheme(n,doc.value.canvas.theme);doc.value.nodes.push(n);ids.value=[n.id];inspectorTab.value="appearance";}
-      function screenPipe(pipe) {const index=doc.value.pipes.findIndex((p)=>p.id===pipe.id);if(index<0)doc.value.pipes.push(pipe);else doc.value.pipes[index]=pipe;}
+      function screenInsert(n) {applyScreenNodeDefaults(n,doc.value.canvas);doc.value.nodes.push(n);ids.value=[n.id];inspectorTab.value="appearance";}
+      function screenPipe(pipe) {
+        const index = doc.value.pipes.findIndex((p) => p.id === pipe.id);
+        if (index >= 0) {
+          doc.value.pipes[index] = pipe;
+          return;
+        }
+        if (doc.value.canvas.theme === "cockpit-dark")
+          pipe.style = { ...pipe.style, color: "#224253", width: 8, appearance: "detailed" };
+        doc.value.pipes.push(pipe);
+      }
       function setScreenTool(tool) {screenView.panTool=false;screenTool.value=tool;if(tool==="pipe")ids.value=[];}
       function screenDrag(event,symbol) {event.dataTransfer.setData("application/x-scada-symbol",symbol);}
       function screenLibraryPlace({id,x,y}){try{const symbol=doc.value.symbols?.find(s=>s.id===id);if(!symbol)throw Error("图元已不存在");ids.value=placeScreenSymbol(doc.value,symbol,x,y,()=>crypto.randomUUID());if(doc.value.canvas.theme)doc.value.nodes.filter(n=>ids.value.includes(n.id)).forEach(n=>applyScreenNodeTheme(n,doc.value.canvas.theme));inspectorTab.value="appearance";message.value="图元已放置，请为新实例选择测点。";}catch(e){message.value=e.message;}}
@@ -1136,7 +1160,7 @@ async function boot() {
         reader.readAsDataURL(file);
       }
       return {
-        screen,screenSymbols,screenTool,libraryTab,screenItems,screenLayerName,newScreen,screenSelect,screenGeometry,screenInsert,screenPipe,setScreenTool,screenDrag,screenCommand,screenLibraryPlace,screenView,screenThemes,setScreenTheme,project,pages,activePageId,publishedUrl,bindingReason,bindingIssueLabel,switchScreenPage,addPage,pageAction,
+        screen,screenSymbols,screenTool,libraryTab,screenItems,screenLayerName,newScreen,screenSelect,screenGeometry,screenInsert,screenPipe,setScreenTool,screenDrag,screenCommand,screenLibraryPlace,screenView,screenThemes,setScreenTheme,screenPurposes,screenPaletteSections,setScreenPurpose,project,pages,activePageId,publishedUrl,bindingReason,bindingIssueLabel,switchScreenPage,addPage,pageAction,
         native, legacyTypes, nativeRecipes, addNative, nativeSelect, nativeMove, nativePatch, nativeRects, rectValue, rectDraft, rectInputValue, startRect, chosenDataMode, nodeCount, pipePoints, updatePipe,
         navigatorNodes, depth, expandable, collapsed, toggleTree, layerSearch, hasBindings, nativeBindingTargets, nativeSlots, nativeSlotMappings, nativeBinding, nativeReadback,
         activeStep,

@@ -117,6 +117,7 @@ class ScreenGraph {
         markup: [
           { tagName: "path", selector: "wrap" },
           { tagName: "path", selector: "line" },
+          { tagName: "path", selector: "highlight" },
           { tagName: "path", selector: "flow" },
         ],
         attrs: {
@@ -128,6 +129,13 @@ class ScreenGraph {
             cursor: "pointer",
           },
           line: { connection: true, fill: "none", strokeLinecap: "round" },
+          highlight: {
+            connection: true,
+            class: "screen-pipe-highlight",
+            fill: "none",
+            pointerEvents: "none",
+            strokeLinecap: "round",
+          },
           flow: { connection: true, fill: "none", pointerEvents: "none" },
         },
       },
@@ -651,10 +659,13 @@ class ScreenGraph {
             : { x: n.target.x, y: n.target.y };
         const a = screenEndpointPosition(p.doc, n.source);
         const b = screenEndpointPosition(p.doc, n.target);
-        // Percentage ports can differ by a fraction of a pixel after resize.
-        // Keep that insignificant offset from triggering an orthogonal detour.
-        const distance = Math.min(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
-        const router = !n.vertices.length && distance > 1e-7 && distance < 0.5
+        // Use the authored path if it is already orthogonal to subpixel precision.
+        // The auto-router can overshoot a vertex placed next to a device port.
+        const points = [a, ...n.vertices, b];
+        const aligned = points.slice(1).every((point, i) =>
+          Math.min(Math.abs(point.x - points[i].x), Math.abs(point.y - points[i].y)) < 0.5,
+        );
+        const router = aligned
           ? { name: "normal" }
           : { name: "orth", args: { padding: 20 } };
         if (!cell) {
@@ -801,6 +812,11 @@ class ScreenGraph {
                   );
           const monitor =
             n.symbol === "tank" && n.params.appearance === "monitor";
+          const levelHeight = (n.symbol === "barGauge" ? 212 : 232) * ratio;
+          const levelY = n.params.levelDirection === "down"
+            ? 29
+            : (n.symbol === "barGauge" ? 241 : 261) - levelHeight;
+          const valueY = monitor ? Math.max(83, Math.min(248, levelY + 20)) : 158;
           attrs = {
             body: {
               stroke: n.style.stroke,
@@ -810,12 +826,8 @@ class ScreenGraph {
                   : "#edf2f5",
             },
             water: {
-              height: (n.symbol === "barGauge" ? 212 : 232) * ratio,
-              y:
-                n.params.levelDirection === "down"
-                  ? 29
-                  : (n.symbol === "barGauge" ? 241 : 261) -
-                    (n.symbol === "barGauge" ? 212 : 232) * ratio,
+              height: levelHeight,
+              y: levelY,
               fill:
                 n.params.waterColor ||
                 (n.style.fill === "#e5edf2" ? "#66abc5" : n.style.fill),
@@ -823,7 +835,8 @@ class ScreenGraph {
             value: {
               text: value.text,
               fill: n.style.color,
-              transform: monitor ? screenArtworkAt(n, 110, 158) : "",
+              y: valueY,
+              transform: monitor ? screenArtworkAt(n, 110, valueY) : "",
             },
             caption: {
               text: n.title,
@@ -870,7 +883,7 @@ class ScreenGraph {
               x: monitor ? 150 : 20,
               y: monitor ? 83 : 32,
               textAnchor: monitor ? "middle" : "start",
-              fontSize: monitor ? 24 : 20,
+              fontSize: monitor ? 24 : Math.min(32, Math.max(20, (13 * 300) / n.w)),
               transform: monitor ? screenArtworkAt(n, 150, 75) : "",
             },
             value: {
@@ -892,9 +905,15 @@ class ScreenGraph {
             body: { fill: n.style.fill, stroke: n.style.stroke },
             stubs: { stroke: n.style.stroke },
           };
-        } else if (n.symbol === "junction")
-          attrs = { body: { fill: n.style.fill, stroke: n.style.stroke } };
-        else if (["rect", "ellipse", "text", "button"].includes(n.symbol)) {
+        } else if (n.symbol === "junction") {
+          const detailed = n.params.appearance === "detailed";
+          attrs = { body: {
+            fill: n.style.fill,
+            stroke: n.style.stroke,
+            r: detailed ? 6 : 8,
+            strokeWidth: detailed ? 1.5 : 2,
+          } };
+        } else if (["rect", "ellipse", "text", "button"].includes(n.symbol)) {
           const textSlot = screenRoleSlot(n, "text"),
             point = screenPoint(n, p.points, "text");
           const label = n.bindings[textSlot?.key]
@@ -966,7 +985,7 @@ class ScreenGraph {
         }
         if (
           attrs?.body &&
-          ["pump", "fan", "valve", "tank", "readout"].includes(n.symbol)
+          ["pump", "fan", "valve", "tank", "readout", "checkValve"].includes(n.symbol)
         ) {
           const detailed = n.params.appearance === "detailed";
           attrs.body.style = {
@@ -1041,12 +1060,18 @@ class ScreenGraph {
           flowing =
             dynamic.flow ?? (point?.quality === "good" && point.value === true);
         dynamic.visible === false && !p.editing ? cell.hide() : cell.show();
+        const detailed = n.style.appearance === "detailed";
         const attrs = {
           line: {
             stroke: dynamic.fill || n.style.color,
             strokeWidth: n.style.width,
             sourceMarker: null,
             targetMarker: null,
+          },
+          highlight: {
+            stroke: detailed ? "#ffffff" : "none",
+            strokeOpacity: 0.13,
+            strokeWidth: Math.max(1, n.style.width * 0.54),
           },
           flow: {
             stroke: flowing ? n.style.flowColor || "#36c2ff" : "none",
@@ -1120,6 +1145,7 @@ class ScreenGraph {
       fontWeight: n.style.fontWeight || 600,
     });
     if (screenTableKinds.has(n.symbol)) {
+      entry.card.classList.toggle("is-compact", n.h < 180);
       const data = screenTableResult(n, p.points, p.doc.mappings),
         key = JSON.stringify([data, n.params]);
       entry.quality.textContent = data.quality + " · " + data.total + " 行";
@@ -1283,6 +1309,13 @@ export const ScreenStage = {
     const object = computed(() =>
       props.doc.nodes.find((n) => n.id === faceplate.value),
     );
+    const faceplateType = computed(() => {
+      const symbol = object.value?.symbol;
+      if (symbol === "pump" || symbol === "fan") return "转动设备";
+      if (symbol === "valve" || symbol === "checkValve") return "阀门";
+      if (["tank", "readout", "gauge", "barGauge"].includes(symbol)) return "模拟量仪表";
+      return "测点详情";
+    });
     const status = computed(() =>
       object.value && ["pump", "fan", "valve"].includes(object.value.symbol)
         ? screenState(object.value, props.points)
@@ -1385,6 +1418,7 @@ export const ScreenStage = {
     return {
       host,
       object,
+      faceplateType,
       status,
       fields,
       faceplate,
@@ -1394,5 +1428,5 @@ export const ScreenStage = {
       trendMode,
     };
   },
-  template: `<div class="screen-stage" :class="{'is-design':editing,'is-connecting':editing&&(tool==='pipe'||selectedPipe)}"><div ref="host" class="screen-graph"></div><svg v-if="pointObject" class="screen-point-overlay" width="1920" height="1080"><g :transform="'translate('+pointObject.x+' '+pointObject.y+') rotate('+pointObject.angle+' '+pointObject.w/2+' '+pointObject.h/2+')'"><circle v-for="(point,i) in pointObject.points" :key="i" :cx="point.x*pointObject.w/100" :cy="point.y*pointObject.h/100" r="6" :data-shape-point="i" :aria-label="'图形顶点 '+(i+1)" @mousedown="startPoint($event,i)" /></g></svg><div v-if="!doc.nodes.length&&editing" class="screen-empty"><b>从空白画布开始设计</b><span>拖入泵、阀、池体，再用“连管”连接设备接口。</span><span>矩形、文字与数据仪表也可自由摆放。</span></div><section v-if="object&&!editing" class="screen-faceplate" role="dialog" :aria-label="object.title+' 设备详情'"><header><b>{{object.title}}</b><button @click="faceplate=''">关闭详情</button></header><strong v-if="status">{{status}}</strong><screen-runtime-trend v-if="trendMode" :key="object.id+':'+sourceVersion" :item="object" :doc="doc" :points="points" :sequence="sequence"></screen-runtime-trend><dl><template v-for="field in fields"><dt>{{field.label}}</dt><dd>{{field.value}} <small>{{field.quality}}</small></dd></template></dl><p>当前为只读监视；显示值来自绑定测点。</p></section></div>`,
+  template: `<div class="screen-stage" :class="{'is-design':editing,'is-connecting':editing&&(tool==='pipe'||selectedPipe)}"><div ref="host" class="screen-graph"></div><svg v-if="pointObject" class="screen-point-overlay" width="1920" height="1080"><g :transform="'translate('+pointObject.x+' '+pointObject.y+') rotate('+pointObject.angle+' '+pointObject.w/2+' '+pointObject.h/2+')'"><circle v-for="(point,i) in pointObject.points" :key="i" :cx="point.x*pointObject.w/100" :cy="point.y*pointObject.h/100" r="6" :data-shape-point="i" :aria-label="'图形顶点 '+(i+1)" @mousedown="startPoint($event,i)" /></g></svg><div v-if="!doc.nodes.length&&!doc.pipes.length&&editing" class="screen-empty"><b>从空白画布开始设计</b><span v-if="doc.canvas.purpose==='cockpit'">从左侧放入指标、图表或状态组件，再到右侧绑定测点。</span><span v-else>拖入泵、阀、池体，再用“连管”连接设备接口。</span></div><section v-if="object&&!editing" class="screen-faceplate" :class="{'is-dark':doc.canvas.theme==='cockpit-dark'}" role="dialog" :aria-label="object.title+' 设备详情'"><header><div><small>{{faceplateType}} · 只读监视</small><b>{{object.title}}</b></div><button @click="faceplate=''">关闭详情</button></header><strong v-if="status" :data-state="status">{{status}}</strong><screen-runtime-trend v-if="trendMode" :key="object.id+':'+sourceVersion" :item="object" :doc="doc" :points="points" :sequence="sequence"></screen-runtime-trend><dl><div v-for="field in fields"><dt>{{field.label}}</dt><dd>{{field.value}} <small>{{field.quality}}</small></dd></div></dl></section></div>`,
 };

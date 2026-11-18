@@ -49,6 +49,13 @@ def exercise(page,base,fixture_url,browser):
     page.screenshot(path=str(OUT/'empty-canvas.png'))
     record('正式编辑器默认是真正的空白文档')
 
+    purpose=page.get_by_label('画面用途',exact=True)
+    purpose.select_option('process')
+    expect(page.get_by_label('画面主题',exact=True)).to_have_value('process-gray')
+    expect(page.locator('[data-palette-section]').first).to_have_attribute('data-palette-section','devices')
+    expect(page.locator('.x6-node,.x6-edge')).to_have_count(0)
+    record('空白工艺监控选择灰色主题，设备图元优先，无预置对象')
+
     def pos(x,y):
         box=page.locator('.board').bounding_box();return(box['x']+x*box['width']/1920,box['y']+y*box['height']/1080)
     def click(x,y):page.mouse.click(*pos(x,y))
@@ -85,6 +92,7 @@ def exercise(page,base,fixture_url,browser):
     panel=place('rect',70,230,(1080,690))
     page.get_by_label('图元名称',exact=True).fill('泵组工艺区')
     title=place('text',90,70)
+    expect(page.get_by_label('字号',exact=True)).to_have_value('32')
     page.get_by_label('文字内容',exact=True).fill('供水泵组运行监控')
     tank=place('tank',130,450)
     pumps=[place('pump',560,y) for y in (300,500,700)]
@@ -98,6 +106,8 @@ def exercise(page,base,fixture_url,browser):
     for i in range(3):connect(joints[i],'right',pumps[i],'left')
     for i in range(2):connect(pumps[i],'right',valves[i],'left')
     data=save();assert len(data['pipes'])==8
+    assert data['canvas']['purpose']=='process'
+    assert next(n for n in data['nodes'] if n['id']==readout)['style']['fontSize']==44
     assert all(p['source']['nodeId'] and p['target']['nodeId'] for p in data['pipes'])
     record('从零逐个创建一池三泵两阀与八条端口管道')
     record('基础绘图、文字、数值与 ECharts 共存')
@@ -232,7 +242,14 @@ def exercise(page,base,fixture_url,browser):
     after=node(pumps[0]).bounding_box();assert abs(after['x']-before['x'])<1
     node(pumps[0]).click();expect(page.get_by_role('dialog',name='P-101 设备详情')).to_be_visible();page.get_by_role('button',name='关闭详情',exact=True).click()
     page.screenshot(path=str(OUT/'published-monitor.png'))
-    record('发布端使用同一模型、禁止编辑且可查看只读设备详情')
+    for id, kind, reading in [(valves[0], '阀门', '开启'), (tank, '模拟量仪表', '3.2 m')]:
+        node(id).click()
+        details=page.get_by_role('dialog')
+        expect(details).to_contain_text(kind+' · 只读监视')
+        expect(details).to_contain_text(reading)
+        expect(details).to_contain_text('有效')
+        details.get_by_role('button',name='关闭详情').click()
+    record('发布端使用同一模型，提供泵、阀门与模拟量仪表只读详情')
     for width,height in [(1366,768),(3840,2160),(1920,1080)]:
         page.set_viewport_size({'width':width,'height':height})
         expect(page.locator('.board')).to_be_visible()

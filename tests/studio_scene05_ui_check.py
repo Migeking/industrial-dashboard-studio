@@ -39,7 +39,9 @@ class Source(BaseHTTPRequestHandler):
             add(f"{key}.mode", f"{key} 工作模式", "text", "自动")
             add(f"{key}.amps", f"{key} 电流", "number", {1: 18.2, 2: 18.0}.get(index, 0) if running else 0, "A")
             add(f"{key}.flow", f"{key} 支路有流量", "boolean", running and not (cls.mode == "fault" and index == 2))
+        add("P-01.interlock", "P-01 保护联锁", "boolean", False)
         add("HEADER.flowing", "回流母管有流量", "boolean", cls.mode != "zero")
+        add("station.runningCount", "运行泵数（模拟）", "number", 0 if cls.mode == "zero" else 2, "台")
         add("LT-101.PV", "集泥井液位", "number", 3.24, "m")
         add("LT-101.SP", "液位设定参考值", "number", 3.20, "m")
         add("FT-101.PV", "回流总管流量", "number", 0 if cls.mode == "zero" else 684, "m³/h")
@@ -76,6 +78,7 @@ def exercise(page, base, source_url, browser):
     assert initial["format"] == "screen-document" and not initial["nodes"] and not initial["pipes"]
     page.screenshot(path=str(OUT / "00-blank.png"))
     page.get_by_label("画面主题", exact=True).select_option("cockpit-dark")
+    page.get_by_label("画布背景", exact=True).fill("#080f16")
     page.get_by_label("名称", exact=True).fill("05 污泥回流泵站 · 通用图元实测")
 
     def field(label, value):
@@ -132,25 +135,28 @@ def exercise(page, base, source_url, browser):
     field("槽位 1 名称", "报警文字")
     page.get_by_label("槽位 1 类型", exact=True).select_option("text")
     page.get_by_label("槽位 1 用途", exact=True).select_option("text")
-    place("rect", "回路参数分区", 20, 103, 298, 754)
+    place("rect", "回路参数分区", 20, 103, 298, 783)
     page.get_by_label("填充颜色", exact=True).fill("#0d1d29")
-    place("rect", "工艺管网分区", 330, 103, 1210, 754)
-    page.get_by_label("填充颜色", exact=True).fill("#09151f")
-    text_label("回路参数标题", "控制回路参数", 39, 119, 250, 22)
-    text_label("工艺标题", "工艺管网   /   二沉池回流", 350, 119, 720, 22)
-    level = place("readout", "LT-101 · 实际液位", 37, 172, 263, 117)
-    setpoint = place("readout", "LIC-101 · 设定参考", 37, 305, 263, 117)
-    headflow = place("readout", "FT-101 · 回流总流量", 37, 438, 263, 117)
-    text_label("操作提示", "点击设备查看读数和质量", 39, 585, 255, 17)
-    permissions = place("table", "控制许可反馈 · 模拟", 1552, 103, 348, 754)
-    well = place("tank", "二沉池集泥井", 353, 272, 204, 397)
+    place("rect", "工艺管网分区", 330, 103, 1210, 783)
+    page.get_by_label("填充颜色", exact=True).fill("#080f16")
+    text_label("回路参数标题", "控制回路参数", 39, 109, 250, 17)
+    text_label("工艺标题", "工艺管网   /   二沉池回流", 350, 119, 720, 17)
+    level = place("readout", "集泥井液位 PV", 33, 154, 134, 76)
+    setpoint = place("readout", "设定参考 SP", 174, 154, 132, 76)
+    frequency = place("readout", "主泵运行频率", 33, 240, 134, 76)
+    field("小数位", 1)
+    running = place("readout", "运行泵数", 174, 240, 132, 76)
+    field("小数位", 0)
+    text_label("操作提示", "点击设备查看读数和质量", 37, 319, 255, 15)
+    permissions = place("table", "控制许可反馈 · 模拟", 1552, 103, 348, 783)
+    well = place("tank", "二沉池集泥井", 338, 220, 252, 516)
     field("液位上限", 6)
     page.get_by_label("外观预设", exact=True).select_option("monitor")
     page.get_by_role("tab", name="元素定义", exact=True).click()
     for port_index in [4, 3, 1]:
         page.get_by_role("button", name=f"移除连接点 {port_index}", exact=True).click()
-    field("连接点 1 Y", 65)
-    flowmeter = place("readout", "FT-101", 1323, 447, 140, 114)
+    field("连接点 1 Y", 76)
+    flowmeter = place("readout", "FT-101", 1286, 409, 136, 114)
     page.get_by_label("外观预设", exact=True).select_option("monitor")
     page.get_by_role("tab", name="元素定义", exact=True).click()
     for index, side in [(1, "left"), (2, "right")]:
@@ -158,18 +164,22 @@ def exercise(page, base, source_url, browser):
         page.get_by_label(f"连接点 {index} 位置", exact=True).select_option(side)
         field(f"连接点 {index} 名称", "流量计入口" if side == "left" else "流量计出口")
     meter_ports = page.locator("[data-port-definition]").evaluate_all("(items) => items.map(n => n.dataset.portDefinition)")
-    text_label("出水方向", "去生化池 →", 1435, 416, 115, 17)
-    events = place("events", "报警与事件 · 本地模拟", 20, 877, 1880, 159)
+    text_label("出水方向", "去生化池 →", 1410, 410, 126, 17)
+    events = place("events", "报警与事件 · 本地模拟", 20, 900, 1880, 138)
 
-    rows = [310, 420, 530, 640]
+    rows = [319, 417, 514, 612]
     suction, delivery, pumps, valves = [], [], [], []
     for i, y in enumerate(rows, start=1):
-        suction.append(place("junction", f"吸水分支 {i}", 598, y - 10, 20, 20))
-        delivery.append(place("junction", f"汇流分支 {i}", 1145, y - 10, 20, 20))
-        pumps.append(place("pump", f"P-0{i}", 799, y - 48, 102, 96))
+        suction.append(place("junction", f"吸水分支 {i}", 638, y - 10, 20, 20))
+        page.get_by_label("外观预设", exact=True).select_option("detailed")
+        page.get_by_label("填充颜色", exact=True).fill("#173141")
+        delivery.append(place("junction", f"汇流分支 {i}", 1150, y - 10, 20, 20))
+        page.get_by_label("外观预设", exact=True).select_option("detailed")
+        page.get_by_label("填充颜色", exact=True).fill("#173141")
+        pumps.append(place("pump", f"P-0{i}", 851, y - 58, 128, 116))
         page.get_by_label("外观预设", exact=True).select_option("monitor")
         field("小数位", 1)
-        valves.append(place("checkValve", f"CV-0{i} · 止回阀", 956, y - 23, 74, 46))
+        valves.append(place("checkValve", f"CV-0{i} · 止回阀", 1006, y - 22, 52, 44))
         page.get_by_label("外观预设", exact=True).select_option("picture")
         page.get_by_label("载入设备图片", exact=True).set_input_files(
             ROOT / "apps/scada-designer/examples/assets/check-valve.png"
@@ -204,9 +214,9 @@ def exercise(page, base, source_url, browser):
             flow_bindings[edge] = signal
         return edge
 
-    tank_pipe = segment(well, "right", suction[2], "left", "HEADER.flowing")
+    tank_pipe = segment(well, "right", suction[3], "left", "HEADER.flowing")
     for i in range(3):
-        segment(suction[i + 1], "top", suction[i], "bottom", "HEADER.flowing" if i < 2 else None)
+        segment(suction[i + 1], "top", suction[i], "bottom", "HEADER.flowing")
         segment(delivery[i], "bottom", delivery[i + 1], "top", "HEADER.flowing")
     for i in range(4):
         signal = f"P-0{i+1}.flow"
@@ -214,24 +224,29 @@ def exercise(page, base, source_url, browser):
         segment(pumps[i], "right", valves[i], "left", signal)
         segment(valves[i], "right", delivery[i], "left", signal)
     bend = segment(delivery[-1], "right", flowmeter, meter_ports[0], "HEADER.flowing")
-    outlet = segment(flowmeter, meter_ports[1], None, (1522, 504), "HEADER.flowing")
+    outlet = segment(flowmeter, meter_ports[1], None, (1522, 466), "HEADER.flowing")
 
     select(bend)
     page.locator(".screen-inspector summary").get_by_text("转折点", exact=False).click()
-    for i, (x, y) in enumerate([(1238, 640), (1238, 504)], start=1):
+    for i, (x, y) in enumerate([(1280, 612), (1280, 466)], start=1):
         page.get_by_role("button", name="添加转折点", exact=True).click()
         field(f"转折 {i} X", x)
         field(f"转折 {i} Y", y)
     field("转折 2 X", 2100)
-    expect(page.get_by_label("转折 2 X", exact=True)).to_have_value("1238")
+    expect(page.get_by_label("转折 2 X", exact=True)).to_have_value("1280")
     expect(page.locator(".screen-inspector [role=alert]")).to_contain_text("画布范围")
     field("图元名称", "回流母管至 FT-101")
     select(outlet)
     page.get_by_label("管道箭头", exact=True).select_option("forward")
-    field("终点 Y", 504)
+    field("终点 Y", 466)
+    pipe_preset = page.get_by_label("管道外观", exact=True)
+    expect(pipe_preset).to_have_value("detailed")
+    pipe_preset.select_option("classic")
+    expect(cell(outlet).locator('.screen-pipe-highlight')).to_have_attribute("stroke", "none")
+    pipe_preset.select_option("detailed")
     layer_search = page.get_by_label("查找画布对象", exact=True)
-    expect(page.locator(f'[data-layer="{tank_pipe}"]')).to_contain_text("二沉池集泥井 → 吸水分支 3")
-    layer_search.fill("集泥井 → 吸水分支 3")
+    expect(page.locator(f'[data-layer="{tank_pipe}"]')).to_contain_text("二沉池集泥井 → 吸水分支 4")
+    layer_search.fill("集泥井 → 吸水分支 4")
     expect(page.locator(f'[data-layer="{tank_pipe}"]')).to_be_visible()
     layer_search.fill("")
 
@@ -244,6 +259,10 @@ def exercise(page, base, source_url, browser):
             page.get_by_label(f"槽位 {index} 类型", exact=True).select_option(kind)
             if kind == "text":
                 page.get_by_label(f"槽位 {index} 用途", exact=True).select_option("text")
+    select(pumps[0], "元素定义")
+    page.get_by_role("button", name="添加数据槽位", exact=True).click()
+    field("槽位 6 名称", "保护联锁")
+    page.get_by_label("槽位 6 类型", exact=True).select_option("boolean")
     select(pumps[0], "动态与测点")
     page.get_by_role("button", name="管理连接与点位", exact=True).click()
     dialog = page.get_by_role("dialog")
@@ -264,9 +283,10 @@ def exercise(page, base, source_url, browser):
         bind(id, {label: f"P-0{i}.{suffix}" for label, suffix in
                   [("运行反馈", "run"), ("故障反馈", "fault"), ("运行数值", "hz"),
                    ("工作模式", "mode"), ("电机电流", "amps")]})
+    bind(pumps[0], {"保护联锁": "P-01.interlock"})
     bind(well, {"液位": "LT-101.PV"})
     for id, tag in [(level, "LT-101.PV"), (setpoint, "LT-101.SP"),
-                    (headflow, "FT-101.PV"), (flowmeter, "FT-101.PV")]:
+                    (frequency, "P-01.hz"), (running, "station.runningCount"), (flowmeter, "FT-101.PV")]:
         bind(id, {"显示数值": tag})
     bind(alarm, {"报警文字": "alarm.summary"})
     bind(permissions, {"表格数据": "station.permissions"})
@@ -293,7 +313,8 @@ def exercise(page, base, source_url, browser):
             assert pipe["target"] == {"nodeId": target, "portId": end}, pipe
         else:
             assert set(pipe["target"]) == {"x", "y"}, pipe
-    assert next(p["vertices"] for p in doc["pipes"] if p["id"] == bend) == [{"x": 1238, "y": 640}, {"x": 1238, "y": 504}]
+    assert next(p["vertices"] for p in doc["pipes"] if p["id"] == bend) == [{"x": 1280, "y": 612}, {"x": 1280, "y": 466}]
+    assert all(p["style"]["appearance"] == "detailed" for p in doc["pipes"])
     page.reload()
     assert not errors, errors
     expect(page.locator(".x6-edge")).to_have_count(21)
@@ -307,6 +328,8 @@ def exercise(page, base, source_url, browser):
     expect(cell(pumps[2])).to_have_attribute("data-state", "停止")
     expect(cell(flowmeter)).to_contain_text("684.00 m³/h")
     expect(cell(well)).to_contain_text("3.24 m")
+    expect(cell(running)).to_contain_text("2 台")
+    expect(cell(tank_pipe).locator('.screen-pipe-highlight')).to_have_attribute("stroke", "#ffffff")
     expect(cell(pumps[0])).to_contain_text("38.5 Hz")
     expect(cell(pumps[0])).to_contain_text("自动")
     expect(cell(permissions)).to_contain_text("停机保护时间锁")
@@ -315,11 +338,20 @@ def exercise(page, base, source_url, browser):
     expect(cell(tank_pipe).locator(".screen-pipe-flow")).to_have_count(1)
     inlet_height = cell(tank_pipe).locator("path").nth(1).evaluate("path => path.getBBox().height")
     assert inlet_height < .5, f"Nearly aligned ports should not produce a detour: {inlet_height}"
+    expect(cell(events).locator("tbody")).to_contain_text("轴承温度偏高")
+    assert cell(events).locator(".screen-table-host").evaluate(
+        "host => host.scrollHeight <= host.clientHeight"
+    ), "The single alarm row must fit without scrolling"
+    bend_y = cell(bend).locator("path").nth(1).evaluate("path => path.getBBox().y")
+    assert abs(bend_y - 466) < 0.5, f"The router overshot the fixed elbow: {bend_y}"
     page.screenshot(path=str(OUT / "02-published.png"))
     cell(pumps[0]).click()
     detail = page.get_by_role("dialog", name="P-01 设备详情")
     expect(detail).to_contain_text("18.2 A")
     expect(detail).to_contain_text("自动")
+    expect(detail).to_contain_text("转动设备 · 只读监视")
+    expect(detail.locator("dl > div").filter(has_text="保护联锁")).to_contain_text("无 有效")
+    expect(detail).to_have_css("background-color", "rgb(13, 30, 43)")
     assert detail.get_by_role("button").count() == 1
     page.screenshot(path=str(OUT / "03-pump-details.png"))
     detail.get_by_role("button", name="关闭详情").click()
@@ -344,6 +376,8 @@ def exercise(page, base, source_url, browser):
     expect(cell(tank_pipe).locator(".screen-pipe-flow")).to_have_count(1)
     page.set_viewport_size({"width": 1366, "height": 768})
     expect(cell(flowmeter)).to_be_visible()
+    caption = cell(level).get_by_text("集泥井液位 PV", exact=True)
+    assert caption.bounding_box()["height"] >= 8, "Narrow cards need a readable caption"
     page.screenshot(path=str(OUT / "05-published-1366.png"))
     page.set_viewport_size({"width": 1920, "height": 1080})
 

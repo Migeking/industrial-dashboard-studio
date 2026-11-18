@@ -33,6 +33,35 @@ export const screenThemes = {
     padding: 14,
   },
 };
+
+export const screenPurposes = {
+  process: {
+    name: "工艺监控",
+    theme: "process-gray",
+    groups: ["devices", "measurements", "widgets"],
+    fontSizes: { text: 32, readout: 44 },
+  },
+  cockpit: {
+    name: "数据驾驶舱",
+    theme: "cockpit-dark",
+    groups: ["widgets", "measurements", "devices"],
+    fontSizes: { text: 40, readout: 48 },
+  },
+};
+
+export function applyScreenPurpose(doc, purpose) {
+  const preset = screenPurposes[purpose];
+  if (!Object.hasOwn(screenPurposes, purpose)) throw Error("画面用途无效");
+  if (doc.nodes.length || doc.pipes.length) throw Error("画面用途只可在空白画面选择");
+  applyScreenTheme(doc, preset.theme);
+  doc.canvas.purpose = purpose;
+}
+
+export function applyScreenNodeDefaults(node, canvas) {
+  if (canvas.theme) applyScreenNodeTheme(node, canvas.theme);
+  const size = screenPurposes[canvas.purpose]?.fontSizes?.[node.symbol];
+  if (size !== undefined) node.style.fontSize = size;
+}
 function screenThemeFill(symbol, theme) {
   return symbol === "text"
     ? "transparent"
