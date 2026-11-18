@@ -1414,3 +1414,11 @@ fieldset small {
 
 .review-item .screen-review-issue { display: grid; gap: 4px; margin-top: 8px; }
 .review-item .screen-review-issue small { color: #745331; }
+
+
+.screen-rehearsal summary { font-weight: 600; cursor: pointer; }
+.screen-rehearsal-active { display: grid; gap: 5px; max-height: 95px; overflow: auto; margin: 8px 0; }
+.screen-demo-source { display: flex; gap: 8px; align-items: center; }
+.screen-demo-source input[type=checkbox] { width: auto; min-height: 0; margin: 0; }
+.screen-rehearsal-active small { overflow-wrap: anywhere; }
+.screen-source-badge.screen-rehearsal-badge { background: #fff0ce; color: #6d4700; }

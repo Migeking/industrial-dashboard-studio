@@ -7,6 +7,7 @@ export const screenThemes = {
     stroke: "#547185",
     color: "#304c5d",
     water: "#66abc5",
+    numericFont: "Microsoft YaHei",
     padding: 16,
   },
   "monitor-light": {
@@ -17,6 +18,7 @@ export const screenThemes = {
     stroke: "#6a93aa",
     color: "#23445a",
     water: "#5faac6",
+    numericFont: "Arial",
     padding: 18,
   },
   "cockpit-dark": {
@@ -27,6 +29,7 @@ export const screenThemes = {
     stroke: "#426a83",
     color: "#d5e9f4",
     water: "#3887a6",
+    numericFont: "Consolas",
     padding: 14,
   },
 };
@@ -57,6 +60,11 @@ export function applyScreenNodeTheme(node, id, previous) {
   if (node.style.stroke === before.stroke) node.style.stroke = theme.stroke;
   if (node.style.fill === screenThemeFill(node.symbol, before))
     node.style.fill = screenThemeFill(node.symbol, theme);
+  if (
+    ["readout", "gauge", "barGauge"].includes(node.symbol) &&
+    (!node.style.fontFamily || node.style.fontFamily === before.numericFont)
+  )
+    node.style.fontFamily = theme.numericFont;
   if (
     ["tank", "barGauge"].includes(node.symbol) &&
     (!node.params.waterColor || node.params.waterColor === before.water)

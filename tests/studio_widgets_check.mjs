@@ -10,7 +10,7 @@ import {
   screenField,
   screenNumeric,
 } from "../packages/runtime/studio/screen-widgets.mjs";
-import { applyScreenTheme } from "../packages/runtime/studio/screen-themes.mjs";
+import { applyScreenNodeTheme, applyScreenTheme } from "../packages/runtime/studio/screen-themes.mjs";
 import { validate } from "../apps/scada-designer/studio/model.mjs";
 
 const doc = blankScreen(),
@@ -198,6 +198,13 @@ applyScreenTheme(doc, "cockpit-dark");
 assert.equal(doc.canvas.background, "#071a2a");
 assert.equal(n.style.color, "#d5e9f4");
 assert.equal(JSON.stringify(n.bindings), before);
+applyScreenNodeTheme(gauge, "cockpit-dark");
+assert.equal(gauge.style.fontFamily, "Consolas");
+applyScreenNodeTheme(gauge, "monitor-light");
+assert.equal(gauge.style.fontFamily, "Arial");
+gauge.style.fontFamily = "SimSun";
+applyScreenNodeTheme(gauge, "process-gray");
+assert.equal(gauge.style.fontFamily, "SimSun");
 n.style.color = "#ffcc00";
 applyScreenTheme(doc, "monitor-light");
 assert.equal(n.style.color, "#ffcc00");

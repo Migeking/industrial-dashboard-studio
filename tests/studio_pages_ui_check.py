@@ -43,6 +43,22 @@ def exercise(page,base,url,browser):
     page.locator('.studio-header').get_by_role('button',name='预览发布',exact=True).click();expect(page.locator('.studio-header').get_by_role('button',name='发布',exact=True)).to_be_disabled()
     page.get_by_role('button',name='去绑定：数值仪表',exact=True).click();expect(page.locator(f'.screen-page-nav [data-page-id="{child}"]')).to_have_attribute('aria-current','page');expect(page.get_by_label('显示数值 · 绑定测点',exact=True)).to_be_visible();page.get_by_label('显示数值 · 绑定测点',exact=True).select_option('T101.level')
     checks.append('发布检查覆盖全部画面，漏绑问题直接定位到对应画面和元素')
+    link=place('text',1150,140)
+    page.get_by_label('文字内容',exact=True).fill('查看本地项目说明')
+    page.get_by_label('图元名称',exact=True).fill('本地说明链接')
+    page.get_by_role('tab',name='交互',exact=True).click()
+    page.get_by_label('点击动作',exact=True).select_option('link')
+    link_input=page.get_by_label('链接地址',exact=True)
+    link_input.fill('not-a-web-url')
+    link_input.press('Tab')
+    page.get_by_role('button',name='预览发布',exact=True).click()
+    expect(page.locator('.studio-header').get_by_role('button',name='发布',exact=True)).to_be_disabled()
+    page.get_by_role('button',name='去配置：本地说明链接',exact=True).click()
+    link_input.fill(base+'/api/draft')
+    link_input.press('Tab')
+    before_tabs=len(page.context.pages)
+    page.locator(f'[data-cell-id="{link}"]').click()
+    assert len(page.context.pages)==before_tabs
     final=save();page.locator('.studio-header').get_by_role('button',name='预览发布',exact=True).click();page.locator('.studio-header').get_by_role('button',name='发布',exact=True).click();expect(page.get_by_role('status')).to_contain_text('已发布')
     assert page.request.get(base+'/api/published').json()==final
     page.goto(base+'/view');expect(page.locator(f'[data-cell-id="{second}"]')).to_be_visible()
@@ -50,6 +66,13 @@ def exercise(page,base,url,browser):
     for _ in range(3):
         page.locator(f'[data-cell-id="{pump}"]').click();expect(page.locator('.runtime-trend-host canvas')).to_have_count(1);expect(page.get_by_role('dialog')).to_contain_text('从打开面板开始采样');page.get_by_role('button',name='关闭详情',exact=True).click();expect(page.locator('.runtime-trend-host canvas')).to_have_count(0)
     page.locator(f'[data-cell-id="{reading}"]').click();expect(page.locator(f'[data-cell-id="{second}"]')).to_be_visible()
+    with page.context.expect_page() as opened:
+        page.locator(f'[data-cell-id="{link}"]').click()
+    linked=opened.value
+    linked.wait_for_url(base+'/api/draft')
+    assert linked.evaluate('window.opener === null')
+    linked.close()
+    checks.append('链接校验与定位可用，编辑点击无动作，发布后新标签打开且无 opener')
     page.screenshot(path=str(OUT/'pages-published.png'))
     checks.append('编辑点击不执行，发布按首页启动，元素导航往返与趋势面板反复打开关闭')
     page.goto(base+'/?page='+child);select(second);page.get_by_label('图元名称',exact=True).fill('草稿中的频率仪表');draft=save();assert page.request.get(base+'/api/published').json()==final

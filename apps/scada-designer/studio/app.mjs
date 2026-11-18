@@ -656,7 +656,10 @@ async function boot() {
             await api(publish ? "/api/publish" : "/api/draft", value);
             lastSaved.value = JSON.stringify(value);
             published.value = publish;
-            if (publish) dialog.value = "";
+            if (publish) {
+              dialog.value = "";
+              clearRehearsal();
+            }
             message.value = publish ? "已发布，可打开展示端核对" : "草稿已保存";
           } finally {
             saving.value = false;
@@ -863,7 +866,76 @@ async function boot() {
         visit(sample.value, "");
         return list;
       });
+      const previewSamples = shallowRef(new Map());
+      const rehearsal = ref({ id: "", quality: "good", value: "", error: "" });
+      const rehearsalPoints = computed(() =>
+        doc.value.mappings.filter((m) => ["boolean", "number", "text"].includes(m.kind)),
+      );
+      const rehearsalPoint = computed(() =>
+        rehearsalPoints.value.find((m) => m.id === rehearsal.value.id),
+      );
+      const canRehearse = computed(() =>
+        !viewer && screen.value && preview.value &&
+        doc.value.source.kind === "json" && doc.value.source.demo === true,
+      );
+      const rehearsalQualities = { good: "有效", bad: "无效", stale: "过期", offline: "离线" };
+      function selectRehearsalPoint(id) {
+        const sample = points.value[id];
+        const mapping = rehearsalPoints.value.find((m) => m.id === id);
+        rehearsal.value = {
+          id,
+          quality: previewSamples.value.get(id)?.quality || "good",
+          value: sample?.value == null ? (mapping?.kind === "boolean" ? "false" : "") : String(sample.value),
+          error: "",
+        };
+      }
+      function applyRehearsal() {
+        if (!canRehearse.value || !rehearsalPoint.value) return;
+        const { id, quality, value } = rehearsal.value;
+        const { kind, unit } = rehearsalPoint.value;
+        let simulatedValue = null;
+        if (!Object.hasOwn(rehearsalQualities, quality)) return;
+        if (quality === "good") {
+          if (kind === "number") {
+            simulatedValue = Number(value);
+            if (!String(value).trim() || !Number.isFinite(simulatedValue)) {
+              rehearsal.value.error = "请输入有效的数值，零值可以直接输入 0。";
+              return;
+            }
+          } else if (kind === "boolean") {
+            simulatedValue = value === "true";
+          } else {
+            simulatedValue = value;
+          }
+        }
+        const timestamp = Date.now();
+        previewSamples.value = new Map(previewSamples.value).set(id, {
+          value: simulatedValue, quality, timestamp, receivedAt: timestamp, unit,
+        });
+        rehearsal.value.error = "";
+        sequence.value++;
+      }
+      function clearRehearsal(id) {
+        if (id !== undefined && !previewSamples.value.has(id)) return;
+        const next = id === undefined ? new Map() : new Map(previewSamples.value);
+        if (id !== undefined) next.delete(id);
+        if (next.size !== previewSamples.value.size) {
+          previewSamples.value = next;
+          // Discard rehearsal samples cached by runtime trend widgets.
+          sourceVersion.value++;
+          sequence.value++;
+        }
+        if (rehearsal.value.id) selectRehearsalPoint(rehearsal.value.id);
+      }
+      watch(canRehearse, (allowed) => {
+        if (!allowed) {
+          clearRehearsal();
+          rehearsal.value = { id: "", quality: "good", value: "", error: "" };
+        }
+      });
       function restart() {
+        previewSamples.value = new Map();
+        rehearsal.value = { id: "", quality: "good", value: "", error: "" };
         sourceVersion.value++;
         stop();
         let closed = false,
@@ -937,6 +1009,8 @@ async function boot() {
       const points = computed(() =>
         Object.fromEntries(
           doc.value.mappings.map((m) => {
+            const simulated = canRehearse.value && previewSamples.value.get(m.id);
+            if (simulated) return [m.id, simulated];
             const fixed = ["json", "csv"].includes(doc.value.source.kind);
             const p = normalize(
               raw.value,
@@ -1105,6 +1179,8 @@ async function boot() {
         stage,
         zoom,
         preview,
+        previewSamples, rehearsal, rehearsalPoints, rehearsalPoint, canRehearse, rehearsalQualities,
+        selectRehearsalPoint, applyRehearsal, clearRehearsal,
         editing,
         dialog,
         message,

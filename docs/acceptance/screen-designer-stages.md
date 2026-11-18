@@ -49,6 +49,12 @@
 - 图表配置容易丢失输入：表单保留本地草稿，校验后提交；添加序列自动建立类型槽位，换绑保留显式范围。
 - 深色画布标题/状态字不清晰、仪表值与刻度叠压：文字跟随主题，仪表数值移到刻度下方；三尺寸截图复核。
 
+## 后续专项证据
+
+- 本地样本演练由 `studio_rehearsal_ui_check.py` 复现。浏览器切换运行和故障、输入 0、模拟无效/过期/离线，核对逐点恢复与返回编辑后清除。保存前未发出写请求，主动发布和离线导出仍使用基准数据。取消本地演示标记后入口消失。REST 流程通过 `studio_screen_check.py` 验证入口不可用。
+- 多画面动作补验了链接。无效地址阻止发布并定位属性，编辑点击不打开标签，发布点击打开无 opener 的本地测试页面，见 `studio_pages_ui_check.py`。
+- 三种主题的仪表字体继承和显式字体保留见 `studio_widgets_check.mjs`。05 的模式文本与故障演练截图分别保存在 `works/designer-plan-audit/rehearsal/` 下。
+
 ## 规模实测
 
 `studio_load_check.py` 的独立合成负载为 **300 个可见节点、100 条管道、6 个图表、250 ms 共享采集**。
@@ -78,6 +84,7 @@ python -X utf8 tests/studio_layout_ui_check.py
 python -X utf8 tests/studio_definitions_ui_check.py
 python -X utf8 tests/studio_process_tools_check.py
 python -X utf8 tests/studio_pages_ui_check.py
+python -X utf8 tests/studio_rehearsal_ui_check.py
 python -X utf8 tests/studio_modbus_batch_ui_check.py
 python -X utf8 tests/studio_cockpit_ui_check.py
 python -X utf8 tests/studio_load_check.py

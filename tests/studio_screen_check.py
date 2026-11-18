@@ -203,6 +203,7 @@ def exercise(page,base,fixture_url,browser):
     copied=save();copy=next(n for n in copied['nodes'] if '副本' in n['title'])
     assert copy['bindings']=={}
     page.locator('.studio-header').get_by_role('button',name='预览发布',exact=True).click()
+    expect(page.locator('.screen-rehearsal')).to_have_count(0)
     expect(page.locator('.studio-header').get_by_role('button',name='发布',exact=True)).to_be_disabled()
     page.get_by_role('button',name='去绑定：'+copy['title'],exact=True).click()
     expect(page.get_by_label('运行反馈 · 绑定测点',exact=True)).to_be_visible()

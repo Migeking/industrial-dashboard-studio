@@ -235,7 +235,7 @@
           ><span>{{ Math.round(screenView.scale * 100) }}%{{screenView.manual&&screen?'':' · 自适应'}}</span
           ><small>{{
             preview
-              ? "展示效果与发布页面一致"
+              ? previewSamples.size ? "正在演练本地样本" : "展示效果与发布页面一致"
               : sel
                 ? "已选中：" + sel.title
                 : screen ? (screenTool==='pipe'?'拖动圆形接口连接设备':screenTool==='select'?'选择、拖动与缩放图元':'在画布放置：'+(screenTool.startsWith('library:')?doc.symbols?.find(s=>s.id===screenTool.slice(8))?.name:screenSymbols[screenTool]?.label)) : native ? "直接拖动对象 · Shift 多选 · Alt 选择设备内文字" : "点击组件编辑 · 拖动标题移动 · 拖动右下角缩放"
@@ -249,7 +249,7 @@
             :style="{...screenView.style,background:screen?doc.canvas.background:undefined}"
           >
             <screen-stage v-if="screen" :doc="doc" :points="points" :selected="ids" :editing="editing" :tool="screenTool" :sequence="sequence" :source-version="sourceVersion" :blocked="!!dialog" @start="snapshot" @insert="screenInsert" @geometry="screenGeometry" @pipe="screenPipe" @library="screenLibraryPlace" @navigate="switchScreenPage" @select="screenSelect" @tool="setScreenTool" @command="screenCommand"></screen-stage>
-            <div v-if="screen" class="screen-source-badge">{{doc.title}} · {{sourceTitle}} · {{connection}}</div>
+            <div v-if="screen" class="screen-source-badge" :class="{'screen-rehearsal-badge':previewSamples.size}">{{doc.title}} · {{sourceTitle}} · {{connection}}<span v-if="previewSamples.size"> · 工况演练</span></div>
             <native-stage v-if="native" :key="doc.template+':'+sourceVersion" :doc="doc" :points="points" :selected="ids" :editing="editing" :sequence="sequence" :clock="clock" :connection="connection" @select="nativeSelect" @patch="nativePatch" @start="snapshot" @move="nativeMove" @geometry="nativeRects=$event"></native-stage>
             <div v-if="!native && !screen" class="board-title">
               <span>运行监视</span>
@@ -311,6 +311,31 @@
               >当前为本地样本，发布后仍显示样本数据。</small
             >
           </div>
+          <details v-if="canRehearse && rehearsalPoints.length" class="review-item screen-rehearsal">
+            <summary>演练工况<span v-if="previewSamples.size"> · {{previewSamples.size}} 个临时值</span></summary>
+            <p class="muted">试改测点值或质量，画面立即响应。发布和离线导出仍使用原样本。</p>
+            <label>测点<select aria-label="演练测点" :value="rehearsal.id" @change="selectRehearsalPoint($event.target.value)">
+              <option value="">选择模拟测点</option>
+              <option v-for="point in rehearsalPoints" :key="point.id" :value="point.id">{{point.label}} · {{point.id}}</option>
+            </select></label>
+            <form v-if="rehearsalPoint" novalidate @submit.prevent="applyRehearsal">
+              <label>数据质量<select aria-label="演练质量" v-model="rehearsal.quality" @change="rehearsal.error=''">
+                <option v-for="(label,quality) in rehearsalQualities" :key="quality" :value="quality">{{label}}</option>
+              </select></label>
+              <label v-if="rehearsal.quality==='good'">演练值<span v-if="rehearsalPoint.unit">（{{rehearsalPoint.unit}}）</span>
+                <select v-if="rehearsalPoint.kind==='boolean'" aria-label="演练值" v-model="rehearsal.value">
+                  <option value="true">成立</option><option value="false">释放</option>
+                </select>
+                <input v-else aria-label="演练值" :type="rehearsalPoint.kind==='number'?'number':'text'" step="any" v-model="rehearsal.value" @input="rehearsal.error=''" />
+              </label>
+              <p v-if="rehearsal.error" role="alert" class="definition-error">{{rehearsal.error}}</p>
+              <div class="tools"><button type="submit" class="primary">应用到预览</button><button v-if="previewSamples.has(rehearsal.id)" type="button" @click="clearRehearsal(rehearsal.id)">恢复本点</button></div>
+            </form>
+            <div v-if="previewSamples.size" class="screen-rehearsal-active">
+              <small v-for="[id, point] in previewSamples" :key="id">{{id}} · {{point.quality==='good'?String(point.value):rehearsalQualities[point.quality]}}</small>
+            </div>
+            <button v-if="previewSamples.size" class="wide" @click="clearRehearsal()">全部恢复样本</button>
+          </details>
           <div class="review-item">
             <b>组件绑定</b
             ><span>{{
@@ -324,7 +349,7 @@
             </div>
           </div>
           <div v-if="invalidPoints" class="quality-note">
-            {{ invalidPoints }} 个测点当前无有效读数，展示端会保留质量提示。
+            {{ invalidPoints }} 个测点当前无有效读数。{{previewSamples.size?"当前含临时演练值。":"展示端会保留质量提示。"}}
           </div>
           <button class="wide" @click="goStep('bind')">检查数据绑定</button>
 <p v-if="published" class="publish-success">发布成功，展示端已更新。</p>
@@ -741,6 +766,10 @@
                   v-model="config.source.url"
                   placeholder="http://127.0.0.1:8101/snapshot"
               /></label>
+              <label v-if="screen && config.source.kind==='json'" class="screen-demo-source">
+                <input type="checkbox" aria-label="标记为本地演示样本" v-model="config.source.demo" />
+                标记为本地演示样本
+              </label>
               <label
                 >刷新周期（ms）<input
                   type="number"
