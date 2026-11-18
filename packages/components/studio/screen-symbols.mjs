@@ -142,6 +142,19 @@ export const screenSymbols = {
   button: { label: "导航按钮", w: 200, h: 60, ports: [], slots: [] },
 };
 export const pipeSlots = [slot("run", "流动状态", ["boolean"])];
+export function screenAppearanceOptions(symbol) {
+  if (
+    !["pump", "fan", "valve", "tank", "readout", "checkValve"].includes(symbol)
+  )
+    return {};
+  const options = { classic: "经典平面" };
+  if (symbol !== "checkValve") options.detailed = "精细平面";
+  if (["pump", "fan", "readout"].includes(symbol)) options.monitor = "监控铭牌";
+  if (symbol === "tank") options.monitor = "监控液位";
+  if (["pump", "fan", "valve", "checkValve"].includes(symbol))
+    options.picture = "本地图片外观";
+  return options;
+}
 export function screenSlots(n) {
   const defaults =
     n?.type === "pipe" ? pipeSlots : screenSymbols[n?.symbol]?.slots || [];
@@ -271,10 +284,9 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
           },
         ],
         attrs: { art: { refWidth: "100%", refHeight: "100%" } },
-        ports: {
-          groups: portGroups,
-          items: def.ports.map((group) => ({ id: group, group })),
-        },
+        // The document supplies the complete port list. X6 merges registered
+        // defaults by array index, which can restore deleted ports on reopen.
+        ports: { groups: portGroups, items: [] },
       },
       true,
     );
@@ -294,6 +306,33 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
   const transparent = (w, h) => ({
     tagName: "rect",
     attrs: { width: w, height: h, fill: "transparent" },
+  });
+  const devicePicture = (x, y, width, height) => ({
+    tagName: "image",
+    selector: "devicePicture",
+    attrs: {
+      x,
+      y,
+      width,
+      height,
+      preserveAspectRatio: "xMidYMid meet",
+      visibility: "hidden",
+      pointerEvents: "none",
+    },
+  });
+  const badgeBox = (selector, x, y, width, height) => ({
+    tagName: "rect",
+    selector,
+    attrs: {
+      x,
+      y,
+      width,
+      height,
+      rx: 5,
+      fill: "#0b2030",
+      stroke: "#355669",
+      visibility: "hidden",
+    },
   });
   for (const symbol of ["pump", "fan"])
     artwork(symbol, [
@@ -331,8 +370,13 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
           fill: "#3f6074",
         },
       },
+      devicePicture(31, 35, 108, 90),
       text("caption", 85, 139),
       text("state", 85, 158, 15),
+      badgeBox("frequencyBox", -47, 29, 92, 29),
+      badgeBox("modeBox", 50, 121, 70, 24),
+      text("frequencyBadge", -1, 49, 15),
+      text("modeBadge", 85, 138, 15),
     ]);
   artwork("valve", [
     transparent(150, 140),
@@ -356,6 +400,7 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
         strokeWidth: 3,
       },
     },
+    devicePicture(25, 25, 100, 86),
     text("caption", 75, 119),
     text("state", 75, 138, 15),
   ]);
@@ -381,11 +426,13 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
         strokeWidth: 3,
       },
     },
+    devicePicture(17, 6, 66, 48),
   ]);
   artwork("tank", [
     transparent(220, 300),
     {
       tagName: "path",
+      selector: "tankStubs",
       attrs: {
         d: "M0 150H25M195 150H220M110 0V25M110 265V300",
         stroke: "#547185",
@@ -430,6 +477,16 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
     },
   ]);
   artwork("readout", [
+    {
+      tagName: "path",
+      selector: "stubs",
+      attrs: {
+        d: "M0 75H103M197 75H300",
+        fill: "none",
+        strokeWidth: 4,
+        visibility: "hidden",
+      },
+    },
     {
       tagName: "rect",
       selector: "body",

@@ -4,6 +4,7 @@ import {
   screenPorts,
   screenPoint,
   screenRoleSlot,
+  screenAppearanceOptions,
 } from "../../components/studio/screen-symbols.mjs";
 import { validateScreenRules } from "./screen-dynamics.mjs";
 import { validateScreenWidget } from "./screen-widgets.mjs";
@@ -270,7 +271,8 @@ export function validateScreen(doc, publishing, project = doc) {
         throw Error("图元量程或显示参数无效");
       if (
         n.params.appearance !== undefined &&
-        !["classic", "detailed"].includes(n.params.appearance)
+        !["classic", "detailed"].includes(n.params.appearance) &&
+        !Object.hasOwn(screenAppearanceOptions(n.symbol), n.params.appearance)
       )
         throw Error("图元外观预设无效");
       if (
@@ -341,7 +343,13 @@ export function validateScreen(doc, publishing, project = doc) {
           n.style.lineWidth > 30)
       )
         throw Error("图形线宽无效");
-      if (n.symbol === "image" && n.image) validateScreenAsset(n.image);
+      if (
+        n.image &&
+        (n.symbol === "image" || screenAppearanceOptions(n.symbol).picture)
+      )
+        validateScreenAsset(n.image);
+      if (publishing && n.params.appearance === "picture" && !n.image)
+        throw Error(n.title + " 尚未载入设备图片");
     } else {
       if (
         !Array.isArray(n.vertices) ||

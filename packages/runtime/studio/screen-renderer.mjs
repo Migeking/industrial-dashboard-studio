@@ -7,8 +7,9 @@ import {
   screenPoint,
   screenRoleSlot,
   screenDefaultAction,
+  screenAppearanceOptions,
 } from "../../components/studio/screen-symbols.mjs";
-import { screenNode, screenState, screenDisplay } from "./screen-model.mjs";
+import { screenNode, screenState, screenDisplay, screenEndpointPosition } from "./screen-model.mjs";
 import { screenRuleProjection } from "./screen-dynamics.mjs";
 import { ScreenRuntimeTrend } from "./screen-trend-panel.mjs";
 import {
@@ -34,6 +35,67 @@ const screenStateColors = {
   故障: "#cf5757",
   未知: "#9baab5",
 };
+
+function screenArtworkAt(node, x, y) {
+  const { w, h } = screenSymbols[node.symbol];
+  const sx = node.w / w,
+    sy = node.h / h;
+  const scale = Math.min(sx, sy);
+  return `translate(${x} ${y}) scale(${scale / sx} ${scale / sy}) translate(${-x} ${-y})`;
+}
+
+function screenPumpBadges(node, points, attrs, state, reading) {
+  const monitor = node.params.appearance === "monitor";
+  const modeSlot = screenRoleSlot(node, "text");
+  const mode = screenPoint(node, points, "text");
+  const showMode = monitor && !!node.bindings[modeSlot?.key];
+  const stateColor =
+    state === "运行" ? "#3fcf91" : state === "故障" ? "#f07878" : "#7694a8";
+  const at = (x, y) => (monitor ? screenArtworkAt(node, x, y) : "");
+  Object.assign(attrs.body, {
+    transform: at(85, 80),
+    fill: monitor
+      ? state === "运行"
+        ? "#103b35"
+        : state === "故障"
+          ? "#502c34"
+          : "#102636"
+      : attrs.body.fill,
+    stroke: monitor ? stateColor : attrs.body.stroke,
+  });
+  attrs.rotor.visibility = monitor ? "hidden" : "visible";
+  Object.assign(attrs.caption, {
+    y: monitor ? 86 : 139,
+    transform: at(85, 86),
+  });
+  attrs.state.visibility = monitor ? "hidden" : "visible";
+  attrs.frequencyBox = {
+    visibility: monitor ? "visible" : "hidden",
+    transform: at(-1, 44),
+  };
+  attrs.frequencyBadge = {
+    text: monitor
+      ? state === "运行" && reading.quality === "good"
+        ? reading.text
+        : state
+      : "",
+    fill: state === "故障" ? "#ffb7b7" : "#c2e9fd",
+    transform: at(-1, 44),
+  };
+  attrs.modeBox = {
+    visibility: showMode ? "visible" : "hidden",
+    transform: at(85, 133),
+  };
+  attrs.modeBadge = {
+    text: showMode
+      ? mode?.quality === "good"
+        ? String(mode.value)
+        : "未知"
+      : "",
+    fill: "#c3dbea",
+    transform: at(85, 133),
+  };
+}
 
 // The graph is a view of the saved document. Live values never enter that document.
 class ScreenGraph {
@@ -587,6 +649,14 @@ class ScreenGraph {
           target = n.target.nodeId
             ? { cell: n.target.nodeId, port: n.target.portId }
             : { x: n.target.x, y: n.target.y };
+        const a = screenEndpointPosition(p.doc, n.source);
+        const b = screenEndpointPosition(p.doc, n.target);
+        // Percentage ports can differ by a fraction of a pixel after resize.
+        // Keep that insignificant offset from triggering an orthogonal detour.
+        const distance = Math.min(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+        const router = !n.vertices.length && distance > 1e-7 && distance < 0.5
+          ? { name: "normal" }
+          : { name: "orth", args: { padding: 20 } };
         if (!cell) {
           this.projections.delete(n.id);
           cell = graph.addEdge({
@@ -596,7 +666,7 @@ class ScreenGraph {
             target,
             vertices: n.vertices,
             zIndex: 0,
-            router: { name: "orth", args: { padding: 20 } },
+            router,
             connector: { name: "rounded", args: { radius: 5 } },
           });
         }
@@ -606,6 +676,7 @@ class ScreenGraph {
           cell.setTarget(target);
         if (JSON.stringify(cell.getVertices()) !== JSON.stringify(n.vertices))
           cell.setVertices(n.vertices);
+        if (cell.getRouter()?.name !== router.name) cell.setRouter(router);
       }
     } finally {
       this.applying = false;
@@ -692,6 +763,8 @@ class ScreenGraph {
                   : ""),
             },
           };
+          if (["pump", "fan"].includes(n.symbol))
+            screenPumpBadges(n, p.points, attrs, state, reading);
           cell.attr("root/data-state", state);
         } else if (["line", "polyline", "polygon"].includes(n.symbol)) {
           const def = screenSymbols[n.symbol],
@@ -726,6 +799,8 @@ class ScreenGraph {
                         (n.params.max - n.params.min),
                     ),
                   );
+          const monitor =
+            n.symbol === "tank" && n.params.appearance === "monitor";
           attrs = {
             body: {
               stroke: n.style.stroke,
@@ -745,26 +820,72 @@ class ScreenGraph {
                 n.params.waterColor ||
                 (n.style.fill === "#e5edf2" ? "#66abc5" : n.style.fill),
             },
-            value: { text: value.text, fill: n.style.color },
+            value: {
+              text: value.text,
+              fill: n.style.color,
+              transform: monitor ? screenArtworkAt(n, 110, 158) : "",
+            },
             caption: {
               text: n.title,
               fill: n.style.color,
               fontSize: n.style.fontSize,
+              y: monitor ? 52 : 289,
+              transform: monitor ? screenArtworkAt(n, 110, 52) : "",
             },
           };
+          if (n.symbol === "tank") {
+            const stubs = screenPorts(n).map(({ x, y }) => {
+              const px = x * 2.2,
+                py = y * 3;
+              const insideX = Math.max(25, Math.min(195, px));
+              const insideY = Math.max(25, Math.min(265, py));
+              return `M${px} ${py}L${insideX} ${insideY}`;
+            });
+            attrs.tankStubs = {
+              d: monitor
+                ? stubs.join(" ")
+                : "M0 150H25M195 150H220M110 0V25M110 265V300",
+              stroke: n.style.stroke,
+            };
+          }
         } else if (n.symbol === "readout") {
           const reading = screenDisplay(n, p.points, p.doc.mappings);
+          const monitor = n.params.appearance === "monitor";
           attrs = {
-            body: { fill: n.style.fill, stroke: n.style.stroke },
+            body: {
+              fill: n.style.fill,
+              stroke: monitor ? "#49b9e5" : n.style.stroke,
+              x: monitor ? 103 : 0,
+              y: monitor ? 40 : 0,
+              width: monitor ? 94 : 300,
+              height: monitor ? 70 : 150,
+              transform: monitor ? screenArtworkAt(n, 150, 75) : "",
+            },
+            stubs: {
+              stroke: n.style.stroke,
+              visibility: monitor ? "visible" : "hidden",
+            },
             caption: {
               text: (n.params.icon ? n.params.icon + " " : "") + n.title,
+              x: monitor ? 150 : 20,
+              y: monitor ? 83 : 32,
+              textAnchor: monitor ? "middle" : "start",
+              fontSize: monitor ? 24 : 20,
+              transform: monitor ? screenArtworkAt(n, 150, 75) : "",
             },
             value: {
               text: reading.text,
               fill: n.style.color,
               fontSize: n.style.fontSize,
+              x: monitor ? 150 : 20,
+              y: monitor ? 142 : 93,
+              textAnchor: monitor ? "middle" : "start",
+              transform: monitor ? screenArtworkAt(n, 150, 142) : "",
             },
-            quality: { text: screenQualityLabels[reading.quality] },
+            quality: {
+              text: screenQualityLabels[reading.quality],
+              visibility: monitor ? "hidden" : "visible",
+            },
           };
         } else if (n.symbol === "checkValve") {
           attrs = {
@@ -809,6 +930,8 @@ class ScreenGraph {
               attrs[key].fontWeight = n.style.fontWeight || 400;
             }
           }
+          if (n.symbol === "tank" && n.params.appearance === "monitor")
+            attrs.caption.visibility = "visible";
         }
         if (attrs?.label) {
           const align = n.style.align || "center";
@@ -865,7 +988,8 @@ class ScreenGraph {
         }
         if (
           attrs?.caption &&
-          ["pump", "fan", "valve", "tank"].includes(n.symbol)
+          ["pump", "fan", "valve", "tank"].includes(n.symbol) &&
+          n.params.appearance !== "monitor"
         ) {
           attrs.caption.y =
             n.params.labelPosition === "top"
@@ -877,6 +1001,21 @@ class ScreenGraph {
                   : 139;
           attrs.caption.visibility =
             n.params.labelPosition === "none" ? "hidden" : "visible";
+        }
+        if (attrs && screenAppearanceOptions(n.symbol).picture) {
+          const image = n.params.appearance === "picture" && n.image;
+          const def = screenSymbols[n.symbol];
+          attrs.body.visibility = image ? "hidden" : "visible";
+          if (attrs.rotor)
+            attrs.rotor.visibility =
+              image || n.params.appearance === "monitor" ? "hidden" : "visible";
+          attrs.devicePicture = {
+            "xlink:href": image || "",
+            visibility: image ? "visible" : "hidden",
+            transform: screenArtworkAt(n, def.w / 2, def.h / 2),
+          };
+          if (n.params.appearance === "monitor")
+            attrs.caption.visibility = "visible";
         }
         const visible = !n.hidden && (dynamic.visible !== false || p.editing);
         visible ? cell.show() : cell.hide();

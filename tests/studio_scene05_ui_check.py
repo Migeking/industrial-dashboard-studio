@@ -14,7 +14,7 @@ from urllib.request import urlopen
 from playwright.sync_api import expect, sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "works/scene05-blank-acceptance"
+OUT = ROOT / "works/scene05-visual-acceptance"
 ORIGINAL = next((ROOT / "scenarios/water-treatment").glob("05-*.html"))
 
 
@@ -43,6 +43,14 @@ class Source(BaseHTTPRequestHandler):
         add("LT-101.PV", "集泥井液位", "number", 3.24, "m")
         add("LT-101.SP", "液位设定参考值", "number", 3.20, "m")
         add("FT-101.PV", "回流总管流量", "number", 0 if cls.mode == "zero" else 684, "m³/h")
+        add("station.permissions", "控制许可反馈（模拟）", "dataset", [
+            {"检查项": "井位高于低限", "反馈": "正常"},
+            {"检查项": "吸入蝶阀 V-in", "反馈": "全开到位"},
+            {"检查项": "出水闸阀 V-out", "反馈": "全开到位"},
+            {"检查项": "停机保护时间锁", "反馈": "倒计时 0 s"},
+            {"检查项": "急停与过载保护", "反馈": "无动作"},
+        ])
+        add("alarm.summary", "当前报警说明", "text", "预警  ·  P-02 轴承温度偏高（演示）")
         add("alarm.events", "演示报警", "dataset",
             [{"时间": "16:10:20", "设备": "P-02", "level": "预警", "描述": "轴承温度偏高（示例）"}])
         return rows
@@ -61,6 +69,7 @@ class Source(BaseHTTPRequestHandler):
 def exercise(page, base, source_url, browser):
     errors = []
     page.on("pageerror", lambda error: errors.append(str(error)))
+    page.on("console", lambda message: errors.append(message.text) if message.type == "error" and "Failed to load resource" not in message.text else None)
     page.goto(base)
     expect(page.locator(".screen-empty")).to_be_visible()
     initial = page.request.get(base + "/api/draft").json()
@@ -111,33 +120,61 @@ def exercise(page, base, source_url, browser):
         page.get_by_label("文字对齐", exact=True).select_option("left")
         return element
 
-    text_label("标题", "污泥回流泵站   /   05 工艺监控", 40, 25, 950, 35)
-    text_label("数据说明", "本地模拟数据   /   只读监视", 1460, 25, 400)
-    place("rect", "管网分区", 40, 245, 1840, 610)
-    text_label("管网标题", "工艺总览   /   二沉池 → 回流母管 → 好氧池", 66, 257, 950)
-    level = place("readout", "LT-101 · 实际液位", 40, 88, 310, 140)
-    setpoint = place("readout", "LIC-101 · 液位设定参考值", 375, 88, 310, 140)
-    headflow = place("readout", "回流总管流量", 710, 88, 310, 140)
-    well = place("tank", "二沉池集泥井", 75, 355, 285, 395)
+    text_label("标题", "污泥回流泵站 SCADA 监控", 24, 9, 670, 29)
+    text_label("数据说明", "本地模拟   /   只读监视", 1510, 9, 378, 21)
+    place("rect", "报警条底色", 20, 57, 1880, 31)
+    page.get_by_label("填充颜色", exact=True).fill("#2f1922")
+    page.get_by_label("边线颜色", exact=True).fill("#713941")
+    alarm = text_label("当前报警", "", 32, 49, 1300, 21)
+    page.get_by_label("文字颜色", exact=True).fill("#ffbdbe")
+    page.get_by_role("tab", name="元素定义", exact=True).click()
+    page.get_by_role("button", name="添加数据槽位", exact=True).click()
+    field("槽位 1 名称", "报警文字")
+    page.get_by_label("槽位 1 类型", exact=True).select_option("text")
+    page.get_by_label("槽位 1 用途", exact=True).select_option("text")
+    place("rect", "回路参数分区", 20, 103, 298, 754)
+    page.get_by_label("填充颜色", exact=True).fill("#0d1d29")
+    place("rect", "工艺管网分区", 330, 103, 1210, 754)
+    page.get_by_label("填充颜色", exact=True).fill("#09151f")
+    text_label("回路参数标题", "控制回路参数", 39, 119, 250, 22)
+    text_label("工艺标题", "工艺管网   /   二沉池回流", 350, 119, 720, 22)
+    level = place("readout", "LT-101 · 实际液位", 37, 172, 263, 117)
+    setpoint = place("readout", "LIC-101 · 设定参考", 37, 305, 263, 117)
+    headflow = place("readout", "FT-101 · 回流总流量", 37, 438, 263, 117)
+    text_label("操作提示", "点击设备查看读数和质量", 39, 585, 255, 17)
+    permissions = place("table", "控制许可反馈 · 模拟", 1552, 103, 348, 754)
+    well = place("tank", "二沉池集泥井", 353, 272, 204, 397)
     field("液位上限", 6)
-    flowmeter = place("readout", "FT-101", 1370, 523, 245, 106)
+    page.get_by_label("外观预设", exact=True).select_option("monitor")
+    page.get_by_role("tab", name="元素定义", exact=True).click()
+    for port_index in [4, 3, 1]:
+        page.get_by_role("button", name=f"移除连接点 {port_index}", exact=True).click()
+    field("连接点 1 Y", 65)
+    flowmeter = place("readout", "FT-101", 1323, 447, 140, 114)
+    page.get_by_label("外观预设", exact=True).select_option("monitor")
     page.get_by_role("tab", name="元素定义", exact=True).click()
     for index, side in [(1, "left"), (2, "right")]:
         page.get_by_role("button", name="添加连接点", exact=True).click()
         page.get_by_label(f"连接点 {index} 位置", exact=True).select_option(side)
         field(f"连接点 {index} 名称", "流量计入口" if side == "left" else "流量计出口")
     meter_ports = page.locator("[data-port-definition]").evaluate_all("(items) => items.map(n => n.dataset.portDefinition)")
-    text_label("出水方向", "去生化好氧池 →", 1640, 517, 225)
-    events = place("events", "报警与事件 · 本地模拟", 40, 880, 1840, 160)
+    text_label("出水方向", "去生化池 →", 1435, 416, 115, 17)
+    events = place("events", "报警与事件 · 本地模拟", 20, 877, 1880, 159)
 
-    rows = [345, 490, 635, 780]
+    rows = [310, 420, 530, 640]
     suction, delivery, pumps, valves = [], [], [], []
     for i, y in enumerate(rows, start=1):
-        suction.append(place("junction", f"吸水分支 {i}", 405, y - 10, 20, 20))
-        delivery.append(place("junction", f"汇流分支 {i}", 1150, y - 10, 20, 20))
-        pumps.append(place("pump", f"P-0{i}", 620, y - 62, 132, 124))
-        valves.append(place("checkValve", f"CV-0{i} · 止回阀", 930, y - 25, 100, 50))
-        text_label(f"CV-0{i} 标签", f"CV-0{i}", 951, y + 18, 130, 17)
+        suction.append(place("junction", f"吸水分支 {i}", 598, y - 10, 20, 20))
+        delivery.append(place("junction", f"汇流分支 {i}", 1145, y - 10, 20, 20))
+        pumps.append(place("pump", f"P-0{i}", 799, y - 48, 102, 96))
+        page.get_by_label("外观预设", exact=True).select_option("monitor")
+        field("小数位", 1)
+        valves.append(place("checkValve", f"CV-0{i} · 止回阀", 956, y - 23, 74, 46))
+        page.get_by_label("外观预设", exact=True).select_option("picture")
+        page.get_by_label("载入设备图片", exact=True).set_input_files(
+            ROOT / "apps/scada-designer/examples/assets/check-valve.png"
+        )
+        expect(cell(valves[-1]).locator("image")).to_have_attribute("visibility", "visible")
 
     def port(id, name):
         bounds = cell(id).locator(f'circle[port="{name}"]').bounding_box()
@@ -167,9 +204,9 @@ def exercise(page, base, source_url, browser):
             flow_bindings[edge] = signal
         return edge
 
-    tank_pipe = segment(well, "right", suction[1], "left", "HEADER.flowing")
+    tank_pipe = segment(well, "right", suction[2], "left", "HEADER.flowing")
     for i in range(3):
-        segment(suction[i + 1], "top", suction[i], "bottom", "HEADER.flowing" if i == 0 else None)
+        segment(suction[i + 1], "top", suction[i], "bottom", "HEADER.flowing" if i < 2 else None)
         segment(delivery[i], "bottom", delivery[i + 1], "top", "HEADER.flowing")
     for i in range(4):
         signal = f"P-0{i+1}.flow"
@@ -177,24 +214,24 @@ def exercise(page, base, source_url, browser):
         segment(pumps[i], "right", valves[i], "left", signal)
         segment(valves[i], "right", delivery[i], "left", signal)
     bend = segment(delivery[-1], "right", flowmeter, meter_ports[0], "HEADER.flowing")
-    outlet = segment(flowmeter, meter_ports[1], None, (1810, 576), "HEADER.flowing")
+    outlet = segment(flowmeter, meter_ports[1], None, (1522, 504), "HEADER.flowing")
 
     select(bend)
     page.locator(".screen-inspector summary").get_by_text("转折点", exact=False).click()
-    for i, (x, y) in enumerate([(1260, 780), (1260, 576)], start=1):
+    for i, (x, y) in enumerate([(1238, 640), (1238, 504)], start=1):
         page.get_by_role("button", name="添加转折点", exact=True).click()
         field(f"转折 {i} X", x)
         field(f"转折 {i} Y", y)
     field("转折 2 X", 2100)
-    expect(page.get_by_label("转折 2 X", exact=True)).to_have_value("1260")
+    expect(page.get_by_label("转折 2 X", exact=True)).to_have_value("1238")
     expect(page.locator(".screen-inspector [role=alert]")).to_contain_text("画布范围")
     field("图元名称", "回流母管至 FT-101")
     select(outlet)
     page.get_by_label("管道箭头", exact=True).select_option("forward")
-    field("终点 Y", 576)
+    field("终点 Y", 504)
     layer_search = page.get_by_label("查找画布对象", exact=True)
-    expect(page.locator(f'[data-layer="{tank_pipe}"]')).to_contain_text("二沉池集泥井 → 吸水分支 2")
-    layer_search.fill("集泥井 → 吸水分支 2")
+    expect(page.locator(f'[data-layer="{tank_pipe}"]')).to_contain_text("二沉池集泥井 → 吸水分支 3")
+    layer_search.fill("集泥井 → 吸水分支 3")
     expect(page.locator(f'[data-layer="{tank_pipe}"]')).to_be_visible()
     layer_search.fill("")
 
@@ -205,6 +242,8 @@ def exercise(page, base, source_url, browser):
             page.get_by_role("button", name="添加数据槽位", exact=True).click()
             field(f"槽位 {index} 名称", name)
             page.get_by_label(f"槽位 {index} 类型", exact=True).select_option(kind)
+            if kind == "text":
+                page.get_by_label(f"槽位 {index} 用途", exact=True).select_option("text")
     select(pumps[0], "动态与测点")
     page.get_by_role("button", name="管理连接与点位", exact=True).click()
     dialog = page.get_by_role("dialog")
@@ -229,10 +268,13 @@ def exercise(page, base, source_url, browser):
     for id, tag in [(level, "LT-101.PV"), (setpoint, "LT-101.SP"),
                     (headflow, "FT-101.PV"), (flowmeter, "FT-101.PV")]:
         bind(id, {"显示数值": tag})
+    bind(alarm, {"报警文字": "alarm.summary"})
+    bind(permissions, {"表格数据": "station.permissions"})
     bind(events, {"事件数据": "alarm.events"})
     select(events)
     page.get_by_role("button", name="从样本生成列", exact=True).click()
     field("列 3 名称", "级别")
+    page.get_by_label("列 1 格式", exact=True).select_option("text")
     for id, tag in flow_bindings.items():
         bind(id, {"流动状态": tag})
     tools()
@@ -251,8 +293,9 @@ def exercise(page, base, source_url, browser):
             assert pipe["target"] == {"nodeId": target, "portId": end}, pipe
         else:
             assert set(pipe["target"]) == {"x", "y"}, pipe
-    assert next(p["vertices"] for p in doc["pipes"] if p["id"] == bend) == [{"x": 1260, "y": 780}, {"x": 1260, "y": 576}]
+    assert next(p["vertices"] for p in doc["pipes"] if p["id"] == bend) == [{"x": 1238, "y": 640}, {"x": 1238, "y": 504}]
     page.reload()
+    assert not errors, errors
     expect(page.locator(".x6-edge")).to_have_count(21)
     page.get_by_role("button", name="预览发布", exact=True).click()
     page.get_by_role("button", name="发布", exact=True).click()
@@ -264,7 +307,14 @@ def exercise(page, base, source_url, browser):
     expect(cell(pumps[2])).to_have_attribute("data-state", "停止")
     expect(cell(flowmeter)).to_contain_text("684.00 m³/h")
     expect(cell(well)).to_contain_text("3.24 m")
+    expect(cell(pumps[0])).to_contain_text("38.5 Hz")
+    expect(cell(pumps[0])).to_contain_text("自动")
+    expect(cell(permissions)).to_contain_text("停机保护时间锁")
+    expect(cell(alarm)).to_contain_text("轴承温度偏高")
+    expect(cell(valves[0]).locator("image")).to_have_attribute("visibility", "visible")
     expect(cell(tank_pipe).locator(".screen-pipe-flow")).to_have_count(1)
+    inlet_height = cell(tank_pipe).locator("path").nth(1).evaluate("path => path.getBBox().height")
+    assert inlet_height < .5, f"Nearly aligned ports should not produce a detour: {inlet_height}"
     page.screenshot(path=str(OUT / "02-published.png"))
     cell(pumps[0]).click()
     detail = page.get_by_role("dialog", name="P-01 设备详情")
@@ -276,6 +326,7 @@ def exercise(page, base, source_url, browser):
 
     Source.mode = "fault"
     expect(cell(pumps[1])).to_have_attribute("data-state", "故障")
+    expect(cell(pumps[1])).to_contain_text("故障")
     for id, tag in flow_bindings.items():
         if tag == "P-02.flow":
             expect(cell(id).locator(".screen-pipe-flow")).to_have_count(0)
@@ -309,6 +360,8 @@ def exercise(page, base, source_url, browser):
     local.on("pageerror", lambda error: errors.append(str(error)))
     local.goto(offline.as_uri())
     expect(local.locator(".x6-edge")).to_have_count(21)
+    expect(local.locator(f'[data-cell-id="{valves[0]}"] image')).to_have_attribute("visibility", "visible")
+    expect(local.locator(f'[data-cell-id="{pumps[0]}"]')).to_contain_text("自动")
     expect(local.locator(f'[data-cell-id="{flowmeter}"]')).to_contain_text("684.00 m³/h")
     assert not requests and not errors, (requests, errors)
     local.close()

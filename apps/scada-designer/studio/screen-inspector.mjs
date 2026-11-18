@@ -3,6 +3,7 @@ import {
   screenSlots,
   screenSlotMappings,
   screenPorts,
+  screenAppearanceOptions,
 } from "../../../packages/components/studio/screen-symbols.mjs";
 import {
   editScreenEndpoint,
@@ -203,6 +204,7 @@ export const ScreenInspector = {
     return {
       search,
       screenChartKinds,
+      screenAppearanceOptions,
       screenTableKinds,
       endpointError,
       waypointError,
@@ -246,7 +248,15 @@ export const ScreenInspector = {
       <template v-if="item.type!=='pipe'"><screen-chart-settings v-if="screenChartKinds.has(item.symbol)" :item="item" :doc="doc" :points="points" @start="$emit('start')"></screen-chart-settings><screen-table-settings v-if="screenTableKinds.has(item.symbol)" :item="item" :doc="doc" :points="points" @start="$emit('start')"></screen-table-settings>
  <label v-if="item.symbol==='readout'">指标符号<select aria-label="指标符号" :value="item.params.icon||''" @focus="$emit('start')" @change="item.params.icon=$event.target.value"><option value="">不显示</option><option v-for="icon in ['Σ','%','≈','⚙','●']" :value="icon">{{icon}}</option></select></label><template v-if="item.symbol==='status'"><div class="pair"><label>信号成立文字<input aria-label="状态成立文字" v-model="item.params.onText" @focus="$emit('start')" placeholder="运行" /></label><label>信号释放文字<input aria-label="状态释放文字" v-model="item.params.offText" @focus="$emit('start')" placeholder="停止" /></label></div><div class="pair"><label>成立颜色<input type="color" aria-label="状态成立颜色" :value="item.params.onColor||'#3c9c77'" @focus="$emit('start')" @change="item.params.onColor=$event.target.value" /></label><label>释放颜色<input type="color" aria-label="状态释放颜色" :value="item.params.offColor||'#d5dfe6'" @focus="$emit('start')" @change="item.params.offColor=$event.target.value" /></label></div></template>
  <div v-if="item.symbol==='barGauge'" class="pair"><label>仪表下限<input type="number" aria-label="仪表下限" v-model.number="item.params.min" @focus="$emit('start')" /></label><label>仪表上限<input type="number" aria-label="仪表上限" v-model.number="item.params.max" @focus="$emit('start')" /></label></div>
-        <template v-if="['pump','fan','valve','tank','readout'].includes(item.symbol)"><label>外观预设<select aria-label="外观预设" :value="item.params.appearance||'classic'" @focus="$emit('start')" @change="item.params.appearance=$event.target.value"><option value="classic">经典平面</option><option value="detailed">精细平面</option></select></label><label v-if="item.symbol!=='readout'">位号位置<select aria-label="位号位置" :value="item.params.labelPosition||'bottom'" @focus="$emit('start')" @change="item.params.labelPosition=$event.target.value"><option value="bottom">设备下方</option><option value="top">设备上方</option><option value="none">隐藏位号</option></select></label></template>
+        <template v-if="Object.keys(screenAppearanceOptions(item.symbol)).length">
+          <label>外观预设<select aria-label="外观预设" :value="item.params.appearance||'classic'" @focus="$emit('start')" @change="item.params.appearance=$event.target.value"><option v-for="(label,key) in screenAppearanceOptions(item.symbol)" :value="key">{{label}}</option></select></label>
+          <template v-if="item.params.appearance==='picture'">
+            <label class="button">载入设备图片<input aria-label="载入设备图片" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" @change="$emit('action',{key:'device-picture',file:$event.target.files[0]});$event.target.value=''" /></label>
+            <p class="muted">{{item.image?'图片已内嵌，可更换。':'请选择透明 PNG、WebP 或其他本地图形。'}}连接点、测点和设备状态独立保存。</p>
+          </template>
+          <p v-if="item.params.appearance==='monitor' && ['pump','fan'].includes(item.symbol)" class="muted">位号显示在泵体内。频率读取运行数值，模式读取“显示文字”槽位。</p>
+          <label v-if="['pump','fan','valve','tank'].includes(item.symbol)&&item.params.appearance!=='monitor'">位号位置<select aria-label="位号位置" :value="item.params.labelPosition||'bottom'" @focus="$emit('start')" @change="item.params.labelPosition=$event.target.value"><option value="bottom">设备下方</option><option value="top">设备上方</option><option value="none">隐藏位号</option></select></label>
+        </template>
         <template v-if="item.symbol==='valve'"><label>阀门类型<select aria-label="阀门类型" :value="item.params.valveMode||'switch'" @change="valveMode($event.target.value)"><option value="switch">开关阀</option><option value="control">调节阀</option></select></label><div v-if="item.params.valveMode==='control'" class="pair"><label>开度下限<input type="number" aria-label="开度下限" :value="item.params.positionMin??0" @focus="$emit('start')" @change="item.params.positionMin=Number($event.target.value)" /></label><label>开度上限<input type="number" aria-label="开度上限" :value="item.params.positionMax??100" @focus="$emit('start')" @change="item.params.positionMax=Number($event.target.value)" /></label></div></template>
         <label v-if="['tank','barGauge'].includes(item.symbol)">液位 / 棒图颜色<input type="color" aria-label="液位颜色" :value="item.params.waterColor||'#66abc5'" @focus="$emit('start')" @change="item.params.waterColor=$event.target.value" /></label><label v-if="item.symbol==='tank'">液位填充方向<select aria-label="液位填充方向" :value="item.params.levelDirection||'up'" @focus="$emit('start')" @change="item.params.levelDirection=$event.target.value"><option value="up">从下向上</option><option value="down">从上向下</option></select></label>
         <div class="pair"><label v-for="(label,key) in {x:'位置 X',y:'位置 Y',w:'宽度',h:'高度',angle:'角度'}">{{label}}<input type="number" :aria-label="label" :value="geometryValue(key)" @focus="startGeometry(key,$event)" @input="geometryDraft.value=$event.target.value" @change="commitGeometry(key,$event)" @blur="geometryDraft.id=''" /></label></div>

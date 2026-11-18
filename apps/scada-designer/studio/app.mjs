@@ -126,6 +126,7 @@ async function boot() {
       function screenCommand({key,step=1,file}) {
         if(key==="undo")return undo(); if(key==="redo")return redo();
         if(key==="image")return loadImage(file);
+        if(key==="device-picture")return loadImage(file, true);
         const selected=doc.value.nodes.filter((n)=>ids.value.includes(n.id)), movable=selected.filter((n)=>!n.locked);
         if(!selected.length&&!ids.value.some((id)=>doc.value.pipes.some((p)=>p.id===id)))return;
         snapshot();
@@ -1030,7 +1031,7 @@ async function boot() {
           screenTool.value = "select";
           document.querySelector(".project-menu")?.removeAttribute("open");
         });
-      function loadImage(file) {
+      function loadImage(file, device = false) {
         if (!file || !sel.value) return;
         const n = sel.value;
         const reader = new FileReader();
@@ -1038,6 +1039,7 @@ async function boot() {
           if(screen.value){try{validateScreenAsset(reader.result);}catch(e){message.value=e.message;return;}}
           snapshot();
           n.image = reader.result;
+          if (device) n.params.appearance = "picture";
         };
         reader.readAsDataURL(file);
       }
