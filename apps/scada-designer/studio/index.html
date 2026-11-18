@@ -35,7 +35,7 @@
               "
           /></label>
           <button @click="runExport">导出离线演示</button>
-          <a href="/view" target="_blank" rel="noopener">打开展示端 ↗</a>
+          <a :href="publishedUrl" target="_blank" rel="noopener">打开展示端 ↗</a>
         </div>
       </details>
       <button v-if="!preview" class="primary" @click="goStep('preview')">
@@ -83,20 +83,22 @@
     </nav>
     <div
       class="workspace"
-      :class="{ presentation: viewer, review: preview && !viewer }"
+      :class="{ presentation: viewer, review: preview && !viewer,'screen-editor':screen&&editing,'left-collapsed':screenView.leftCollapsed,'right-collapsed':screenView.rightCollapsed }"
     >
-      <aside v-if="editing" class="navigator" aria-label="场景与组件">
+      <aside v-if="editing" v-show="!screen||!screenView.leftCollapsed" class="navigator" aria-label="场景与组件">
         <template v-if="screen && activeStep!=='scene'">
-          <div class="screen-library-tabs" role="tablist" aria-label="绘图资源"><button role="tab" :aria-selected="libraryTab==='symbols'" @click="libraryTab='symbols'">图元与工具</button><button role="tab" :aria-selected="libraryTab==='layers'" @click="libraryTab='layers'">图层 {{screenItems.length}}</button></div>
+          <div class="screen-library-tabs" role="tablist" aria-label="绘图资源"><button role="tab" aria-label="图元与工具" :aria-selected="libraryTab==='symbols'" @click="libraryTab='symbols'">绘图</button><button role="tab" :aria-selected="libraryTab==='layers'" @click="libraryTab='layers'">图层 {{screenItems.length}}</button><button role="tab" :aria-selected="libraryTab==='mine'" @click="libraryTab='mine'">我的图元</button></div>
           <template v-if="libraryTab==='symbols'">
-            <h2>绘图工具</h2><div class="tools screen-tools"><button v-for="(label,key) in {select:'↖ 选择',pipe:'⌁ 连管',rect:'▭ 矩形',ellipse:'◯ 椭圆',text:'T 文字'}" :data-tool="key" :class="{active:screenTool===key}" @click="setScreenTool(key)">{{label}}</button></div>
+            <h2>绘图工具</h2><div class="tools screen-tools"><button v-for="(label,key) in {select:'↖ 选择',pipe:'⌁ 连管',rect:'▭ 矩形',ellipse:'◯ 椭圆',line:'直线',polyline:'折线',polygon:'多边形',text:'T 文字'}" :data-tool="key" :class="{active:screenTool===key}" @click="setScreenTool(key)">{{label}}</button></div>
             <h2>独立设备图元</h2><p class="muted">拖入画布，或点击后在画布放置。</p>
             <div class="tools screen-symbols"><button v-for="symbol in ['pump','valve','tank','fan','junction']" :data-symbol="symbol" draggable="true" @dragstart="screenDrag($event,symbol)" @click="setScreenTool(symbol)">{{screenSymbols[symbol].label}}</button></div>
             <h2>数据与素材</h2><div class="tools screen-symbols"><button v-for="symbol in ['readout','trend','image']" :data-symbol="symbol" draggable="true" @dragstart="screenDrag($event,symbol)" @click="setScreenTool(symbol)">{{screenSymbols[symbol].label}}</button></div>
+            <h2>驾驶舱组件</h2><div class="tools screen-symbols"><button v-for="symbol in ['status','barGauge','gauge','barChart','pieChart','table','events','button']" :data-symbol="symbol" draggable="true" @dragstart="screenDrag($event,symbol)" @click="setScreenTool(symbol)">{{screenSymbols[symbol].label}}</button></div>
             <div class="screen-source-summary"><b>{{sourceTitle}}</b><span>{{connection}}</span><small>{{doc.mappings.length}} 个测点</small><button @click="openConfig">管理连接与点位</button></div>
             <p class="muted">Shift 多选 / 框选，方向键微移，Ctrl+D 复制。先选“连管”，再拖动设备的圆形接口。</p>
           </template>
-          <template v-else><input aria-label="查找画布对象" placeholder="查找设备、管道或文字" v-model="layerSearch" /><button v-for="n in screenItems.filter(n=>!layerSearch||n.title.includes(layerSearch))" class="layer" :class="{active:ids.includes(n.id)}" :data-layer="n.id" @click="screenSelect($event.shiftKey?[...new Set([...ids,n.id])]:n.group?doc.nodes.filter(v=>v.group===n.group).map(v=>v.id):[n.id])"><span>{{n.locked?'▣ ':''}}{{n.hidden?'◌ ':''}}{{n.title}}</span><small>{{n.type==='pipe'?'管道':screenSymbols[n.symbol].label}}<span v-if="bindingProblem(n,doc.mappings)"> · 待绑定</span></small></button><p v-if="!screenItems.length" class="muted">画布为空，切换到图元与工具开始绘制。</p></template>
+          <template v-else-if="libraryTab==='layers'"><input aria-label="查找画布对象" placeholder="查找设备、管道或文字" v-model="layerSearch" /><button v-for="n in screenItems.filter(n=>!layerSearch||n.title.includes(layerSearch))" class="layer" :class="{active:ids.includes(n.id)}" :data-layer="n.id" @click="screenSelect($event.altKey?[n.id]:$event.shiftKey?[...new Set([...ids,n.id])]:n.group?doc.nodes.filter(v=>v.group===n.group).map(v=>v.id):[n.id])"><span>{{n.locked?'▣ ':''}}{{n.hidden?'◌ ':''}}{{n.title}}</span><small>{{n.type==='pipe'?'管道':screenSymbols[n.symbol].label}}<span v-if="bindingReason(n)"> · 待绑定</span></small></button><p v-if="!screenItems.length" class="muted">画布为空，切换到图元与工具开始绘制。</p></template>
+          <screen-library v-else :doc="doc" :selected="ids" @start="snapshot" @place="setScreenTool('library:'+$event)"></screen-library>
         </template>
         <template v-else>
         <template v-if="activeStep === 'scene'">
@@ -194,11 +196,11 @@
             <span v-if="expandable(n)" class="tree-toggle" role="button" :aria-label="(collapsed.includes(n.id)?'展开 ':'收起 ')+n.title" @click.stop="toggleTree(n)">{{collapsed.includes(n.id)?'▸':'▾'}}</span>
             <span>{{ n.locked ? "▣ " : "" }}{{ n.title }}</span
             ><small
-              :class="{ 'needs-binding': bindingProblem(n, doc.mappings) }"
+              :class="{ 'needs-binding': bindingReason(n) }"
               >{{ types[n.type] }} ·
               {{
                 mapped(n)
-                  ? bindingProblem(n, doc.mappings)
+                  ? bindingReason(n)
                     ? "待绑定"
                     : "已绑定"
                   : "静态内容"
@@ -226,26 +228,27 @@
         </template>
       </aside>
       <div class="canvas-workspace">
+        <screen-page-navigator v-if="screen&&(editing||pages.length>1)" :project="project" :pages="pages" :active="activePageId" :editing="editing" @change="switchScreenPage" @add="addPage" @rename="pageAction('rename',$event)" @home="pageAction('home')" @remove="pageAction('remove')"></screen-page-navigator>
         <div v-if="!viewer" class="canvas-toolbar">
-          <b>{{ preview ? "页面预览" : "场景画布" }}</b
+          <screen-viewport-tools v-if="screen&&editing" :view="screenView" @pan="screenTool='select'"></screen-viewport-tools><b>{{ preview ? "页面预览" : "场景画布" }}</b
           ><span>1920 × 1080</span
-          ><span>{{ Math.round(zoom * 100) }}% · 自适应</span
+          ><span>{{ Math.round(screenView.scale * 100) }}%{{screenView.manual&&screen?'':' · 自适应'}}</span
           ><small>{{
             preview
               ? "展示效果与发布页面一致"
               : sel
                 ? "已选中：" + sel.title
-                : screen ? (screenTool==='pipe'?'拖动圆形接口连接设备':screenTool==='select'?'选择、拖动与缩放图元':'在画布放置：'+screenSymbols[screenTool]?.label) : native ? "直接拖动对象 · Shift 多选 · Alt 选择设备内文字" : "点击组件编辑 · 拖动标题移动 · 拖动右下角缩放"
+                : screen ? (screenTool==='pipe'?'拖动圆形接口连接设备':screenTool==='select'?'选择、拖动与缩放图元':'在画布放置：'+(screenTool.startsWith('library:')?doc.symbols?.find(s=>s.id===screenTool.slice(8))?.name:screenSymbols[screenTool]?.label)) : native ? "直接拖动对象 · Shift 多选 · Alt 选择设备内文字" : "点击组件编辑 · 拖动标题移动 · 拖动右下角缩放"
           }}</small
           ><button v-if="preview" @click="goStep('canvas')">返回编辑</button>
         </div>
-        <main ref="stage" @pointerdown.self="ids = []">
+        <main ref="stage" :class="{'screen-panning':screen&&editing&&(screenView.panTool||screenView.space||screenView.dragging)}" @mousedown.capture="screenView.start" @wheel="screenView.wheel" @pointerdown.self="ids = []"><screen-rulers v-if="screen&&editing" :view="screenView"></screen-rulers>
           <div
             class="board"
               @pointerdown.self="ids = []"
-            :style="{ transform: 'translate(-50%,-50%) scale(' + zoom + ')',background:screen?doc.canvas.background:undefined }"
+            :style="{...screenView.style,background:screen?doc.canvas.background:undefined}"
           >
-            <screen-stage v-if="screen" :doc="doc" :points="points" :selected="ids" :editing="editing" :tool="screenTool" :sequence="sequence" :source-version="sourceVersion" :blocked="!!dialog" @start="snapshot" @insert="screenInsert" @geometry="screenGeometry" @pipe="screenPipe" @select="screenSelect" @tool="setScreenTool" @command="screenCommand"></screen-stage>
+            <screen-stage v-if="screen" :doc="doc" :points="points" :selected="ids" :editing="editing" :tool="screenTool" :sequence="sequence" :source-version="sourceVersion" :blocked="!!dialog" @start="snapshot" @insert="screenInsert" @geometry="screenGeometry" @pipe="screenPipe" @library="screenLibraryPlace" @navigate="switchScreenPage" @select="screenSelect" @tool="setScreenTool" @command="screenCommand"></screen-stage>
             <div v-if="screen" class="screen-source-badge">{{doc.title}} · {{sourceTitle}} · {{connection}}</div>
             <native-stage v-if="native" :key="doc.template+':'+sourceVersion" :doc="doc" :points="points" :selected="ids" :editing="editing" :sequence="sequence" :clock="clock" :connection="connection" @select="nativeSelect" @patch="nativePatch" @start="snapshot" @move="nativeMove" @geometry="nativeRects=$event"></native-stage>
             <div v-if="!native && !screen" class="board-title">
@@ -262,7 +265,7 @@
                 'pending-binding':
                   editing &&
                   activeStep === 'bind' &&
-                  bindingProblem(n, doc.mappings),
+                  bindingReason(n),
               }"
               :data-id="n.id"
               :style="{
@@ -293,13 +296,13 @@
           </div>
         </main>
       </div>
-      <aside v-if="!viewer" class="inspector" aria-label="当前配置">
+      <aside v-if="!viewer" v-show="!screen||!editing||!screenView.rightCollapsed" class="inspector" aria-label="当前配置">
         <template v-if="preview">
           <h2>发布检查</h2>
           <p class="muted">先确认画面和数据，再发布到展示端。</p>
           <div class="review-item">
-            <b>场景画布</b
-            ><span>{{ doc.nodes.length }} 个组件 · 1920 × 1080</span>
+            <b>{{screen?'项目画面':'场景画布'}}</b
+            ><span>{{screen?pages.length+' 张画面 · 当前 ':''}}{{ doc.nodes.length }} 个组件 · 1920 × 1080</span><small v-if="screen">首页：{{pages.find(p=>p.id===(project.defaultPageId||'main'))?.title}}</small>
           </div>
           <div class="review-item">
             <b>数据来源</b><span>{{ sourceTitle }}</span
@@ -316,7 +319,7 @@
                 : "所有组件绑定已完成"
             }}</span
             ><button v-for="n in bindingIssues" @click="selectBinding(n)">
-              去绑定：{{ n.title }}
+              {{bindingIssueLabel(n)}}
             </button>
           </div>
           <div v-if="invalidPoints" class="quality-note">
@@ -327,7 +330,7 @@
         </template>
         <template v-else>
           <template v-if="screen && sel">
-            <screen-inspector :item="sel" :doc="doc" :points="points" :tab="inspectorTab" :count="ids.length" @start="snapshot" @geometry="screenGeometry" @action="screenCommand" @tab="inspectorTab=$event" @data="openConfig"></screen-inspector>
+            <screen-inspector :item="sel" :doc="doc" :project="project" :points="points" :tab="inspectorTab" :count="ids.length" @start="snapshot" @geometry="screenGeometry" @action="screenCommand" @tab="inspectorTab=$event" @data="openConfig"></screen-inspector>
           </template>
           <template v-else-if="sel">
             <div class="inspector-heading">
@@ -642,6 +645,7 @@
                 v-model="doc.title"
                 @focus="snapshot"
             /></label>
+            <label v-if="screen">画面主题<select aria-label="画面主题" :value="doc.canvas.theme||'process-gray'" @change="setScreenTheme($event.target.value)"><option v-for="(theme,key) in screenThemes" :value="key">{{theme.name}}</option></select></label>
             <label v-if="screen">画布背景<input type="color" aria-label="画布背景" v-model="doc.canvas.background" @focus="snapshot" /></label>
             <p class="inspector-empty">
               点击画布或左侧列表中的组件，在这里编辑外观和数据。
@@ -655,7 +659,7 @@
     </div>
 
     <div v-if="!viewer && message && !dialog" role="status" class="status-message">
-      <span>{{message}}</span><a v-if="published" href="/view" target="_blank" rel="noopener">查看展示页面 ↗</a><button @click="message=''" aria-label="关闭提示">×</button>
+      <span>{{message}}</span><a v-if="published" :href="publishedUrl" target="_blank" rel="noopener">查看展示页面 ↗</a><button @click="message=''" aria-label="关闭提示">×</button>
     </div>
     <div v-if="dialog" class="shade">
       <section

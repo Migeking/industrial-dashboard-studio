@@ -76,10 +76,150 @@ export const screenSymbols = {
   ellipse: { label: "圆 / 椭圆", w: 160, h: 160, ports: [], slots: [] },
   text: { label: "文字", w: 460, h: 60, ports: [], slots: [] },
   image: { label: "图片", w: 400, h: 260, ports: [], slots: [] },
+  line: { label: "直线", w: 300, h: 16, ports: [], slots: [] },
+  polyline: { label: "折线", w: 300, h: 180, ports: [], slots: [] },
+  polygon: { label: "多边形", w: 240, h: 180, ports: [], slots: [] },
+  barChart: {
+    label: "柱状图",
+    w: 620,
+    h: 300,
+    ports: [],
+    slots: [slot("value", "图表数据", ["number", "dataset"], true)],
+  },
+  pieChart: {
+    label: "饼环图",
+    w: 420,
+    h: 320,
+    ports: [],
+    slots: [slot("value", "图表数据", ["dataset"], true)],
+  },
+  gauge: {
+    label: "仪表盘",
+    w: 360,
+    h: 300,
+    ports: [],
+    slots: [slot("value", "显示数值", ["number"], true)],
+  },
+  barGauge: {
+    label: "棒图",
+    w: 200,
+    h: 300,
+    ports: [],
+    slots: [slot("value", "显示数值", ["number"], true)],
+  },
+  status: {
+    label: "状态灯",
+    w: 220,
+    h: 150,
+    ports: [],
+    slots: [
+      slot("run", "状态信号", ["boolean"], true),
+      slot("fault", "故障反馈", ["boolean"]),
+    ],
+  },
+  table: {
+    label: "数据表",
+    w: 680,
+    h: 320,
+    ports: [],
+    slots: [slot("value", "表格数据", ["dataset"], true)],
+  },
+  events: {
+    label: "告警 / 事件列表",
+    w: 680,
+    h: 280,
+    ports: [],
+    slots: [slot("value", "事件数据", ["dataset"], true)],
+  },
+  button: { label: "导航按钮", w: 200, h: 60, ports: [], slots: [] },
 };
 export const pipeSlots = [slot("run", "流动状态", ["boolean"])];
 export function screenSlots(n) {
-  return n?.type === "pipe" ? pipeSlots : screenSymbols[n?.symbol]?.slots || [];
+  const defaults =
+    n?.type === "pipe" ? pipeSlots : screenSymbols[n?.symbol]?.slots || [];
+  const definitions =
+    n?.dataSlots ??
+    defaults.map((s) => ({
+      ...s,
+      role: n?.type === "pipe" && s.key === "run" ? "flow" : s.key,
+    }));
+  return n?.symbol === "valve" &&
+    n.params?.valveMode === "control" &&
+    n.dataSlots === undefined
+    ? definitions.map((s) => ({
+        ...s,
+        required: (s.role || s.key) === "value",
+      }))
+    : definitions;
+}
+export const screenPortSides = {
+  left: "左侧",
+  right: "右侧",
+  top: "顶部",
+  bottom: "底部",
+  custom: "自定位置",
+};
+export const screenSlotRoles = {
+  extra: "附加测点",
+  run: "运行反馈",
+  fault: "故障反馈",
+  open: "开到位反馈",
+  value: "显示数值 / 数据",
+  text: "显示文字",
+  flow: "管道流动",
+};
+export function screenPorts(n) {
+  return (
+    n?.ports ??
+    (screenSymbols[n?.symbol]?.ports || []).map((id) => ({
+      id,
+      label: screenPortSides[id],
+      x: id === "left" ? 0 : id === "right" ? 100 : 50,
+      y: id === "top" ? 0 : id === "bottom" ? 100 : 50,
+      direction: "both",
+    }))
+  );
+}
+export function screenRoleSlot(n, role) {
+  return screenSlots(n).find((s) => (s.role || s.key) === role);
+}
+export function screenDefaultAction(n) {
+  return ["trend", "barChart", "pieChart", "gauge", "table", "events"].includes(
+    n?.symbol,
+  )
+    ? "none"
+    : screenSlots(n).length
+      ? "details"
+      : "none";
+}
+export function screenPoint(n, points, role) {
+  const s = screenRoleSlot(n, role);
+  return s ? points[n.bindings?.[s.key]] : undefined;
+}
+export function screenGraphPorts(n) {
+  return {
+    groups: {
+      custom: {
+        position: "absolute",
+        attrs: {
+          circle: {
+            r: 7,
+            magnet: true,
+            stroke: "#087f85",
+            strokeWidth: 2,
+            fill: "#fff",
+          },
+        },
+      },
+    },
+    items: screenPorts(n).map((p) => ({
+      id: p.id,
+      group: "custom",
+      args: { x: p.x + "%", y: p.y + "%" },
+      attrs: { circle: { "data-port-label": p.label, "aria-label": p.label } },
+      tooltip: p.label,
+    })),
+  };
 }
 export function screenSlotMappings(slot, mappings) {
   return mappings.filter((m) => slot.kinds.includes(m.kind));
@@ -306,7 +446,32 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
       },
     },
   ]);
-  for (const symbol of ["rect", "ellipse", "text", "image"])
+  for (const symbol of ["line", "polyline", "polygon"]) {
+    const def = screenSymbols[symbol];
+    artwork(symbol, [
+      {
+        ...transparent(def.w, def.h),
+        attrs: {
+          width: def.w,
+          height: def.h,
+          fill: "transparent",
+          pointerEvents: "none",
+        },
+      },
+      {
+        tagName: "path",
+        selector: "body",
+        attrs: {
+          d: `M0 ${def.h / 2}L${def.w} ${def.h / 2}`,
+          fill: symbol === "polygon" ? "#e5edf2" : "none",
+          stroke: "#547185",
+          strokeWidth: 3,
+          vectorEffect: "non-scaling-stroke",
+        },
+      },
+    ]);
+  }
+  for (const symbol of ["rect", "ellipse", "text", "image", "button"])
     Graph.registerNode(
       "screen-" + symbol,
       {
@@ -329,11 +494,60 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
       },
       true,
     );
-  Shape.HTML.register({
-    shape: "screen-trend",
-    width: 620,
-    height: 300,
-    effect: [],
-    html: renderChart,
-  });
+  artwork("status", [
+    transparent(220, 150),
+    {
+      tagName: "circle",
+      selector: "body",
+      attrs: {
+        cx: 110,
+        cy: 45,
+        r: 25,
+        fill: "#9baab5",
+        stroke: "#547185",
+        strokeWidth: 2,
+      },
+    },
+    text("caption", 110, 104),
+    text("state", 110, 138, 18),
+  ]);
+  artwork("barGauge", [
+    transparent(200, 300),
+    {
+      tagName: "rect",
+      selector: "body",
+      attrs: {
+        x: 55,
+        y: 25,
+        width: 90,
+        height: 220,
+        rx: 5,
+        fill: "#edf2f5",
+        stroke: "#547185",
+        strokeWidth: 2,
+      },
+    },
+    {
+      tagName: "rect",
+      selector: "water",
+      attrs: { x: 59, y: 241, width: 82, height: 0, fill: "#66abc5" },
+    },
+    text("value", 100, 150, 24),
+    text("caption", 100, 282),
+  ]);
+  for (const symbol of [
+    "trend",
+    "barChart",
+    "pieChart",
+    "gauge",
+    "table",
+    "events",
+  ])
+    Shape.HTML.register({
+      shape: "screen-" + symbol,
+      width: screenSymbols[symbol].w,
+      height: screenSymbols[symbol].h,
+      effect: [],
+      html: renderChart,
+    });
 }

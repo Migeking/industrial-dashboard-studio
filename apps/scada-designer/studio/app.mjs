@@ -17,10 +17,16 @@ import { Widget } from "./widgets.mjs";
 import { TagManager } from "./tag-manager.mjs";
 import { isNative, nativeTypes, nativeSlots, nativeSlotMappings, nativeBranch, cloneNativeBranch, nativeRecipes, nativeRecipe, nativeBlank } from "../../../packages/runtime/studio/native-model.mjs";
 import { NativeStage } from "../../../packages/runtime/studio/native-renderer.mjs";
-import { isScreen, blankScreen, copyScreenSelection } from "../../../packages/runtime/studio/screen-model.mjs";
+import { isScreen, blankScreen, copyScreenSelection,validateScreenAsset } from "../../../packages/runtime/studio/screen-model.mjs";
 import { screenSymbols } from "../../../packages/components/studio/screen-symbols.mjs";
 import { ScreenStage } from "../../../packages/runtime/studio/screen-renderer.mjs";
 import { ScreenInspector } from "./screen-inspector.mjs";
+import {ScreenLibrary} from "./screen-library.mjs";
+import {placeScreenSymbol} from "../../../packages/runtime/studio/screen-library.mjs";
+import {useScreenViewport,ScreenViewportTools,ScreenRulers} from "./screen-viewport.mjs";
+import {screenPages,screenPageView,addScreenPage,screenPageForNode,screenPageItems,removeScreenPage,screenActionProblem} from "../../../packages/runtime/studio/screen-pages.mjs";
+import {ScreenPageNavigator} from "./screen-pages.mjs";
+import {screenThemes,applyScreenTheme,applyScreenNodeTheme} from "../../../packages/runtime/studio/screen-themes.mjs";
 const offline = window.OFFLINE;
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const kindNames = {
@@ -58,7 +64,7 @@ async function boot() {
     offline || (await api(viewer ? "/api/published" : "/api/draft"));
   document.getElementById("app").classList.toggle("editor-shell", !viewer);
   Vue.createApp({
-    components: { Widget, TagManager, NativeStage, ScreenStage, ScreenInspector },
+    components: { Widget, TagManager, NativeStage, ScreenStage, ScreenInspector,ScreenLibrary,ScreenViewportTools,ScreenRulers,ScreenPageNavigator },
     setup() {
       const {
         ref,
@@ -69,7 +75,8 @@ async function boot() {
         onBeforeUnmount,
         shallowRef,
       } = Vue;
-      const doc = ref(initial),
+      const project=ref(initial),activePageId=ref(new URLSearchParams(location.search).get("page")||(viewer?initial.defaultPageId:undefined)||"main");
+      const doc = computed({get:()=>screenPageView(project.value,activePageId.value),set:(value)=>{project.value=value;if(!isScreen(value)||activePageId.value!=="main"&&!value.pages?.some(p=>p.id===activePageId.value))activePageId.value="main";}}),
         ids = ref([]),
         stage = ref(),
         zoom = ref(1),
@@ -81,24 +88,35 @@ async function boot() {
           [...doc.value.nodes,...(isScreen(doc.value)?doc.value.pipes:[])].find((n) => n.id === ids.value.at(-1)),
         );
       const screen = computed(()=>isScreen(doc.value)), screenTool = ref("select"), libraryTab = ref("symbols");
+      const screenView=useScreenViewport(stage,screen,editing,zoom);
+      const pages=computed(()=>screen.value?screenPages(project.value):[]),publishedUrl=computed(()=>"/view"+(screen.value&&activePageId.value!=="main"?"?page="+encodeURIComponent(activePageId.value):""));
+      if(screen.value&&!pages.value.some(p=>p.id===activePageId.value))activePageId.value=project.value.defaultPageId||'main';
+      watch(()=>[activePageId.value,screen.value],()=>{const url=new URL(location.href);if(screen.value&&activePageId.value!=='main')url.searchParams.set('page',activePageId.value);else url.searchParams.delete('page');window.history.replaceState(null,'',url.pathname+url.search+url.hash);});
+      function switchScreenPage(id){if(!pages.value.some(p=>p.id===id)){message.value="目标画面已不存在";return;}if(activePageId.value===id)return;activePageId.value=id;ids.value=[];screenTool.value="select";screenView.fit();if(viewer)window.history.replaceState(null,"",publishedUrl.value);}
+      function addPage(){snapshot();const page=addScreenPage(project.value,crypto.randomUUID());switchScreenPage(page.id);preview.value=false;activeStep.value="canvas";message.value="已添加空白画面，连接、点表和我的图元共用。";}
+      function pageAction(key,value){try{if(key==="rename"){if(!value?.trim())throw Error("请填写画面名称");snapshot();doc.value.title=value.trim();}else if(key==="home"){snapshot();project.value.defaultPageId=activePageId.value;}else if(key==="remove"){removeScreenPage(clone(project.value),activePageId.value);snapshot();removeScreenPage(project.value,activePageId.value);switchScreenPage("main");}message.value="画面设置已更新";}catch(e){message.value=e.message;}}
       const screenItems = computed(()=>[...doc.value.nodes,...(screen.value?doc.value.pipes:[])]);
       function newScreen() {
+        if(screen.value)return addPage();
         snapshot();
-        const next=blankScreen(); next.source=clone(doc.value.source); next.mappings=clone(doc.value.mappings);
-        doc.value=next; ids.value=[]; screenTool.value="select"; libraryTab.value="symbols"; goStep("canvas");
+        const next=blankScreen(); next.source=clone(doc.value.source); next.mappings=clone(doc.value.mappings);next.symbols=clone(doc.value.symbols||[]);
+        doc.value=next; ids.value=[]; screenTool.value="select"; libraryTab.value="symbols";screenView.fit();goStep("canvas");
         message.value="已新建空白画面，连接与点表已保留；可撤销恢复原画面。";
       }
+      function setScreenTheme(id){try{snapshot();applyScreenTheme(doc.value,id);}catch(e){message.value=e.message;}}
       function screenSelect(selected) { ids.value=selected; }
       function screenGeometry(change) {
         const n=doc.value.nodes.find((n)=>n.id===change.id); if(!n||n.locked)return;
         for(const key of ["x","y","w","h","angle"])if(change[key]!==undefined&&Number.isFinite(change[key]))n[key]=change[key];
+        if(change.points)n.points=clone(change.points);
         n.w=Math.max(16,Math.min(1920,n.w)); n.h=Math.max(16,Math.min(1080,n.h));
         n.x=Math.max(0,Math.min(1920-n.w,n.x)); n.y=Math.max(0,Math.min(1080-n.h,n.y));
       }
-      function screenInsert(n) {doc.value.nodes.push(n);ids.value=[n.id];inspectorTab.value="appearance";}
+      function screenInsert(n) {if(doc.value.canvas.theme)applyScreenNodeTheme(n,doc.value.canvas.theme);doc.value.nodes.push(n);ids.value=[n.id];inspectorTab.value="appearance";}
       function screenPipe(pipe) {const index=doc.value.pipes.findIndex((p)=>p.id===pipe.id);if(index<0)doc.value.pipes.push(pipe);else doc.value.pipes[index]=pipe;}
-      function setScreenTool(tool) {screenTool.value=tool;if(tool==="pipe")ids.value=[];}
+      function setScreenTool(tool) {screenView.panTool=false;screenTool.value=tool;if(tool==="pipe")ids.value=[];}
       function screenDrag(event,symbol) {event.dataTransfer.setData("application/x-scada-symbol",symbol);}
+      function screenLibraryPlace({id,x,y}){try{const symbol=doc.value.symbols?.find(s=>s.id===id);if(!symbol)throw Error("图元已不存在");ids.value=placeScreenSymbol(doc.value,symbol,x,y,()=>crypto.randomUUID());if(doc.value.canvas.theme)doc.value.nodes.filter(n=>ids.value.includes(n.id)).forEach(n=>applyScreenNodeTheme(n,doc.value.canvas.theme));inspectorTab.value="appearance";message.value="图元已放置，请为新实例选择测点。";}catch(e){message.value=e.message;}}
       function screenCommand({key,step=1,file}) {
         if(key==="undo")return undo(); if(key==="redo")return redo();
         if(key==="image")return loadImage(file);
@@ -251,7 +269,7 @@ async function boot() {
         saving = ref(false),
         published = ref(false);
       const dirty = computed(
-        () => JSON.stringify(doc.value) !== lastSaved.value,
+        () => JSON.stringify(project.value) !== lastSaved.value,
       );
       watch(dirty, (value) => {
         if (value && published.value) {
@@ -260,10 +278,13 @@ async function boot() {
         }
       });
       const bindingNodes = computed(() =>
-        screenItems.value.filter((n) => mapped(n)),
+        (screen.value?screenPageItems(project.value):screenItems.value).filter((n) => mapped(n)||screen.value&&n.action&&n.action.type!=="none"),
       );
+      const bindingReason=(n)=>bindingProblem(n,doc.value.mappings)||(screen.value?screenActionProblem(n,project.value):'');
+      const bindingIssueLabel=(n)=>(screen.value&&screenActionProblem(n,project.value)&&!bindingProblem(n,doc.value.mappings)?'去配置：':'去绑定：')+n.title;
+
       const bindingIssues = computed(() =>
-        bindingNodes.value.filter((n) => bindingProblem(n, doc.value.mappings)),
+        bindingNodes.value.filter((n) => bindingProblem(n, doc.value.mappings)||screen.value&&screenActionProblem(n,project.value)),
       );
       const sourceTitle = computed(
         () =>
@@ -283,12 +304,14 @@ async function boot() {
           ).length,
       );
       function selectBinding(n) {
+        if(screen.value)switchScreenPage(screenPageForNode(project.value,n.id));
         preview.value = false;
         activeStep.value = screen.value ? "canvas" : "bind";
-        inspectorTab.value = "binding";
+        inspectorTab.value = screen.value&&!bindingProblem(n,doc.value.mappings)&&screenActionProblem(n,project.value)?"action":"binding";
         ids.value = [n.id];
       }
       function goStep(key) {
+        if(screen.value&&key==="bind"){const n=sel.value&&(hasBindings(sel.value)||sel.value.action)?sel.value:bindingIssues.value[0]||bindingNodes.value[0];if(n)selectBinding(n);return;}
         dialog.value = "";
         activeStep.value = screen.value && key==="bind" ? "canvas" : key;
         preview.value = key === "preview";
@@ -386,7 +409,7 @@ async function boot() {
         drag;
       function snapshot() {
         redoHistory.length = 0; redoCount.value = 0;
-        const value = JSON.stringify(doc.value);
+        const value = JSON.stringify(project.value);
         if (history.at(-1) !== value) {
           history.push(value);
           if (history.length > 50) history.shift();
@@ -395,13 +418,13 @@ async function boot() {
       }
       function undo() {
         if (history.length) {
-          redoHistory.push(JSON.stringify(doc.value)); redoCount.value = redoHistory.length;
+          redoHistory.push(JSON.stringify(project.value)); redoCount.value = redoHistory.length;
           doc.value = JSON.parse(history.pop());
           ids.value = [];
           undoCount.value = history.length;
         }
       }
-      function redo() { if (redoHistory.length) { history.push(JSON.stringify(doc.value)); doc.value = JSON.parse(redoHistory.pop()); redoCount.value = redoHistory.length; undoCount.value = history.length; ids.value = []; } }
+      function redo() { if (redoHistory.length) { history.push(JSON.stringify(project.value)); doc.value = JSON.parse(redoHistory.pop()); redoCount.value = redoHistory.length; undoCount.value = history.length; ids.value = []; } }
       function pick(n, e) {
         if (!editing.value) return;
         if (e?.shiftKey) {
@@ -603,13 +626,13 @@ async function boot() {
         if (publish && bindingIssues.value.length) {
           openBindings();
           message.value =
-            "请完成 " + bindingIssues.value.length + " 个组件的测点绑定";
+            "请完成 " + bindingIssues.value.length + (screen.value?" 个元素的测点或交互配置":" 个组件的测点绑定");
           return;
         }
         return guarded(async () => {
           saving.value = true;
           try {
-            const value = clone(doc.value);
+            const value = clone(project.value);
             validate(value, publish);
             await api(publish ? "/api/publish" : "/api/draft", value);
             lastSaved.value = JSON.stringify(value);
@@ -766,29 +789,20 @@ async function boot() {
         mappingIndex.value = 0;
       }
       async function finishTags() {
-        if (
-          !sample.value ||
-          sampleSource.value !== JSON.stringify(config.value.source)
-        )
-          await readSample();
-        if (
-          sample.value &&
-          sampleSource.value === JSON.stringify(config.value.source)
-        )
-          await applyConfig();
+        // Offline engineering is valid: acquisition quality is decided at runtime.
+        await applyConfig(false);
       }
-      function applyConfig() {
+      function applyConfig(requireSample = true) {
         return guarded(async () => {
           const native = ["opcua", "modbus"].includes(config.value.source.kind);
           if (native) {
-            if (
-              !sample.value ||
-              sampleSource.value !== JSON.stringify(config.value.source)
-            )
+            const currentSample = sample.value && sampleSource.value === JSON.stringify(config.value.source);
+            if (requireSample && !currentSample)
               throw Error("请读取当前连接配置的样本，再应用数据配置");
-            bridgeMappings();
+            if (currentSample) bridgeMappings();
+            else config.value.mappings = protocolMappings(config.value.source.connection.points, config.value.source.kind, config.value.mappings);
           }
-          const updated = { ...doc.value, ...config.value };
+          const updated = { ...project.value, ...config.value };
           if (updated.source.kind !== "json") updated.source.demo = false;
           validate(updated, false);
           if (["csv", "json"].includes(config.value.source.kind))
@@ -990,7 +1004,7 @@ async function boot() {
           download(
             "监视页面-离线演示.html",
             await api("/api/export", {
-              doc: doc.value,
+              doc: project.value,
               payload: connected.value ? raw.value : null,
               receivedAt: received.value,
             }),
@@ -1015,13 +1029,14 @@ async function boot() {
         const n = sel.value;
         const reader = new FileReader();
         reader.onload = () => {
+          if(screen.value){try{validateScreenAsset(reader.result);}catch(e){message.value=e.message;return;}}
           snapshot();
           n.image = reader.result;
         };
         reader.readAsDataURL(file);
       }
       return {
-        screen,screenSymbols,screenTool,libraryTab,screenItems,newScreen,screenSelect,screenGeometry,screenInsert,screenPipe,setScreenTool,screenDrag,screenCommand,
+        screen,screenSymbols,screenTool,libraryTab,screenItems,newScreen,screenSelect,screenGeometry,screenInsert,screenPipe,setScreenTool,screenDrag,screenCommand,screenLibraryPlace,screenView,screenThemes,setScreenTheme,project,pages,activePageId,publishedUrl,bindingReason,bindingIssueLabel,switchScreenPage,addPage,pageAction,
         native, legacyTypes, nativeRecipes, addNative, nativeSelect, nativeMove, nativePatch, nativeRects, rectValue, rectDraft, rectInputValue, startRect, chosenDataMode, nodeCount, pipePoints, updatePipe,
         navigatorNodes, depth, expandable, collapsed, toggleTree, layerSearch, hasBindings, nativeBindingTargets, nativeSlots, nativeSlotMappings, nativeBinding, nativeReadback,
         activeStep,
@@ -1109,7 +1124,7 @@ async function boot() {
         exportDoc: () =>
           download(
             "project.json",
-            JSON.stringify(doc.value, null, 2),
+            JSON.stringify(project.value, null, 2),
             "application/json",
           ),
         fileData: (file) =>

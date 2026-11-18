@@ -1,5 +1,7 @@
 # 空白画面设计器：首个贯通版本验收
 
+后续 M1—M4 的完整状态见 [整体验收记录](screen-designer-stages.md)。本页保留首轮结果。
+
 日期：2026-11-18。分支：`codex/visual-config-platform`。实施依据：[重订方案](../plans/scada-screen-designer.md)。
 
 ## 结论与范围

@@ -56,6 +56,19 @@ const files = new Map(
     "/packages/runtime/studio/screen-model.mjs": "../../packages/runtime/studio/screen-model.mjs",
     "/packages/runtime/studio/screen-renderer.mjs": "../../packages/runtime/studio/screen-renderer.mjs",
     "/screen-inspector.mjs": "studio/screen-inspector.mjs",
+    "/screen-definitions.mjs": "studio/screen-definitions.mjs",
+    "/screen-rules.mjs": "studio/screen-rules.mjs",
+    "/screen-library.mjs": "studio/screen-library.mjs",
+    "/screen-viewport.mjs": "studio/screen-viewport.mjs",
+    "/screen-pages.mjs": "studio/screen-pages.mjs",
+    "/screen-actions.mjs": "studio/screen-actions.mjs",
+    "/screen-widget-settings.mjs": "studio/screen-widget-settings.mjs",
+    "/packages/runtime/studio/screen-trend-panel.mjs": "../../packages/runtime/studio/screen-trend-panel.mjs",
+    "/packages/runtime/studio/screen-pages.mjs": "../../packages/runtime/studio/screen-pages.mjs",
+    "/packages/runtime/studio/screen-library.mjs": "../../packages/runtime/studio/screen-library.mjs",
+    "/packages/runtime/studio/screen-dynamics.mjs": "../../packages/runtime/studio/screen-dynamics.mjs",
+    "/packages/runtime/studio/screen-widgets.mjs": "../../packages/runtime/studio/screen-widgets.mjs",
+    "/packages/runtime/studio/screen-themes.mjs": "../../packages/runtime/studio/screen-themes.mjs",
     "/packages/components/studio/native-data.mjs": "../../packages/components/studio/native-data.mjs",
     "/packages/runtime/studio/native-model.mjs": "../../packages/runtime/studio/native-model.mjs",
     "/packages/runtime/studio/native-renderer.mjs": "../../packages/runtime/studio/native-renderer.mjs",
@@ -104,7 +117,7 @@ async function offline(doc, payload, receivedAt) {
     );
   }
   const modules = await Promise.all(
-    ["/packages/components/studio/native-data.mjs", "/packages/runtime/studio/native-model.mjs", "/packages/components/studio/screen-symbols.mjs", "/packages/runtime/studio/screen-model.mjs", "/model.mjs", "/widgets.mjs", "/tag-manager.mjs", "/packages/runtime/studio/native-renderer.mjs", "/packages/runtime/studio/screen-renderer.mjs", "/screen-inspector.mjs", "/app.mjs"].map(content),
+    ["/packages/components/studio/native-data.mjs", "/packages/runtime/studio/native-model.mjs", "/packages/components/studio/screen-symbols.mjs", "/packages/runtime/studio/screen-dynamics.mjs", "/packages/runtime/studio/screen-widgets.mjs", "/packages/runtime/studio/screen-themes.mjs", "/packages/runtime/studio/screen-model.mjs", "/packages/runtime/studio/screen-library.mjs", "/packages/runtime/studio/screen-pages.mjs", "/model.mjs", "/widgets.mjs", "/tag-manager.mjs", "/packages/runtime/studio/native-renderer.mjs", "/packages/runtime/studio/screen-trend-panel.mjs", "/packages/runtime/studio/screen-renderer.mjs", "/screen-definitions.mjs", "/screen-rules.mjs", "/screen-actions.mjs", "/screen-widget-settings.mjs", "/screen-inspector.mjs", "/screen-library.mjs", "/screen-viewport.mjs", "/screen-pages.mjs", "/app.mjs"].map(content),
   );
   const code = modules
     .map((m) =>

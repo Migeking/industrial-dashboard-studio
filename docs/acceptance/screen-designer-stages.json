@@ -1,0 +1,393 @@
+{
+  "objective": "整体方案 M1-M4，组件/点数据绑定与连接点均可定义",
+  "stages": {
+    "M1": [
+      {
+        "requirement": "基础矩形圆文字图片",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_drawing_ui_check.py",
+          "tests/studio_layout_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "直线折线多边形",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_drawing_ui_check.py",
+          "tests/studio_layout_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "本地 SVG 资源与交付",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_drawing_ui_check.py",
+          "tests/studio_layout_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "字体对齐换行",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_drawing_ui_check.py",
+          "tests/studio_layout_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "选择变换与布局工具",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_drawing_ui_check.py",
+          "tests/studio_layout_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "可折叠面板",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_drawing_ui_check.py",
+          "tests/studio_layout_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "标尺缩放平移适应",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_drawing_ui_check.py",
+          "tests/studio_layout_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "世界坐标与手势撤销",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_drawing_ui_check.py",
+          "tests/studio_layout_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "元素连接点可定义",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_drawing_ui_check.py",
+          "tests/studio_layout_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "元素数据槽位可定义",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_drawing_ui_check.py",
+          "tests/studio_layout_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "旧项目兼容",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_model_check.mjs",
+          "tests/studio_v2_model_check.mjs",
+          "tests/studio_check.py",
+          "tests/studio_v2_check.py"
+        ]
+      }
+    ],
+    "M2": [
+      {
+        "requirement": "泵风机阀池仪表独立图元",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_process_tools_check.py",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "经典平面与精细平面预设",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_process_tools_check.py",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "方向标签液位参数",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_process_tools_check.py",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "管道端口手动转折",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_process_tools_check.py",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "开放管端未连接状态",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_process_tools_check.py",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "介质颜色箭头流动方向",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_process_tools_check.py",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "变换组合复制保留连接",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_process_tools_check.py",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "我的图元保存跨画面实例化",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_process_tools_check.py",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "我的图元接口槽位规则保留",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_process_tools_check.py",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_definitions_ui_check.py"
+        ]
+      }
+    ],
+    "M3": [
+      {
+        "requirement": "KepServer 选点沿用",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_check.py",
+          "tests/studio_definitions_ui_check.py",
+          "tests/studio_pages_ui_check.py",
+          "tests/studio_cockpit_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "Modbus 批量地址编辑",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_modbus_batch_check.mjs",
+          "tests/studio_modbus_batch_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "类型过滤必需绑定",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_check.py",
+          "tests/studio_definitions_ui_check.py",
+          "tests/studio_pages_ui_check.py",
+          "tests/studio_cockpit_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "比较区间枚举显示规则",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_check.py",
+          "tests/studio_definitions_ui_check.py",
+          "tests/studio_pages_ui_check.py",
+          "tests/studio_cockpit_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "质量零false故障恢复",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_check.py",
+          "tests/studio_definitions_ui_check.py",
+          "tests/studio_pages_ui_check.py",
+          "tests/studio_cockpit_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "有限事件及只读设备面板",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_check.py",
+          "tests/studio_definitions_ui_check.py",
+          "tests/studio_pages_ui_check.py",
+          "tests/studio_cockpit_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "多画面与导航",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_check.py",
+          "tests/studio_definitions_ui_check.py",
+          "tests/studio_pages_ui_check.py",
+          "tests/studio_cockpit_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "草稿发布版本离线同模型",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_check.py",
+          "tests/studio_definitions_ui_check.py",
+          "tests/studio_pages_ui_check.py",
+          "tests/studio_cockpit_ui_check.py"
+        ]
+      },
+      {
+        "requirement": "数据刷新不污染设计与历史",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_check.py",
+          "tests/studio_definitions_ui_check.py",
+          "tests/studio_pages_ui_check.py",
+          "tests/studio_cockpit_ui_check.py"
+        ]
+      }
+    ],
+    "M4": [
+      {
+        "requirement": "指标状态灯棒图仪表",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_widgets_check.mjs",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_load_check.py"
+        ]
+      },
+      {
+        "requirement": "折线柱图饼环图多序列左右轴",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_widgets_check.mjs",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_load_check.py"
+        ]
+      },
+      {
+        "requirement": "字段时间图例阈值范围可配",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_widgets_check.mjs",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_load_check.py"
+        ]
+      },
+      {
+        "requirement": "表格事件告警列表字段排序行数",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_widgets_check.mjs",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_load_check.py"
+        ]
+      },
+      {
+        "requirement": "灰浅深三种主题",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_widgets_check.mjs",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_load_check.py"
+        ]
+      },
+      {
+        "requirement": "从空白 UI 制作 A 工艺画面",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_widgets_check.mjs",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_load_check.py"
+        ]
+      },
+      {
+        "requirement": "从空白 UI 制作 B 驾驶舱",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_widgets_check.mjs",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_load_check.py"
+        ]
+      },
+      {
+        "requirement": "同组件跨 A B 复用与换绑",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_widgets_check.mjs",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_load_check.py"
+        ]
+      },
+      {
+        "requirement": "三个横屏尺寸及编辑折叠",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_widgets_check.mjs",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_load_check.py"
+        ]
+      },
+      {
+        "requirement": "300节点100管道6图表性能",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_load_check.py"
+        ],
+        "limitation": "Short capacity sample, not a long-duration soak or fixed-FPS claim"
+      },
+      {
+        "requirement": "无重复图表与脚本错误",
+        "status": "passed",
+        "evidence": [
+          "tests/studio_widgets_check.mjs",
+          "tests/studio_cockpit_ui_check.py",
+          "tests/studio_load_check.py"
+        ]
+      },
+      {
+        "requirement": "截图操作文档与可复现交付",
+        "status": "passed",
+        "evidence": [
+          "apps/scada-designer/README.md",
+          "docs/screenshots/studio-screen-designer.png",
+          "docs/screenshots/studio-cockpit-designer.png",
+          "apps/scada-designer/examples/water-process-and-cockpit.json"
+        ]
+      }
+    ]
+  },
+  "date": "2026-11-18",
+  "status": "passed",
+  "scope": "M1-M4 2D first version; local simulation and software verification, not mechanical acceptance"
+}

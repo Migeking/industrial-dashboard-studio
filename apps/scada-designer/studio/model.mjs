@@ -400,6 +400,24 @@ export function validate(doc, publishing) {
   return doc;
 }
 
+// Registers are entered as one-based ordinals, stored as zero-based addresses.
+// Build the complete batch before mutating the user's point table.
+export function modbusBatchPoints(settings, existing = []) {
+  const { prefix, start, count, serial, step, format, order } = settings;
+  const fn = settings.function;
+  const width = fn <= 2 ? 1 : ["uint32", "int32", "float32"].includes(format) ? 2 : 1;
+  if (typeof prefix !== "string" || !/^[\w.-]+$/.test(prefix)) throw Error("编号前缀请使用英文、数字、下划线、点或短横线");
+  if (![1,2,3,4].includes(fn) || ![start,count,serial,step].every(Number.isInteger) || start < 1 || count < 1 || count > 500 || serial < 0 || step < width || start - 1 + (count - 1) * step + width > 65536) throw Error("数量为 1～500；寄存器序号从 1 开始，步长不得小于数据占用的寄存器数，末地址不得越界");
+  const rows = Array.from({length:count}, (_,i) => ({id:prefix+String(serial+i).padStart(3,"0"),label:prefix+String(serial+i).padStart(3,"0"),kind:fn<=2?"boolean":"number",function:fn,address:start-1+i*step,...(fn>2?{format,order}: {})}));
+  const ids = new Set(existing.map(p=>p.id));
+  for (const row of rows) {
+    if (ids.has(row.id)) throw Error("点位编号已存在："+row.id);
+    if (existing.some(p=>p.function===fn && row.address < p.address+(fn<=2||["uint16","int16"].includes(p.format)?1:2) && p.address < row.address+width)) throw Error("地址与已选点位重叠："+(row.address+1));
+  }
+  validateConnection({host:"batch",port:502,unitId:1,points:rows},"modbus");
+  return rows;
+}
+
 export function validateConnection(c, kind) {
   if (!c || !Array.isArray(c.points) || !c.points.length)
     throw Error("请先选择协议测点");

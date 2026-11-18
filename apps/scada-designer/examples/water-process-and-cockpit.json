@@ -1,0 +1,1632 @@
+{
+  "format": "screen-document",
+  "version": 1,
+  "template": "blank",
+  "title": "供水泵组工艺监控 · 本地模拟",
+  "canvas": {
+    "width": 1920,
+    "height": 1080,
+    "background": "#f4f7f9"
+  },
+  "source": {
+    "kind": "json",
+    "data": "{\"points\": [{\"id\": \"P101.run\", \"label\": \"P101.run\", \"kind\": \"boolean\", \"value\": true, \"quality\": \"good\", \"unit\": \"\"}, {\"id\": \"P101.fault\", \"label\": \"P101.fault\", \"kind\": \"boolean\", \"value\": false, \"quality\": \"good\", \"unit\": \"\"}, {\"id\": \"P101.hz\", \"label\": \"P101.hz\", \"kind\": \"number\", \"value\": 38.5, \"quality\": \"good\", \"unit\": \"Hz\"}, {\"id\": \"P102.run\", \"label\": \"P102.run\", \"kind\": \"boolean\", \"value\": false, \"quality\": \"good\", \"unit\": \"\"}, {\"id\": \"P102.fault\", \"label\": \"P102.fault\", \"kind\": \"boolean\", \"value\": false, \"quality\": \"good\", \"unit\": \"\"}, {\"id\": \"P103.run\", \"label\": \"P103.run\", \"kind\": \"boolean\", \"value\": false, \"quality\": \"good\", \"unit\": \"\"}, {\"id\": \"P103.fault\", \"label\": \"P103.fault\", \"kind\": \"boolean\", \"value\": false, \"quality\": \"good\", \"unit\": \"\"}, {\"id\": \"V101.open\", \"label\": \"V101.open\", \"kind\": \"boolean\", \"value\": true, \"quality\": \"good\", \"unit\": \"\"}, {\"id\": \"V102.open\", \"label\": \"V102.open\", \"kind\": \"boolean\", \"value\": false, \"quality\": \"good\", \"unit\": \"\"}, {\"id\": \"T101.level\", \"label\": \"T101.level\", \"kind\": \"number\", \"value\": 3.2, \"quality\": \"good\", \"unit\": \"m\"}, {\"id\": \"plant.flow\", \"label\": \"plant.flow\", \"kind\": \"number\", \"value\": 128.6, \"quality\": \"good\", \"unit\": \"m³/h\"}, {\"id\": \"plant.energy\", \"label\": \"plant.energy\", \"kind\": \"number\", \"value\": 460.2, \"quality\": \"good\", \"unit\": \"kWh\"}, {\"id\": \"plant.efficiency\", \"label\": \"plant.efficiency\", \"kind\": \"number\", \"value\": 92.5, \"quality\": \"good\", \"unit\": \"%\"}, {\"id\": \"plant.onlineCount\", \"label\": \"plant.onlineCount\", \"kind\": \"number\", \"value\": 5, \"quality\": \"good\", \"unit\": \"台\"}, {\"id\": \"history\", \"label\": \"history\", \"kind\": \"dataset\", \"value\": [{\"time\": 1794970469123, \"frequency\": 30.0, \"flow\": 105}, {\"time\": 1794970479123, \"frequency\": 31.7, \"flow\": 112}, {\"time\": 1794970489123, \"frequency\": 33.4, \"flow\": 121}, {\"time\": 1794970499123, \"frequency\": 35.1, \"flow\": 130}, {\"time\": 1794970509123, \"frequency\": 36.8, \"flow\": 126}, {\"time\": 1794970519123, \"frequency\": 38.5, \"flow\": 128.6}], \"quality\": \"good\", \"unit\": \"\"}, {\"id\": \"branches\", \"label\": \"branches\", \"kind\": \"dataset\", \"value\": [{\"branch\": \"东区\", \"flow\": 68.4}, {\"branch\": \"西区\", \"flow\": 60.2}], \"quality\": \"good\", \"unit\": \"\"}, {\"id\": \"branches.alternate\", \"label\": \"branches.alternate\", \"kind\": \"dataset\", \"value\": [{\"branch\": \"东区\", \"flow\": 70.0}, {\"branch\": \"西区\", \"flow\": 58.6}], \"quality\": \"good\", \"unit\": \"\"}, {\"id\": \"energy.categories\", \"label\": \"energy.categories\", \"kind\": \"dataset\", \"value\": [{\"category\": \"提升泵\", \"value\": 300}, {\"category\": \"送水泵\", \"value\": 100}, {\"category\": \"附属设备\", \"value\": 60.2}], \"quality\": \"good\", \"unit\": \"\"}, {\"id\": \"devices\", \"label\": \"devices\", \"kind\": \"dataset\", \"value\": [{\"name\": \"P-101\", \"running\": true, \"fault\": false, \"frequency\": 38.5}, {\"name\": \"P-102\", \"running\": false, \"fault\": false, \"frequency\": 0}, {\"name\": \"P-103\", \"running\": false, \"fault\": false, \"frequency\": 0}], \"quality\": \"good\", \"unit\": \"\"}, {\"id\": \"events\", \"label\": \"events\", \"kind\": \"dataset\", \"value\": [{\"time\": 1794970399123, \"level\": \"warning\", \"device\": \"T-101\", \"message\": \"历史演示事件：液位低预警已恢复\"}, {\"time\": 1794970459123, \"level\": \"info\", \"device\": \"P-101\", \"message\": \"历史演示事件：进入运行状态\"}], \"quality\": \"good\", \"unit\": \"\"}]}",
+    "url": "",
+    "pollMs": 1000,
+    "maxAgeMs": 10000,
+    "demo": true
+  },
+  "mappings": [
+    {
+      "id": "P101.run",
+      "label": "P101.run",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P101.run",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P101.fault",
+      "label": "P101.fault",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P101.fault",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P101.hz",
+      "label": "P101.hz",
+      "unit": "Hz",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P101.hz",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P102.run",
+      "label": "P102.run",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P102.run",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P102.fault",
+      "label": "P102.fault",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P102.fault",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P103.run",
+      "label": "P103.run",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P103.run",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P103.fault",
+      "label": "P103.fault",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P103.fault",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "V101.open",
+      "label": "V101.open",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "V101.open",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "V102.open",
+      "label": "V102.open",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "V102.open",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "T101.level",
+      "label": "T101.level",
+      "unit": "m",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "T101.level",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "plant.flow",
+      "label": "plant.flow",
+      "unit": "m³/h",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "plant.flow",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "plant.energy",
+      "label": "plant.energy",
+      "unit": "kWh",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "plant.energy",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "plant.efficiency",
+      "label": "plant.efficiency",
+      "unit": "%",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "plant.efficiency",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "plant.onlineCount",
+      "label": "plant.onlineCount",
+      "unit": "台",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "plant.onlineCount",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "history",
+      "label": "history",
+      "unit": "",
+      "kind": "dataset",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "history",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "branches",
+      "label": "branches",
+      "unit": "",
+      "kind": "dataset",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "branches",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "branches.alternate",
+      "label": "branches.alternate",
+      "unit": "",
+      "kind": "dataset",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "branches.alternate",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "energy.categories",
+      "label": "energy.categories",
+      "unit": "",
+      "kind": "dataset",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "energy.categories",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "devices",
+      "label": "devices",
+      "unit": "",
+      "kind": "dataset",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "devices",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "events",
+      "label": "events",
+      "unit": "",
+      "kind": "dataset",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "events",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "89ded864-f59e-48b9-81c9-036c4f8154bd",
+      "type": "screen-node",
+      "symbol": "rect",
+      "title": "泵组工艺区",
+      "x": 70,
+      "y": 230,
+      "w": 1080,
+      "h": 690,
+      "angle": 0,
+      "z": -10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {}
+    },
+    {
+      "id": "d1b4e67a-7bd1-42bd-836b-210760d40812",
+      "type": "screen-node",
+      "symbol": "text",
+      "title": "文字",
+      "x": 90,
+      "y": 70,
+      "w": 460,
+      "h": 60,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "transparent",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 32
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {},
+      "text": "供水泵组运行监控"
+    },
+    {
+      "id": "32e17f9c-0639-4244-ae06-d707bf814623",
+      "type": "screen-node",
+      "symbol": "tank",
+      "title": "T-101",
+      "x": 130,
+      "y": 450,
+      "w": 220,
+      "h": 300,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {
+        "value": "T101.level"
+      }
+    },
+    {
+      "id": "d93d684e-3880-4a64-928c-c34c28e2a115",
+      "type": "screen-node",
+      "symbol": "pump",
+      "title": "P-101",
+      "x": 680,
+      "y": 285,
+      "w": 190,
+      "h": 160,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {
+        "run": "P101.run",
+        "fault": "P101.fault",
+        "value": "P101.hz"
+      }
+    },
+    {
+      "id": "471f8e21-b7b3-4829-ae03-d1de5763a82c",
+      "type": "screen-node",
+      "symbol": "pump",
+      "title": "P-102",
+      "x": 560,
+      "y": 500,
+      "w": 170,
+      "h": 160,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {
+        "run": "P102.run",
+        "fault": "P102.fault"
+      }
+    },
+    {
+      "id": "b163db51-c5a5-4c23-bf01-0cde3c6b52f8",
+      "type": "screen-node",
+      "symbol": "pump",
+      "title": "P-103",
+      "x": 560,
+      "y": 700,
+      "w": 170,
+      "h": 160,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {
+        "run": "P103.run",
+        "fault": "P103.fault"
+      }
+    },
+    {
+      "id": "8e4219a3-8a92-4126-bce4-3e2dae64d119",
+      "type": "screen-node",
+      "symbol": "valve",
+      "title": "V-101",
+      "x": 870,
+      "y": 310,
+      "w": 150,
+      "h": 140,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {
+        "open": "V101.open"
+      }
+    },
+    {
+      "id": "0b11e886-fc64-42b2-9f85-91356464c7fb",
+      "type": "screen-node",
+      "symbol": "valve",
+      "title": "V-102",
+      "x": 870,
+      "y": 510,
+      "w": 150,
+      "h": 140,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {
+        "open": "V102.open"
+      }
+    },
+    {
+      "id": "7fd5f6c5-ac4b-4d31-af7b-0d8d59dffc50",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "J-101",
+      "x": 430,
+      "y": 370,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#547185",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {}
+    },
+    {
+      "id": "d385f7f3-1fe2-4432-80bb-af83656c1572",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "J-102",
+      "x": 430,
+      "y": 570,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#547185",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {}
+    },
+    {
+      "id": "46774d73-9d87-46b9-ab7c-c677d6e37363",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "J-103",
+      "x": 430,
+      "y": 770,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#547185",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {}
+    },
+    {
+      "id": "9deae079-334c-460e-b77c-806542190051",
+      "type": "screen-node",
+      "symbol": "readout",
+      "title": "P-101 运行频率",
+      "x": 1450,
+      "y": 220,
+      "w": 400,
+      "h": 150,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#ffffff",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 44
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {
+        "value": "P101.hz"
+      }
+    },
+    {
+      "id": "1c79243f-0b4a-4643-975c-bf402304e537",
+      "type": "screen-node",
+      "symbol": "trend",
+      "title": "P-101 实时趋势",
+      "x": 1210,
+      "y": 450,
+      "w": 650,
+      "h": 300,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#ffffff",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {
+        "value": "P101.hz"
+      }
+    },
+    {
+      "id": "a5f5d235-fc7d-4dd9-9e09-df4e0f818d23",
+      "type": "screen-node",
+      "symbol": "barGauge",
+      "title": "清水池液位",
+      "x": 1190,
+      "y": 215,
+      "w": 210,
+      "h": 280,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {
+        "value": "T101.level"
+      }
+    },
+    {
+      "id": "318884ef-6716-4518-b496-f696a0d3d5bc",
+      "type": "screen-node",
+      "symbol": "events",
+      "title": "最近事件 · 本地模拟",
+      "x": 1210,
+      "y": 790,
+      "w": 650,
+      "h": 230,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#ffffff",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "columns": [
+          {
+            "field": "time",
+            "title": "时间",
+            "format": "time",
+            "unit": ""
+          },
+          {
+            "field": "level",
+            "title": "级别",
+            "format": "text",
+            "unit": ""
+          },
+          {
+            "field": "device",
+            "title": "设备",
+            "format": "text",
+            "unit": ""
+          },
+          {
+            "field": "message",
+            "title": "事件内容",
+            "format": "text",
+            "unit": ""
+          }
+        ],
+        "sortField": "time",
+        "sortDirection": "desc",
+        "limit": 3
+      },
+      "bindings": {
+        "value": "events"
+      }
+    },
+    {
+      "id": "165d1f99-1e0d-406a-a08c-48a95599fa18",
+      "type": "screen-node",
+      "symbol": "button",
+      "title": "运行驾驶舱",
+      "x": 1600,
+      "y": 60,
+      "w": 230,
+      "h": 65,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120
+      },
+      "bindings": {},
+      "action": {
+        "type": "navigate",
+        "pageId": "43453882-8a49-4366-a11e-f46d24584001"
+      }
+    }
+  ],
+  "pipes": [
+    {
+      "id": "109f562b-15b4-4dd0-bd1a-eb94facf4d4a",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#557f96",
+        "width": 7
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "32e17f9c-0639-4244-ae06-d707bf814623",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "d385f7f3-1fe2-4432-80bb-af83656c1572",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "7c924181-aa56-4c25-afa5-c1c103cfce53",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#557f96",
+        "width": 7
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "7fd5f6c5-ac4b-4d31-af7b-0d8d59dffc50",
+        "portId": "bottom"
+      },
+      "target": {
+        "nodeId": "d385f7f3-1fe2-4432-80bb-af83656c1572",
+        "portId": "top"
+      },
+      "vertices": []
+    },
+    {
+      "id": "5ed29d75-a259-4af5-8d9e-ba64b273124f",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#557f96",
+        "width": 7
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "d385f7f3-1fe2-4432-80bb-af83656c1572",
+        "portId": "bottom"
+      },
+      "target": {
+        "nodeId": "46774d73-9d87-46b9-ab7c-c677d6e37363",
+        "portId": "top"
+      },
+      "vertices": []
+    },
+    {
+      "id": "6483c0e8-939a-43c2-8fb8-922e603e784d",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#557f96",
+        "width": 7
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "7fd5f6c5-ac4b-4d31-af7b-0d8d59dffc50",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "d93d684e-3880-4a64-928c-c34c28e2a115",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "77864d18-da61-4eb0-89d8-6649e29ebcf8",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#557f96",
+        "width": 7
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "d385f7f3-1fe2-4432-80bb-af83656c1572",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "471f8e21-b7b3-4829-ae03-d1de5763a82c",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "e9f2451c-f19a-457f-a7ec-5c5f2d870503",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#557f96",
+        "width": 7
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "46774d73-9d87-46b9-ab7c-c677d6e37363",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "b163db51-c5a5-4c23-bf01-0cde3c6b52f8",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "9d8dab2f-2c65-4feb-9926-6f446eb57f95",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#557f96",
+        "width": 7
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "d93d684e-3880-4a64-928c-c34c28e2a115",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "8e4219a3-8a92-4126-bce4-3e2dae64d119",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "563a606b-b77c-4231-9ab0-ff82f656c96c",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#557f96",
+        "width": 7
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "471f8e21-b7b3-4829-ae03-d1de5763a82c",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "0b11e886-fc64-42b2-9f85-91356464c7fb",
+        "portId": "left"
+      },
+      "vertices": []
+    }
+  ],
+  "pages": [
+    {
+      "id": "43453882-8a49-4366-a11e-f46d24584001",
+      "title": "供水运行驾驶舱",
+      "canvas": {
+        "width": 1920,
+        "height": 1080,
+        "background": "#071a2a",
+        "theme": "cockpit-dark"
+      },
+      "nodes": [
+        {
+          "id": "8e285af4-d20e-4c77-9e03-a254a17b9601",
+          "type": "screen-node",
+          "symbol": "text",
+          "title": "驾驶舱标题",
+          "x": 40,
+          "y": 35,
+          "w": 1250,
+          "h": 80,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "transparent",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 42,
+            "align": "left"
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 2,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14
+          },
+          "bindings": {},
+          "text": "供水运行驾驶舱  /  本地模拟"
+        },
+        {
+          "id": "bc3938ef-8e6d-43fb-9068-537e5ef58a0d",
+          "type": "screen-node",
+          "symbol": "status",
+          "title": "P-101",
+          "x": 1430,
+          "y": 20,
+          "w": 220,
+          "h": 120,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 20
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 2,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14,
+            "onText": "运行",
+            "offText": "停止"
+          },
+          "bindings": {
+            "run": "P101.run",
+            "fault": "P101.fault"
+          }
+        },
+        {
+          "id": "c61fb580-ed58-4473-9855-0c702efca22a",
+          "type": "screen-node",
+          "symbol": "button",
+          "title": "工艺监控",
+          "x": 1680,
+          "y": 50,
+          "w": 200,
+          "h": 60,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 20
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 2,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14
+          },
+          "bindings": {},
+          "action": {
+            "type": "navigate",
+            "pageId": "main"
+          }
+        },
+        {
+          "id": "d26245b8-617b-4be8-a92d-541d947adae2",
+          "type": "screen-node",
+          "symbol": "readout",
+          "title": "总流量",
+          "x": 40,
+          "y": 160,
+          "w": 280,
+          "h": 140,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 44
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 1,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14
+          },
+          "bindings": {
+            "value": "plant.flow"
+          }
+        },
+        {
+          "id": "c4666ccf-17f8-4e19-b6c2-95d3bf233083",
+          "type": "screen-node",
+          "symbol": "readout",
+          "title": "累计能耗",
+          "x": 350,
+          "y": 160,
+          "w": 280,
+          "h": 140,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 44
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 1,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14
+          },
+          "bindings": {
+            "value": "plant.energy"
+          }
+        },
+        {
+          "id": "e92f9a05-a9b1-4788-a828-acf6a0184a47",
+          "type": "screen-node",
+          "symbol": "readout",
+          "title": "运行效率",
+          "x": 660,
+          "y": 160,
+          "w": 280,
+          "h": 140,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 44
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 1,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14
+          },
+          "bindings": {
+            "value": "plant.efficiency"
+          }
+        },
+        {
+          "id": "182c2c32-d21c-4e70-a7c3-e267e4d5a297",
+          "type": "screen-node",
+          "symbol": "readout",
+          "title": "在线设备",
+          "x": 970,
+          "y": 160,
+          "w": 280,
+          "h": 140,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 44
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 0,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14
+          },
+          "bindings": {
+            "value": "plant.onlineCount"
+          }
+        },
+        {
+          "id": "a693b553-1821-408a-a0a9-9d34acb6517a",
+          "type": "screen-node",
+          "symbol": "readout",
+          "title": "清水池液位",
+          "x": 1280,
+          "y": 160,
+          "w": 280,
+          "h": 140,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 44
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 1,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14
+          },
+          "bindings": {
+            "value": "T101.level"
+          }
+        },
+        {
+          "id": "3a31137a-ab20-4809-bdcd-d748a5550a49",
+          "type": "screen-node",
+          "symbol": "readout",
+          "title": "主泵频率",
+          "x": 1590,
+          "y": 160,
+          "w": 280,
+          "h": 140,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 44
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 1,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14
+          },
+          "bindings": {
+            "value": "P101.hz"
+          }
+        },
+        {
+          "id": "0393f703-628e-47f3-a39f-3cb13b69efad",
+          "type": "screen-node",
+          "symbol": "trend",
+          "title": "频率 / 流量历史",
+          "x": 40,
+          "y": 340,
+          "w": 820,
+          "h": 310,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 20
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 2,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14,
+            "xField": "time",
+            "series": [
+              {
+                "id": "primary",
+                "slot": "value",
+                "name": "频率",
+                "type": "line",
+                "axis": 0,
+                "field": "frequency"
+              },
+              {
+                "id": "e6be6ee1-ea8d-452e-989d-dc34c38b8fe1",
+                "slot": "series_2",
+                "name": "流量",
+                "type": "line",
+                "axis": 1,
+                "field": "flow"
+              }
+            ],
+            "leftUnit": "Hz",
+            "leftMin": 0,
+            "leftMax": 60,
+            "rightUnit": "m³/h",
+            "rightMin": 0,
+            "rightMax": 200,
+            "thresholds": [
+              {
+                "value": 50,
+                "axis": 0,
+                "label": "频率上限",
+                "color": "#d98b45"
+              }
+            ]
+          },
+          "bindings": {
+            "value": "history",
+            "series_2": "history"
+          },
+          "dataSlots": [
+            {
+              "key": "value",
+              "label": "趋势数据",
+              "kinds": [
+                "number",
+                "dataset"
+              ],
+              "required": true,
+              "role": "value"
+            },
+            {
+              "key": "series_2",
+              "label": "序列 2",
+              "kinds": [
+                "number",
+                "dataset"
+              ],
+              "role": "extra",
+              "required": true
+            }
+          ]
+        },
+        {
+          "id": "ac21b26f-c3ca-477a-832f-e7de7163d53f",
+          "type": "screen-node",
+          "symbol": "barChart",
+          "title": "分区供水量",
+          "x": 890,
+          "y": 340,
+          "w": 500,
+          "h": 310,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 20
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 2,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14,
+            "xField": "branch",
+            "series": [
+              {
+                "id": "primary",
+                "slot": "value",
+                "name": "",
+                "type": "bar",
+                "axis": 0,
+                "field": "flow"
+              }
+            ],
+            "leftMin": 0,
+            "leftMax": 100,
+            "leftUnit": "m³/h"
+          },
+          "bindings": {
+            "value": "branches"
+          }
+        },
+        {
+          "id": "152f9775-88ff-42c2-b5f3-aab92d21769b",
+          "type": "screen-node",
+          "symbol": "pieChart",
+          "title": "能耗分项",
+          "x": 1420,
+          "y": 340,
+          "w": 460,
+          "h": 310,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 20
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 2,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14,
+            "xField": "category"
+          },
+          "bindings": {
+            "value": "energy.categories"
+          }
+        },
+        {
+          "id": "3b95ead1-c523-4410-9c95-faf068e016c1",
+          "type": "screen-node",
+          "symbol": "table",
+          "title": "设备运行状态",
+          "x": 40,
+          "y": 690,
+          "w": 670,
+          "h": 300,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 20
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 2,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14,
+            "columns": [
+              {
+                "field": "name",
+                "title": "设备",
+                "format": "text",
+                "unit": ""
+              },
+              {
+                "field": "running",
+                "title": "运行",
+                "format": "boolean",
+                "unit": ""
+              },
+              {
+                "field": "fault",
+                "title": "故障",
+                "format": "boolean",
+                "unit": ""
+              },
+              {
+                "field": "frequency",
+                "title": "频率",
+                "format": "number",
+                "unit": "Hz"
+              }
+            ],
+            "sortField": "name",
+            "limit": 3
+          },
+          "bindings": {
+            "value": "devices"
+          }
+        },
+        {
+          "id": "547f3db9-41e8-4e59-a9cd-5dd42cb0aadc",
+          "type": "screen-node",
+          "symbol": "events",
+          "title": "事件记录 · 本地模拟",
+          "x": 740,
+          "y": 690,
+          "w": 690,
+          "h": 300,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 20
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 2,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14,
+            "columns": [
+              {
+                "field": "time",
+                "title": "发生时间",
+                "format": "time",
+                "unit": ""
+              },
+              {
+                "field": "level",
+                "title": "级别",
+                "format": "text",
+                "unit": ""
+              },
+              {
+                "field": "device",
+                "title": "设备",
+                "format": "text",
+                "unit": ""
+              },
+              {
+                "field": "message",
+                "title": "内容",
+                "format": "text",
+                "unit": ""
+              }
+            ],
+            "sortField": "time",
+            "sortDirection": "desc",
+            "limit": 5
+          },
+          "bindings": {
+            "value": "events"
+          }
+        },
+        {
+          "id": "33571f6b-bc44-4718-a0dd-8fd89d62e327",
+          "type": "screen-node",
+          "symbol": "gauge",
+          "title": "主泵频率",
+          "x": 1460,
+          "y": 690,
+          "w": 390,
+          "h": 300,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 20
+          },
+          "params": {
+            "min": 0,
+            "max": 60,
+            "unit": "",
+            "precision": 2,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14
+          },
+          "bindings": {
+            "value": "P101.hz"
+          }
+        }
+      ],
+      "pipes": []
+    }
+  ],
+  "defaultPageId": "43453882-8a49-4366-a11e-f46d24584001"
+}

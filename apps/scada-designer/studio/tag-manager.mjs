@@ -1,4 +1,4 @@
-import { protocolMappings, importNorthbound, normalize } from "./model.mjs";
+import { protocolMappings, importNorthbound, normalize, modbusBatchPoints } from "./model.mjs";
 
 export const TagManager = {
   props: [
@@ -153,11 +153,23 @@ export const TagManager = {
       }
     }
     const localError = ref("");
+    const batchOpen = ref(false), batch = ref({prefix:"MB_",start:1,count:10,serial:1,step:1,function:4,format:"uint16",order:"AB"});
+    const batchMessage = ref("");
+    const batchFormat = () => {
+      const wide = batch.value.function>2 && ["uint32","int32","float32"].includes(batch.value.format);
+      batch.value.step = wide?2:1;batch.value.order=wide?"ABCD":"AB";
+    };
+    const addBatch = () => {
+      try {const rows=modbusBatchPoints(batch.value,points.value);points.value.push(...rows);selectedId.value=rows[0].id;sync();localError.value="";batchMessage.value="已添加 "+rows.length+" 个点位，可在下表修改名称与工程量换算";batchOpen.value=false;}
+      catch(e){localError.value=e.message;batchMessage.value="";}
+    };
     function nameChanged() {
       if (mapping.value) mapping.value.label = current.value.label;
     }
     function formatChanged() {
       current.value.kind = current.value.function <= 2 ? "boolean" : "number";
+      const bytes = ['uint16','int16'].includes(current.value.format) ? 2 : 4;
+      if (current.value.order && current.value.order.length !== bytes) delete current.value.order;
       if (current.value.kind === "boolean") {
         delete current.value.rawMin;
         delete current.value.rawMax;
@@ -211,6 +223,7 @@ export const TagManager = {
       selectAll,
       remove,
       addRegister,
+      batchOpen,batch,batchMessage,batchFormat,addBatch,
       importFile,
       nameChanged,
       formatChanged,
@@ -416,6 +429,7 @@ export const TagManager = {
             placeholder="搜索已选点位"
           /><template v-if="source.kind === 'modbus'"
             ><button @click="addRegister" :disabled="busy">新建点位</button
+            ><button @click="batchOpen=!batchOpen;batchMessage=''" :disabled="busy">批量地址</button
             ><label class="button"
               >导入点表<input
                 type="file"
@@ -430,6 +444,13 @@ export const TagManager = {
             移除
           </button>
         </div>
+        <div class="tag-batch" v-if="source.kind==='modbus'&&batchOpen">
+          <b>批量添加连续地址</b><p>序号从 1 开始；生成后可逐行改名。此操作只建立点表。</p>
+          <div class="pair"><label>编号前缀<input aria-label="批量编号前缀" v-model="batch.prefix" /></label><label>编号起始<input type="number" aria-label="批量编号起始" v-model.number="batch.serial" min="0" /></label></div>
+          <div class="pair"><label>地址区<select aria-label="批量读取功能" v-model.number="batch.function" @change="batchFormat"><option :value="1">0x · 线圈</option><option :value="2">1x · 离散输入</option><option :value="3">4x · 保持寄存器</option><option :value="4">3x · 输入寄存器</option></select></label><label v-if="batch.function>2">数据类型<select aria-label="批量数据格式" v-model="batch.format" @change="batchFormat"><option v-for="f in ['uint16','int16','uint32','int32','float32']">{{f}}</option></select></label></div>
+          <div class="pair"><label>起始序号<input type="number" aria-label="批量起始序号" v-model.number="batch.start" min="1" /></label><label>点数<input type="number" aria-label="批量点数" v-model.number="batch.count" min="1" max="500" /></label><label>地址步长<input type="number" aria-label="批量地址步长" v-model.number="batch.step" min="1" /></label><label v-if="batch.function>2">字节顺序<select aria-label="批量字节顺序" v-model="batch.order"><option v-for="o in ['uint16','int16'].includes(batch.format)?['AB','BA']:['ABCD','CDAB','BADC','DCBA']">{{o}}</option></select></label></div>
+          <p>将添加 {{batch.prefix}}{{String(batch.serial).padStart(3,'0')}} 起 {{batch.count}} 点；地址序号 {{batch.start}} ～ {{batch.start+(batch.count-1)*batch.step}}。</p><button class="primary" @click="addBatch" :disabled="busy">添加这批点位</button><button @click="batchOpen=false">取消批量</button>
+        </div><p v-if="batchMessage" role="status">{{batchMessage}}</p>
         <div class="tag-scroll">
           <table>
             <thead>
@@ -525,7 +546,7 @@ export const TagManager = {
               " /></label
           ><small>序号从 1 开始，首个寄存器填 1。</small
           ><label v-if="current.function > 2"
-            >数据类型<select aria-label="数据格式" v-model="current.format">
+            >数据类型<select aria-label="数据格式" v-model="current.format" @change="formatChanged">
               <option
                 v-for="f in ['uint16', 'int16', 'uint32', 'int32', 'float32']"
                 :value="f"

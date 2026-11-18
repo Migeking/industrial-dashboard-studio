@@ -4,7 +4,7 @@
 
 运行 `node apps/scada-designer/server.mjs` 启动画面设计器。新项目默认空白，可独立摆放泵、阀、池体、仪表与趋势，连接设备端口，并绑定 OPC UA / Modbus / REST 等只读数据后发布。详见 [操作说明](apps/scada-designer/README.md)。
 
-当前已完成新设计器的首个贯通版本：空白作图、独立图元、端口连管、移动跟随、同区选点、保存重开、发布及离线导出；从零搭建一池三泵两阀并通过正式界面回归。见 [新画布验收](docs/acceptance/screen-designer.md) 与 [后续方案](docs/plans/scada-screen-designer.md)。通用规则、我的图元、多画面导航和完整驾驶舱组件仍待后续实现。原作品保持 30 套；01/05 的旧 V2 项目继续兼容，暂停按模板数量迁移。
+新设计器现已完成本轮 M1—M4 二维组态范围：基础绘图、可定义端口与数据槽位、显示规则、我的图元、多画面导航、双轴图表和表格，以及同区选点、发布、版本回退和离线导出。工艺 A / 驾驶舱 B 均由空白画布通过正式界面搭建，并通过规模负载和旧格式回归。见 [整体验收](docs/acceptance/screen-designer-stages.md)、[实施方案](docs/plans/scada-screen-designer.md) 与 [可导入示例](apps/scada-designer/examples/water-process-and-cockpit.json)。原作品仍为 30 套，01/05 旧 V2 继续兼容。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Canvas: 1920×1080](https://img.shields.io/badge/canvas-1920%C3%971080-0ea5e9)](docs/architecture.md)
@@ -534,7 +534,7 @@ open apps/scada-designer/index.html
 | --- | --- |
 | ![01 V2](docs/screenshots/01-studio-native.png) | ![05 V2](docs/screenshots/05-studio-native.png) |
 
-原版展示入口继续保留；以上是 V2 渲染结果。当前原型可选择 01 或 05，明确选择演示样本或保留当前连接，再完成“编辑画布 → 数据绑定 → 预览发布”。其空白页仅可插入既有场景片段；真正从零绘图的能力按新方案建设。
+原版展示入口继续保留；以上是 V2 渲染结果。当前原型可选择 01 或 05，明确选择演示样本或保留当前连接，再完成“编辑画布 → 数据绑定 → 预览发布”。旧 V2 空白页仅兼容既有片段；新建默认使用独立二维画布，能力与验收见上方设计器说明。
 
 <details>
 <summary><b>Showcase 多分辨率适配（点击展开）</b></summary>
