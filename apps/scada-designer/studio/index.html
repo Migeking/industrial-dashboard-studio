@@ -14,12 +14,13 @@
       <button @click="newScreen">新建画面</button>
       <button v-if="screen" @click="goStep('scene')" aria-label="选择场景">示例场景</button>
       <button v-if="screen" @click="openConfig">数据连接</button>
+      <button class="assistant-entry" v-if="screen&&editing" :aria-expanded="assistantOpen" @click="assistantOpen=!assistantOpen;cancelAssistant();screenView.rightCollapsed=false">AI 画图</button>
       <small class="save-state">{{
         dirty ? "有未保存修改" : "草稿已保存"
       }}</small>
       <button @click="undo" :disabled="!undoCount">撤销</button>
       <button @click="redo" :disabled="!redoCount">重做</button>
-      <button @click="save(false)" :disabled="saving">保存草稿</button>
+      <button @click="save(false)" :disabled="saving||!!assistantResult">保存草稿</button>
       <button @click="versions">版本</button>
       <details class="project-menu">
         <summary>项目文件</summary>
@@ -38,7 +39,7 @@
           <a :href="publishedUrl" target="_blank" rel="noopener">打开展示端 ↗</a>
         </div>
       </details>
-      <button v-if="!preview" class="primary" @click="goStep('preview')">
+      <button v-if="!preview" class="primary" :disabled="!!assistantResult" @click="goStep('preview')">
         预览发布
       </button>
       <button
@@ -281,7 +282,7 @@
               @pointerdown.self="ids = []"
             :style="{...screenView.style,background:screen?doc.canvas.background:undefined}"
           >
-            <screen-stage v-if="screen" :doc="doc" :points="points" :selected="ids" :editing="editing" :tool="screenTool" :sequence="sequence" :source-version="sourceVersion" :blocked="!!dialog" @start="snapshot" @insert="screenInsert" @geometry="screenGeometry" @pipe="screenPipe" @library="screenLibraryPlace" @navigate="switchScreenPage" @select="screenSelect" @tool="setScreenTool" @command="screenCommand"></screen-stage>
+            <screen-stage v-if="screen" :doc="assistantDoc" :points="points" :selected="ids" :editing="editing&&!assistantResult" :tool="screenTool" :proposal-ids="assistantResult?[...new Set(assistantResult.changes.map(c=>c.id))]:[]" :sequence="sequence" :source-version="sourceVersion" :blocked="!!dialog" @start="snapshot" @insert="screenInsert" @geometry="screenGeometry" @pipe="screenPipe" @library="screenLibraryPlace" @navigate="switchScreenPage" @select="screenSelect" @tool="setScreenTool" @command="screenCommand"></screen-stage>
             <div v-if="screen" class="screen-source-badge" :class="{'screen-rehearsal-badge':previewSamples.size}">{{doc.title}} · {{sourceTitle}} · {{connection}}<span v-if="previewSamples.size"> · 工况演练</span></div>
             <native-stage v-if="native" :key="doc.template+':'+sourceVersion" :doc="doc" :points="points" :selected="ids" :editing="editing" :sequence="sequence" :clock="clock" :connection="connection" @select="nativeSelect" @patch="nativePatch" @start="snapshot" @move="nativeMove" @geometry="nativeRects=$event"></native-stage>
             <div v-if="!native && !screen" class="board-title">
@@ -330,7 +331,8 @@
         </main>
       </div>
       <aside v-if="!viewer" v-show="!screen||!editing||!screenView.rightCollapsed" class="inspector" aria-label="当前配置">
-        <template v-if="preview">
+        <screen-assistant v-if="screen&&assistantOpen&&editing" :project="project" :page-id="activePageId" :result="assistantResult" :error="assistantError" :points="points" :session="assistantSession" @preview="previewAssistant" @cancel="cancelAssistant" @apply="applyAssistant" @close="assistantOpen=false;cancelAssistant()"></screen-assistant>
+        <template v-else-if="preview">
           <h2>发布检查</h2>
           <p class="muted">先确认画面和数据，再发布到展示端。</p>
           <div class="review-item">

@@ -1456,9 +1456,27 @@ fieldset small {
 .component-place-preview { margin:14px 0; padding:12px; border:1px solid #d9e5eb; border-radius:5px; font-size:12px; line-height:1.6; }
 .component-place-preview img { width:100%; height:180px; object-fit:contain; background:#f2f6f8; }
 
+.screen-assistant header { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.screen-assistant h2 { margin:0; }
+.screen-assistant p { line-height:1.6; }
+.screen-assistant .assistant-bindings { max-height:340px; overflow:auto; margin:12px 0; }
+.screen-assistant select { width:100%; }
+.screen-assistant textarea { width:100%; box-sizing:border-box; font-family:Consolas,monospace; }
+.screen-assistant details { margin:12px 0; }
+.screen-assistant ol { max-height:160px; overflow:auto; padding-left:22px; }
 .x6-node[data-proposed="true"] { filter:drop-shadow(0 0 3px #d79a23); }
 .x6-edge[data-proposed="true"] .screen-pipe-rim { stroke:#d79a23; stroke-width:12px; opacity:.5; }
 
+.inspector .screen-assistant header { background:transparent; color:#23445a; padding:0; }
+.studio-header .assistant-entry { background:#d7eaf4; color:#193f56; border-color:#81abc0; font-weight:600; }
+.assistant-chat { max-height:260px; overflow:auto; padding:10px; background:#f0f5f8; border:1px solid #d0dfe8; border-radius:6px; margin:12px 0; }
+.assistant-chat article { padding:10px; margin:8px 0; border-radius:5px; background:white; overflow-wrap:anywhere; }
+.assistant-chat article.user { background:#dcecf5; }
+.assistant-chat p { white-space:pre-wrap; margin:5px 0; }
+.assistant-chat small { color:#526b79; }
+.screen-assistant textarea[aria-label="设计需求"] { font-family:inherit; resize:vertical; min-height:110px; }
+.assistant-examples { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }
+.assistant-generating { padding:10px; background:#edf4fa; border-left:3px solid #3988b2; }
 
 /* Runtime controls use the same screen-document geometry as all other components. */
 .screen-runtime-control{border:0!important;border-radius:5px;justify-content:center;overflow:hidden}

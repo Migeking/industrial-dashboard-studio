@@ -24,6 +24,8 @@ import { waterArtwork } from '../../../packages/components/studio/water-artwork.
 import { waterEquipment, waterEquipmentGroups } from '../../../packages/components/studio/water-equipment.mjs';
 import { screenSymbols, screenPidSymbols } from "../../../packages/components/studio/screen-symbols.mjs";
 import { ScreenStage } from "../../../packages/runtime/studio/screen-renderer.mjs";
+import { executeScreenCommands } from "../../../packages/runtime/studio/screen-commands.mjs";
+import { ScreenAssistant } from "./screen-assistant.mjs";
 import { ScreenInspector } from "./screen-inspector.mjs";
 import {ScreenLibrary} from "./screen-library.mjs";
 import {placeScreenSymbol} from "../../../packages/runtime/studio/screen-library.mjs";
@@ -76,7 +78,7 @@ async function boot() {
     offline || (await api(viewer ? "/api/published" : "/api/draft"));
   document.getElementById("app").classList.toggle("editor-shell", !viewer);
   Vue.createApp({
-    components: { Widget, TagManager, NativeStage, ScreenStage, ScreenInspector,ScreenLibrary,ScreenViewportTools,ScreenRulers,ScreenPageNavigator },
+    components: { ScreenAssistant,Widget, TagManager, NativeStage, ScreenStage, ScreenInspector,ScreenLibrary,ScreenViewportTools,ScreenRulers,ScreenPageNavigator },
     setup() {
       const {
         ref,
@@ -95,6 +97,23 @@ async function boot() {
         preview = ref(false),
         dialog = ref(""),
         message = ref("");
+      const assistantOpen=ref(new URLSearchParams(location.search).get("assistant")==="1"),assistantResult=shallowRef(null),assistantError=ref(""),assistantSession=ref({chat:[],allowed:[],prompt:""});
+      let assistantPayload=null;
+      const assistantApplied=new Set();
+      const assistantDoc=computed(()=>assistantResult.value?screenPageView(assistantResult.value.project,activePageId.value):doc.value);
+      function cancelAssistant(){assistantResult.value=null;assistantError.value="";assistantPayload=null;}
+      function previewAssistant(payload){try{assistantPayload=payload;assistantResult.value=executeScreenCommands(project.value,payload.proposal,payload.allowed);assistantError.value="";ids.value=[];}catch(e){assistantResult.value=null;assistantError.value=e.message;}}
+      function applyAssistant(){
+        if(!assistantResult.value||!assistantPayload)return;
+        try{
+          if(assistantApplied.has(assistantPayload.proposal.id))throw Error("此批次已经应用，请重新生成");
+          const result=executeScreenCommands(project.value,assistantPayload.proposal,assistantPayload.allowed);
+          snapshot();project.value=result.project;assistantApplied.add(assistantPayload.proposal.id);
+          ids.value=[...new Set(result.changes.map(c=>c.id))];
+          cancelAssistant();message.value="AI 辅助设计已整批应用，可继续提需求或一次撤销。";
+        }catch(e){assistantError.value=e.message;}
+      }
+      watch(activePageId,()=>{cancelAssistant();assistantOpen.value=false;assistantSession.value={chat:[],allowed:[],prompt:""};});
       const editing = computed(() => !viewer && !preview.value),
         sel = computed(() =>
           [...doc.value.nodes,...(isScreen(doc.value)?doc.value.pipes:[])].find((n) => n.id === ids.value.at(-1)),
@@ -1219,7 +1238,7 @@ async function boot() {
       }
       return {
         componentQuery,componentCategory,componentCategories,componentArtwork,waterEquipment,
-        screenDepthArtwork,screenDrawingAppearances,setScreenDrawingAppearance,applyDrawingAppearance,screen,screenSymbols,screenTool,libraryTab,screenItems,screenLayerName,screenLayerSections,openWorkspaceCategory,newScreen,screenSelect,screenGeometry,screenInsert,screenPipe,setScreenTool,screenDrag,screenCommand,screenLibraryPlace,screenView,screenThemes,setScreenTheme,screenPurposes,screenPaletteSections,setScreenPurpose,project,pages,activePageId,publishedUrl,bindingReason,bindingIssueLabel,switchScreenPage,addPage,pageAction,
+        assistantOpen,assistantResult,assistantError,assistantSession,assistantDoc,cancelAssistant,previewAssistant,applyAssistant,screenDepthArtwork,screenDrawingAppearances,setScreenDrawingAppearance,applyDrawingAppearance,screen,screenSymbols,screenTool,libraryTab,screenItems,screenLayerName,screenLayerSections,openWorkspaceCategory,newScreen,screenSelect,screenGeometry,screenInsert,screenPipe,setScreenTool,screenDrag,screenCommand,screenLibraryPlace,screenView,screenThemes,setScreenTheme,screenPurposes,screenPaletteSections,setScreenPurpose,project,pages,activePageId,publishedUrl,bindingReason,bindingIssueLabel,switchScreenPage,addPage,pageAction,
         native, legacyTypes, nativeRecipes, addNative, nativeSelect, nativeMove, nativePatch, nativeRects, rectValue, rectDraft, rectInputValue, startRect, chosenDataMode, nodeCount, pipePoints, updatePipe,
         navigatorNodes, depth, expandable, collapsed, toggleTree, layerSearch, hasBindings, nativeBindingTargets, nativeSlots, nativeSlotMappings, nativeBinding, nativeReadback,
         activeStep,

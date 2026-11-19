@@ -1,3 +1,4 @@
+import { modelAssistant } from "./model-assistant.mjs";
 import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -11,6 +12,7 @@ const here = path.dirname(fileURLToPath(import.meta.url)),
 const dir = process.env.STUDIO_DATA_DIR || path.join(root, "works/studio");
 const port = Number(process.env.STUDIO_PORT || 8099);
 await fs.mkdir(dir, { recursive: true });
+const assistant = modelAssistant(dir);
 const store = path.join(dir, "project.json");
 async function read() {
   try {
@@ -60,6 +62,8 @@ const files = new Map(
     "/packages/components/studio/screen-symbols.mjs": "../../packages/components/studio/screen-symbols.mjs",
     "/packages/runtime/studio/screen-model.mjs": "../../packages/runtime/studio/screen-model.mjs",
     "/packages/runtime/studio/screen-renderer.mjs": "../../packages/runtime/studio/screen-renderer.mjs",
+    "/screen-assistant.mjs": "studio/screen-assistant.mjs",
+    "/packages/runtime/studio/screen-commands.mjs": "../../packages/runtime/studio/screen-commands.mjs",
     "/screen-inspector.mjs": "studio/screen-inspector.mjs",
     "/screen-definitions.mjs": "studio/screen-definitions.mjs",
     "/screen-rules.mjs": "studio/screen-rules.mjs",
@@ -124,7 +128,7 @@ async function offline(doc, payload, receivedAt) {
     );
   }
   const modules = await Promise.all(
-    ["/packages/components/studio/water-equipment.mjs", "/packages/components/studio/water-artwork.mjs", "/packages/components/studio/native-data.mjs", "/packages/runtime/studio/native-model.mjs", "/packages/components/studio/screen-symbols.mjs", "/packages/components/studio/screen-artwork.mjs", "/packages/runtime/studio/screen-dynamics.mjs", "/packages/runtime/studio/screen-widgets.mjs", "/packages/runtime/studio/screen-themes.mjs", "/packages/runtime/studio/screen-controls.mjs", "/packages/runtime/studio/screen-model.mjs", "/packages/runtime/studio/screen-library.mjs", "/packages/runtime/studio/screen-pages.mjs", "/model.mjs", "/widgets.mjs", "/tag-manager.mjs", "/packages/runtime/studio/native-renderer.mjs", "/packages/runtime/studio/screen-trend-panel.mjs", "/packages/runtime/studio/equipment-display.mjs", "/packages/runtime/studio/screen-routing.mjs", "/packages/runtime/studio/screen-renderer.mjs", "/screen-definitions.mjs", "/screen-rules.mjs", "/screen-actions.mjs", "/screen-widget-settings.mjs", "/screen-control-settings.mjs", "/screen-inspector.mjs", "/screen-library.mjs", "/screen-viewport.mjs", "/screen-pages.mjs", "/app.mjs"].map(content),
+    ["/packages/components/studio/water-equipment.mjs", "/packages/components/studio/water-artwork.mjs", "/packages/components/studio/native-data.mjs", "/packages/runtime/studio/native-model.mjs", "/packages/components/studio/screen-symbols.mjs", "/packages/components/studio/screen-artwork.mjs", "/packages/runtime/studio/screen-dynamics.mjs", "/packages/runtime/studio/screen-widgets.mjs", "/packages/runtime/studio/screen-themes.mjs", "/packages/runtime/studio/screen-controls.mjs", "/packages/runtime/studio/screen-model.mjs", "/packages/runtime/studio/screen-library.mjs", "/packages/runtime/studio/screen-pages.mjs", "/model.mjs", "/widgets.mjs", "/tag-manager.mjs", "/packages/runtime/studio/native-renderer.mjs", "/packages/runtime/studio/screen-trend-panel.mjs", "/packages/runtime/studio/equipment-display.mjs", "/packages/runtime/studio/screen-routing.mjs", "/packages/runtime/studio/screen-renderer.mjs", "/screen-definitions.mjs", "/screen-rules.mjs", "/screen-actions.mjs", "/screen-widget-settings.mjs", "/packages/runtime/studio/screen-commands.mjs", "/screen-assistant.mjs", "/screen-control-settings.mjs", "/screen-inspector.mjs", "/screen-library.mjs", "/screen-viewport.mjs", "/screen-pages.mjs", "/app.mjs"].map(content),
   );
   const code = modules
     .map((m) =>
@@ -178,6 +182,7 @@ http
               : "text/html",
         );
       if (req.method === "GET" && p.startsWith("/api/")) {
+        if (p === "/api/assistant/config") return send(200, await assistant.publicConfig());
         const state = await read();
         if (p === "/api/draft") return send(200, state.draft);
         if (p === "/api/published") {
@@ -196,6 +201,12 @@ http
       }
       if (req.method === "POST") {
         const data = await body(req);
+        if (p === "/api/assistant/config") return send(200, await assistant.save(data));
+        if (p === "/api/assistant/propose") {
+          const controller=new AbortController();
+          res.on("close",()=>{if(!res.writableEnded)controller.abort();});
+          return send(200, await assistant.propose(data,controller.signal));
+        }
         if (p === "/api/opcua/browse")
           return send(200, await browseNodes(data));
         if (p === "/api/protocol/sample")
