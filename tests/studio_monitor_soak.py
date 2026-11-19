@@ -34,6 +34,7 @@ def release_at(page, url):
         "id": release["id"], "documentHash": manifest.get("documentSha256"),
         "deploymentHash": manifest.get("deploymentSha256"),
         "deploymentMatches": release.get("deploymentMatches"),
+        "documentMatches": release.get("documentMatches"),
     }
 
 
@@ -53,6 +54,7 @@ def probe(page):
         }));
         const trendHosts = [...document.querySelectorAll('[data-shape="screen-trend"] .screen-chart-host')];
         return {
+            browserAtMs: Date.now(),
             link: badge.dataset.monitorLink,
             source: badge.dataset.monitorSource,
             maxAgeMs: number(badge.dataset.monitorMaxAge),
@@ -61,7 +63,8 @@ def probe(page):
             trendSamples: trendHosts.map(host => globalThis.echarts?.getInstanceByDom(host)
                 ?.getOption()?.series?.map(series => series.data?.length || 0) || []),
             renderedEventRows: [...document.querySelectorAll('[data-shape="screen-events"] .screen-table-host tbody')]
-                .map(body => body.rows.length),
+                .map(body => [...body.rows].filter(row => row.cells[0] &&
+                    !row.cells[0].hasAttribute('colspan')).length),
             points,
         };
     }""")
@@ -74,6 +77,60 @@ def probe(page):
 
 def observed_gap(previous, current):
     return max(current[0] - previous[0], current[1] - previous[1])
+
+
+def record_observation(summary, reading, source_timed_points, elapsed, observed_at):
+    windows = summary.setdefault("connectionWindows", [])
+    if not windows or windows[-1]["link"] != reading["link"]:
+        if windows:
+            prior = windows[-1]
+            prior["transitionObservedAt"] = observed_at
+            if reading["link"] == "connected" and prior["link"] == "disconnected":
+                prior["recoveryObservedSeconds"] = round(elapsed - prior["firstElapsedSeconds"], 3)
+        windows.append({"link": reading["link"], "firstObservedAt": observed_at,
+                        "firstElapsedSeconds": elapsed, "observations": 0})
+    window = windows[-1]
+    window["lastObservedAt"] = observed_at
+    window["lastElapsedSeconds"] = elapsed
+    window["observations"] += 1
+    window["observedSpanSeconds"] = round(elapsed - window["firstElapsedSeconds"], 3)
+
+    load = summary.setdefault("renderLoad", {})
+    counts = {"nodes": reading["nodes"], "pipes": reading["pipes"],
+              "trendSamples": sum(sum(series) for series in reading["trendSamples"]),
+              "renderedEventRows": sum(reading["renderedEventRows"])}
+    for name, value in counts.items():
+        limits = load.setdefault(name, {"min": value, "max": value})
+        limits["min"] = min(limits["min"], value)
+        limits["max"] = max(limits["max"], value)
+
+    point_stats = summary.setdefault("pointStats", {})
+    for point in reading["points"]:
+        stats = point_stats.setdefault(point["id"], {
+            "kind": point["kind"], "timeBasis": "source" if point["id"] in source_timed_points else "receive",
+            "qualityObservations": Counter(), "reasonObservations": Counter(),
+        })
+        stats["qualityObservations"][point["quality"]] += 1
+        if point["reason"]:
+            stats["reasonObservations"][point["reason"]] += 1
+        if point["quality"] != "good":
+            if point["quality"] != "waiting":
+                stats.setdefault("firstAbnormalAt", observed_at)
+                stats["lastAbnormalAt"] = observed_at
+            continue
+        stats["lastGoodAt"] = observed_at
+        received_at = point["receivedAtMs"]
+        if isinstance(received_at, (int, float)) and received_at > 0:
+            age = reading["browserAtMs"] - received_at
+            if age >= 0:
+                stats["maxReceiveAgeMs"] = max(stats.get("maxReceiveAgeMs", 0), age)
+        sample_at = point["sampleAtMs"]
+        if stats["timeBasis"] == "source" and isinstance(sample_at, (int, float)) and sample_at > 0:
+            age = reading["browserAtMs"] - sample_at
+            if age >= 0:
+                stats["maxSourceAgeMs"] = max(stats.get("maxSourceAgeMs", 0), age)
+            else:
+                stats["sourceClockAheadObservations"] = stats.get("sourceClockAheadObservations", 0) + 1
 
 
 def observe(page, args, emit, summary):
@@ -98,6 +155,13 @@ def observe(page, args, emit, summary):
     page.route("**/*", read_only)
     page.on("pageerror", lambda error: script_errors.append(True))
     initial_release = release_at(page, versions_url)
+    summary["release"] = initial_release
+    if getattr(args, "scope", "bench") == "field" and not (
+        initial_release["documentMatches"] is True and
+        initial_release["deploymentMatches"] is True and
+        initial_release["documentHash"] and initial_release["deploymentHash"]
+    ):
+        raise RuntimeError("现场观察需要工程与运行文件均通过当前发布版核对")
     with page.expect_response(published_url, timeout=15000) as loaded:
         page.goto(args.view, wait_until="domcontentloaded", timeout=15000)
     published = loaded.value
@@ -112,7 +176,9 @@ def observe(page, args, emit, summary):
     page.get_by_role("button", name="测点诊断", exact=True).click(timeout=10000)
     only_bad = page.get_by_role("checkbox", name="仅显示异常", exact=True)
     only_bad.uncheck(timeout=5000)
-    summary.update(release=initial_release, documentSha256=document_hash)
+    document = published.json()
+    source_timed_points = {m["id"] for m in document["mappings"] if m.get("timePath")}
+    summary.update(documentSha256=document_hash, requestedPollMs=document["source"]["pollMs"])
     previous = first = None
     next_release_check = time.monotonic() + args.release_check_seconds
     expected_points = None
@@ -135,7 +201,10 @@ def observe(page, args, emit, summary):
         summary["observedSeconds"] = round(elapsed, 3)
         summary["linkObservations"][reading["link"]] += 1
         summary["pointQualityObservations"].update(p["quality"] for p in reading["points"])
-        emit("observation", elapsedSeconds=summary["observedSeconds"], gapSeconds=round(gap, 3), **reading)
+        observed_at = datetime.fromtimestamp(current[1], timezone.utc).isoformat()
+        record_observation(summary, reading, source_timed_points, summary["observedSeconds"], observed_at)
+        emit("observation", elapsedSeconds=summary["observedSeconds"], gapSeconds=round(gap, 3),
+             observedAt=observed_at, **reading)
         if elapsed >= args.seconds or current[0] >= next_release_check:
             if release_at(page, versions_url) != initial_release:
                 raise RuntimeError("值守期间发布版本或部署一致性发生变化")

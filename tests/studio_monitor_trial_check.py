@@ -387,6 +387,7 @@ def exercise(browser, base, source):
     expect(pager).to_contain_text("第 1 / 2 页")
     recovery_ms = round((time.monotonic() - reconnect_at) * 1000)
 
+    expect(editor.locator(".screen-source-badge")).to_contain_text("已连接 · REST")
     editor.locator(".project-menu summary").click()
     with editor.expect_download() as download:
         editor.get_by_role("button", name="导出离线演示", exact=True).click()
@@ -456,7 +457,47 @@ def exercise(browser, base, source):
         assert samples[-1]["trendSamples"] == [[3]]
     finally:
         observer.close()
-    return {"detectionMs": detection_ms, "recoveryMs": recovery_ms}
+    observer = browser.new_page()
+    try:
+        outage_samples = 0
+        induced_outage = False
+
+        def change_source(event, **sample):
+            nonlocal induced_outage, outage_samples
+            if not induced_outage and sample["link"] == "connected":
+                induced_outage = True
+                Snapshot.offline = True
+            elif sample["link"] == "disconnected":
+                outage_samples += 1
+                if outage_samples == 2:
+                    Snapshot.offline = False
+
+        arguments = SimpleNamespace(view=base + "/view", scope="bench", seconds=4,
+                                    interval_seconds=.2, max_gap_seconds=3, release_check_seconds=60)
+        observed = {"maxObservationGapSeconds": 0, "observations": 0,
+                    "linkObservations": Counter(), "pointQualityObservations": Counter()}
+        observe(observer, arguments, change_source, observed)
+        links = [window for window in observed["connectionWindows"] if window["link"] != "waiting"]
+        assert [window["link"] for window in links] == ["connected", "disconnected", "connected"], links
+        outage = links[1]
+        assert outage["observations"] >= 2
+        assert 0 < outage["observedSpanSeconds"] < outage["recoveryObservedSeconds"]
+        assert outage["firstObservedAt"] <= outage["lastObservedAt"] < outage["transitionObservedAt"]
+        assert observed["renderLoad"]["nodes"] == {"min": 5, "max": 5}
+        assert observed["renderLoad"]["trendSamples"] == {"min": 0, "max": 3}
+        assert observed["renderLoad"]["renderedEventRows"] == {"min": 0, "max": 2}
+        for point in observed["pointStats"].values():
+            assert point["qualityObservations"]["offline"] == outage["observations"]
+            assert point["reasonObservations"]["disconnected"] == outage["observations"]
+            assert point["lastGoodAt"] > point["lastAbnormalAt"]
+            assert point["timeBasis"] == "source" and point["maxSourceAgeMs"] >= 0
+            assert point["maxReceiveAgeMs"] >= 0
+        (OUT / "soak-recovery-summary.json").write_text(json.dumps(observed, indent=2), "utf-8")
+    finally:
+        Snapshot.offline = False
+        observer.close()
+    return {"detectionMs": detection_ms, "recoveryMs": recovery_ms,
+            "observedRecoverySeconds": outage["recoveryObservedSeconds"]}
 
 
 def main():
@@ -502,6 +543,7 @@ def main():
         "CSV export round trip, row errors are atomic, blank entries preserve selections",
         "point diagnostics show raw out-of-range values, timestamps, device location and disconnect reason",
         "live polling stays active across observation intervals longer than the configured data age",
+        "observation summary identifies disconnected intervals, affected points, recovery, and display load",
         "alarm pagination stays pinned during refresh, opens device and returns to live",
         "device trend custom fields and gaps", "stale values while transport stays connected",
         "missing source records in publish review", "alarm lifecycle readback",
