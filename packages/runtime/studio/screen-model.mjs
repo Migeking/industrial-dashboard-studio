@@ -768,6 +768,8 @@ export function validateScreenSymbolDefinition(symbol) {
     typeof symbol.name !== "string" ||
     !symbol.name.trim() ||
     symbol.version !== 1 ||
+    (symbol.revision !== undefined &&
+      (!Number.isSafeInteger(symbol.revision) || symbol.revision < 1)) ||
     ![symbol.w, symbol.h].every(Number.isFinite) ||
     symbol.w < 16 ||
     symbol.h < 16 ||

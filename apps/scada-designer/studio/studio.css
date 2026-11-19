@@ -1473,6 +1473,51 @@ fieldset small {
   background: #087579;
   border-color: #087579;
 }
+.symbol-revision-dialog {
+  width: min(90vw, 820px);
+  max-height: 88vh;
+  padding: 20px;
+  color: #294659;
+  background: #f7f9fb;
+  border: 1px solid #a2b7c4;
+  box-shadow: 0 12px 50px #132c4040;
+}
+.symbol-revision-dialog::backdrop { background: #14263199; }
+.symbol-revision-dialog h2 { color: #294659; margin: 0 0 12px; font-size: 18px; }
+.symbol-revision-dialog p { font-size: 14px; }
+.symbol-revision-list {
+  max-height: 45vh;
+  overflow: auto;
+  border: 1px solid #b8cbd8;
+  background: #fff;
+}
+.symbol-revision-list table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.symbol-revision-list thead { position: sticky; top: 0; background: #e5eef3; }
+.symbol-revision-list th,
+.symbol-revision-list td {
+  padding: 10px;
+  color: #294659;
+  font-size: 13px;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid #d6e2ea;
+}
+.symbol-revision-list th:first-child { width: 27%; }
+.symbol-revision-list small { display: block; margin-top: 4px; color: #435e6d; }
+.symbol-revision-dialog footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.symbol-revision-dialog footer button {
+  min-height: 40px;
+  color: #294659;
+  background: #fff;
+  border-color: #a2b7c4;
+}
+.symbol-revision-dialog footer .primary { color: #fff; background: #087579; border-color: #087579; }
 @media (max-width: 1400px) {
   .editor-shell .workspace {
     grid-template-columns: 218px minmax(0, 1fr) 290px;

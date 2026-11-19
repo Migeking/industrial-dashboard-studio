@@ -8,6 +8,7 @@ import {
   copyScreenSelection,
 } from "../packages/runtime/studio/screen-model.mjs";
 import { screenSymbols } from "../packages/components/studio/screen-symbols.mjs";
+import { makeScreenSymbol, screenSymbolChanges, validateScreenSymbol } from "../packages/runtime/studio/screen-library.mjs";
 
 const doc = blankScreen();
 assert.deepEqual(doc.nodes, []);
@@ -49,6 +50,23 @@ doc.pipes.push({
   bindings: {},
 });
 validate(doc, true);
+const unit = makeScreenSymbol(doc, ["p", "v"], "回流泵阀组", "unit");
+assert.equal(unit.revision, 1);
+const portable = structuredClone(unit);
+delete portable.revision;
+assert.equal(validateScreenSymbol(portable), portable);
+assert.throws(() => validateScreenSymbol({ ...portable, revision: 0 }), /图元文件/);
+portable.nodes[0].id = "new-pump-id";
+portable.pipes[0].source.nodeId = portable.nodes[0].id;
+assert.deepEqual(screenSymbolChanges(unit, portable), []);
+portable.nodes[0].ports.find((p) => p.id === "right").x = 90;
+portable.nodes[0].dataSlots.push({
+  key: "energy", label: "电耗", role: "extra", kinds: ["number"], required: true,
+});
+const changes = screenSymbolChanges(unit, portable);
+assert.equal(changes.length, 2);
+assert.match(changes.find((item) => item.key === "right").to, /位置 90%/);
+assert.match(changes.find((item) => item.key === "energy").to, /电耗 · 必绑/);
 const bad = (change, pattern) => {
   const copy = structuredClone(doc);
   change(copy);

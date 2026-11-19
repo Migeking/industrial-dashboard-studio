@@ -15,6 +15,63 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "works/scene13-assembly-acceptance"
 
 
+def verify_unit_revision(page, unit, original, url):
+    card = page.locator("[data-user-symbol]")
+    review = page.get_by_role("dialog", name="图元更新预览")
+    page.get_by_role("button", name="用选中内容更新", exact=True).click()
+    expect(review).to_be_visible()
+    page.keyboard.press("Escape")
+    expect(review).not_to_be_visible()
+    expect(card).to_contain_text("修订 1")
+
+    revised = json.loads(json.dumps(unit))
+    revised["revision"] = 2
+    clarifier = next(n for n in revised["nodes"] if n["symbol"] == "highRateClarifier")
+    port = next(p for p in clarifier["ports"] if p["id"] == "pacIn")
+    port["x"] = round(port["x"] + 3, 2)
+    clarifier["dataSlots"].append({
+        "key": "outletTurbidity", "label": "出水浊度", "role": "extra",
+        "kinds": ["number"], "required": True,
+    })
+    card.get_by_label("导入 " + unit["name"] + " 的修订文件", exact=True).set_input_files({
+        "name": "scene13-v2.symbol.json", "mimeType": "application/json",
+        "buffer": json.dumps(revised, ensure_ascii=False).encode("utf-8"),
+    })
+    expect(review).to_contain_text("修订 1 → 2")
+    expect(review.get_by_role("row", name="接口 · pacIn", exact=False)).to_contain_text(f"位置 {port['x']}%")
+    expect(review.get_by_role("row", name="测点槽位 · outletTurbidity", exact=False)).to_contain_text("出水浊度 · 必绑")
+    page.screenshot(path=str(OUT / "unit-revision-review.png"))
+    review.get_by_role("button", name="确认更新图元库", exact=True).click()
+    expect(review).not_to_be_visible()
+    expect(card).to_contain_text("修订 2")
+    page.get_by_role("button", name="撤销", exact=True).click()
+    expect(card).to_contain_text("修订 1")
+    page.get_by_role("button", name="重做", exact=True).click()
+    expect(card).to_contain_text("修订 2")
+
+    def save():
+        with page.expect_response(lambda response: response.url == url and response.request.method == "POST") as response:
+            page.get_by_role("button", name="保存草稿", exact=True).click()
+        assert response.value.ok, response.value.text()
+        return page.request.get(url).json()
+
+    updated = save()
+    assert updated["nodes"] == original["nodes"] and updated["pipes"] == original["pipes"]
+    assert updated["symbols"][0]["id"] == original["symbols"][0]["id"]
+    assert updated["symbols"][0]["revision"] == 2
+    page.get_by_role("button", name="放置 " + unit["name"], exact=True).click()
+    bounds = page.locator(".board").bounding_box()
+    page.mouse.click(bounds["x"] + 110, bounds["y"] + 100)
+    expect(page.locator(".x6-node")).to_have_count(2 * len(unit["nodes"]))
+    placed = save()
+    assert placed["nodes"][:len(original["nodes"])] == original["nodes"]
+    assert placed["pipes"][:len(original["pipes"])] == original["pipes"]
+    assert len(placed["pipes"]) == 2 * len(original["pipes"])
+    new = next(n for n in placed["nodes"][len(original["nodes"]):] if n["symbol"] == "highRateClarifier")
+    assert next(p for p in new["ports"] if p["id"] == "pacIn")["x"] == port["x"]
+    assert any(s["key"] == "outletTurbidity" and s["required"] for s in new["dataSlots"])
+
+
 def verify_unit_imports(page, base):
     units = ROOT / "apps/scada-designer/examples/units"
     for file in sorted(units.glob("*.symbol.json")):
@@ -39,6 +96,8 @@ def verify_unit_imports(page, base):
         doc = page.request.get(url).json()
         assert all(not n["bindings"] for n in doc["nodes"])
         assert len(doc["pipes"]) == len(unit["pipes"])
+        if file.name.startswith("scene13"):
+            verify_unit_revision(page, unit, doc, url)
 
 
 def exercise(browser, base, definitions):
@@ -177,7 +236,7 @@ def exercise(browser, base, definitions):
     return {"scene": 13, "nodes": len(resized["nodes"]), "pipes": len(resized["pipes"]),
             "bindings": sum(len(n["bindings"]) for n in resized["nodes"]),
             "maxEndpointErrorPx": max(dists), "offlineBytes": offline.stat().st_size,
-            "crossProjectImports": 3, "errors": errors}
+            "crossProjectImports": 3, "libraryRevisionVerified": True, "errors": errors}
 
 
 def main():
