@@ -74,6 +74,8 @@ export const pointReasonLabels = {
   "source-quality": "数据源报告无效",
   "missing-record": "样本缺少该测点记录",
   "protocol-unmapped": "未关联当前协议点位",
+  "protocol-address": "设备拒绝该 Modbus 地址",
+  "protocol-request": "设备拒绝该 Modbus 读取请求",
   "missing-value": "样本无数值",
   "invalid-timestamp": "时间戳无效",
   "invalid-number": "输入不是有效数值",

@@ -8,6 +8,7 @@ import struct
 import sys
 import threading
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -78,45 +79,98 @@ async def ua_samples(config, publish, active):
             publish(rows)
             await asyncio.sleep(config.get("interval", 2))
 
-def modbus_rows(client, config):
+MODBUS_REGISTER_FORMATS = {"uint16": "H", "int16": "h", "uint32": "I", "int32": "i", "float32": "f"}
+MODBUS_READ_LIMITS = {1: 2000, 2: 2000, 3: 125, 4: 125}
+
+
+@dataclass
+class ModbusRead:
+    function: int
+    start: int
+    end: int
+    points: list[tuple[int, dict, int]]
+
+
+def plan_modbus_reads(tags):
+    plan = []
+    ordered = sorted(enumerate(tags), key=lambda item: (item[1]["function"], item[1]["address"]))
+    for index, tag in ordered:
+        function, start = tag["function"], tag["address"]
+        if function not in MODBUS_READ_LIMITS:
+            raise ValueError("Only read function codes 1 through 4 are supported")
+        width = 1 if function <= 2 else struct.calcsize(">" + MODBUS_REGISTER_FORMATS[tag["format"]]) // 2
+        end = start + width
+        entry = (index, tag, width)
+        block = plan[-1] if plan else None
+        if block and block.function == function and start <= block.end and end - block.start <= MODBUS_READ_LIMITS[function]:
+            block.end = max(block.end, end)
+            block.points.append(entry)
+        else:
+            plan.append(ModbusRead(function, start, end, [entry]))
+    return plan
+
+
+def decode_modbus_registers(tag, registers):
+    raw = b"".join(value.to_bytes(2, "big") for value in registers)
+    expected = "ABCD"[:len(raw)]
+    order = tag.get("order", expected)
+    if sorted(order) != list(expected):
+        raise ValueError("Invalid byte order")
+    canonical = bytes(raw[order.index(char)] for char in expected)
+    return struct.unpack(">" + MODBUS_REGISTER_FORMATS[tag["format"]], canonical)[0]
+
+
+def modbus_rows(client, config, plan):
+    from pymodbus.exceptions import ModbusIOException
+
     methods = {1: client.read_coils, 2: client.read_discrete_inputs,
                3: client.read_holding_registers, 4: client.read_input_registers}
-    formats = {"uint16": "H", "int16": "h", "uint32": "I", "int32": "i", "float32": "f"}
-    rows = []
-    for tag in config["points"]:
-        fc = tag["function"]
-        if fc not in methods:
-            raise ValueError("Only read function codes 1 through 4 are supported")
-        size = 1 if fc <= 2 else struct.calcsize(">"+formats[tag["format"]])//2
-        reply = methods[fc](tag["address"], size, unit=config["unitId"])
-        from pymodbus.exceptions import ModbusIOException
+    rows = [None] * len(config["points"])
+    next_plan = []
+
+    def read(block):
+        quantity = block.end - block.start
+        reply = methods[block.function](block.start, quantity, unit=config["unitId"])
         if isinstance(reply, ModbusIOException):
             raise ConnectionError(str(reply))
         if reply.isError():
-            rows.append(point(tag))
-            continue
-        if fc <= 2:
-            value = bool(reply.bits[0])
+            code = getattr(reply, "exception_code", None)
+            if code in (2, 3) and len(block.points) > 1:
+                # Some devices reject a range or cap reads below the protocol limit.
+                middle = len(block.points) // 2
+                for entries in (block.points[:middle], block.points[middle:]):
+                    start = entries[0][1]["address"]
+                    end = max(tag["address"] + width for _, tag, width in entries)
+                    read(ModbusRead(block.function, start, end, entries))
+                return
+            reason = {2: "protocol-address", 3: "protocol-request"}.get(code)
+            for index, tag, _ in block.points:
+                rows[index] = point(tag, reason=reason)
         else:
-            raw = b"".join(v.to_bytes(2, "big") for v in reply.registers)
-            order = tag.get("order", "ABCD"[:len(raw)])
-            expected = "ABCD"[:len(raw)]
-            if sorted(order) != list(expected):
-                raise ValueError("Invalid byte order")
-            canonical = bytes(raw[order.index(char)] for char in expected)
-            value = struct.unpack(">"+formats[tag["format"]], canonical)[0]
-        valid = tag.get("rawMin", -math.inf) <= value <= tag.get("rawMax", math.inf)
-        row = point(tag, value, "good" if valid else "bad",
-                    reason=None if valid else "out-of-range")
-        rows.append(row)
-    return rows
+            bits = block.function <= 2
+            values = reply.bits if bits else reply.registers
+            if len(values) < quantity:
+                raise ConnectionError("Modbus response is shorter than the requested range")
+            for index, tag, width in block.points:
+                offset = tag["address"] - block.start
+                value = bool(values[offset]) if bits else decode_modbus_registers(tag, values[offset:offset + width])
+                valid = tag.get("rawMin", -math.inf) <= value <= tag.get("rawMax", math.inf)
+                rows[index] = point(tag, value, "good" if valid else "bad",
+                                    reason=None if valid else "out-of-range")
+        next_plan.append(block)
+
+    for block in plan:
+        read(block)
+    return rows, next_plan
+
 
 async def modbus_samples(config, publish, active):
     from pymodbus.client.sync import ModbusTcpClient
     client = ModbusTcpClient(config["host"], port=config.get("port", 502), timeout=2, retries=0)
     try:
+        plan = plan_modbus_reads(config["points"])
         while active():
-            rows = await asyncio.to_thread(modbus_rows, client, config)
+            rows, plan = await asyncio.to_thread(modbus_rows, client, config, plan)
             publish(rows)
             await asyncio.sleep(config.get("interval", 2))
     finally:

@@ -171,6 +171,11 @@ assert.equal(attached.id, business.id);
 assert.equal(attached.label, business.label);
 assert.deepEqual(attached.conversion, business.conversion);
 assert.equal(normalize(modbusPayload, attached, time, 1000, time).value, 4.5);
+const rejectedAddress = normalize({ ...modbusPayload, points: [
+  { ...sampleValue, raw: null, value: null, quality: "bad", reason: "protocol-address" },
+] }, attached, time, 1000, time);
+assert.equal(rejectedAddress.quality, "bad");
+assert.equal(rejectedAddress.reason, "protocol-address");
 assert.equal(attached.timePath, "receivedAt");
 assert.equal(protocolPointMapping(levelTag, "opcua", attached).timePath, "timestamp");
 const changed = syncProtocolMappings([{...levelTag,kind:"boolean"}], "modbus", [attached, unlinked[2]], existing);
