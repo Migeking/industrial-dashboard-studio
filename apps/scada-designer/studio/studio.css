@@ -1545,3 +1545,14 @@ fieldset small {
 }
 .editor-shell .screen-workspace-tools button:disabled { opacity: .48; }
 .editor-shell .screen-workspace-tools label { color: #304c5d; }
+
+.studio-project-home {
+  color: #086773;
+  padding: 6px 9px;
+  border: 1px solid #b8c9d3;
+  border-radius: 4px;
+  white-space: nowrap;
+  text-decoration: none;
+  font-size: 13px;
+}
+.studio-project-home:hover { background: #eaf4f5; }

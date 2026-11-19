@@ -1,8 +1,12 @@
 # 工业可视化配置工作台
 
-当前主入口是能从空白设计工艺监控和数据驾驶舱的二维画面设计器。M1—M4 的绘图、可定义端口/数据槽位、显示规则、我的图元、多画面、图表/列表及发布流程已按 [整体验收](../../docs/acceptance/screen-designer-stages.md) 验证；旧 V1/V2 继续兼容。实现范围以 [方案](../../docs/plans/scada-screen-designer.md) 为准。
+工作台入口提供项目管理和案例库。项目管理用于新建、导入、复制草稿与重命名工程。工程包含自己的画布、测点、草稿和发布版本。案例库扫描仓库现有的 01–30 号及定制工艺页面，可按行业或名称、编号查询，并打开原版或对应可编辑工程。
 
-在仓库根目录运行 `node apps/scada-designer/server.mjs`（使用 Node 24 验证）。打开 [本地编辑器](http://127.0.0.1:8099/)，发布后可打开[展示端](http://127.0.0.1:8099/view)。无项目时默认为零对象画布；已有项目不会被覆盖或转换。旧版静态设计器保留原有入口和导出格式。
+在仓库根目录运行 `node apps/scada-designer/server.mjs`，打开 [本地项目管理](http://127.0.0.1:8099/projects)。已有单工程实例继续支持 `/editor`、`/view` 和原有数据存储。独立工程通过 `/editor?project=工程ID` 及 `/view?project=工程ID` 打开。通过 `STUDIO_DATA_DIR` 启动的旧实例保留原首页行为，设置 `STUDIO_ENTRY=projects` 可将其首页切换为项目管理。
+
+有已交付的本机验收工程时，可在目标服务开启前运行 `node scripts/collect-studio-projects.mjs <工程数据目录>` 将可用档案归集。归档重跑保留同 ID 已有工程，缺失的本机档案仍可从案例库浏览原版。也可直接在项目管理中导入导出的工程 JSON。
+
+画面设计器支持空白作图、端口、数据槽位、显示规则、图元库、多画面、图表和发布。详见 [设计器整体验收](../../docs/acceptance/screen-designer-stages.md) 和 [项目入口验收](../../docs/acceptance/studio-project-platform.md)。
 
 ## 从空白设计一张工艺监控画面
 

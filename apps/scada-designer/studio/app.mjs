@@ -49,7 +49,10 @@ const kindNames = {
   text: "文本",
   dataset: "数据表",
 };
+const projectKey = new URLSearchParams(location.search).get("project");
+const projectScopedApis = new Set(["/api/draft", "/api/published", "/api/publish", "/api/versions", "/api/rollback"]);
 async function api(url, data) {
+  if (projectKey && projectScopedApis.has(url)) url += "?project=" + encodeURIComponent(projectKey);
   const r = await fetch(
     url,
     data === undefined
@@ -129,7 +132,12 @@ async function boot() {
         return order.filter(key=>componentCategory.value==='all'||componentCategory.value===key).map(key=>({key,...screenPaletteGroups[key],symbols:screenPaletteGroups[key].symbols.filter(symbol=>!query||[symbol,screenSymbols[symbol].label,waterEquipment[symbol]?.keywords].join(' ').toLowerCase().includes(query))})).filter(group=>group.symbols.length);
       });
       const screenView=useScreenViewport(stage,screen,editing,zoom);
-      const pages=computed(()=>screen.value?screenPages(project.value):[]),publishedUrl=computed(()=>"/view"+(screen.value&&activePageId.value!=="main"?"?page="+encodeURIComponent(activePageId.value):""));
+      const pages=computed(()=>screen.value?screenPages(project.value):[]),publishedUrl=computed(()=>{
+        const params = new URLSearchParams();
+        if (projectKey) params.set("project", projectKey);
+        if (screen.value && activePageId.value !== "main") params.set("page", activePageId.value);
+        return "/view" + (params.size ? "?" + params : "");
+      });
       if(screen.value&&!pages.value.some(p=>p.id===activePageId.value))activePageId.value=project.value.defaultPageId||'main';
       watch(()=>[activePageId.value,screen.value],()=>{const url=new URL(location.href);if(screen.value&&activePageId.value!=='main')url.searchParams.set('page',activePageId.value);else url.searchParams.delete('page');window.history.replaceState(null,'',url.pathname+url.search+url.hash);});
       function switchScreenPage(id){if(!pages.value.some(p=>p.id===id)){message.value="目标画面已不存在";return;}if(activePageId.value===id)return;activePageId.value=id;ids.value=[];screenTool.value="select";screenView.fit();if(viewer)window.history.replaceState(null,"",publishedUrl.value);}
@@ -382,6 +390,9 @@ async function boot() {
       const dirty = computed(
         () => JSON.stringify(project.value) !== lastSaved.value,
       );
+      function returnToProjects(event) {
+        if (dirty.value && !window.confirm("当前画面有未保存修改。仍要返回项目管理？")) event.preventDefault();
+      }
       watch(dirty, (value) => {
         if (value && published.value) {
           published.value = false;
@@ -1245,7 +1256,7 @@ async function boot() {
       }
       return {
         componentQuery,componentCategory,componentCategories,componentArtwork,waterEquipment,
-        assistantOpen,assistantResult,assistantError,assistantSession,assistantDoc,cancelAssistant,previewAssistant,applyAssistant,screenDepthArtwork,screenDrawingAppearances,setScreenDrawingAppearance,applyDrawingAppearance,screen,screenSymbols,screenTool,libraryTab,screenItems,screenLayerName,screenLayerSections,openWorkspaceCategory,newScreen,screenSelect,screenGeometry,screenInsert,screenPipe,setScreenTool,screenDrag,screenCommand,screenLibraryPlace,screenView,screenThemes,setScreenTheme,screenPurposes,screenPaletteSections,setScreenPurpose,project,pages,activePageId,publishedUrl,bindingReason,bindingIssueLabel,switchScreenPage,addPage,pageAction,
+        returnToProjects,assistantOpen,assistantResult,assistantError,assistantSession,assistantDoc,cancelAssistant,previewAssistant,applyAssistant,screenDepthArtwork,screenDrawingAppearances,setScreenDrawingAppearance,applyDrawingAppearance,screen,screenSymbols,screenTool,libraryTab,screenItems,screenLayerName,screenLayerSections,openWorkspaceCategory,newScreen,screenSelect,screenGeometry,screenInsert,screenPipe,setScreenTool,screenDrag,screenCommand,screenLibraryPlace,screenView,screenThemes,setScreenTheme,screenPurposes,screenPaletteSections,setScreenPurpose,project,pages,activePageId,publishedUrl,bindingReason,bindingIssueLabel,switchScreenPage,addPage,pageAction,
         native, legacyTypes, nativeRecipes, addNative, nativeSelect, nativeMove, nativePatch, nativeRects, rectValue, rectDraft, rectInputValue, startRect, chosenDataMode, nodeCount, pipePoints, updatePipe,
         navigatorNodes, depth, expandable, collapsed, toggleTree, layerSearch, hasBindings, nativeBindingTargets, nativeSlots, nativeSlotMappings, nativeBinding, nativeReadback,
         activeStep,
@@ -1359,8 +1370,8 @@ boot().catch((e) => {
   const detail = document.createElement("p");
   detail.textContent = e.message;
   const link = document.createElement("a");
-  link.href = "/";
-  link.textContent = "返回配置工作台";
+  link.href = "/projects";
+  link.textContent = "返回项目管理";
   section.append(title, detail, link);
   document.body.replaceChildren(section);
 });

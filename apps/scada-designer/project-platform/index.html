@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>工业画面工作台</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/project-platform.css">
+</head>
+<body>
+  <div id="portal" v-cloak>
+    <header class="masthead">
+      <a class="brand" href="/projects">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <b>工业画面工作台</b>
+      </a>
+      <span class="local-label">本机工作区</span>
+    </header>
+    <div class="workspace">
+      <nav class="workspace-nav" aria-label="工作台导航">
+        <a href="/projects" :aria-current="tab==='projects'?'page':null" @click.prevent="navigate('projects')">
+          <span class="nav-icon projects-icon" aria-hidden="true"></span>项目管理 <small>{{projects.length}}</small>
+        </a>
+        <a href="/projects?tab=cases" :aria-current="tab==='cases'?'page':null" @click.prevent="navigate('cases')">
+          <span class="nav-icon cases-icon" aria-hidden="true"></span>案例库 <small>{{cases.length}}</small>
+        </a>
+      </nav>
+      <main>
+        <div class="page-heading">
+          <div>
+            <h1>{{tab==='projects'?'项目管理':'案例库'}}</h1>
+            <p>{{tab==='projects'?'打开一个工程，继续设计、绑定测点或发布。':'浏览各行业原版画面，查找对应的可编辑工程。'}}</p>
+          </div>
+          <div class="heading-actions">
+            <button type="button" @click="importInput.click()">导入工程</button>
+            <button type="button" class="primary" @click="openForm('create')">＋ 新建工程</button>
+            <input ref="importInput" type="file" accept=".json,application/json" hidden @change="importProject">
+          </div>
+        </div>
+        <div class="browse">
+          <label class="filter">搜索<input v-model="query" type="search" :placeholder="tab==='projects'?'工程名称、案例编号':'案例名称、行业或编号'"></label>
+          <label v-if="tab==='cases'" class="filter">行业
+            <select v-model="category" aria-label="行业"><option value="">全部行业</option><option v-for="item in categories" :key="item.id" :value="item.id">{{item.name}}</option></select>
+          </label>
+          <button v-if="tab==='projects'&&linkedCase" @click="navigate('projects')">清除案例筛选 ×</button>
+          <span class="result-count" role="status">{{loading?'正在读取…':tab==='projects'?visibleProjects.length+' 个工程':visibleCases.length+' 个案例'}}</span>
+        </div>
+        <p v-if="notice" class="notice" role="alert">{{notice}} <button @click="notice=''">关闭</button></p>
+        <section v-if="!loading && tab==='projects'" aria-label="工程列表">
+          <div v-if="visibleProjects.length" class="project-list">
+            <article v-for="project in visibleProjects" :key="project.id" class="project-row">
+              <div class="project-visual" aria-hidden="true">
+                <img v-if="caseFor(project)?.thumbnail" :src="caseFor(project).thumbnail" alt="" loading="lazy" @error="hideImage">
+                <span>{{caseFor(project)?.number || '工程'}}</span>
+              </div>
+              <div class="project-info">
+                <h2><a :href="editorUrl(project)">{{project.name}}</a></h2>
+                <p>
+                  <span>{{project.pages}} 个画面</span><span>{{project.points}} 个测点</span><span>{{sourceNames[project.source] || project.source}}</span>
+                </p>
+                <p class="project-time" v-if="project.updatedAt">更新于 {{formatDate(project.updatedAt)}}</p>
+              </div>
+              <span class="state" :class="{published:project.published}">{{project.published?'已发布':'草稿'}}</span>
+              <div class="row-actions">
+                <a class="button" v-if="project.published" :href="viewUrl(project)" target="_blank" rel="noopener">查看发布</a>
+                <a class="button primary" :href="editorUrl(project)">打开设计器</a>
+                <details class="project-menu">
+                  <summary aria-label="工程操作">•••</summary>
+                  <div><button @click="openForm('rename',project,$event)">重命名</button><button @click="openForm('copy',project,$event)">复制草稿</button></div>
+                </details>
+              </div>
+            </article>
+          </div>
+          <div v-else class="empty"><b>{{projects.length?'没有匹配的工程':'还没有工程'}}</b><p>{{projects.length?'试试其他名称或编号。':'新建一个空白工程，或通过案例库找到已有画面。'}}</p><a class="button" href="/projects?tab=cases" @click.prevent="navigate('cases')">浏览案例库</a></div>
+        </section>
+        <section v-else-if="!loading" class="case-grid" aria-label="案例列表">
+          <article v-for="item in visibleCases" :key="item.id" class="case-card">
+            <a class="case-image" :href="item.url" target="_blank" rel="noopener" :aria-label="'查看原版 '+item.title">
+              <span aria-hidden="true">{{item.categoryLabel}}</span>
+              <img :src="item.thumbnail" alt="" loading="lazy" @error="hideImage">
+              <b>{{item.id.startsWith('cso-')?'CSO':item.number}}</b>
+            </a>
+            <div class="case-copy">
+              <p class="case-category">{{item.categoryLabel}}</p>
+              <h2>{{item.title}}</h2>
+              <div class="case-actions">
+                <a :href="item.url" target="_blank" rel="noopener">查看原版 ↗</a>
+                <a v-if="caseProjects(item).length===1" class="case-project" :href="editorUrl(caseProjects(item)[0])">打开关联工程 →</a>
+                <button v-else-if="caseProjects(item).length>1" class="text-button" @click="showLinked(item)">查看 {{caseProjects(item).length}} 个关联工程</button>
+                <button v-else class="text-button" @click="openForm('case',item)">新建关联工程</button>
+              </div>
+            </div>
+          </article>
+          <div v-if="!visibleCases.length" class="empty"><b>没有匹配的案例</b><p>可更换搜索词或行业筛选。</p><button @click="query='';category=''">清空筛选</button></div>
+        </section>
+      </main>
+    </div>
+    <dialog ref="formDialog" aria-labelledby="form-title" @close="error=''">
+      <form @submit.prevent="submit">
+        <div class="form-heading"><h2 id="form-title">{{formTitle}}</h2><button type="button" @click="formDialog.close()" aria-label="关闭">×</button></div>
+        <p v-if="form.mode==='case'">关联 {{form.item?.number}} 号案例，创建一张空白画布。</p>
+        <p v-if="form.mode==='copy'">复制当前草稿到一个独立工程。</p>
+        <label>工程名称<input v-model="form.name" ref="nameInput" maxlength="80" required></label>
+        <p class="form-error" v-if="error" role="alert">{{error}}</p>
+        <div class="form-actions">
+          <button type="button" @click="formDialog.close()">取消</button>
+          <button class="primary" :disabled="busy">{{busy?'正在保存…':form.mode==='rename'?'保存名称':'创建并打开'}}</button>
+        </div>
+      </form>
+    </dialog>
+  </div>
+  <script src="/lib/vue.js"></script>
+  <script type="module" src="/project-platform.mjs"></script>
+</body>
+</html>

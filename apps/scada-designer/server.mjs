@@ -1,4 +1,3 @@
-import { modelAssistant } from "./model-assistant.mjs";
 import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -6,6 +5,9 @@ import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { template, validate, csv } from "./studio/model.mjs";
 import { browseNodes, protocolSample } from "./protocol.mjs";
+import { modelAssistant } from "./model-assistant.mjs";
+import { projectStore } from "./project-store.mjs";
+import { createCaseLibrary } from "./case-library.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url)),
   root = path.resolve(here, "../..");
@@ -13,28 +15,10 @@ const dir = process.env.STUDIO_DATA_DIR || path.join(root, "works/studio");
 const port = Number(process.env.STUDIO_PORT || 8099);
 await fs.mkdir(dir, { recursive: true });
 const assistant = modelAssistant(dir);
-const store = path.join(dir, "project.json");
-async function read() {
-  try {
-    return JSON.parse(await fs.readFile(store, "utf8"));
-  } catch (e) {
-    if (e.code !== "ENOENT") throw e;
-    return { draft: template("blank"), versions: [], active: null };
-  }
-}
-let writes = Promise.resolve();
-function edit(change) {
-  const job = writes.then(async () => {
-    const state = await read();
-    const result = change(state);
-    const tmp = store + ".tmp";
-    await fs.writeFile(tmp, JSON.stringify(state));
-    await fs.rename(tmp, store);
-    return result;
-  });
-  writes = job.catch(() => {});
-  return job;
-}
+const projects = projectStore(dir);
+const library = await createCaseLibrary(root);
+// Existing single-project instances can keep their old landing URL.
+const projectEntry = (process.env.STUDIO_ENTRY || (process.env.STUDIO_DATA_DIR ? "editor" : "projects")) === "projects";
 async function body(req) {
   let bytes = 0;
   const chunks = [];
@@ -47,7 +31,10 @@ async function body(req) {
 }
 const files = new Map(
   Object.entries({
-    "/": "studio/index.html",
+    "/editor": "studio/index.html",
+    "/projects": "project-platform/index.html",
+    "/project-platform.css": "project-platform/platform.css",
+    "/project-platform.mjs": "project-platform/platform.mjs",
     "/view": "studio/index.html",
     "/studio.css": "studio/studio.css",
     "/app.mjs": "studio/app.mjs",
@@ -107,7 +94,7 @@ async function offline(doc, payload, receivedAt) {
     maxAgeMs: doc.source.maxAgeMs,
     demo: doc.source.demo === true,
   };
-  let html = await content("/");
+  let html = await content("/editor");
   const windowlessCss = await content("/studio.css");
   html = html.replace(
     /<link rel="stylesheet" href="\/studio\.css"\s*\/?>/,
@@ -154,10 +141,12 @@ http
         "Content-Type": type + "; charset=utf-8",
         "Cache-Control": "no-store",
       });
-      res.end(type === "application/json" ? JSON.stringify(value) : value);
+      res.end(type === "application/json" && !Buffer.isBuffer(value) ? JSON.stringify(value) : value);
     };
     try {
-      const p = new URL(req.url, "http://localhost").pathname;
+      const url = new URL(req.url, "http://localhost");
+      const p = url.pathname;
+      const projectId = url.searchParams.get("project") ?? "local";
       if (
         !["localhost", "127.0.0.1"].includes(
           (req.headers.host || "").split(":")[0],
@@ -171,6 +160,13 @@ http
           !req.headers["content-type"]?.startsWith("application/json"))
       )
         return send(403, { error: "请求来源无效" });
+      if (req.method === "GET" && p === "/") {
+        if (projectEntry) {
+          res.writeHead(302, {Location:"/projects", "Cache-Control":"no-store"});
+          return res.end();
+        }
+        return send(200, await content("/editor"), "text/html");
+      }
       if (req.method === "GET" && files.has(p))
         return send(
           200,
@@ -183,7 +179,8 @@ http
         );
       if (req.method === "GET" && p.startsWith("/api/")) {
         if (p === "/api/assistant/config") return send(200, await assistant.publicConfig());
-        const state = await read();
+        if (p === "/api/projects") return send(200, { projects: await projects.list(), cases: library.cases });
+        const state = await projects.read(projectId);
         if (p === "/api/draft") return send(200, state.draft);
         if (p === "/api/published") {
           const v = state.versions.find((v) => v.id === state.active);
@@ -201,6 +198,11 @@ http
       }
       if (req.method === "POST") {
         const data = await body(req);
+        if (p === "/api/projects") {
+          if (data.caseId && !library.cases.some(item => item.id === data.caseId)) throw Error("案例不存在");
+          return send(201, await projects.create(data));
+        }
+        if (p === "/api/projects/rename") return send(200, await projects.rename(data.id, data.name));
         if (p === "/api/assistant/config") return send(200, await assistant.save(data));
         if (p === "/api/assistant/propose") {
           const controller=new AbortController();
@@ -251,7 +253,7 @@ http
             (data.source.kind === "json" ? JSON.parse : csv)(data.source.data);
           return send(
             200,
-            await edit((s) => {
+            await projects.edit(projectId, (s) => {
               s.draft = data;
               if (p === "/api/publish") {
                 const id = randomUUID();
@@ -270,7 +272,7 @@ http
         if (p === "/api/rollback")
           return send(
             200,
-            await edit((s) => {
+            await projects.edit(projectId, (s) => {
               if (!s.versions.some((v) => v.id === data.id))
                 throw Error("版本不存在");
               s.active = data.id;
@@ -278,9 +280,13 @@ http
             }),
           );
       }
+      if (req.method === "GET") {
+        const asset = await library.asset(p);
+        if (asset) return send(200, asset.data, asset.type);
+      }
       send(404, { error: "未找到" });
     } catch (e) {
-      send(400, { error: e.message });
+      send(e.code === "ENOENT" ? 404 : 400, { error: e.message });
     }
   })
   .listen(port, "127.0.0.1", () =>

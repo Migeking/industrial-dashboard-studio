@@ -10,7 +10,7 @@
   <body>
   <div id="app" v-cloak>
     <header v-if="!viewer" class="studio-header">
-      <b>{{screen?'画面设计器':'工业可视化工作台'}}</b><span class="project-title">{{ doc.title }}</span>
+      <a class="studio-project-home" href="/projects" @click="returnToProjects">项目管理</a><b>{{screen?'画面设计器':'工业可视化工作台'}}</b><span class="project-title">{{ doc.title }}</span>
       <button @click="newScreen">新建画面</button>
       <button v-if="screen" @click="goStep('scene')" aria-label="选择场景">示例场景</button>
       <button v-if="screen" @click="openConfig">数据连接</button>
