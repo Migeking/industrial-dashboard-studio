@@ -21,10 +21,11 @@ class Fixture(process.Fixture):
         data={'P101.run':True,'P101.fault':False,'P101.hz':38.5,'P102.run':False,'P102.fault':False,'P103.run':False,'P103.fault':False,'V101.open':True,'V102.open':False,'T101.level':3.2,
               'plant.flow':128.6,'plant.energy':460.2,'plant.efficiency':92.5,'plant.onlineCount':5,
               'history':[{'time':stamp-(5-i)*10000,'frequency':30+i*1.7,'flow':[105,112,121,130,126,128.6][i]} for i in range(6)],
+              'history.flow':[{'at':stamp-(5-i)*10000,'metrics':{'flow':[105,112,121,130,126,128.6][i]},'q':'bad' if i==2 else 'good'} for i in range(6)],
               'branches':[{'branch':'东区','flow':68.4},{'branch':'西区','flow':60.2}],
               'branches.alternate':[{'branch':'东区','flow':70.0},{'branch':'西区','flow':58.6}],
               'energy.categories':[{'category':'提升泵','value':300},{'category':'送水泵','value':100},{'category':'附属设备','value':60.2}],
-              'devices':[{'name':'P-101','running':True,'fault':False,'frequency':38.5},{'name':'P-102','running':False,'fault':False,'frequency':0},{'name':'P-103','running':False,'fault':False,'frequency':0}],
+              'devices':[{'name':'P-101','running':True,'fault':False,'frequency':38.5},{'name':'P-102','running':False,'fault':False,'frequency':0},{'name':'P-103','running':False,'fault':False,'frequency':0,'maintenance':'待巡检'}],
               'events':[{'time':stamp-120000,'level':'warning','device':'T-101','message':'历史演示事件：液位低预警已恢复'},{'time':stamp-60000,'level':'info','device':'P-101','message':'历史演示事件：进入运行状态'}]}
         if self.mode=='zero':data.update({'P101.run':False,'P101.hz':0,'T101.level':0,'plant.flow':0})
         if self.mode=='fault':data['P101.fault']=True
@@ -91,14 +92,59 @@ def exercise(page,base,url,browser):
     kpis=[]
     for i,(title,point) in enumerate([('总流量','plant.flow'),('累计能耗','plant.energy'),('运行效率','plant.efficiency'),('在线设备','plant.onlineCount'),('清水池液位','T101.level'),('主泵频率','P101.hz')]):
         id=place('readout',40+i*310,160,280,140,title);bind(id,{'显示数值':point});field('小数位',0 if i==3 else 1);kpis.append(id)
-    dual=place('trend',40,340,820,310,'频率 / 流量历史');field('图表分类字段','time');field('序列 1 名称','频率');field('序列 1 数值字段','frequency');page.get_by_role('button',name='添加序列',exact=True).click();field('序列 2 名称','流量');field('序列 2 数值字段','flow');page.get_by_label('序列 2 坐标轴',exact=True).select_option('1')
+    dual=place('trend',40,340,820,310,'频率 / 流量历史')
+    page.get_by_label('序列 1 绑定测点',exact=True).select_option('history')
+    page.get_by_role('button',name='添加序列',exact=True).click()
+    page.get_by_label('序列 2 绑定测点',exact=True).select_option('history.flow')
+    for i,expected_fields in [(1,{'time','frequency','flow'}),(2,{'at','metrics.flow','q'})]:
+        locator=page.get_by_label(f'序列 {i} 数值字段',exact=True)
+        sample_list=locator.get_attribute('list')
+        assert set(page.locator(f'[id="{sample_list}"] option').evaluate_all('(options)=>options.map(o=>o.value)'))==expected_fields
+    series2=page.get_by_role('group',name='序列 2',exact=True)
+    series2.get_by_text('字段样本',exact=False).click()
+    samples=series2.get_by_role('table',name='数据集字段样本')
+    expect(samples.get_by_role('row').filter(has_text='metrics.flow')).to_contain_text('数值')
+    expect(samples.get_by_role('row').filter(has_text='metrics.flow')).to_contain_text('105')
+    expect(samples.get_by_role('row').filter(has_text='at')).to_be_visible()
+    page.screenshot(path=str(OUT/'B-dataset-fields.png'))
+    field('序列 1 名称','频率')
+    field('序列 1 数值字段','frequency')
+    field('序列 2 名称','流量')
+    field('序列 2 时间 / 分类字段','at')
+    value_field=page.get_by_label('序列 2 数值字段',exact=True)
+    time_option=page.locator(f'[id="{value_field.get_attribute("list")}"] option[value="at"]')
+    previous_sample=time_option.text_content()
+    value_field.fill('metrics.flow')
+    expect(time_option).not_to_have_text(previous_sample,timeout=10000)
+    expect(value_field).to_have_value('metrics.flow')
+    value_field.press('Tab')
+    field('序列 2 质量字段','q')
+    page.get_by_label('序列 2 坐标轴',exact=True).select_option('1')
     for label,val in [('左轴单位','Hz'),('左轴最小值',0),('左轴最大值',60),('右轴单位','m³/h'),('右轴最小值',0),('右轴最大值',200)]:field(label,val)
-    page.get_by_role('button',name='添加参考线',exact=True).click();field('参考线 1 数值',50);field('参考线 1 名称','频率上限');bind(dual,{'趋势数据':'history','序列 2':'history'})
-    opt=option(dual);assert len(opt['series'])==2 and opt['series'][1]['yAxisIndex']==1 and opt['yAxis'][1]['max']==200 and len(opt['series'][0]['data'])==6
+    page.get_by_role('button',name='添加参考线',exact=True).click()
+    field('参考线 1 数值',50)
+    field('参考线 1 名称','频率上限')
+
+    def assert_dual_series():
+        opt=option(dual)
+        assert len(opt['series'])==2 and opt['series'][1]['yAxisIndex']==1 and opt['yAxis'][1]['max']==200
+        assert len(opt['series'][0]['data'])==6
+        flow_values=[row[1] for row in opt['series'][1]['data']]
+        assert flow_values==[105,112,None,130,126,128.6],flow_values
+
+    assert_dual_series()
     bar=place('barChart',890,340,500,310,'分区供水量');field('图表分类字段','branch');field('序列 1 数值字段','flow');field('左轴最小值',0);field('左轴最大值',100);field('左轴单位','m³/h');bind(bar,{'图表数据':'branches'});assert option(bar)['xAxis'][0]['data']==['东区','西区']
     bind(bar,{'图表数据':'branches.alternate'});assert option(bar)['series'][0]['name']=='branches.alternate' and option(bar)['yAxis'][0]['max']==100;bind(bar,{'图表数据':'branches'})
     pie=place('pieChart',1420,340,460,310,'能耗分项');field('图表分类字段','category');field('饼图数值字段','value');bind(pie,{'图表数据':'energy.categories'});assert len(option(pie)['series'][0]['data'])==3
-    table=place('table',40,690,670,300,'设备运行状态');bind(table,{'表格数据':'devices'});columns(table,['设备','运行','故障','频率']);field('列 4 单位','Hz');field('列表排序字段','name');field('列表行数',3);expect(node(table).locator('tbody')).to_contain_text('0.00 Hz');expect(node(table).locator('tbody')).to_contain_text('否')
+    table=place('table',40,690,670,300,'设备运行状态')
+    page.get_by_label('列表绑定测点',exact=True).select_option('devices')
+    page.get_by_text('字段样本',exact=False).click()
+    expect(page.get_by_role('table',name='数据集字段样本')).to_contain_text('待巡检')
+    columns(table,['设备','运行','故障','频率','巡检状态'])
+    field('列 4 单位','Hz');field('列表排序字段','name');field('列表行数',3)
+    expect(node(table).locator('tbody')).to_contain_text('0.00 Hz')
+    expect(node(table).locator('tbody')).to_contain_text('否')
+    expect(node(table).locator('tbody')).to_contain_text('待巡检')
     bevents=place('events',740,690,690,300,'事件记录 · 本地模拟');bind(bevents,{'事件数据':'events'});columns(bevents,['发生时间','级别','设备','内容']);field('列表排序字段','time');page.get_by_label('列表排序方向',exact=True).select_option('desc');field('列表行数',5)
     gauge=place('gauge',1460,690,390,300,'主泵频率');field('仪表上限',60);bind(gauge,{'显示数值':'P101.hz'});assert option(gauge)['series'][0]['data'][0]['value']==38.5
     action(back,'main');nav('main');forward=place('button',1600,60,230,65,'运行驾驶舱');action(forward,b_id);nav(b_id)
@@ -109,7 +155,7 @@ def exercise(page,base,url,browser):
 
     # Preview and published mode share the authored configuration.
     page.locator('.studio-header').get_by_role('button',name='预览发布',exact=True).click();expect(page.locator('.studio-header').get_by_role('button',name='发布',exact=True)).to_be_enabled();page.locator('.studio-header').get_by_role('button',name='发布',exact=True).click();expect(page.get_by_role('status')).to_contain_text('已发布');assert page.request.get(base+'/api/published').json()==final
-    page.goto(base+'/view');expect(node(kpis[0])).to_contain_text('128.6 m³/h');expect(node(status)).to_have_attribute('data-state','运行');assert len(option(dual)['series'])==2
+    page.goto(base+'/view');expect(node(kpis[0])).to_contain_text('128.6 m³/h');expect(node(status)).to_have_attribute('data-state','运行');assert_dual_series()
     Fixture.mode='zero';expect(node(kpis[0])).to_contain_text('0.0 m³/h');expect(node(status)).to_contain_text('停止');page.wait_for_function('id=>{const h=document.querySelector(`[data-cell-id="${id}"] .screen-chart-host`);return echarts.getInstanceByDom(h).getOption().series[0].data[0]?.value===0}',arg=gauge)
     Fixture.mode='bad';expect(node(kpis[0])).to_contain_text('—');expect(node(status)).to_have_attribute('data-state','未知');expect(node(table)).to_contain_text('无效');page.wait_for_function('id=>{const h=document.querySelector(`[data-cell-id="${id}"] .screen-chart-host`);return echarts.getInstanceByDom(h).getOption().series[0].data.length===0}',arg=gauge)
     Fixture.mode='normal';expect(node(kpis[0])).to_contain_text('128.6 m³/h');expect(node(table).locator('tbody tr')).to_have_count(3)
@@ -119,6 +165,7 @@ def exercise(page,base,url,browser):
         page.set_viewport_size({'width':width,'height':height});box=page.locator('.board').bounding_box();assert abs(box['width']/box['height']-1920/1080)<.01;expect(node(table)).to_be_visible();page.screenshot(path=str(OUT/f'B-published-{width}.png'))
     for _ in range(8):node(back).click();expect(page.locator('.screen-chart-host canvas')).to_have_count(1);node(forward).click();expect(page.locator('.screen-chart-host canvas')).to_have_count(4)
     stats=page.evaluate('window.__chartStats');assert stats['init']-stats['dispose']==4,stats
+    checks.append({'check':'两条序列内直接选点，字段候选按数据集隔离，不同时间列正常绘图，坏样本断开，列表纳入后续行新列','status':'passed'})
     checks.append({'check':'A/B 共用独立仪表和趋势，预览发布一致；0/false、坏质量/恢复、三尺寸与八次导航正确','status':'passed','chartLifecycle':stats})
     page.goto(base+'/?page='+b_id);page.locator('.project-menu summary').click()
     with page.expect_download() as dl:page.get_by_role('button',name='导出离线演示',exact=True).click()

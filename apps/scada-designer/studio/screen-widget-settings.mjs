@@ -1,6 +1,7 @@
 import {
   screenSlots,
   screenRoleSlot,
+  screenSlotMappings,
 } from "../../../packages/components/studio/screen-symbols.mjs";
 import {
   screenSeries,
@@ -36,7 +37,89 @@ function screenWidgetForm(props, emit) {
   };
   return { form, error, commit };
 }
+function widgetFieldSamples(point) {
+  const rows = point?.quality === "good" && Array.isArray(point.value)
+    ? point.value.slice(0, 12) : [];
+  const fields = new Map();
+  const types = { number: "数值", string: "文本", boolean: "布尔" };
+  const add = (row, prefix = "", depth = 0) => {
+    for (const [key, value] of Object.entries(row)) {
+      const field = prefix ? prefix + "." + key : key;
+      if (value && typeof value === "object" && !Array.isArray(value) && depth < 3) {
+        add(value, field, depth + 1);
+        continue;
+      }
+      if (!fields.has(field)) {
+        if (fields.size >= 100) continue;
+        fields.set(field, { field, types: new Set(), examples: new Set() });
+      }
+      if (value == null) continue;
+      const sample = fields.get(field);
+      sample.types.add(types[typeof value] || (Array.isArray(value) ? "数组" : "对象"));
+      if (sample.examples.size < 3 && types[typeof value])
+        sample.examples.add(String(value).slice(0, 72));
+    }
+  };
+  for (const row of rows) add(row);
+  return [...fields.values()].map(({field, types, examples}) => ({
+    field, type: [...types].join(" / ") || "空值", example: [...examples].join(" / ") || "—",
+  }));
+}
+
+const ScreenWidgetSource = {
+  props: ["slot", "doc", "item", "points", "label", "fields"],
+  emits: ["bind"],
+  setup(props) {
+    const id = Vue.computed(() => props.item.bindings[props.slot?.key] || "");
+    const options = Vue.computed(() => props.slot ? screenSlotMappings(props.slot, props.doc.mappings) : []);
+    const mapping = Vue.computed(() => options.value.find(m => m.id === id.value));
+    const readback = Vue.computed(() => {
+      const point = props.points[id.value];
+      if (!id.value) return "";
+      if (point?.quality === "good")
+        return Array.isArray(point.value) ? point.value.length + " 行" :
+          [point.value, mapping.value?.unit].filter(v => v !== "" && v != null).join(" ");
+      return { offline: "离线", stale: "已过期", bad: "无效" }[point?.quality] || "等待样本";
+    });
+    return { id, options, mapping, readback };
+  },
+  template: `<div v-if="slot" class="widget-source">
+    <label>{{label}}
+      <select :aria-label="label" :value="id" @change="$emit('bind', $event.target.value)">
+        <option value="">选择测点</option>
+        <option v-for="m in options" :key="m.id" :value="m.id">{{m.label}} · {{m.id}}</option>
+      </select>
+    </label>
+    <small v-if="readback" class="point-readback">{{readback}}</small>
+    <details v-if="mapping?.kind==='dataset'" class="widget-field-samples">
+      <summary>字段样本<span v-if="fields.length"> · {{fields.length}} 列</span></summary>
+      <p v-if="!fields.length" class="muted">当前没有可预览的行数据。</p>
+      <div v-else class="widget-field-scroll" tabindex="0" role="region" aria-label="字段样本列表">
+      <table aria-label="数据集字段样本">
+        <thead><tr><th scope="col">字段</th><th scope="col">类型</th><th scope="col">样本</th></tr></thead>
+        <tbody><tr v-for="f in fields" :key="f.field"><th scope="row">{{f.field}}</th><td>{{f.type}}</td><td>{{f.example}}</td></tr></tbody>
+      </table>
+      </div>
+    </details>
+  </div>`,
+};
+
+const ScreenChartFieldInput = {
+  props: ["caption", "label", "value", "list", "placeholder"],
+  emits: ["commit"],
+  setup(props) {
+    const draft = Vue.ref(props.value);
+    Vue.watch(() => props.value, value => { draft.value = value; });
+    return { draft };
+  },
+  template: `<label>{{caption}}
+    <input v-model="draft" :aria-label="label" :list="list" :placeholder="placeholder"
+      @change="$emit('commit', draft)" />
+  </label>`,
+};
+
 export const ScreenChartSettings = {
+  components: { ScreenWidgetSource, ScreenChartFieldInput },
   props: ["item", "doc", "points"],
   emits: ["start"],
   setup(props, { emit }) {
@@ -52,13 +135,20 @@ export const ScreenChartSettings = {
         s.kinds.every((k) => ["number", "dataset"].includes(k)),
       ),
     );
-    const sampleFields = Vue.computed(() => {
-      const samples = slots.value.flatMap(slot => {
-        const point = props.points[props.item.bindings[slot.key]];
-        return point?.quality === "good" && Array.isArray(point.value) ? point.value.slice(0, 5) : [];
-      });
-      return [...new Set(samples.flatMap(Object.keys))].slice(0, 100);
-    });
+    const primarySlot = Vue.computed(() => screenRoleSlot(props.item, "value"));
+    const fieldsBySlot = Vue.computed(() => new Map(slots.value.map(slot => [
+      slot.key, widgetFieldSamples(props.points[props.item.bindings[slot.key]]),
+    ])));
+    const fieldsFor = (key) => fieldsBySlot.value.get(key) || [];
+    const sampleFields = Vue.computed(() => [...new Set(
+      series.value.flatMap(s => fieldsFor(s.slot).map(f => f.field)),
+    )].slice(0, 100));
+    const bind = (key, value) => state.commit({ bindings: { ...props.item.bindings, [key]: value } });
+    const setXField = (value) => {
+      if (value.trim()) state.form.value.xField = value.trim();
+      else delete state.form.value.xField;
+      state.commit();
+    };
     const setSeries = (index, key, value) => {
       state.form.value.series = JSON.parse(JSON.stringify(series.value));
       state.form.value.series[index][key] = value;
@@ -121,7 +211,11 @@ export const ScreenChartSettings = {
       cartesian,
       series,
       slots,
+      primarySlot,
+      fieldsFor,
       sampleFields,
+      bind,
+      setXField,
       setSeries,
       add,
       remove,
@@ -131,72 +225,66 @@ export const ScreenChartSettings = {
   template: `<section class="screen-chart-settings"><h2>图表配置</h2><datalist :id="'chart-fields-'+item.id"><option v-for="field in sampleFields" :value="field"></option></datalist><p class="definition-error" v-if="error" role="alert">{{error}}</p>
  <template v-if="cartesian"><label class="screen-check"><input type="checkbox" aria-label="平滑趋势线" :checked="!!form.smooth" @change="form.smooth=$event.target.checked;commit()" />平滑趋势线</label><label class="screen-check"><input type="checkbox" aria-label="显示数据标记" :checked="form.showSymbol!==false" @change="form.showSymbol=$event.target.checked;commit()" />显示数据标记</label></template>
  <label v-if="item.symbol!=='gauge'" class="screen-check"><input type="checkbox" aria-label="显示图例" :checked="form.legend!==false" @change="form.legend=$event.target.checked;commit()" />显示图例</label>
- <template v-if="cartesian||item.symbol==='pieChart'"><label v-if="cartesian">横轴类型<select aria-label="图表横轴类型" :value="form.xType||(item.symbol==='trend'?'time':'category')" @change="form.xType=$event.target.value;commit()"><option value="time">时间</option><option value="category">分类</option></select></label><label v-if="cartesian">时间刻度<select aria-label="趋势时间刻度" :value="form.timeFormat||'seconds'" @change="form.timeFormat=$event.target.value;commit()"><option value="seconds">时:分:秒</option><option value="hours">时:分</option></select></label><label>时间 / 分类字段<input aria-label="图表分类字段" :list="'chart-fields-'+item.id" :placeholder="item.symbol==='trend'?'time':'name'" v-model="form.xField" @change="commit()" /></label></template>
+ <template v-if="cartesian||item.symbol==='pieChart'"><label v-if="cartesian">横轴类型<select aria-label="图表横轴类型" :value="form.xType||(item.symbol==='trend'?'time':'category')" @change="form.xType=$event.target.value;commit()"><option value="time">时间</option><option value="category">分类</option></select></label><label v-if="cartesian">时间刻度<select aria-label="趋势时间刻度" :value="form.timeFormat||'seconds'" @change="form.timeFormat=$event.target.value;commit()"><option value="seconds">时:分:秒</option><option value="hours">时:分</option></select></label><screen-chart-field-input caption="时间 / 分类字段" label="图表分类字段"
+   :list="'chart-fields-'+item.id" :placeholder="item.symbol==='trend'?'time':'name'"
+   :value="form.xField||''" @commit="setXField" /></template>
+ <screen-widget-source v-if="!cartesian&&primarySlot" :slot="primarySlot" :doc="doc" :item="item" :points="points" label="图表绑定测点" :fields="fieldsFor(primarySlot.key)" @bind="bind(primarySlot.key,$event)"></screen-widget-source>
  <label v-if="item.symbol==='pieChart'" class="screen-check"><input type="checkbox" aria-label="环形图" :checked="form.donut!==false" @change="form.donut=$event.target.checked;commit()" />显示为环形</label>
  <template v-if="item.symbol==='gauge'"><div class="pair"><label>下限<input type="number" aria-label="仪表下限" v-model.number="form.min" @change="commit()" /></label><label>上限<input type="number" aria-label="仪表上限" v-model.number="form.max" @change="commit()" /></label></div></template>
- <template v-if="cartesian"><div class="definition-heading"><h2>数据序列</h2><button @click="add">添加序列</button></div><p class="muted">每个序列有独立测点槽位。添加后到“动态与测点”绑定；名称留空时跟随测点。</p>
- <fieldset class="definition-card" v-for="(s,i) in series" :key="s.id"><legend>序列 {{i+1}}</legend><label>名称<input :aria-label="'序列 '+(i+1)+' 名称'" :value="s.name" @change="setSeries(i,'name',$event.target.value)" placeholder="跟随测点" /></label><label>测点槽位<select :aria-label="'序列 '+(i+1)+' 槽位'" :value="s.slot" @change="setSeries(i,'slot',$event.target.value)"><option v-for="slot in slots" :value="slot.key">{{slot.label}}</option></select></label><div class="pair"><label>样式<select :aria-label="'序列 '+(i+1)+' 样式'" :value="s.type" @change="setSeries(i,'type',$event.target.value)"><option value="line">折线</option><option value="bar">柱形</option></select></label><label>坐标轴<select :aria-label="'序列 '+(i+1)+' 坐标轴'" :value="s.axis" @change="setSeries(i,'axis',Number($event.target.value))"><option :value="0">左轴</option><option :value="1">右轴</option></select></label></div><label>数据集数值字段<input :aria-label="'序列 '+(i+1)+' 数值字段'" :value="s.field" :list="'chart-fields-'+item.id" @change="setSeries(i,'field',$event.target.value)" /></label><label>数据集质量字段<input :aria-label="'序列 '+(i+1)+' 质量字段'" :value="s.qualityField||''" :list="'chart-fields-'+item.id" @change="setSeries(i,'qualityField',$event.target.value.trim())" placeholder="可留空" /></label><label>颜色<input type="color" :aria-label="'序列 '+(i+1)+' 颜色'" :value="s.color||(i===0?'#227f9f':'#d68b45')" @change="setSeries(i,'color',$event.target.value)" /></label><button @click="remove(i)" :disabled="series.length===1">移除序列 {{i+1}}</button></fieldset>
+ <template v-if="cartesian"><div class="definition-heading"><h2>数据序列</h2><button @click="add">添加序列</button></div><p class="muted">在序列中选择测点和字段。名称留空时跟随测点。</p>
+ <fieldset class="definition-card" v-for="(s,i) in series" :key="s.id"><legend>序列 {{i+1}}</legend><screen-chart-field-input caption="名称" :label="'序列 '+(i+1)+' 名称'" :value="s.name"
+   @commit="setSeries(i,'name',$event)" placeholder="跟随测点" /><label>测点槽位<select :aria-label="'序列 '+(i+1)+' 槽位'" :value="s.slot" @change="setSeries(i,'slot',$event.target.value)"><option v-for="slot in slots" :value="slot.key">{{slot.label}}</option></select></label>
+ <screen-widget-source :slot="slots.find(slot=>slot.key===s.slot)" :doc="doc" :item="item" :points="points"
+   :label="'序列 '+(i+1)+' 绑定测点'" :fields="fieldsFor(s.slot)" @bind="bind(s.slot,$event)"></screen-widget-source>
+ <datalist :id="'series-fields-'+item.id+'-'+i"><option v-for="f in fieldsFor(s.slot)" :key="f.field" :value="f.field">{{f.type}} · {{f.example}}</option></datalist>
+ <screen-chart-field-input caption="序列时间 / 分类字段" :label="'序列 '+(i+1)+' 时间 / 分类字段'"
+   :value="s.xField||''" :list="'series-fields-'+item.id+'-'+i"
+   @commit="setSeries(i,'xField',$event.trim())" placeholder="沿用图表横轴字段" />
+ <div class="pair"><label>样式<select :aria-label="'序列 '+(i+1)+' 样式'" :value="s.type" @change="setSeries(i,'type',$event.target.value)"><option value="line">折线</option><option value="bar">柱形</option></select></label><label>坐标轴<select :aria-label="'序列 '+(i+1)+' 坐标轴'" :value="s.axis" @change="setSeries(i,'axis',Number($event.target.value))"><option :value="0">左轴</option><option :value="1">右轴</option></select></label></div><screen-chart-field-input caption="数据集数值字段" :label="'序列 '+(i+1)+' 数值字段'"
+   :value="s.field" :list="'series-fields-'+item.id+'-'+i" @commit="setSeries(i,'field',$event.trim())" /><screen-chart-field-input caption="数据集质量字段" :label="'序列 '+(i+1)+' 质量字段'"
+   :value="s.qualityField||''" :list="'series-fields-'+item.id+'-'+i"
+   @commit="setSeries(i,'qualityField',$event.trim())" placeholder="可留空" /><label>颜色<input type="color" :aria-label="'序列 '+(i+1)+' 颜色'" :value="s.color||(i===0?'#227f9f':'#d68b45')" @change="setSeries(i,'color',$event.target.value)" /></label><button @click="remove(i)" :disabled="series.length===1">移除序列 {{i+1}}</button></fieldset>
  <fieldset class="definition-card" v-for="(label,side) in {left:'左轴',right:'右轴'}"><legend>{{label}}</legend><label>单位（留空跟随测点）<input :aria-label="label+'单位'" v-model="form[side+'Unit']" @change="commit()" /></label><div class="pair"><label>最小值<input type="number" :aria-label="label+'最小值'" v-model.number="form[side+'Min']" placeholder="自动" @change="commit()" /></label><label>最大值<input type="number" :aria-label="label+'最大值'" v-model.number="form[side+'Max']" placeholder="自动" @change="commit()" /></label></div></fieldset>
  <div class="definition-heading"><h2>参考线</h2><button @click="addThreshold">添加参考线</button></div><fieldset v-for="(line,i) in form.thresholds||[]" :key="i" class="definition-card"><legend>参考线 {{i+1}}</legend><label>数值<input type="number" :aria-label="'参考线 '+(i+1)+' 数值'" v-model.number="line.value" @change="commit()" /></label><label>名称<input :aria-label="'参考线 '+(i+1)+' 名称'" v-model="line.label" @change="commit()" /></label><label>坐标轴<select :aria-label="'参考线 '+(i+1)+' 坐标轴'" v-model.number="line.axis" @change="commit()"><option :value="0">左轴</option><option :value="1">右轴</option></select></label><label>颜色<input type="color" :aria-label="'参考线 '+(i+1)+' 颜色'" v-model="line.color" @change="commit()" /></label><button @click="form.thresholds.splice(i,1);commit()">移除参考线 {{i+1}}</button></fieldset></template>
- <template v-else-if="item.symbol==='pieChart'"><label>数据集数值字段<input aria-label="饼图数值字段" :value="form.series?.[0]?.field||'value'" @change="form.series=[{id:'primary',slot:slots[0]?.key||'value',name:'',type:'line',axis:0,field:$event.target.value}];commit()" /></label></template>
+ <template v-else-if="item.symbol==='pieChart'"><screen-chart-field-input caption="数据集数值字段" label="饼图数值字段" :list="'chart-fields-'+item.id"
+   :value="series[0]?.field||'value'" @commit="setSeries(0,'field',$event.trim())" /></template>
  </section>`,
 };
 export const ScreenTableSettings = {
+  components: { ScreenWidgetSource },
   props: ["item", "doc", "points"],
   emits: ["start"],
   setup(props, { emit }) {
     const state = screenWidgetForm(props, emit);
-    const sample = Vue.computed(() => {
-      const slot = screenRoleSlot(props.item, "value"),
-        point = props.points[props.item.bindings[slot?.key]];
-      return point?.quality === "good" && Array.isArray(point.value)
-        ? point.value[0]
-        : null;
-    });
+    const slot = Vue.computed(() => screenRoleSlot(props.item, "value"));
     const fields = Vue.computed(() =>
-      sample.value && typeof sample.value === "object"
-        ? Object.keys(sample.value)
-        : [],
+      widgetFieldSamples(props.points[props.item.bindings[slot.value?.key]]),
     );
+    const bind = (value) => state.commit({ bindings: { ...props.item.bindings, [slot.value.key]: value } });
+    const column = ({ field, type }) => ({
+      field, title: field, unit: "",
+      format: /^(time|timestamp|receivedAt|eventTime|sourceTime|createdAt|updatedAt|时间)$/i.test(field)
+        ? "time" : { 数值: "number", 布尔: "boolean" }[type] || "text",
+    });
     const add = () => {
       state.form.value.columns ||= [];
-      const field =
-        fields.value.find(
-          (f) => !state.form.value.columns.some((c) => c.field === f),
-        ) || "value";
-      state.form.value.columns.push({
-        field,
-        title: field,
-        format: typeof sample.value?.[field] === "number" ? "number" : "text",
-        unit: "",
-      });
+      const field = fields.value.find(f =>
+        !state.form.value.columns.some(c => c.field === f.field),
+      ) || { field: "value", type: "" };
+      state.form.value.columns.push(column(field));
       state.commit();
     };
     const generate = () => {
-      state.form.value.columns = fields.value.map((field) => ({
-        field,
-        title: field,
-        format:
-          /^(time|timestamp|receivedAt|eventTime|sourceTime|createdAt|updatedAt|时间)$/i.test(
-            field,
-          )
-            ? "time"
-            : typeof sample.value[field] === "number"
-              ? "number"
-              : typeof sample.value[field] === "boolean"
-                ? "boolean"
-                : "text",
-        unit: "",
-      }));
+      state.form.value.columns = fields.value.map(column);
       state.commit();
     };
-    return { ...state, fields, add, generate };
+    return { ...state, slot, fields, bind, add, generate };
   },
-  template: `<section class="screen-table-settings"><h2>列表字段</h2><p role="alert" v-if="error" class="definition-error">{{error}}</p><p class="muted">默认显示样本前六列。生成后可改字段、列名及格式。</p><div class="tools"><button @click="generate" :disabled="!fields.length">从样本生成列</button><button @click="add">添加列</button></div><fieldset v-for="(col,i) in form.columns||[]" :key="i" class="definition-card"><legend>列 {{i+1}}</legend><label>字段<input :aria-label="'列 '+(i+1)+' 字段'" v-model="col.field" @change="commit()" /></label><label>列名<input :aria-label="'列 '+(i+1)+' 名称'" v-model="col.title" @change="commit()" /></label><label>格式<select :aria-label="'列 '+(i+1)+' 格式'" v-model="col.format" @change="commit()"><option value="text">文本</option><option value="number">数值</option><option value="time">时间</option><option value="boolean">是 / 否</option></select></label><label v-if="col.format==='number'">单位<input :aria-label="'列 '+(i+1)+' 单位'" v-model="col.unit" @change="commit()" /></label><div class="tools"><button :disabled="i===0" @click="[form.columns[i-1],form.columns[i]]=[form.columns[i],form.columns[i-1]];commit()">上移列 {{i+1}}</button><button @click="form.columns.splice(i,1);commit()">移除列 {{i+1}}</button></div></fieldset><div class="pair"><label>{{item.symbol==='events'?'每页行数':'最多显示行数'}}<input type="number" min="1" max="200" aria-label="列表行数" :value="form.limit||8" @change="form.limit=Number($event.target.value);commit()" /></label><label>排序方向<select aria-label="列表排序方向" :value="form.sortDirection||'asc'" @change="form.sortDirection=$event.target.value;commit()"><option value="asc">升序</option><option value="desc">降序</option></select></label></div><label>排序字段<input aria-label="列表排序字段" v-model="form.sortField" @change="commit()" /></label><label v-if="item.symbol==='events'">告警级别字段<input aria-label="告警级别字段" :value="form.severityField||'level'" @change="form.severityField=$event.target.value;commit()" /></label>
+  template: `<section class="screen-table-settings"><h2>列表字段</h2><p role="alert" v-if="error" class="definition-error">{{error}}</p><screen-widget-source :slot="slot" :doc="doc" :item="item" :points="points" label="列表绑定测点" :fields="fields" @bind="bind"></screen-widget-source>
+  <datalist :id="'table-fields-'+item.id"><option v-for="f in fields" :key="f.field" :value="f.field">{{f.type}} · {{f.example}}</option></datalist><div class="tools"><button @click="generate" :disabled="!fields.length">从样本生成列</button><button @click="add">添加列</button></div><fieldset v-for="(col,i) in form.columns||[]" :key="i" class="definition-card"><legend>列 {{i+1}}</legend><label>字段<input :aria-label="'列 '+(i+1)+' 字段'" v-model="col.field" :list="'table-fields-'+item.id" @change="commit()" /></label><label>列名<input :aria-label="'列 '+(i+1)+' 名称'" v-model="col.title" @change="commit()" /></label><label>格式<select :aria-label="'列 '+(i+1)+' 格式'" v-model="col.format" @change="commit()"><option value="text">文本</option><option value="number">数值</option><option value="time">时间</option><option value="boolean">是 / 否</option></select></label><label v-if="col.format==='number'">单位<input :aria-label="'列 '+(i+1)+' 单位'" v-model="col.unit" @change="commit()" /></label><div class="tools"><button :disabled="i===0" @click="[form.columns[i-1],form.columns[i]]=[form.columns[i],form.columns[i-1]];commit()">上移列 {{i+1}}</button><button @click="form.columns.splice(i,1);commit()">移除列 {{i+1}}</button></div></fieldset><div class="pair"><label>{{item.symbol==='events'?'每页行数':'最多显示行数'}}<input type="number" min="1" max="200" aria-label="列表行数" :value="form.limit||8" @change="form.limit=Number($event.target.value);commit()" /></label><label>排序方向<select aria-label="列表排序方向" :value="form.sortDirection||'asc'" @change="form.sortDirection=$event.target.value;commit()"><option value="asc">升序</option><option value="desc">降序</option></select></label></div><label>排序字段<input aria-label="列表排序字段" v-model="form.sortField" :list="'table-fields-'+item.id" @change="commit()" /></label><label v-if="item.symbol==='events'">告警级别字段<input aria-label="告警级别字段" :list="'table-fields-'+item.id" :value="form.severityField||'level'" @change="form.severityField=$event.target.value;commit()" /></label>
     <template v-if="item.symbol==='events'">
       <label>告警定位字段<input aria-label="告警定位字段" v-model.trim="form.deviceRefField" maxlength="128"
-        :list="'event-fields-'+item.id" @change="commit()" placeholder="例如 deviceRef" /></label>
-      <datalist :id="'event-fields-'+item.id"><option v-for="field in fields" :value="field"></option></datalist>
+        :list="'table-fields-'+item.id" @change="commit()" placeholder="例如 deviceRef" /></label>
       <p class="muted">字段值填写本画面的图元编号或唯一设备名称。</p>
     </template></section>`,
 };

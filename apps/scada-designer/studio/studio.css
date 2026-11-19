@@ -1746,3 +1746,47 @@ fieldset small {
   font-size: 13px;
 }
 .studio-project-home:hover { background: #eaf4f5; }
+
+
+.widget-source {
+  margin: 8px 0 12px;
+}
+.widget-field-samples {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #c9d8e0;
+  border-radius: 4px;
+  background: #f7fafb;
+  color: #304c5e;
+}
+.widget-field-samples summary {
+  cursor: pointer;
+  padding: 5px 0;
+}
+.widget-field-scroll {
+  max-height: 220px;
+  overflow-y: auto;
+}
+.widget-field-samples table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.widget-field-samples th,
+.widget-field-samples td {
+  padding: 6px 4px;
+  border-top: 1px solid #dce5ea;
+  overflow-wrap: anywhere;
+  text-align: left;
+  vertical-align: top;
+}
+.widget-field-samples th {
+  color: #304c5e;
+}
+.widget-field-samples thead th:first-child {
+  width: 35%;
+}
+.widget-field-samples thead th:nth-child(2) {
+  width: 18%;
+}

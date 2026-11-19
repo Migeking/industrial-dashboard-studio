@@ -127,6 +127,8 @@ export function validateScreenWidget(n) {
         throw Error("序列颜色无效");
       if (s.qualityField !== undefined && typeof s.qualityField !== "string")
         throw Error("序列质量字段无效");
+      if (s.xField !== undefined && typeof s.xField !== "string")
+        throw Error("序列时间或分类字段无效");
       ids.add(s.id);
     }
   }
@@ -260,7 +262,7 @@ export function screenChartResult(
             ];
     } else if (point?.quality === "good" && Array.isArray(point.value)) {
       rows = screenHistoryRows(point.value, {
-        xType, xField, field: s.field, qualityField: s.qualityField,
+        xType, xField: s.xField?.trim() || xField, field: s.field, qualityField: s.qualityField,
       });
     }
     if(n.params.rangeActive&&xType==='time'&&rows.length){
