@@ -791,6 +791,7 @@ async function boot() {
       async function rollback(id) {
         await guarded(async () => {
           await api("/api/rollback", { id });
+          published.value = false;
           await versions();
           message.value = "展示端已切换版本";
         });
