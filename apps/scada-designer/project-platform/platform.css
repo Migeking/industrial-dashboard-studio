@@ -82,7 +82,7 @@ input,select{min-height:38px;min-width:0;border:1px solid #b8c9d3;border-radius:
 .project-menu summary{display:grid;place-items:center;list-style:none;width:36px;min-height:40px;border:1px solid var(--line);border-radius:4px;color:var(--muted)}
 .project-menu summary::-webkit-details-marker{display:none}
 .project-menu div {position:absolute;right:0;top:calc(100% + 4px);min-width:128px;z-index:2;display:grid;gap:3px;padding:5px;border:1px solid var(--line);border-radius:5px;background:white;box-shadow:0 4px 12px #18313d17}
-.project-menu button{border-color:transparent;justify-content:flex-start}
+.project-menu button,.project-menu .button{border-color:transparent;justify-content:flex-start;white-space:nowrap}
 .case-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:17px}
 .case-card{min-width:0;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
 .case-card:focus-within,.case-card:hover{border-color:#9db8c5}

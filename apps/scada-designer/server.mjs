@@ -2,11 +2,13 @@ import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createHash, randomUUID } from "node:crypto";
-import { template, validate, csv } from "./studio/model.mjs";
+import { randomUUID } from "node:crypto";
+import { template, validate } from "./studio/model.mjs";
 import { browseNodes, protocolSample } from "./protocol.mjs";
 import { modelAssistant } from "./model-assistant.mjs";
-import { projectStore } from "./project-store.mjs";
+import {
+  projectStore, publicationMatchesDocument, sha256, validatePublication, versionLimit,
+} from "./project-store.mjs";
 import { createCaseLibrary } from "./case-library.mjs";
 import { waterArtwork } from "../../packages/components/studio/water-artwork.mjs";
 import { screenDepthArtwork } from "../../packages/components/studio/screen-artwork.mjs";
@@ -21,12 +23,12 @@ const projects = projectStore(dir);
 const library = await createCaseLibrary(root);
 // Existing single-project instances can keep their old landing URL.
 const projectEntry = (process.env.STUDIO_ENTRY || (process.env.STUDIO_DATA_DIR ? "editor" : "projects")) === "projects";
-async function body(req) {
+async function body(req, limit = 16 * 1024 * 1024) {
   let bytes = 0;
   const chunks = [];
   for await (const chunk of req) {
     bytes += chunk.length;
-    if (bytes > 16 * 1024 * 1024) throw Error("配置过大");
+    if (bytes > limit) throw Error("配置过大");
     chunks.push(chunk);
   }
   return JSON.parse(Buffer.concat(chunks).toString());
@@ -81,7 +83,6 @@ const files = new Map(
   }),
 );
 const content = (p) => fs.readFile(path.resolve(here, files.get(p)), "utf8");
-const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 
 async function deploymentDigest() {
   const dependencies = [...new Set([
@@ -231,6 +232,7 @@ http
       if (req.method === "GET" && p.startsWith("/api/")) {
         if (p === "/api/assistant/config") return send(200, await assistant.publicConfig());
         if (p === "/api/projects") return send(200, { projects: await projects.list(), cases: library.cases });
+        if (p === "/api/project-backup") return send(200, await projects.backup(projectId));
         const state = await projects.read(projectId);
         if (p === "/api/draft") return send(200, state.draft);
         if (p === "/api/published") {
@@ -250,14 +252,15 @@ http
               ...(manifest ? {
                 manifest,
                 deploymentMatches: manifest.deploymentSha256 === deployment,
-                documentMatches: manifest.projectId === projectId &&
-                  manifest.documentSha256 === sha256(JSON.stringify(doc)),
+                documentMatches: publicationMatchesDocument(doc, manifest),
               } : {}),
             })),
           });
         }
       }
       if (req.method === "POST") {
+        if (p === "/api/project-restore")
+          return send(201, await projects.restore(await body(req, 100 * 1024 * 1024)));
         const data = await body(req);
         if (p === "/api/projects") {
           if (data.caseId && !library.cases.some(item => item.id === data.caseId)) throw Error("案例不存在");
@@ -307,12 +310,8 @@ http
         }
         if (["/api/draft", "/api/publish"].includes(p)) {
           const publishing = p === "/api/publish";
-          validate(data, publishing);
-          if (
-            p === "/api/publish" &&
-            ["json", "csv"].includes(data.source.kind)
-          )
-            (data.source.kind === "json" ? JSON.parse : csv)(data.source.data);
+          if (publishing) validatePublication(data);
+          else validate(data, false);
           const manifest = publishing ? await publicationManifest(projectId, data) : null;
           return send(
             200,
@@ -326,7 +325,7 @@ http
                   doc: data,
                   manifest,
                 });
-                s.versions = s.versions.slice(0, 5);
+                s.versions = s.versions.slice(0, versionLimit);
                 s.active = id;
               }
               return { active: s.active };

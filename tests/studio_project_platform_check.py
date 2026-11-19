@@ -102,6 +102,38 @@ def check(page, base):
     page.set_viewport_size({'width':390,'height':844})
     assert page.evaluate('document.documentElement.scrollWidth === innerWidth')
 
+    original_release = page.request.get(base + '/api/versions?project=' + first).json()['active']
+    revised = {**doc, 'title': '分离工艺 · 二版草稿'}
+    assert page.request.post(base + '/api/publish?project=' + first, data=revised).ok
+    assert page.request.post(base + '/api/rollback?project=' + first, data={'id':original_release}).ok
+    page.set_viewport_size({'width':1366,'height':768})
+    page.goto(base + '/projects')
+    row = page.locator('.project-row').filter(has_text='分离工艺验收')
+    row.get_by_label('工程操作').click()
+    with page.expect_download() as download:
+        row.get_by_role('link', name='下载工程备份', exact=True).click()
+    file = OUT / 'project-backup.json'
+    download.value.save_as(file)
+    archive = json.loads(file.read_text('utf-8'))
+    assert archive['projectId'] == first and archive['project']['active'] == original_release
+    assert archive['project']['draft'] == revised and len(archive['project']['versions']) == 2
+    page.locator('input[type=file]').set_input_files(file)
+    expect(page.locator('.studio-header .project-title')).to_have_text(revised['title'])
+    restored = project_id(page)
+    assert restored not in [first, second]
+    assert page.request.get(base + '/api/draft?project=' + restored).json() == revised
+    assert page.request.get(base + '/api/published?project=' + restored).json() == doc
+    assert page.request.get(base + '/api/published?project=' + first).json() == doc
+    records = page.request.get(base + '/api/versions?project=' + restored).json()
+    assert records['active'] == original_release
+    assert all(v['documentMatches'] and v['manifest']['projectId'] == first for v in records['versions'])
+    corrupted = json.loads(file.read_text('utf-8'))
+    corrupted['project']['versions'][0]['doc']['title'] = '损坏的版次'
+    project_count = len(page.request.get(base + '/api/projects').json()['projects'])
+    failure = page.request.post(base + '/api/project-restore', data=corrupted)
+    assert not failure.ok and '追溯记录与文档不一致' in failure.json()['error']
+    assert len(page.request.get(base + '/api/projects').json()['projects']) == project_count
+
 
 def main():
     OUT.mkdir(exist_ok=True,parents=True)
@@ -136,7 +168,7 @@ def main():
         finally:
             process.terminate()
             process.wait(timeout=15)
-    print('PASS: 31 cases, filters, original preview, project creation and association, per-project draft and publish, copy, rename, import, navigation and mobile layout')
+    print('PASS: portal, case association, isolated projects, import, full backup, separate restore, checksum rejection and mobile layout')
 
 
 if __name__=='__main__':

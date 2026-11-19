@@ -108,7 +108,11 @@ createApp({
       notice.value = "";
       try {
         const parsed = JSON.parse((await file.text()).replace(/^\uFEFF/, ""));
-        const project = await requestProjects("/api/projects", { doc:parsed.draft || parsed });
+        const backup = parsed?.format === "studio-project-backup" ||
+          (parsed?.draft && Array.isArray(parsed.versions));
+        const project = backup
+          ? await requestProjects("/api/project-restore", parsed)
+          : await requestProjects("/api/projects", { doc:parsed.draft || parsed });
         location.href = projectUrl("/editor", project);
       } catch (e) {
         notice.value = "导入失败 · " + e.message;
@@ -131,6 +135,7 @@ createApp({
       caseFor, caseProjects, navigate, showLinked, openForm, importProject, submit,
       editorUrl: project => projectUrl("/editor", project),
       viewUrl: project => projectUrl("/view", project),
+      backupUrl: project => projectUrl("/api/project-backup", project),
       formatDate: date => dateFormatter.format(new Date(date)),
       hideImage: event => { event.target.hidden = true; },
     };

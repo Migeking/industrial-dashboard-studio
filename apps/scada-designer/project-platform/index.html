@@ -66,7 +66,11 @@
                 <a class="button primary" :href="editorUrl(project)">打开设计器</a>
                 <details class="project-menu">
                   <summary aria-label="工程操作">•••</summary>
-                  <div><button @click="openForm('rename',project,$event)">重命名</button><button @click="openForm('copy',project,$event)">复制草稿</button></div>
+                  <div>
+                    <button @click="openForm('rename',project,$event)">重命名</button>
+                    <button @click="openForm('copy',project,$event)">复制草稿</button>
+                    <a class="button" :href="backupUrl(project)" :download="project.name+'.backup.json'">下载工程备份</a>
+                  </div>
                 </details>
               </div>
             </article>
