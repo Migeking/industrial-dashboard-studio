@@ -1,4 +1,5 @@
 import { nativeCss, nativeClone, nativePoint, nativeText } from "./native-model.mjs";
+import { beginEquipmentOperation, equipmentOperationProblem, updateEquipmentOperation } from "./equipment-operation.mjs";
 
 const NativeTrend = {
   props: ["node", "doc", "points", "sequence"],
@@ -52,7 +53,16 @@ const NativeTree = {
   emits: ["select", "patch", "move", "start", "geometry"],
   setup(p, { emit }) {
     const ui = Vue.reactive({ scenario: p.doc.demo?.initial || "stable", audit: p.doc.source.demo && p.doc.source.kind === "json" ? nativeClone(p.doc.demo?.audit || []) : [], ack: false, active: "", pid: false, pending: null, frequency: 35, setpoint: 3.2, error: "" });
-    let root, dragging, frame;
+    const stopOperation = Vue.shallowRef(null);
+    let root, dragging, frame, stopTimers = [];
+    const stopPending = () => ["submitted", "accepted", "unconfirmed"].includes(stopOperation.value?.status);
+    const stopStatus = (operation) => ({
+      submitted: "已提交，等待模拟服务回执",
+      accepted: "模拟服务已接收，等待停机反馈",
+      confirmed: operation.late ? "模拟停机反馈已确认（晚于超时）" : "模拟停机反馈已确认",
+      rejected: "模拟服务拒绝" + (operation.reason ? " · " + operation.reason : ""),
+      unconfirmed: "结果待确认，请查看最新有效反馈",
+    })[operation.status];
     const byId = () => new Map(p.doc.nodes.map((n) => [n.id, n]));
     const runtime = () => ({ ...ui, clock: p.clock, byId: byId() });
     const point = (id, slot) => nativePoint({ node: id, slot }, p.doc, p.points, runtime());
@@ -62,7 +72,7 @@ const NativeTree = {
       ui.audit.splice(100);
     }
     function action(a) {
-      if (p.editing) return;
+      if (p.editing || ui.pending) return;
       ui.error = "";
       if (a.type === "scenario") {
         if (!demo()) return;
@@ -74,8 +84,73 @@ const NativeTree = {
       } else if (a.type === "pid") { ui.pid = true; ui.active = a.target; const q = point(a.target, a.slot); ui.setpoint = q.quality === "good" ? q.value : ""; }
       else if (demo()) { if (a.type === "ack") ui.ack = true; log("ALARM-SYS", a.type === "ack" ? "确认告警" : "警报消音", "未处理", "已处理", false); }
     }
+    function stopContext(node) {
+      const feedback = node && point(node.id, "run");
+      return {
+        permitted: !p.editing && demo() && !!node,
+        interlocked: false,
+        pointId: node?.bindings.run,
+        sequence: p.sequence,
+        feedback,
+      };
+    }
+    function clearStopTimers() {
+      for (const timer of stopTimers) clearTimeout(timer);
+      stopTimers = [];
+    }
+    function stopEvent(event) {
+      const next = updateEquipmentOperation(stopOperation.value, { ...event, at: performance.now() });
+      if (next === stopOperation.value) return;
+      stopOperation.value = next;
+      const entry = ui.audit.find((row) => row.operationId === next.id);
+      if (entry) entry.result = stopStatus(next);
+      if (["confirmed", "rejected"].includes(next.status)) clearStopTimers();
+    }
+    function performDemoStop(req, n) {
+      const started = beginEquipmentOperation(req.intent, stopContext(n), performance.now(), 3000);
+      clearStopTimers();
+      stopOperation.value = started;
+      ui.audit.unshift({
+        operationId: started.id, time: new Date().toLocaleTimeString("zh-CN", { hour12: false }),
+        user: "DEMO", target: n.title, action: "停止设备", oldVal: "运行", newVal: "停机",
+        sbo: true, result: stopStatus(started),
+      });
+      ui.audit.splice(100);
+      const check = () => {
+        const node = byId().get(req.target);
+        if (!node || req.source !== JSON.stringify(p.doc.source) || req.bindings !== JSON.stringify(node.bindings))
+          return "设备绑定或演示数据已变化";
+        if (["fault", "auto"].some((slot) => point(node.id, slot).quality !== "good"))
+          return "设备反馈无效";
+        return equipmentOperationProblem(started, stopContext(node));
+      };
+      // The loopback simulator supplies a receipt and then a separate feedback update.
+      stopTimers.push(setTimeout(() => {
+        const reason = check();
+        stopEvent({ type: "receipt", id: started.id, accepted: !reason, reason });
+      }, 240));
+      stopTimers.push(setTimeout(() => {
+        if (stopOperation.value?.status !== "accepted") return;
+        const reason = check();
+        if (reason) {
+          stopEvent({ type: "receipt", id: started.id, accepted: false, reason });
+          return;
+        }
+        emit("patch", { [n.bindings.run]: false, [n.bindings.frequency]: 0, [n.bindings.current]: 0 });
+      }, 900));
+      stopTimers.push(setTimeout(() => stopEvent({ type: "timeout" }), Math.ceil(started.deadline - performance.now())));
+    }
+    Vue.watch(() => p.sequence, () => {
+      const operation = stopOperation.value;
+      if (!stopPending()) return;
+      const node = byId().get(operation.deviceId);
+      const state = stopContext(node);
+      stopEvent({ type: "feedback", sequence: state.sequence, pointId: state.pointId,
+        quality: state.feedback?.quality, value: state.feedback?.value });
+    });
     function request(kind, value) {
       ui.error = "";
+      if (stopPending() || ui.pending) return;
       if (!demo()) { ui.error = "当前为只读数据，设备操作仅供查看。"; return; }
       const n = byId().get(ui.active);
       if (kind === "setpoint" && point(n.id, "value").quality !== "good") { ui.error = "设定值反馈无效，请恢复数据后重试。"; return; }
@@ -86,7 +161,15 @@ const NativeTree = {
         if (kind === "frequency" && auto.value) { ui.error = "请先切到远程手动。"; return; }
       }
       if ((kind === "frequency" && (!Number.isFinite(value) || value < 28 || value > 50)) || (kind === "setpoint" && (!Number.isFinite(value) || value < 2 || value > 4))) { ui.error = "设定值超出允许范围。"; return; }
-      ui.pending = { kind, value, target: ui.active, source: JSON.stringify(p.doc.source), bindings: JSON.stringify(n?.bindings), message: ({ start: "启动这台回流泵", stop: "停止这台回流泵", auto: "切换为远程自动", manual: "切换为远程手动", frequency: "修改频率为 " + value + " Hz", setpoint: "修改液位设定为 " + value + " m" })[kind] };
+      const intent = kind === "stop" ? {
+        id: crypto.randomUUID(), deviceId: n.id, pointId: n.bindings.run,
+        previous: true, target: false, confirmBy: performance.now() + 15000,
+      } : null;
+      if (intent) {
+        const problem = equipmentOperationProblem(intent, stopContext(n));
+        if (problem) { ui.error = problem; return; }
+      }
+      ui.pending = { kind, value, intent, target: ui.active, source: JSON.stringify(p.doc.source), bindings: JSON.stringify(n?.bindings), message: ({ start: "启动这台回流泵", stop: "停止这台回流泵", auto: "切换为远程自动", manual: "切换为远程手动", frequency: "修改频率为 " + value + " Hz", setpoint: "修改液位设定为 " + value + " m" })[kind] };
     }
     function confirm() {
       const req = ui.pending;
@@ -96,7 +179,10 @@ const NativeTree = {
       if (!n || req.bindings !== JSON.stringify(n.bindings) || (req.kind === "setpoint" ? point(n.id, "value").quality !== "good" : ["run", "fault", "auto"].some((s) => point(n.id, s).quality !== "good"))) { ui.error = "反馈或绑定已变化，请重新操作。"; return; }
       const put = (slot, value) => { changes[n.bindings[slot]] = value; };
       if (req.kind === "start") { if (point(n.id, "fault").value) { ui.error = "设备故障，不能启动。"; return; } put("run", true); put("frequency", ui.frequency); put("current", 18); }
-      if (req.kind === "stop") { put("run", false); put("frequency", 0); put("current", 0); }
+      if (req.kind === "stop") {
+        try { performDemoStop(req, n); } catch (e) { ui.error = e.message; }
+        return;
+      }
       if (["auto", "manual"].includes(req.kind)) put("auto", req.kind === "auto");
       if (req.kind === "frequency") { if (point(n.id, "auto").value) return; put("frequency", req.value); }
       if (req.kind === "setpoint") { put("value", req.value); ui.pid = false; ui.active = ""; }
@@ -128,7 +214,12 @@ const NativeTree = {
     }
     Vue.onMounted(() => { window.addEventListener("pointermove", move); window.addEventListener("pointerup", up); });
     function up() { dragging = null; }
-    Vue.onBeforeUnmount(() => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); cancelAnimationFrame(frame); });
+    Vue.onBeforeUnmount(() => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      cancelAnimationFrame(frame);
+      clearStopTimers();
+    });
     function geometry() {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
@@ -164,7 +255,9 @@ const NativeTree = {
         const rows = point(n.id, "rows");
         children = rows.quality === "good" && Array.isArray(rows.value) ? rows.value.map((row) => Vue.h("div", { class: "alarm-item" }, [Vue.h("i", { style: row.level === "warning" ? "--level:#ffb547" : "" }), Vue.h("div", {}, [Vue.h("b", {}, row.title), Vue.h("span", {}, row.detail)]), Vue.h("time", { class: "num" }, row.time)])) : [Vue.h("span", { style: "font-size:12px;color:#8ba3b5" }, "暂无有效事件数据")];
       }
-      else if (n.role === "auditRows") children = ui.audit.map((log) => Vue.h("tr", {}, ["time", "user", "target", "action", "oldVal", "newVal", "sbo", "result"].map((k) => Vue.h("td", { class: k === "time" ? "num" : "" }, k === "sbo" ? log[k] ? "两步确认通过" : "直接下发" : String(log[k])))));
+      else if (n.role === "auditRows") children = ui.audit.map((log) => Vue.h("tr", {
+        "data-operation-id": log.operationId, title: log.operationId,
+      }, ["time", "user", "target", "action", "oldVal", "newVal", "sbo", "result"].map((k) => Vue.h("td", { class: k === "time" ? "num" : "" }, k === "sbo" ? log[k] ? "两步确认通过" : "直接下发" : String(log[k])))));
       else if (n.type === "trend") children = [Vue.h(NativeTrend, { node: n, doc: p.doc, points: p.points, sequence: p.sequence })];
       else children = n.content.map((part) => part?.child ? renderNode(index.get(part.child), index) : nativeText(part, p.doc, p.points, runtime()));
       return Vue.h(n.tag, attrs, children);
@@ -172,20 +265,24 @@ const NativeTree = {
     function overlays() {
       const h = Vue.h, n = byId().get(ui.active), q = (key) => point(n.id, key), fmt = (key, unit) => q(key).quality === "good" ? Number(q(key).value).toFixed(1) + " " + unit : "—";
       const btn = (text, fn, disabled = false, cls = "") => h("button", { onClick: fn, disabled, class: cls }, text);
+      const controlDisabled = !demo() || stopPending();
+      const operation = stopOperation.value;
       const section = (title, content) => h("section", {}, [h("h5", {}, title), ...content]);
       const result = [];
       if (n || ui.pid) result.push(h("div", { class: "native-faceplate", role: "dialog", "aria-label": ui.pid ? "液位回路面板" : "设备面板" }, [
         h("header", {}, [h("b", {}, ui.pid ? "LIC-101 · 液位 PID 调节回路" : n.title), btn("关闭面板", () => { ui.active = ""; ui.pid = false; ui.pending = null; })]),
         h("section", {}, demo() ? "本地演示 · 操作不会写入现场设备" : "只读监视 · 不提供现场控制"),
-        ...(ui.pid ? [section("液位设定值（2.00～4.00 m）", [h("input", { type: "number", min: 2, max: 4, step: .05, value: ui.setpoint, "aria-label": "液位设定", onInput: (e) => ui.setpoint = Number(e.target.value), disabled: !demo() }), btn("下发设定", () => request("setpoint", ui.setpoint), !demo())])] : [
+        ...(ui.pid ? [section("液位设定值（2.00～4.00 m）", [h("input", { type: "number", min: 2, max: 4, step: .05, value: ui.setpoint, "aria-label": "液位设定", onInput: (e) => ui.setpoint = Number(e.target.value), disabled: controlDisabled }), btn("下发设定", () => request("setpoint", ui.setpoint), controlDisabled)])] : [
           section("设备实时状态", [h("div", { class: "native-row" }, [h("div", {}, ["运行状态", h("strong", {}, q("fault").quality === "good" && q("fault").value ? "故障" : q("run").quality !== "good" ? "未知" : q("run").value ? "运行中" : "停机")]), h("div", {}, ["实际频率", h("strong", {}, fmt("frequency", "Hz"))]), h("div", {}, ["电机电流", h("strong", {}, fmt("current", "A"))])])]),
-          section("控制模式切换", [h("div", { class: "native-row" }, [btn("远程自动", () => request("auto"), !demo(), q("auto").value === true ? "active" : ""), btn("远程手动", () => request("manual"), !demo(), q("auto").value === false ? "active" : "")])]),
-          section("频率设定（28.0～50.0 Hz）", [h("input", { type: "number", min: 28, max: 50, step: .5, "aria-label": "频率设定", value: ui.frequency, disabled: !demo() || q("auto").value !== false, onInput: (e) => ui.frequency = Number(e.target.value) }), btn("下发设定", () => request("frequency", ui.frequency), !demo() || q("auto").value !== false)]),
-          section("手动动作控制 · 两步确认", [h("div", { class: "native-row" }, [btn("启动设备", () => request("start"), !demo() || q("run").quality !== "good" || q("run").value === true || q("fault").value !== false, "native-start"), btn("停止设备", () => request("stop"), !demo() || q("run").quality !== "good" || q("run").value !== true, "native-stop")])]),
+          section("控制模式切换", [h("div", { class: "native-row" }, [btn("远程自动", () => request("auto"), controlDisabled, q("auto").value === true ? "active" : ""), btn("远程手动", () => request("manual"), controlDisabled, q("auto").value === false ? "active" : "")])]),
+          section("频率设定（28.0～50.0 Hz）", [h("input", { type: "number", min: 28, max: 50, step: .5, "aria-label": "频率设定", value: ui.frequency, disabled: controlDisabled || q("auto").value !== false, onInput: (e) => ui.frequency = Number(e.target.value) }), btn("下发设定", () => request("frequency", ui.frequency), controlDisabled || q("auto").value !== false)]),
+          section("手动动作控制 · 两步确认", [h("div", { class: "native-row" }, [btn("启动设备", () => request("start"), controlDisabled || q("run").quality !== "good" || q("run").value === true || q("fault").value !== false, "native-start"), btn("停止设备", () => request("stop"), controlDisabled || ["run", "fault", "auto"].some((slot) => q(slot).quality !== "good") || q("run").value !== true, "native-stop")])]),
+          operation?.deviceId === n?.id ? h("section", { role: "status", "data-operation-id": operation.id },
+            stopStatus(operation) + " · " + operation.id.slice(0, 8)) : null,
         ]),
         ui.error ? h("section", { role: "alert", class: "native-error" }, ui.error) : null,
       ]));
-      if (ui.pending) result.push(h("div", { class: "native-confirm", role: "dialog", "aria-label": "操作二次确认" }, [h("div", { class: "native-faceplate" }, [h("header", {}, "操作二次确认"), h("section", {}, [h("p", {}, (n?.title || "集泥井") + "：" + ui.pending.message), h("p", { class: "native-help" }, "仅改变本地演示状态，并记录本次操作。")]), h("div", { class: "native-actions" }, [btn("取消操作", () => ui.pending = null), btn("确认下发执行", confirm)])])]));
+      if (ui.pending) result.push(h("div", { class: "native-confirm", role: "dialog", "aria-label": "操作二次确认", "aria-modal": "true" }, [h("div", { class: "native-faceplate" }, [h("header", {}, "操作二次确认"), h("section", {}, [h("p", {}, (byId().get(ui.pending.target)?.title || "集泥井") + "：" + ui.pending.message), h("p", { class: "native-help" }, ui.pending.kind === "stop" ? "提交后等待模拟服务回执及停机反馈。" : "本次操作会记录在演示日志中。")]), h("div", { class: "native-actions" }, [btn("取消操作", () => ui.pending = null), btn("确认下发执行", confirm)])])]));
       return result;
     }
     return () => {

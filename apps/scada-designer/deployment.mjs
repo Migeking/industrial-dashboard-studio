@@ -46,6 +46,7 @@ export const files = new Map(
     "/packages/runtime/studio/screen-themes.mjs": "../../packages/runtime/studio/screen-themes.mjs",
     "/packages/components/studio/native-data.mjs": "../../packages/components/studio/native-data.mjs",
     "/packages/runtime/studio/native-model.mjs": "../../packages/runtime/studio/native-model.mjs",
+    "/packages/runtime/studio/equipment-operation.mjs": "../../packages/runtime/studio/equipment-operation.mjs",
     "/packages/runtime/studio/native-renderer.mjs": "../../packages/runtime/studio/native-renderer.mjs",
     "/lib/interact.js": "studio/lib/interact.min.js",
     "/lib/x6.js": "../../vendor/x6.min.js",
