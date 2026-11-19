@@ -1817,3 +1817,52 @@ fieldset small {
 .widget-field-samples thead th:nth-child(2) {
   width: 18%;
 }
+
+.screen-group-bindings {
+  margin-top: 10px;
+}
+.screen-group-bindings-dialog .group-binding-controls,
+.screen-group-bindings-dialog .group-binding-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 16px;
+}
+.screen-group-bindings-dialog .group-binding-slots {
+  max-height: min(440px, 49vh);
+  overflow: auto;
+  padding: 8px 12px 12px;
+  background: #f4f8fa;
+  border: 1px solid #d4e0e6;
+}
+.screen-group-bindings-dialog label {
+  color: #294659;
+}
+.screen-group-bindings-dialog :is(input, select, button):focus-visible {
+  outline: 2px solid #087579;
+  outline-offset: 2px;
+}
+.screen-group-bindings-dialog .group-binding-slots small {
+  color: #58717f;
+  margin-left: 5px;
+}
+.screen-group-bindings-dialog input,
+.screen-group-bindings-dialog select,
+.screen-group-bindings-dialog button {
+  background: #fff;
+  color: #294659;
+  border-color: #b8cbd8;
+}
+.screen-group-bindings-dialog button.primary {
+  color: #fff;
+  background: #087579;
+  border-color: #087579;
+}
+@media (max-width: 600px) {
+  .screen-group-bindings-dialog .group-binding-controls,
+  .screen-group-bindings-dialog .group-binding-slots {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .screen-group-bindings-dialog footer {
+    flex-wrap: wrap;
+  }
+}

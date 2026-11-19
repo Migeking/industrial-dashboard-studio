@@ -403,7 +403,7 @@
         <template v-else>
           <details v-if="screen" class="screen-page-appearance"><summary>基础图元与管道外观</summary><label>默认外观<select aria-label="绘图外观" :value="doc.canvas.appearance||'classic'" @change="setScreenDrawingAppearance($event.target.value)"><option v-for="(label,key) in screenDrawingAppearances" :value="key">{{label}}</option></select></label><div class="pair"><button @click="applyDrawingAppearance(true)">应用到选中</button><button @click="applyDrawingAppearance(false)">应用到本页</button></div><p class="muted">成套组件使用自带图稿。锁定对象和本地图片保持原样，可撤销。</p></details>
           <template v-if="screen && sel">
-            <screen-inspector :item="sel" :doc="doc" :project="project" :points="points" :tab="inspectorTab" :count="ids.length" @start="snapshot" @geometry="screenGeometry" @action="screenCommand" @tab="inspectorTab=$event" @data="openConfig"></screen-inspector>
+            <screen-inspector :item="sel" :doc="doc" :project="project" :points="points" :tab="inspectorTab" :count="ids.length" :selected="ids" @start="snapshot" @geometry="screenGeometry" @action="screenCommand" @tab="inspectorTab=$event" @data="openConfig"></screen-inspector>
           </template>
           <template v-else-if="sel">
             <div class="inspector-heading">

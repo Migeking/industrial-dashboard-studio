@@ -11,6 +11,7 @@ import { waterEquipment } from '../../../packages/components/studio/water-equipm
 import {
   editScreenEndpoint,
   screenEndpointPosition,
+  screenPipeInSelection,
 } from "../../../packages/runtime/studio/screen-model.mjs";
 import { ScreenDefinitions } from "./screen-definitions.mjs";
 import { ScreenRules } from "./screen-rules.mjs";
@@ -24,16 +25,131 @@ import {
   screenTableKinds,
 } from "../../../packages/runtime/studio/screen-widgets.mjs";
 
+const ScreenGroupBindings = {
+  props: ["doc", "selected"],
+  emits: ["start"],
+  setup(props, { emit }) {
+    const dialog = Vue.ref(null);
+    const activeId = Vue.ref("");
+    const query = Vue.ref("");
+    const notice = Vue.ref("");
+    const error = Vue.ref("");
+    const draft = Vue.ref(new Map());
+    const typeLabels = { number: "数值", boolean: "开关量", text: "文本", dataset: "数据集" };
+    Vue.watch(() => JSON.stringify(props.selected), () => {
+      notice.value = "";
+      if (dialog.value?.open) dialog.value.close();
+    });
+
+    const items = Vue.computed(() => {
+      const selected = new Set(props.selected);
+      return [
+        ...props.doc.nodes.filter(node => selected.has(node.id)),
+        ...props.doc.pipes.filter(pipe => selected.has(pipe.id) || screenPipeInSelection(pipe, selected)),
+      ].map(item => ({ item, slots: screenSlots(item) })).filter(entry => entry.slots.length);
+    });
+    const mappings = Vue.computed(() => new Map(props.doc.mappings.map(m => [m.id, m])));
+    const active = Vue.computed(() => items.value.find(({ item }) => item.id === activeId.value));
+    const choice = (item, slot) => draft.value.get(item.id)?.[slot.key] || "";
+    const missing = ({ item, slots }) => slots.filter(slot => {
+      const current = mappings.value.get(choice(item, slot));
+      return slot.required && !slot.kinds.includes(current?.kind);
+    }).length;
+    const pending = Vue.computed(() => items.value.reduce((total, entry) => total + missing(entry), 0));
+    const changes = Vue.computed(() => items.value.flatMap(({ item, slots }) => slots.flatMap(slot => {
+      const value = choice(item, slot);
+      return value !== (item.bindings[slot.key] || "") ? [{ item, slot, value }] : [];
+    })));
+    const options = (item, slot) => {
+      const search = query.value.trim().toLowerCase();
+      return screenSlotMappings(slot, props.doc.mappings).filter(mapping =>
+        !search || mapping.id === choice(item, slot) ||
+        (mapping.label + " " + mapping.id).toLowerCase().includes(search),
+      );
+    };
+
+    function show() {
+      draft.value = new Map(items.value.map(({ item }) => [item.id, { ...item.bindings }]));
+      activeId.value = (items.value.find(entry => missing(entry)) || items.value[0]).item.id;
+      query.value = "";
+      error.value = "";
+      notice.value = "";
+      dialog.value.showModal();
+    }
+    function selectPoint(slot, value) {
+      draft.value.get(activeId.value)[slot.key] = value;
+      error.value = "";
+    }
+    function apply() {
+      if (!changes.value.length) return;
+      if (changes.value.some(({ slot, value }) => value && !slot.kinds.includes(mappings.value.get(value)?.kind))) {
+        error.value = "待应用的测点已变更，请重新选择。";
+        return;
+      }
+      const accepted = changes.value;
+      emit("start");
+      for (const { item, slot, value } of accepted) item.bindings[slot.key] = value;
+      notice.value = `已应用 ${accepted.length} 处绑定`;
+      dialog.value.close();
+    }
+    return { dialog, activeId, query, notice, error, items, active, pending, changes,
+      typeLabels, choice, missing, options, show, selectPoint, apply };
+  },
+  template: `<div v-if="selected.length>1 && items.length" class="screen-group-bindings">
+    <button type="button" class="wide" @click="show">组合测点绑定</button>
+    <p v-if="notice" class="muted" role="status">{{notice}}</p>
+    <Teleport to="body">
+      <dialog ref="dialog" class="screen-point-dialog screen-group-bindings-dialog"
+        aria-labelledby="screen-group-bindings-title" @keydown.stop>
+        <header>
+          <h2 id="screen-group-bindings-title">组合测点绑定</h2>
+          <button type="button" @click="dialog.close()">关闭</button>
+        </header>
+        <div class="group-binding-controls">
+          <label>设备或管线
+            <select v-model="activeId" autofocus>
+              <option v-for="entry in items" :key="entry.item.id" :value="entry.item.id">
+                {{entry.item.title || '未命名对象'}} · {{entry.slots.length}} 槽位{{missing(entry) ? ' · 缺 '+missing(entry)+' 必绑' : ''}}
+              </option>
+            </select>
+          </label>
+          <label>搜索测点<input v-model="query" placeholder="名称或业务编号" /></label>
+        </div>
+        <div v-if="active" class="group-binding-slots" role="region" aria-label="当前对象的测点槽位">
+          <label v-for="slot in active.slots" :key="slot.key">
+            {{slot.label}}<span v-if="slot.required" class="required-mark"> *</span>
+            <small>{{slot.kinds.map(type=>typeLabels[type]).join('／')}}</small>
+            <select :aria-label="slot.label+' · 组合测点'" :value="choice(active.item,slot)" @change="selectPoint(slot,$event.target.value)">
+              <option value="">{{slot.required ? '选择测点' : '不绑定（可选）'}}</option>
+              <option v-for="point in options(active.item,slot)" :key="point.id" :value="point.id">
+                {{point.id}}{{point.label && point.label!==point.id ? ' · '+point.label : ''}}{{point.unit?' / '+point.unit:''}}
+              </option>
+            </select>
+          </label>
+        </div>
+        <p v-if="!doc.mappings.length" class="quality-note">请先在数据连接中配置可用测点。</p>
+        <p v-if="error" class="definition-error" role="alert">{{error}}</p>
+        <footer>
+          <span role="status">缺 {{pending}} 个必绑槽位 · {{changes.length}} 处待应用</span>
+          <button type="button" @click="dialog.close()">取消</button>
+          <button type="button" class="primary" :disabled="!changes.length" @click="apply">应用绑定</button>
+        </footer>
+      </dialog>
+    </Teleport>
+  </div>`,
+};
+
 export const ScreenInspector = {
   components: {
     ScreenControlSettings,
+    ScreenGroupBindings,
     ScreenDefinitions,
     ScreenRules,
     ScreenActions,
     ScreenChartSettings,
     ScreenTableSettings,
   },
-  props: ["item", "doc", "project", "points", "tab", "count"],
+  props: ["item", "doc", "project", "points", "tab", "count", "selected"],
   emits: ["start", "geometry", "action", "tab", "data"],
   setup(props, { emit }) {
     const search = Vue.ref("");
@@ -286,6 +402,7 @@ export const ScreenInspector = {
   },
   template: `<div class="screen-inspector">
     <div class="inspector-heading"><small>{{kind}}<span v-if="count>1"> · 已选 {{count}} 个对象</span></small><b>{{item.title}}</b></div>
+    <screen-group-bindings :doc="doc" :selected="selected" @start="$emit('start')"></screen-group-bindings>
     <p v-if="waterEquipment[item.symbol]" class="equipment-contract-note">
       {{waterEquipment[item.symbol].description}}<br>
       <small>{{slots.length}} 个测点槽位<span v-if="item.equipmentVersion"> · 组件 v{{item.equipmentVersion}}</span></small>

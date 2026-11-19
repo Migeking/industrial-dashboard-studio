@@ -107,7 +107,99 @@ def verify_unit_revision(page, unit, original, url):
     assert any(s["key"] == "outletTurbidity" and s["required"] for s in new["dataSlots"])
 
 
-def verify_unit_imports(page, base, definition):
+def saved_project(page, url):
+    with page.expect_response(lambda response: response.url == url and response.request.method == "POST") as response:
+        page.get_by_role("button", name="保存草稿", exact=True).click()
+    assert response.value.ok, response.value.text()
+    return page.request.get(url).json()
+
+
+def configure_reused_points(page, unit, fixture):
+    definitions = fixture["definitions"]
+    wanted = {definitions[node["symbol"]]["prefix"] + "101." + slot["key"]
+              for node in unit["nodes"] for slot in node["dataSlots"]}
+    stamp = int(time.time() * 1000)
+    source_rows = json.loads(fixture["blank"]["source"]["data"])["points"]
+    rows = [{**row, "id": "bench." + row["id"], "receivedAt": stamp}
+            for row in source_rows if row["id"] in wanted]
+    assert len(rows) == len(wanted) == 36
+    page.get_by_role("button", name="数据连接", exact=True).click()
+    source = page.get_by_role("dialog", name="数据连接与点位")
+    source.get_by_label("样本内容").fill(json.dumps({"points": rows}, ensure_ascii=False))
+    source.get_by_label("最大数据年龄（ms）").fill("600000")
+    source.get_by_role("button", name="读取样本", exact=True).click()
+    source.get_by_role("button", name="从桥接点表生成映射", exact=True).click()
+    source.get_by_role("button", name="应用数据配置", exact=True).click()
+    expect(source).to_have_count(0)
+
+
+def bind_reused_assembly(page, base, project_id, url, doc, definitions):
+    layer_tab = page.get_by_role("tab", name="图层", exact=False)
+    layer_tab.click()
+    layer = page.locator(f'[data-layer="{doc["nodes"][0]["id"]}"]')
+    layer.click()
+    trigger = page.get_by_role("button", name="组合测点绑定", exact=True)
+    trigger.click()
+    dialog = page.get_by_role("dialog", name="组合测点绑定")
+    active = dialog.get_by_label("设备或管线")
+    query = dialog.get_by_label("搜索测点", exact=True)
+    first = doc["nodes"][0]
+    prefix = "bench." + definitions[first["symbol"]]["prefix"] + "101."
+    slot = next(field for field in first["dataSlots"] if field["kinds"] == ["boolean"])
+    active.select_option(first["id"])
+    target = dialog.get_by_label(slot["label"] + " · 组合测点", exact=True)
+    numeric = next(field["key"] for field in first["dataSlots"] if field["kinds"] == ["number"])
+    expect(target.locator(f'option[value="{prefix + numeric}"]')).to_have_count(0)
+    query.fill(prefix + slot["key"])
+    expect(target.locator("option")).to_have_count(2)
+    target.select_option(prefix + slot["key"])
+    assert target.locator("option:checked").inner_text().strip().startswith(prefix + slot["key"])
+    expect(dialog.get_by_role("status")).to_contain_text("1 处待应用")
+    dialog.get_by_role("button", name="取消", exact=True).click()
+    trigger.click()
+    active.select_option(first["id"])
+    expect(target).to_have_value("")
+
+    for node in doc["nodes"]:
+        active.select_option(node["id"])
+        prefix = "bench." + definitions[node["symbol"]]["prefix"] + "101."
+        for slot in node["dataSlots"]:
+            dialog.get_by_label(slot["label"] + " · 组合测点", exact=True).select_option(prefix + slot["key"])
+    expect(dialog.get_by_role("status")).to_have_text("缺 0 个必绑槽位 · 36 处待应用")
+    clarifier = next(node for node in doc["nodes"] if node["symbol"] == "highRateClarifier")
+    active.select_option(clarifier["id"])
+    page.screenshot(path=str(OUT / "reused-unit-group-bindings.png"))
+    dialog.get_by_role("button", name="应用绑定", exact=True).click()
+    expect(trigger.locator("..").get_by_role("status")).to_have_text("已应用 36 处绑定")
+    bound = saved_project(page, url)
+    assert sum(len(n["bindings"]) for n in bound["nodes"]) == 36
+    assert bound["pipes"] == doc["pipes"]
+    for before, after in zip(doc["nodes"], bound["nodes"]):
+        assert {**after, "bindings": {}} == before
+        assert all(value.startswith("bench.") for value in after["bindings"].values())
+    page.get_by_role("button", name="撤销", exact=True).click()
+    undone = saved_project(page, url)
+    assert undone["nodes"] == doc["nodes"] and undone["pipes"] == doc["pipes"]
+    page.get_by_role("button", name="重做", exact=True).click()
+    assert saved_project(page, url) == bound
+
+    publish(page)
+    expect(page.locator(".status-message")).to_contain_text("已发布")
+    assert page.request.get(base + "/api/published?project=" + project_id).json() == bound
+    page.goto(base + "/view?project=" + project_id)
+    expect(page.locator(".x6-node")).to_have_count(len(doc["nodes"]))
+    expect(page.locator(".x6-edge")).to_have_count(len(doc["pipes"]))
+    page.get_by_role("button", name="测点诊断", exact=True).click()
+    diagnostics = page.get_by_role("dialog", name="测点诊断")
+    expect(diagnostics).to_contain_text("36 个画面测点 · 0 个异常")
+    page.screenshot(path=str(OUT / "reused-unit-group-published.png"))
+    page.goto(base + "/editor?project=" + project_id)
+    layer_tab.click()
+    layer.click()
+    return bound
+
+
+def verify_unit_imports(page, base, fixture):
     units = ROOT / "apps/scada-designer/examples/units"
     errors = []
     for file in sorted(units.glob("*.symbol.json")):
@@ -119,6 +211,8 @@ def verify_unit_imports(page, base, definition):
         project_id = created.json()["id"]
         page.goto(base + "/editor?project=" + project_id)
         expect(page.locator(".x6-node")).to_have_count(0)
+        if file.name.startswith("scene13"):
+            configure_reused_points(page, unit, fixture)
         page.get_by_role("tab", name="我的图元", exact=True).click()
         page.get_by_label("导入我的图元", exact=True).set_input_files(file)
         page.get_by_role("button", name="放置 " + unit["name"], exact=True).click()
@@ -140,9 +234,9 @@ def verify_unit_imports(page, base, definition):
             layer.click(modifiers=["Alt"])
             page.get_by_role("tab", name="外观", exact=True).click()
             set_field(page, "宽度", clarifier["w"] + 210)
-            errors.append(artwork_endpoints(page, doc, definition))
+            errors.append(artwork_endpoints(page, doc, fixture["definitions"]["highRateClarifier"]))
             set_field(page, "高度", clarifier["h"] + 120)
-            errors.append(artwork_endpoints(page, doc, definition))
+            errors.append(artwork_endpoints(page, doc, fixture["definitions"]["highRateClarifier"]))
             page.screenshot(path=str(OUT / "reused-unit-resized.png"))
             for _ in range(2):
                 page.get_by_role("button", name="撤销", exact=True).click()
@@ -150,12 +244,14 @@ def verify_unit_imports(page, base, definition):
             expect(page.get_by_label("宽度", exact=True)).to_have_value(str(clarifier["w"]))
             expect(page.get_by_label("高度", exact=True)).to_have_value(str(clarifier["h"]))
             layer.click()
+            bound = bind_reused_assembly(page, base, project_id, url, doc, fixture["definitions"])
             page.get_by_role("tab", name="我的图元", exact=True).click()
-            verify_unit_revision(page, unit, doc, url)
+            verify_unit_revision(page, unit, bound, url)
     return errors
 
 
-def exercise(browser, base, definitions):
+def exercise(browser, base, fixture):
+    definitions = fixture["definitions"]
     page = browser.new_page(viewport={"width": 1920, "height": 1080})
     page.set_default_timeout(15000)
     errors = []
@@ -291,13 +387,14 @@ def exercise(browser, base, definitions):
     artwork_errors.append(artwork_endpoints(local, resized, definition))
     local.screenshot(path=str(OUT / "offline-1366.png"))
     assert not network and not errors, (network, errors)
-    artwork_errors.extend(verify_unit_imports(page, base, definition))
+    artwork_errors.extend(verify_unit_imports(page, base, fixture))
     (OUT / "project.json").write_text(json.dumps(resized, ensure_ascii=False, indent=2), "utf-8")
     return {"scene": 13, "nodes": len(resized["nodes"]), "pipes": len(resized["pipes"]),
             "bindings": sum(len(n["bindings"]) for n in resized["nodes"]),
             "maxEndpointErrorPx": max(dists), "offlineBytes": offline.stat().st_size,
             "maxArtworkNozzleErrorPx": max(artwork_errors),
-            "crossProjectImports": 3, "libraryRevisionVerified": True, "errors": errors}
+            "crossProjectImports": 3, "libraryRevisionVerified": True,
+            "crossProjectGroupBindings": 36, "errors": errors}
 
 
 def main():
@@ -331,7 +428,7 @@ def main():
             with sync_playwright() as playwright:
                 browser = playwright.chromium.launch()
                 try:
-                    result = exercise(browser, base, fixture["definitions"])
+                    result = exercise(browser, base, fixture)
                 except Exception:
                     browser.contexts[0].pages[0].screenshot(path=str(OUT / "failure.png"))
                     raise
