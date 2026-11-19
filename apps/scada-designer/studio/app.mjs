@@ -442,17 +442,19 @@ async function boot() {
       const bindingReason = (n) => reviewIssue(n)?.reason || "";
       const bindingIssueLabel = (n) => (reviewIssue(n)?.tab === "binding" ? "去绑定：" : "去配置：") + n.title;
       const bindingIssues = computed(() => bindingNodes.value.filter(bindingReason));
-      const sourceTitle = computed(
-        () =>
-          ({
-            json: "本地 JSON 样本",
-            csv: "本地 CSV 样本",
-            rest: "REST 接口",
-            ws: "WebSocket",
-            opcua: "OPC UA",
-            modbus: "Modbus TCP",
-          })[doc.value.source.kind],
-      );
+      const sourceNames = {
+        json: "本地 JSON 样本",
+        csv: "本地 CSV 样本",
+        rest: "REST 接口",
+        ws: "WebSocket",
+        opcua: "OPC UA",
+        modbus: "Modbus TCP",
+      };
+      const sourceTitle = computed(() => sourceNames[doc.value.source.kind]);
+      const versionSourceTitle = version => [
+        sourceNames[version.sourceKind], version.demo ? "演示" : "",
+        version.datasets ? "含历史与告警接口" : "",
+      ].filter(Boolean).join(" · ");
       const invalidPoints = computed(
         () =>
           doc.value.mappings.filter(m => livePoints.value[m.id]?.quality !== "good")
@@ -1519,6 +1521,7 @@ async function boot() {
         steps,
         openCampusOrBinding,
         sourceTitle,
+        versionSourceTitle,
         invalidPoints,
         goStep,
         selectBinding,

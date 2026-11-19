@@ -168,6 +168,9 @@ http
               id,
               time,
               title: doc.title,
+              sourceKind: doc.source.kind,
+              demo: doc.source.demo === true,
+              datasets: !!Object.keys(doc.source.datasets?.bindings || {}).length,
               ...(manifest ? {
                 manifest,
                 deploymentMatches: manifest.deploymentSha256 === deployment,

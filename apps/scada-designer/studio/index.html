@@ -1044,7 +1044,9 @@
           <div v-for="v in versionInfo.versions" :key="v.id" class="review-item">
             <p>
             {{ new Date(v.time).toLocaleString() }} · {{ v.title }}
+            <small :id="'publication-' + v.id" :title="v.id">{{ versionSourceTitle(v) }} · <code>{{ v.id.slice(0, 8) }}</code></small>
             <button
+              :aria-describedby="'publication-' + v.id"
               :disabled="versionInfo.active === v.id"
               @click="rollback(v.id)"
             >

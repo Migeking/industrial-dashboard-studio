@@ -131,6 +131,15 @@ def check(page, base):
     records = page.request.get(base + '/api/versions?project=' + restored).json()
     assert records['active'] == original_release
     assert all(v['documentMatches'] and v['manifest']['projectId'] == first for v in records['versions'])
+    page.get_by_role('button',name='版本',exact=True).click()
+    versions = page.get_by_role('dialog',name='发布版本')
+    current = versions.locator('.review-item').filter(has_text=original_release[:8])
+    other_id = records['versions'][0]['id']
+    other = versions.locator('.review-item').filter(has_text=other_id[:8])
+    expect(current).to_contain_text('本地 JSON 样本')
+    expect(current.get_by_role('button',name='当前展示',exact=True)).to_be_disabled()
+    expect(other.get_by_role('button',name='回退至此版',exact=True)).to_be_enabled()
+    versions.get_by_role('button',name='关闭',exact=True).click()
     corrupted = json.loads(file.read_text('utf-8'))
     corrupted['project']['versions'][0]['doc']['title'] = '损坏的版次'
     project_count = len(page.request.get(base + '/api/projects').json()['projects'])
