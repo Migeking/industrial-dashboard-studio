@@ -1,6 +1,7 @@
 import {
   screenSlots,
   screenRoleSlot,
+  screenDefaultAction,
 } from "../../components/studio/screen-symbols.mjs";
 
 export const screenChartKinds = new Set([
@@ -164,6 +165,9 @@ export function validateScreenWidget(n) {
     !["asc", "desc"].includes(p.sortDirection)
   )
     throw Error("表格排序方向无效");
+  if (n.symbol === "events" && p.deviceRefField !== undefined &&
+      (typeof p.deviceRefField !== "string" || p.deviceRefField.length > 128))
+    throw Error("告警定位字段无效");
 }
 const widgetQualityNames = {
   good: "有效",
@@ -431,18 +435,36 @@ export function screenChartResult(
   }
   return { option, quality };
 }
-export function screenTableResult(n, points, mappings) {
+export function screenTableResult(n, points, mappings, pageNodes = []) {
   const slot = screenRoleSlot(n, "value"),
     point = points[n.bindings[slot?.key]],
     source =
       point?.quality === "good" && Array.isArray(point.value)
         ? point.value
         : [];
+  const deviceField = n.symbol === "events" ? n.params.deviceRefField : "";
+  const byId = new Map(), byTitle = new Map();
+  if (deviceField) {
+    for (const node of pageNodes) {
+      byId.set(node.id, node);
+      byTitle.set(node.title, byTitle.has(node.title) ? null : node);
+    }
+  }
+  const resolveDevice = (row) => {
+    const ref = screenField(row, deviceField);
+    if (typeof ref !== "string" || !ref.trim()) return null;
+    const key = ref.trim();
+    const node = byId.has(key) ? byId.get(key) : byTitle.get(key);
+    return node && !node.hidden && (node.action?.type ?? screenDefaultAction(node)) === "details"
+      ? { id: node.id, title: node.title }
+      : null;
+  };
   const fields =
       source[0] && typeof source[0] === "object" ? Object.keys(source[0]) : [],
     columns = n.params.columns?.length
       ? n.params.columns
       : fields
+          .filter(field => field !== deviceField)
           .slice(0, 6)
           .map((field) => ({ field, title: field, format: "text", unit: "" }));
   const rows = [...source];
@@ -494,6 +516,7 @@ export function screenTableResult(n, points, mappings) {
           screenField(row, n.params.severityField || "level") ?? "",
         ),
         cells: columns.map((c) => format(screenField(row, c.field), c)),
+        ...(deviceField ? { device: resolveDevice(row) } : {}),
       })),
     total: rows.length,
   };

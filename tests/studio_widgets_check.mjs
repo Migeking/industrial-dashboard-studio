@@ -145,6 +145,25 @@ assert.equal(tableData.rows[0].cells[0], "0.00 m³/h");
 assert.equal(tableData.rows[0].cells[1], "否");
 assert.notEqual(tableData.rows[0].cells[2], "—");
 assert.equal(tableData.total, 2);
+const events = screenNode("events", "events", 800, 100);
+events.bindings.value = "hist";
+events.params.deviceRefField = "assetRef";
+const equipment = [
+  { ...screenNode("pump", "pump-one", 0, 0), title: "回流泵一" },
+  { ...screenNode("pump", "pump-two", 0, 0), title: "同名泵" },
+  { ...screenNode("pump", "pump-three", 0, 0), title: "同名泵" },
+  { ...screenNode("pump", "hidden-pump", 0, 0), hidden: true },
+  { ...screenNode("pump", "link-pump", 0, 0), action: { type: "link", url: "https://example.com" } },
+];
+const eventRows = screenTableResult(events, { hist: {
+  quality: "good",
+  value: ["pump-one", "回流泵一", "同名泵", "unknown", "hidden-pump", "link-pump", 1]
+    .map(assetRef => ({ assetRef, message: "模拟告警" })),
+} }, doc.mappings, equipment);
+assert.deepEqual(eventRows.rows.map(row => row.device?.id), [
+  "pump-one", "pump-one", undefined, undefined, undefined, undefined, undefined,
+]);
+assert.deepEqual(eventRows.columns.map(col => col.field), ["message"]);
 assert.equal(
   screenTableResult(
     table,

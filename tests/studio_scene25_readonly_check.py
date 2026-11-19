@@ -35,12 +35,13 @@ def serve_snapshot(points, state):
                 return
             rows = copy.deepcopy(points)
             indexed = {row["id"]: row for row in rows}
+            indexed["plant.events"]["value"][0]["deviceRef"] = "unknown-equipment"
             if mode == "fault":
                 indexed["DC101.fault"]["value"] = True
                 indexed["DC101.run"]["value"] = False
                 indexed["plant.events"]["value"][0].update({
                     "级别 / 设备": "故障 · DC101", "事件内容": "一号脱水机故障",
-                    "确认状态": "待确认",
+                    "确认状态": "待确认", "deviceRef": state["equipmentTitle"],
                 })
             if mode == "recovered":
                 indexed["plant.events"]["value"][0].update({
@@ -60,8 +61,9 @@ def serve_snapshot(points, state):
     return Snapshot
 
 
-def publish(page, base):
-    page.goto(base)
+def publish(page, base=None):
+    if base:
+        page.goto(base)
     page.get_by_role("button", name="预览发布", exact=True).click()
     page.get_by_role("button", name="发布", exact=True).click()
     expect(page.locator(".status-message")).to_contain_text("已发布")
@@ -75,7 +77,16 @@ def exercise(browser, base, doc, state, out):
         page.on("pageerror", lambda error: errors.append(str(error)))
     viewer.on("request", lambda request: source_requests.append((request.method, request.url))
               if request.method not in ("GET", "HEAD") else None)
-    publish(editor, base)
+    editor.goto(base)
+    events_node = next(node for node in doc["nodes"] if node["symbol"] == "events")
+    editor.get_by_role("tab", name="图层", exact=False).click()
+    editor.locator(f'[data-layer="{events_node["id"]}"]').click()
+    editor.get_by_role("tab", name="外观", exact=True).click()
+    field = editor.get_by_label("告警定位字段", exact=True)
+    field.fill("deviceRef")
+    field.press("Tab")
+    events_node["params"]["deviceRefField"] = "deviceRef"
+    publish(editor)
     assert editor.request.get(base + "/api/published").json() == doc
     first_version = editor.request.get(base + "/api/versions").json()
     assert first_version["versions"][0]["documentMatches"]
@@ -91,6 +102,7 @@ def exercise(browser, base, doc, state, out):
     flow = bound("readout", "value", "plant.flow")
     equipment = bound("decanterCentrifuge", "fault", "DC101.fault")
     events = bound("events", "value", "plant.events")
+    expect(events.get_by_role("button")).to_have_count(0)
     expect(equipment).to_have_attribute("data-state", "运行")
     expect(viewer.get_by_role("button", name="PAM 投加配比 · +", exact=True)).to_be_disabled()
     expect(viewer.get_by_role("button", name="演示工况 · 常规运行", exact=True)).to_be_disabled()
@@ -112,6 +124,13 @@ def exercise(browser, base, doc, state, out):
     expect(equipment).to_have_attribute("data-state", "故障")
     expect(events).to_contain_text("一号脱水机故障")
     expect(events).to_contain_text("待确认")
+    title = state["equipmentTitle"]
+    events.get_by_role("button", name="查看设备 " + title, exact=True).click()
+    details = viewer.get_by_role("dialog", name=title + " 设备详情", exact=True)
+    expect(details).to_contain_text("只读监视")
+    expect(details).to_contain_text("故障")
+    viewer.screenshot(path=str(out / "alarm-device.png"))
+    details.get_by_role("button", name="关闭详情", exact=True).click()
     viewer.screenshot(path=str(out / "fault.png"))
     start = time.monotonic()
     state["mode"] = "offline"
@@ -156,7 +175,9 @@ def main():
         raise ValueError("Use the authored 25 local demo source as the fixture")
     points = json.loads(doc["source"]["data"])["points"]
     args.out.mkdir(parents=True, exist_ok=True)
-    state = {"mode": "normal", "samples": 0, "writeRequests": 0}
+    title = next(n["title"] for n in doc["nodes"]
+                 if n["symbol"] == "decanterCentrifuge" and n["bindings"].get("fault") == "DC101.fault")
+    state = {"mode": "normal", "samples": 0, "writeRequests": 0, "equipmentTitle": title}
     upstream = ThreadingHTTPServer(("127.0.0.1", 0), serve_snapshot(points, state))
     threading.Thread(target=upstream.serve_forever, daemon=True).start()
     with socket.socket() as listener:
@@ -205,7 +226,7 @@ def main():
               "nodes": len(doc["nodes"]), "pipes": len(doc["pipes"]), "points": len(points),
               "samples": state["samples"], "upstreamWriteRequests": state["writeRequests"],
               "verified": ["publish with original bindings", "read-only controls", "8/24 hour history",
-                           "alarm and equipment status", "offline and recovery", "rollback"],
+                           "alarm and equipment status", "open device from alarm", "offline and recovery", "rollback"],
               **observations}
     (args.out / "results.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), "utf-8")
     print(json.dumps(result, ensure_ascii=False))

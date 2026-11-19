@@ -1333,8 +1333,9 @@ class ScreenGraph {
     if(screenControlKinds.has(n.symbol)){projectScreenControl(n,entry,p,data=>this.emit('control',data));return;}
     if (screenTableKinds.has(n.symbol)) {
       entry.card.classList.toggle("is-compact", n.params.compact || n.h < 180);
-      const data = screenTableResult(n, p.points, p.doc.mappings),
-        key = JSON.stringify([data, n.params]);
+      const showDevice = n.symbol === "events" && !!n.params.deviceRefField;
+      const data = screenTableResult(n, p.points, p.doc.mappings, p.doc.nodes),
+        key = JSON.stringify([data, n.params, p.editing]);
       entry.quality.textContent = data.quality + " · " + data.total + " 行";
       entry.quality.style.display=n.params.compact&&data.quality==='有效'?'none':'';
       if (entry.tableKey === key) return;
@@ -1345,6 +1346,11 @@ class ScreenGraph {
       for (const col of data.columns) {
         const th = document.createElement("th");
         th.textContent = col.title;
+        tr.append(th);
+      }
+      if (showDevice) {
+        const th = document.createElement("th");
+        th.textContent = "设备";
         tr.append(th);
       }
       head.append(tr);
@@ -1373,12 +1379,28 @@ class ScreenGraph {
           td.textContent = value;
           tr.append(td);
         }
+        if (showDevice) {
+          const td = document.createElement("td");
+          if (row.device && !p.editing) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "screen-event-device";
+            button.textContent = "查看";
+            button.setAttribute("aria-label", "查看设备 " + row.device.title);
+            button.onclick = (event) => {
+              event.stopPropagation();
+              this.emit("faceplate", row.device.id);
+            };
+            td.append(button);
+          } else td.textContent = "—";
+          tr.append(td);
+        }
         body.append(tr);
       }
       if (!data.rows.length) {
         const tr = document.createElement("tr"),
           td = document.createElement("td");
-        td.colSpan = Math.max(1, data.columns.length);
+        td.colSpan = Math.max(1, data.columns.length + Number(showDevice));
         td.textContent =
           data.quality === "有效" ? "暂无数据" : "— · " + data.quality;
         tr.append(td);
