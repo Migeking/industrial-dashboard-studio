@@ -515,6 +515,19 @@ fieldset small {
   background: #e8edf1;
   border-bottom: 1px solid #c4ced5;
 }
+.tag-empty-state {
+  max-width: 460px;
+  margin: 8px auto;
+  padding: 12px 16px;
+  color: #304553;
+  text-align: center;
+  white-space: normal;
+}
+.tag-empty-state p {
+  margin: 5px 0 0;
+  color: #526976;
+  line-height: 1.5;
+}
 .tag-tree {
   display: flex;
   flex-direction: column;

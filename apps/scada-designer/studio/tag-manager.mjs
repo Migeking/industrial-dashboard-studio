@@ -11,7 +11,7 @@ export const TagManager = {
     "nextOffset",
     "notice",
   ],
-  emits: ["browse", "read", "finish", "kind-change"],
+  emits: ["browse", "read", "finish", "kind-change", "endpoint-change"],
   setup(props, { emit }) {
     const { ref, computed, watch } = Vue;
     const search = ref(""),
@@ -245,18 +245,18 @@ export const TagManager = {
 <div class="tag-manager">
   <div class="tag-connection">
     <label
-      >通信驱动<select
+      >来源<select
         aria-label="来源"
-        v-model="source.kind"
-        @change="$emit('kind-change')"
+        :value="source.kind"
+        @change="$emit('kind-change', $event.target.value)"
         :disabled="busy"
       >
-        <option value="opcua">OPC UA</option>
-        <option value="modbus">Modbus TCP/IP</option>
-        <option value="rest">REST JSON</option>
-        <option value="ws">WebSocket</option>
         <option value="json">本地 JSON</option>
         <option value="csv">本地 CSV</option>
+        <option value="rest">REST / 工业协议桥接</option>
+        <option value="ws">WebSocket JSON</option>
+        <option value="opcua">OPC UA</option>
+        <option value="modbus">Modbus TCP</option>
       </select></label
     >
     <template v-if="source.kind === 'opcua'"
@@ -265,22 +265,23 @@ export const TagManager = {
           aria-label="OPC UA 地址"
           v-model="source.connection.endpoint"
           :disabled="busy"
-          @change="$emit('kind-change')" /></label
+          @change="cache = {}; $emit('endpoint-change')" /></label
       ><button
         @click="
           cache = {};
           $emit('browse');
         "
-        :disabled="busy"
+        :disabled="busy || !source.connection.endpoint.trim()"
       >
         连接并浏览
       </button></template
     >
     <template v-else
       ><label class="endpoint"
-        >设备 IP<input
+        >设备 IP 或主机名<input
           aria-label="Modbus 主机"
           v-model="source.connection.host"
+          placeholder="例如 192.168.1.10"
           :disabled="busy" /></label
       ><label class="short"
         >端口<input
@@ -393,7 +394,7 @@ export const TagManager = {
                 <td>{{ p.dataType || typeNames[p.kind] || "暂不支持" }}</td>
                 <td :title="p.nodeId">{{ p.nodeId }}</td>
               </tr>
-              <tr v-if="!candidates.length">
+              <tr v-if="!candidates.length && (busy || results.length || search)">
                 <td colspan="4">
                   {{
                     busy
@@ -406,6 +407,10 @@ export const TagManager = {
               </tr>
             </tbody>
           </table>
+          <div v-if="!results.length && !search && !busy" class="tag-empty-state">
+            <b>等待浏览 OPC UA 服务器</b>
+            <p>确认上方的服务器地址，点击“连接并浏览”，然后勾选要使用的标签。</p>
+          </div>
         </div>
         <div class="tag-table-foot">
           <span
@@ -486,19 +491,18 @@ export const TagManager = {
                 <td>{{ preview(p).value }}</td>
                 <td>{{ preview(p).quality }}</td>
               </tr>
-              <tr v-if="!selected.length">
+              <tr v-if="!selected.length && points.length">
                 <td colspan="5">
-                  {{
-                    points.length
-                      ? "没有匹配的已选点位"
-                      : source.kind === "opcua"
-                        ? "在上方勾选标签，点击“添加所选”"
-                        : "点击“新建点位”，或导入设备点表"
-                  }}
+                  没有匹配的已选点位
                 </td>
               </tr>
             </tbody>
           </table>
+          <div v-if="!points.length" class="tag-empty-state">
+            <b>{{ source.kind === 'modbus' ? '尚未配置 Modbus 点位' : '尚未添加 OPC UA 点位' }}</b>
+            <p v-if="source.kind === 'modbus'">填写上方的设备 IP 或主机名、端口和站号，再新建点位、批量添加地址或导入点表。</p>
+            <p v-else>浏览服务器后，在上方勾选标签并点击“添加所选”。</p>
+          </div>
         </div>
       </section>
     </div>

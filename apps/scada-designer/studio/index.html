@@ -760,6 +760,7 @@
           "
         >
           <tag-manager
+            :key="config.source.kind"
             :config="config"
             :sample="sample"
             :sample-source="sampleSource"
@@ -769,6 +770,7 @@
             :next-offset="browseNext"
             :notice="message"
             @kind-change="sourceKindChanged"
+            @endpoint-change="resetConnectionPreview"
             @browse="browseProtocol"
             @read="readSample"
             @finish="finishTags"
@@ -780,8 +782,8 @@
               <label
                 >来源<select
                   aria-label="来源"
-                  v-model="config.source.kind"
-                  @change="sourceKindChanged"
+                  :value="config.source.kind"
+                  @change="sourceKindChanged($event.target.value)"
                   :disabled="protocolBusy"
                 >
                   <option value="json">本地 JSON</option>

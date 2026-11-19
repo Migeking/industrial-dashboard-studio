@@ -780,46 +780,53 @@ async function boot() {
           message.value = "展示端已切换版本";
         });
       }
+      const connectionDrafts = new Map();
       function openConfig() {
         config.value = clone({
           source: doc.value.source,
           mappings: doc.value.mappings,
         });
+        connectionDrafts.clear();
+        connectionDrafts.set(config.value.source.kind, config.value);
+        resetConnectionPreview();
         mappingIndex.value = 0;
-        sample.value = null;
         dialog.value = "data";
-        message.value = "";
-        browsePath.value = [];
-        browseResults.value = [];
       }
       const protocolBusy = ref(false),
         browseResults = ref([]),
         browsePath = ref([]);
-      function sourceKindChanged() {
+      const browseNext = ref(null);
+      function resetConnectionPreview() {
         sample.value = null;
+        sampleSource.value = "";
         browseResults.value = [];
         browsePath.value = [];
-        const s = config.value.source;
-        if (
-          ["opcua", "modbus"].includes(s.kind) &&
-          s.connection?.protocol !== s.kind
-        )
-          s.connection =
-            s.kind === "opcua"
-              ? {
-                  protocol: s.kind,
-                  endpoint: "opc.tcp://127.0.0.1:49320",
-                  points: [],
-                }
-              : {
-                  protocol: s.kind,
-                  host: "",
-                  port: 502,
-                  unitId: 1,
-                  points: [],
-                };
+        browseNext.value = null;
+        message.value = "";
       }
-      const browseNext = ref(null);
+      function sourceKindChanged(kind) {
+        if (protocolBusy.value || kind === config.value.source.kind) return;
+        if (!connectionDrafts.has(kind)) {
+          const { source: current, mappings } = config.value;
+          const source = {
+            ...current,
+            kind,
+            demo: false,
+          };
+          delete source.connection;
+          if (kind === "opcua") {
+            source.connection = { protocol: kind, endpoint: "opc.tcp://127.0.0.1:49320", points: [] };
+          } else if (kind === "modbus") {
+            source.connection = { protocol: kind, host: "", port: 502, unitId: 1, points: [] };
+          }
+          const previousMappings = ["opcua", "modbus"].includes(current.kind) ? [] : clone(mappings);
+          connectionDrafts.set(kind, { source, mappings: previousMappings });
+        }
+        config.value = connectionDrafts.get(kind);
+        connectionDrafts.set(kind, config.value);
+        mappingIndex.value = 0;
+        resetConnectionPreview();
+      }
       async function browseProtocol(entry, backIndex, append = false) {
         if (protocolBusy.value) return;
         message.value = "";
@@ -1316,6 +1323,7 @@ async function boot() {
         browseResults,
         browsePath,
         sourceKindChanged,
+        resetConnectionPreview,
         browseProtocol,
         finishTags,
         browseNext,
