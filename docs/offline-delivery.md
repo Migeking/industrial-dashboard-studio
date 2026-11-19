@@ -23,3 +23,22 @@
 ```
 
 省略参数时从当前提交生成 `release/industrial-dashboard-offline.zip`。脚本输出源提交和 ZIP 的 SHA-256，ZIP 注释也记录源提交。交付范围限于指定提交中的产品应用、标准案例和相关资源。工作区草稿、站点工程备份、现场样本、凭据和本地环境配置由项目方单独保管。
+
+## 附带工程的交付包
+
+在「项目管理」下载工程备份。选择与该工程当前展示版发布时相同的应用提交，再显式传入备份文件。以下命令以当前 HEAD 就是发布所用提交为例。
+
+```powershell
+./scripts/build-release.ps1 -Ref HEAD -OutputPath ./release/hmi-project.zip `
+  -ProjectBackup ./works/project-backup.json
+```
+
+打包工具核对工程及点表指纹、当前发布版所引用的图源和运行文件。核对通过后，包内的 `handoff/project-backup.json` 可从「导入工程」恢复，其中保留草稿、展示版和发布历史。旧备份的当前展示版若缺少发布追溯，需在选定的应用版本重新发布并下载备份。历史版本仍可按原方式单独恢复。
+
+收到包后先核对 ZIP 的 SHA-256。解压后可在启动服务前复核配套关系，核对命令只读取本地文件。
+
+```powershell
+node apps/scada-designer/verify-handoff.mjs
+```
+
+工程备份可能包含现场地址和点位，仅随明确指定的工程包交付。现场凭据和环境配置沿用项目现场的单独配置。

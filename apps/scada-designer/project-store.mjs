@@ -5,7 +5,7 @@ import { csv, template, validate } from "./studio/model.mjs";
 
 export const versionLimit = 5;
 export const sha256 = (value) => createHash("sha256").update(value).digest("hex");
-const backupFormat = "studio-project-backup";
+export const backupFormat = "studio-project-backup";
 const isDigest = (value) => typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
 
 export function publicationMatchesDocument(doc, manifest) {
@@ -17,6 +17,37 @@ export function validatePublication(doc) {
   validate(doc, true);
   if (["json", "csv"].includes(doc.source.kind))
     (doc.source.kind === "json" ? JSON.parse : csv)(doc.source.data);
+}
+
+export function validateProjectBackup(archive) {
+  if (archive?.format && (archive.format !== backupFormat || archive.version !== 1))
+    throw Error("工程备份格式或版本不受支持");
+  const state = archive?.format ? archive.project : archive;
+  if (!state?.draft || !Array.isArray(state.versions) || state.versions.length > versionLimit)
+    throw Error("工程备份缺少草稿或发布版本无效");
+  validate(state.draft, false);
+  const ids = new Set();
+  for (const edition of state.versions) {
+    if (typeof edition?.id !== "string" || !edition.id || ids.has(edition.id) ||
+        typeof edition.time !== "string" || !Number.isFinite(Date.parse(edition.time)))
+      throw Error("工程备份中的发布版本编号或时间无效");
+    ids.add(edition.id);
+    validatePublication(edition.doc);
+    const manifest = edition.manifest;
+    if (manifest !== undefined &&
+        (manifest?.format !== 1 || typeof manifest.projectId !== "string" ||
+         !isDigest(manifest.deploymentSha256) ||
+         manifest.points !== edition.doc.mappings.length ||
+         manifest.pages !== 1 + (edition.doc.pages?.length || 0) ||
+         !Array.isArray(manifest.assets) || manifest.assets.some(asset => !isDigest(asset?.sha256)) ||
+         !publicationMatchesDocument(edition.doc, manifest)))
+      throw Error("工程备份中的发布追溯记录与文档不一致");
+  }
+  if (state.active !== null && !ids.has(state.active))
+    throw Error("工程备份的当前展示版本不存在");
+  if (state.caseId != null && (typeof state.caseId !== "string" || state.caseId.length > 64))
+    throw Error("工程备份的关联案例无效");
+  return state;
 }
 
 export function projectStore(dir) {
@@ -128,33 +159,7 @@ export function projectStore(dir) {
   }
 
   async function restore(archive) {
-    if (archive?.format && (archive.format !== backupFormat || archive.version !== 1))
-      throw Error("工程备份格式或版本不受支持");
-    const state = archive?.format ? archive.project : archive;
-    if (!state?.draft || !Array.isArray(state.versions) || state.versions.length > versionLimit)
-      throw Error("工程备份缺少草稿或发布版本无效");
-    validate(state.draft, false);
-    const ids = new Set();
-    for (const edition of state.versions) {
-      if (typeof edition?.id !== "string" || !edition.id || ids.has(edition.id) ||
-          typeof edition.time !== "string" || !Number.isFinite(Date.parse(edition.time)))
-        throw Error("工程备份中的发布版本编号或时间无效");
-      ids.add(edition.id);
-      validatePublication(edition.doc);
-      const manifest = edition.manifest;
-      if (manifest !== undefined &&
-          (manifest?.format !== 1 || typeof manifest.projectId !== "string" ||
-           !isDigest(manifest.deploymentSha256) ||
-           manifest.points !== edition.doc.mappings.length ||
-           manifest.pages !== 1 + (edition.doc.pages?.length || 0) ||
-           !Array.isArray(manifest.assets) || manifest.assets.some(asset => !isDigest(asset?.sha256)) ||
-           !publicationMatchesDocument(edition.doc, manifest)))
-        throw Error("工程备份中的发布追溯记录与文档不一致");
-    }
-    if (state.active !== null && !ids.has(state.active))
-      throw Error("工程备份的当前展示版本不存在");
-    if (state.caseId != null && (typeof state.caseId !== "string" || state.caseId.length > 64))
-      throw Error("工程备份的关联案例无效");
+    const state = validateProjectBackup(archive);
     const name = projectName(state.name || state.draft.title);
     return createFromState({
       name: name.slice(0, 77) + " 恢复", caseId: state.caseId || "",
