@@ -8,6 +8,7 @@ import {
   screenChartResult,
   screenTableResult,
   screenField,
+  screenHistoryRows,
   screenNumeric,
 } from "../packages/runtime/studio/screen-widgets.mjs";
 import { applyScreenNodeTheme, applyScreenTheme } from "../packages/runtime/studio/screen-themes.mjs";
@@ -85,6 +86,21 @@ const rows = [
   points = { hist: { value: rows, quality: "good", timestamp: now } };
 const entry = {},
   result = screenChartResult(n, points, doc.mappings, entry, 1, 1, now);
+const historyRows = [
+  { time: now, value: "4.5", quality: "GOOD" },
+  { time: now - 1000, value: 9999, quality: "bad" },
+  { time: now - 2000, value: 0 },
+  { time: "invalid", value: 1, quality: "good" },
+];
+assert.deepEqual(screenHistoryRows(historyRows), [
+  { x: now - 2000, y: 0 },
+  { x: now - 1000, y: null },
+  { x: now, y: 4.5 },
+]);
+assert.deepEqual(
+  screenHistoryRows(historyRows, { qualityField: "quality" }).map((r) => r.y),
+  [null, null, 4.5],
+);
 assert.equal(result.option.yAxis.length, 2);
 assert.equal(result.option.yAxis[1].max, 10);
 assert.equal(result.option.series[1].type, "bar");

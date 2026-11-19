@@ -36,6 +36,26 @@ export function screenNumeric(value) {
 function widgetTime(value) {
   return typeof value === "number" ? value : Date.parse(value);
 }
+export function screenHistoryRows(rows, {
+  xType = "time",
+  xField = "time",
+  field = "value",
+  qualityField = "",
+} = {}) {
+  const samples = rows.map((row) => {
+    const rawTime = screenField(row, xField);
+    const quality = screenField(row, qualityField || "quality");
+    const valid = (!qualityField && quality === undefined) ||
+      ["good", "GOOD", true, 1].includes(quality);
+    return {
+      x: xType === "time" ? widgetTime(rawTime) : String(rawTime ?? ""),
+      y: valid ? screenNumeric(screenField(row, field)) : null,
+    };
+  });
+  return xType === "time"
+    ? samples.filter((r) => Number.isFinite(r.x)).sort((a, b) => a.x - b.x)
+    : samples;
+}
 export function screenSeries(n) {
   return n.params.series?.length
     ? n.params.series
@@ -239,23 +259,9 @@ export function screenChartResult(
               },
             ];
     } else if (point?.quality === "good" && Array.isArray(point.value)) {
-      rows = point.value
-        .map((row) => {
-          const x = screenField(row, xField);
-          const valid = !s.qualityField ||
-            ["good", "GOOD", true, 1].includes(screenField(row, s.qualityField));
-          return {
-            x:
-              xType === "time"
-                ? widgetTime(x)
-                : x === undefined || x === null
-                  ? ""
-                  : String(x),
-            y: valid ? screenNumeric(screenField(row, s.field)) : null,
-          };
-        })
-        .filter((r) => xType !== "time" || Number.isFinite(r.x));
-      if (xType === "time") rows.sort((a, b) => a.x - b.x);
+      rows = screenHistoryRows(point.value, {
+        xType, xField, field: s.field, qualityField: s.qualityField,
+      });
     }
     if(n.params.rangeActive&&xType==='time'&&rows.length){
       const latest=rows.reduce((max,r)=>Math.max(max,r.x),-Infinity);rows=rows.filter(r=>r.x>=latest-n.params.windowSeconds*1000);

@@ -1,4 +1,5 @@
 import { screenRoleSlot } from "../../components/studio/screen-symbols.mjs";
+import { screenHistoryRows } from "./screen-widgets.mjs";
 
 export const ScreenRuntimeTrend = {
   props: ["item", "doc", "points", "sequence"],
@@ -11,8 +12,8 @@ export const ScreenRuntimeTrend = {
       last = "";
     const update = () => {
       if (!chart) return;
-      const slot =
-          props.item.action?.slot || screenRoleSlot(props.item, "value")?.key,
+      const action = props.item.action,
+        slot = action?.slot || screenRoleSlot(props.item, "value")?.key,
         binding = props.item.bindings[slot],
         point = props.points[binding],
         mapping = props.doc.mappings.find((m) => m.id === binding),
@@ -27,12 +28,11 @@ export const ScreenRuntimeTrend = {
       if (mapping?.kind === "dataset")
         samples =
           point?.quality === "good" && Array.isArray(point.value)
-            ? point.value
-                .map((r) => [
-                  typeof r.time === "number" ? r.time : Date.parse(r.time),
-                  r.value,
-                ])
-                .filter((r) => Number.isFinite(r[0]) && Number.isFinite(r[1]))
+            ? screenHistoryRows(point.value, {
+                xField: action?.timeField || "time",
+                field: action?.valueField || "value",
+                qualityField: action?.qualityField,
+              }).map(({ x, y }) => [x, y])
             : [];
       else {
         const key = JSON.stringify([props.sequence, point?.quality, binding]);

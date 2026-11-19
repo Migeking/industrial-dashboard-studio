@@ -512,6 +512,13 @@ export function validateScreen(doc, publishing, project = doc) {
         )
           throw Error("请使用 HTTP 或 HTTPS 链接");
       }
+      if (n.action.type === "trend") {
+        for (const key of ["timeField", "valueField", "qualityField"]) {
+          const field = n.action[key];
+          if (field !== undefined && (typeof field !== "string" || field.length > 128))
+            throw Error(n.title + " 的趋势字段无效");
+        }
+      }
       if (n.action.type === "trend" && publishing) {
         const slot = screenSlots(n).find((s) => s.key === n.action.slot),
           mapping = doc.mappings.find(

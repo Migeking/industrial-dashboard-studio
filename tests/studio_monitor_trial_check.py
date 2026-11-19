@@ -21,6 +21,7 @@ OUT = ROOT / "works/hmi-monitor-acceptance"
 class Snapshot(BaseHTTPRequestHandler):
     offline = False
     missing_events = False
+    frozen_at = None
 
     def log_message(self, *_):
         pass
@@ -30,11 +31,11 @@ class Snapshot(BaseHTTPRequestHandler):
             self.send_response(503)
             self.end_headers()
             return
-        stamp = int(time.time() * 1000)
+        stamp = self.frozen_at if self.frozen_at is not None else int(time.time() * 1000)
         historical = [
-            {"time": stamp - 2000, "value": 4.5, "quality": "good"},
-            {"time": stamp - 4000, "value": 3, "quality": "good"},
-            {"time": stamp - 3000, "value": 9999, "quality": "bad"},
+            {"observedAt": stamp - 2000, "reading": "4.5", "quality": "good"},
+            {"observedAt": stamp - 4000, "reading": 3, "quality": "good"},
+            {"observedAt": stamp - 3000, "reading": 9999, "quality": "bad"},
         ]
         events = [
             {"occurredAt": "2026-11-19T14:04:00+08:00", "level": "警告",
@@ -62,6 +63,7 @@ class Snapshot(BaseHTTPRequestHandler):
 def make_doc(source):
     script = """
       import { blankScreen, screenNode } from './packages/runtime/studio/screen-model.mjs';
+      import { screenSlots } from './packages/components/studio/screen-symbols.mjs';
       import { protocolMappings } from './apps/scada-designer/studio/model.mjs';
       const doc = blankScreen(); doc.title = '预处理进水监视 · 本机台架';
       doc.canvas.theme = 'process-gray'; doc.canvas.purpose = 'process';
@@ -81,6 +83,11 @@ def make_doc(source):
         n.bindings.value=id;
         doc.nodes.push(n);
       }
+      const [level, trend] = doc.nodes;
+      level.dataSlots = [...screenSlots(level),
+        {key:'history',label:'面板历史',role:'extra',kinds:['dataset'],required:false}];
+      level.bindings.history = 'history';
+      trend.params.xField = 'observedAt';
       const events=doc.nodes[2].params;
       events.columns=[
         {field:'occurredAt',title:'时间',format:'time',unit:''},
@@ -107,9 +114,22 @@ def exercise(browser, base):
     editor.locator('[data-layer="history"]').click()
     editor.get_by_role("tab", name="外观", exact=True).click()
     expect(editor.locator('datalist[id="chart-fields-history"] option[value="quality"]')).to_have_count(1)
-    field = editor.get_by_label("序列 1 质量字段", exact=True)
-    field.fill("quality")
-    field.press("Tab")
+    for label, value in [("序列 1 数值字段", "reading"), ("序列 1 质量字段", "quality")]:
+        field = editor.get_by_label(label, exact=True)
+        field.fill(value)
+        field.press("Tab")
+    editor.locator('[data-layer="level"]').click()
+    editor.get_by_role("tab", name="交互", exact=True).click()
+    editor.get_by_label("点击动作", exact=True).select_option("trend")
+    editor.get_by_label("趋势面板槽位", exact=True).select_option("history")
+    for label, value in [
+        ("趋势面板时间字段", "observedAt"),
+        ("趋势面板数值字段", "reading"),
+        ("趋势面板质量字段", "quality"),
+    ]:
+        field = editor.get_by_label(label, exact=True)
+        field.fill(value)
+        field.press("Tab")
     Snapshot.missing_events = True
     try:
         editor.get_by_role("button", name="预览发布", exact=True).click()
@@ -140,6 +160,31 @@ def exercise(browser, base):
     viewer.goto(base + "/view")
     runtime_ready()
     viewer.screenshot(path=str(OUT / "online.png"))
+    level = viewer.locator('[data-cell-id="level"]')
+    level.click()
+    popup = viewer.get_by_role("dialog", name="进水池液位 设备详情")
+    expect(popup).to_contain_text("上游历史数据")
+    viewer.wait_for_function("""() => {
+        const host = document.querySelector(".runtime-trend-host");
+        const series = host && echarts.getInstanceByDom(host)?.getOption()?.series[0];
+        const data = series?.data;
+        return series?.connectNulls === false && data?.length === 3 &&
+            data[0][1] === 3 && data[1][1] === null && data[2][1] === 4.5 &&
+            data[0][0] < data[1][0] && data[1][0] < data[2][0];
+    }""")
+    viewer.screenshot(path=str(OUT / "history-panel.png"))
+    Snapshot.frozen_at = int(time.time() * 1000)
+    try:
+        expect(level).to_contain_text("过期", timeout=12000)
+        expect(popup).to_contain_text("过期")
+        expect(viewer.get_by_text("已连接 · REST")).to_be_visible()
+        expect(viewer.locator('[data-cell-id="events"]')).not_to_contain_text("格栅压差高")
+        viewer.screenshot(path=str(OUT / "frozen.png"))
+    finally:
+        Snapshot.frozen_at = None
+    expect(popup).to_contain_text("上游历史数据")
+    popup.get_by_role("button", name="关闭详情").click()
+    runtime_ready()
     disconnected_at = time.monotonic()
     Snapshot.offline = True
     try:
@@ -223,6 +268,7 @@ def main():
         fixture.server_close()
     result = {"scope": "local read-only upstream fixture", **timings, "verified": [
         "sample field suggestions", "raw and engineering values", "history quality and order",
+        "device trend custom fields and gaps", "stale values while transport stays connected",
         "missing source records in publish review", "alarm lifecycle readback",
         "offline and recovery", "published version rollback", "release manifest and snapshot trace",
     ]}
