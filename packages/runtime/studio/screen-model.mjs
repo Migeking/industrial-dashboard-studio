@@ -723,7 +723,12 @@ export function editScreenDefinition(
       )
         throw Error("该连接点仍有管道，请先更换管道端点或删除管道");
       next.ports.splice(index, 1);
-    } else next.ports[index] = { ...next.ports[index], ...value };
+    } else {
+      const port = next.ports[index];
+      const updated = { ...port, ...value };
+      if (port.x !== updated.x || port.y !== updated.y) delete updated.anchor;
+      next.ports[index] = updated;
+    }
   } else if (section === "slots") {
     next.dataSlots = JSON.parse(JSON.stringify(screenSlots(item)));
     const index = next.dataSlots.findIndex((s) => s.key === value.key);

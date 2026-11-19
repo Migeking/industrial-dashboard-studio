@@ -15,6 +15,41 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "works/scene13-assembly-acceptance"
 
 
+def set_field(page, label, value):
+    field = page.get_by_label(label, exact=True)
+    field.fill(str(value))
+    field.press("Tab")
+
+
+def artwork_endpoints(page, doc, definition):
+    node = next(n for n in doc["nodes"] if n["symbol"] == "highRateClarifier")
+    ends = [
+        {"pipe": pipe["id"], "side": side, "port": pipe[side]["portId"]}
+        for pipe in doc["pipes"] for side in ("source", "target")
+        if pipe[side].get("nodeId") == node["id"]
+    ]
+    assert len(ends) == 5
+    result = page.evaluate("""({id, w, h, ports, ends}) => {
+        const cell = document.querySelector('[data-cell-id="' + id + '"]');
+        const picture = cell.querySelector('image');
+        return ends.map(({pipe, side, port}) => {
+            const group = document.querySelector('[data-cell-id="' + pipe + '"]');
+            const path = group.querySelector('[data-selector="line"]') ||
+                [...group.querySelectorAll("path")].find(el => el.getAttribute("d"));
+            const point = path.getPointAtLength(side === "source" ? 0 : path.getTotalLength());
+            const end = new DOMPoint(point.x, point.y).matrixTransform(path.getScreenCTM());
+            const [x, y] = ports[port];
+            const nozzle = new DOMPoint(x * w / 100, y * h / 100).matrixTransform(picture.getScreenCTM());
+            return Math.hypot(end.x - nozzle.x, end.y - nozzle.y);
+        });
+    }""", {
+        "id": node["id"], "w": definition["w"], "h": definition["h"], "ends": ends,
+        "ports": {p["id"]: p.get("anchor", [p["x"], p["y"]]) for p in definition["portDefinitions"]},
+    })
+    assert max(result) < 2, result
+    return max(result)
+
+
 def verify_unit_revision(page, unit, original, url):
     card = page.locator("[data-user-symbol]")
     review = page.get_by_role("dialog", name="图元更新预览")
@@ -72,8 +107,9 @@ def verify_unit_revision(page, unit, original, url):
     assert any(s["key"] == "outletTurbidity" and s["required"] for s in new["dataSlots"])
 
 
-def verify_unit_imports(page, base):
+def verify_unit_imports(page, base, definition):
     units = ROOT / "apps/scada-designer/examples/units"
+    errors = []
     for file in sorted(units.glob("*.symbol.json")):
         unit = json.loads(file.read_text("utf-8"))
         created = page.request.post(base + "/api/projects", data={
@@ -97,7 +133,26 @@ def verify_unit_imports(page, base):
         assert all(not n["bindings"] for n in doc["nodes"])
         assert len(doc["pipes"]) == len(unit["pipes"])
         if file.name.startswith("scene13"):
+            clarifier = next(n for n in doc["nodes"] if n["symbol"] == "highRateClarifier")
+            assert clarifier["ports"]
+            layer = page.locator(f'[data-layer="{clarifier["id"]}"]')
+            page.get_by_role("tab", name="图层", exact=False).click()
+            layer.click(modifiers=["Alt"])
+            page.get_by_role("tab", name="外观", exact=True).click()
+            set_field(page, "宽度", clarifier["w"] + 210)
+            errors.append(artwork_endpoints(page, doc, definition))
+            set_field(page, "高度", clarifier["h"] + 120)
+            errors.append(artwork_endpoints(page, doc, definition))
+            page.screenshot(path=str(OUT / "reused-unit-resized.png"))
+            for _ in range(2):
+                page.get_by_role("button", name="撤销", exact=True).click()
+            layer.click(modifiers=["Alt"])
+            expect(page.get_by_label("宽度", exact=True)).to_have_value(str(clarifier["w"]))
+            expect(page.get_by_label("高度", exact=True)).to_have_value(str(clarifier["h"]))
+            layer.click()
+            page.get_by_role("tab", name="我的图元", exact=True).click()
             verify_unit_revision(page, unit, doc, url)
+    return errors
 
 
 def exercise(browser, base, definitions):
@@ -123,11 +178,6 @@ def exercise(browser, base, definitions):
     def cell(key):
         return page.locator(f'.x6-node[data-cell-id="{equipment[key]}"]')
 
-    def field(label, value):
-        form_field = page.get_by_label(label, exact=True)
-        form_field.fill(str(value))
-        form_field.press("Tab")
-
     def add(symbol, x, y):
         tools()
         library.get_by_label("搜索组件", exact=True).fill(symbol)
@@ -141,7 +191,7 @@ def exercise(browser, base, definitions):
         equipment[symbol] = (set(page.locator(".x6-node").evaluate_all("(els) => els.map(el => el.dataset.cellId)")) - prior).pop()
         expect(cell(symbol).locator("image")).to_have_attribute("xlink:href", artwork)
         definition = definitions[symbol]
-        field("图元名称", definition["label"])
+        set_field(page, "图元名称", definition["label"])
         page.get_by_role("tab", name="动态与测点", exact=True).click()
         for slot in definition["slots"]:
             selection = page.get_by_label(slot["label"] + " · 绑定测点", exact=True)
@@ -183,10 +233,18 @@ def exercise(browser, base, definitions):
 
     page.get_by_role("tab", name="图层", exact=False).click()
     page.locator(f'[data-layer="{equipment["highRateClarifier"]}"]').click()
+    page.get_by_role("tab", name="元素定义", exact=True).click()
+    port_name = page.locator('[data-port-definition="pacIn"]').get_by_role("textbox")
+    port_name.fill("快混 PAC 投加口")
+    port_name.press("Tab")
     page.get_by_role("tab", name="外观", exact=True).click()
-    field("宽度", 740)
+    set_field(page, "宽度", 740)
     resized = save()
     assert resized["pipes"] == linked["pipes"]
+    clarifier = next(n for n in resized["nodes"] if n["symbol"] == "highRateClarifier")
+    assert next(p for p in clarifier["ports"] if p["id"] == "pacIn")["label"] == "快混 PAC 投加口"
+    definition = definitions["highRateClarifier"]
+    artwork_errors = [artwork_endpoints(page, resized, definition)]
     dists = page.evaluate("""pipes => pipes.flatMap(pipe => {
         const group = document.querySelector('[data-cell-id="' + pipe.id + '"]');
         const path = group.querySelector('[data-selector="line"]') ||
@@ -206,6 +264,7 @@ def exercise(browser, base, definitions):
     expect(page.get_by_role("status")).to_contain_text("已发布")
     page.goto(base + "/view")
     expect(page.locator(".x6-edge")).to_have_count(5)
+    artwork_errors.append(artwork_endpoints(page, resized, definition))
     page.screenshot(path=str(OUT / "published.png"))
     cell("highRateClarifier").click()
     details = page.get_by_role("dialog")
@@ -229,13 +288,15 @@ def exercise(browser, base, definitions):
     local.on("request", lambda request: network.append(request.url) if request.url.startswith("http") else None)
     local.goto(offline.as_uri())
     expect(local.locator(".x6-edge")).to_have_count(5)
+    artwork_errors.append(artwork_endpoints(local, resized, definition))
     local.screenshot(path=str(OUT / "offline-1366.png"))
     assert not network and not errors, (network, errors)
-    verify_unit_imports(page, base)
+    artwork_errors.extend(verify_unit_imports(page, base, definition))
     (OUT / "project.json").write_text(json.dumps(resized, ensure_ascii=False, indent=2), "utf-8")
     return {"scene": 13, "nodes": len(resized["nodes"]), "pipes": len(resized["pipes"]),
             "bindings": sum(len(n["bindings"]) for n in resized["nodes"]),
             "maxEndpointErrorPx": max(dists), "offlineBytes": offline.stat().st_size,
+            "maxArtworkNozzleErrorPx": max(artwork_errors),
             "crossProjectImports": 3, "libraryRevisionVerified": True, "errors": errors}
 
 

@@ -225,14 +225,23 @@ export const screenSlotRoles = {
   text: "显示文字",
   flow: "管道流动",
 };
+function equipmentPortPosition(equipment, width, height, [ax, ay]) {
+  const sx = width / equipment.w, sy = height / equipment.h;
+  const scale = Math.min(sx, sy);
+  const centerY = equipment.pictureHeight / equipment.h * 50;
+  return {
+    x: 50 + (ax - 50) * scale / sx,
+    y: centerY + (ay - centerY) * scale / sy,
+  };
+}
+
 export function screenPorts(n) {
-  const equipment=waterEquipment[n?.symbol];
-  if(equipment&&!n.ports){
-    const sx=(n.w||equipment.w)/equipment.w,sy=(n.h||equipment.h)/equipment.h,k=Math.min(sx,sy);
-    return equipment.portDefinitions.map(p=>{
-      const [ax,ay]=p.anchor||[p.x,p.y],cy=equipment.pictureHeight/equipment.h*50;
-      return {...p,x:50+(ax-50)*k/sx,y:cy+(ay-cy)*k/sy};
-    });
+  const equipment = waterEquipment[n?.symbol];
+  if (equipment && !n.ports) {
+    return equipment.portDefinitions.map((p) => ({
+      ...p,
+      ...equipmentPortPosition(equipment, n.w || equipment.w, n.h || equipment.h, p.anchor || [p.x, p.y]),
+    }));
   }
   return (
     n?.ports ??
@@ -244,6 +253,24 @@ export function screenPorts(n) {
       direction: "both",
     }))
   );
+}
+
+export function resizeScreenPorts(node, width, height) {
+  const equipment = waterEquipment[node.symbol];
+  if (!equipment || !Array.isArray(node.ports)) return node.ports;
+  return node.ports.map((port) => {
+    const { anchor } = port;
+    if (!Array.isArray(anchor) || anchor.length !== 2 || !anchor.every(Number.isFinite))
+      return port;
+    const current = equipmentPortPosition(equipment, node.w, node.h, anchor);
+    // Older library exports may retain an anchor after a user changes its coordinates.
+    if (Math.abs(port.x - current.x) > 1e-6 || Math.abs(port.y - current.y) > 1e-6) {
+      const manual = { ...port };
+      delete manual.anchor;
+      return manual;
+    }
+    return { ...port, ...equipmentPortPosition(equipment, width, height, anchor) };
+  });
 }
 export function screenRoleSlot(n, role) {
   return screenSlots(n).find((s) => (s.role || s.key) === role);

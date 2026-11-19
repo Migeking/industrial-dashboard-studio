@@ -26,7 +26,7 @@ import { isScreen, blankScreen, copyScreenSelection,validateScreenAsset,screenAs
 import { screenDepthArtwork } from "../../../packages/components/studio/screen-artwork.mjs";
 import { waterArtwork } from '../../../packages/components/studio/water-artwork.mjs';
 import { waterEquipment, waterEquipmentGroups } from '../../../packages/components/studio/water-equipment.mjs';
-import { screenSymbols, screenPidSymbols } from "../../../packages/components/studio/screen-symbols.mjs";
+import { resizeScreenPorts, screenSymbols, screenPidSymbols } from "../../../packages/components/studio/screen-symbols.mjs";
 import { ScreenStage } from "../../../packages/runtime/studio/screen-renderer.mjs";
 import { executeScreenCommands } from "../../../packages/runtime/studio/screen-commands.mjs";
 import { ScreenAssistant } from "./screen-assistant.mjs";
@@ -208,11 +208,19 @@ async function boot() {
       }
       function screenSelect(selected) { ids.value=selected; }
       function screenGeometry(change) {
-        const n=doc.value.nodes.find((n)=>n.id===change.id); if(!n||n.locked)return;
-        for(const key of ["x","y","w","h","angle"])if(change[key]!==undefined&&Number.isFinite(change[key]))n[key]=change[key];
-        if(change.points)n.points=clone(change.points);
-        n.w=Math.max(16,Math.min(1920,n.w)); n.h=Math.max(16,Math.min(1080,n.h));
-        n.x=Math.max(0,Math.min(1920-n.w,n.x)); n.y=Math.max(0,Math.min(1080-n.h,n.y));
+        const n = doc.value.nodes.find((node) => node.id === change.id);
+        if (!n || n.locked) return;
+        const width = Math.max(16, Math.min(1920, Number.isFinite(change.w) ? change.w : n.w));
+        const height = Math.max(16, Math.min(1080, Number.isFinite(change.h) ? change.h : n.h));
+        if (n.ports && (n.w !== width || n.h !== height))
+          n.ports = resizeScreenPorts(n, width, height);
+        n.w = width;
+        n.h = height;
+        for (const key of ["x", "y", "angle"])
+          if (Number.isFinite(change[key])) n[key] = change[key];
+        if (change.points) n.points = clone(change.points);
+        n.x = Math.max(0, Math.min(1920 - width, n.x));
+        n.y = Math.max(0, Math.min(1080 - height, n.y));
       }
       function screenInsert(n) {if(componentArtwork[n.symbol])n.params.appearance="depth";applyScreenNodeDefaults(n,doc.value.canvas);doc.value.nodes.push(n);ids.value=[n.id];inspectorTab.value="appearance";}
       function screenPipe(pipe) {

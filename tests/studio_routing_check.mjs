@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import {blankScreen,screenNode,screenEndpointPosition} from '../packages/runtime/studio/screen-model.mjs';
+import {blankScreen,screenNode,screenEndpointPosition,editScreenDefinition} from '../packages/runtime/studio/screen-model.mjs';
 import {routeScreenPipe,equipmentObstacle} from '../packages/runtime/studio/screen-routing.mjs';
+import {resizeScreenPorts,screenPorts} from '../packages/components/studio/screen-symbols.mjs';
 const d=blankScreen(),a=screenNode('screwPump','a',70,200),b=screenNode('decanterCentrifuge','b',1100,200),block=screenNode('chemicalTank','block',600,150);d.nodes=[a,b,block];
 const pipe={source:{nodeId:'a',portId:'right'},target:{nodeId:'b',portId:'left'},vertices:[]};
 let points=[screenEndpointPosition(d,pipe.source),...routeScreenPipe(d,pipe),screenEndpointPosition(d,pipe.target)];
@@ -15,3 +16,21 @@ const overflow={source:{nodeId:'tk',portId:'top'},target:{x:780,y:720},vertices:
 const overflowPath=routeScreenPipe({...blankScreen(),nodes:[thickener]},overflow);
 assert(overflowPath[0].x<equipmentObstacle(thickener).left); // Upper-side overflow nozzle exits left; port ID alone is insufficient.
 console.log('PASS: artwork-specific overflow exit direction');
+
+const clarifier = screenNode('highRateClarifier', 'clarifier', 40, 120);
+const base = {...clarifier, w:740, h:440};
+base.ports = screenPorts(base);
+const oldManual = base.ports.find(p => p.id === 'pamIn');
+oldManual.x += 3;
+const resized = {...base, w:950, h:520, ports:resizeScreenPorts(base, 950, 520)};
+const moved = resized.ports.find(p => p.id === 'pacIn');
+const expected = screenPorts({...resized, ports:undefined}).find(p => p.id === 'pacIn');
+assert.deepEqual(moved, expected);
+const fixed = resized.ports.find(p => p.id === 'pamIn');
+assert.equal(fixed.x, oldManual.x);
+assert.equal(fixed.anchor, undefined);
+const modified = editScreenDefinition({...blankScreen(), nodes:[resized]}, resized.id,
+  'ports', 'edit', {id:'pacIn', x:moved.x + 3});
+assert.equal(modified.ports.find(p => p.id === 'pacIn').anchor, undefined);
+assert.equal(resizeScreenPorts(modified, 740, 440).find(p => p.id === 'pacIn').x, moved.x + 3);
+console.log('PASS: materialized equipment ports track artwork; manual coordinates stay fixed');
