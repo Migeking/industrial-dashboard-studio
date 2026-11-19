@@ -22,6 +22,17 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "works/hmi-engineering-acceptance"
 
 
+class PausableRegisters(ModbusSequentialDataBlock):
+    def __init__(self, address, values):
+        super().__init__(address, values)
+        self.readable = threading.Event()
+        self.readable.set()
+
+    def getValues(self, address, count=1):
+        self.readable.wait(5)
+        return super().getValues(address, count)
+
+
 def exercise(page, base, device_port, registers):
     errors = []
     page.on("pageerror", lambda error: errors.append(str(error)))
@@ -34,6 +45,7 @@ def exercise(page, base, device_port, registers):
     scan = dialog.get_by_label("刷新周期（ms）", exact=True)
     assert "200 ms" not in scan.inner_text()
     scan.select_option("500")
+    dialog.get_by_label("最大数据年龄（ms）", exact=True).fill("850")
     dialog.get_by_role("button", name="新建点位", exact=True).click()
     dialog.get_by_label("点位名称", exact=True).fill("液位 LT-101")
     dialog.get_by_label("点位单位", exact=True).fill("m")
@@ -117,6 +129,22 @@ def exercise(page, base, device_port, registers):
         )
 
     trend_contains(3)
+    page.get_by_role("button", name="测点诊断", exact=True).click()
+    diagnostics = page.get_by_role("dialog", name="测点诊断")
+    liquid_diagnostics = diagnostics.get_by_role("row").filter(has_text="液位 LT-101")
+    expect(liquid_diagnostics).to_have_attribute("data-monitor-quality", "good")
+    registers.readable.clear()
+    try:
+        expect(diagnostics).to_contain_text("协议采样已停止更新", timeout=5000)
+        expect(liquid_diagnostics).to_have_attribute("data-monitor-quality", "offline")
+        expect(liquid_diagnostics).to_contain_text("原值 12000")
+        expect(liquid).to_contain_text("离线")
+        registers.setValues(0, [14000])
+    finally:
+        registers.readable.set()
+    expect(liquid_diagnostics).to_have_attribute("data-monitor-quality", "good", timeout=12000)
+    expect(liquid).to_contain_text("3.75 m")
+    diagnostics.get_by_role("button", name="关闭", exact=True).click()
     for raw, display in [(4000, "0.00 m"), (16000, "4.50 m"), (20000, "6.00 m")]:
         registers.setValues(0, [raw])
         expect(liquid).to_contain_text(display, timeout=12000)
@@ -212,7 +240,7 @@ def main():
     base = f"http://127.0.0.1:{port}"
     flow = struct.unpack(">HH", struct.pack(">f", 18.25))
     frequency = struct.unpack(">HH", struct.pack(">f", 38.5))
-    registers = ModbusSequentialDataBlock(0, [12000, *flow, 16000, *reversed(frequency), 0xFEC0, 480, 226, 52])
+    registers = PausableRegisters(0, [12000, *flow, 16000, *reversed(frequency), 0xFEC0, 480, 226, 52])
     discrete = ModbusSequentialDataBlock(0, [True, False])
     device = ModbusTcpServer(
         ModbusServerContext(slaves=ModbusSlaveContext(ir=registers, di=discrete, zero_mode=True)),
@@ -255,7 +283,7 @@ def main():
         "levels": {"4000": 0, "12000": 3, "16000": 4.5, "20000": 6},
         "outOfRange": 3999, "engineeredFlow": 18.25,
         "verified": ["commissioning", "batch preview/apply/undo", "invalid range rejection",
-                     "binding", "publish", "live trend"],
+                     "binding", "publish", "live trend", "stalled acquisition and recovery"],
     }
     (OUT / "results.json").write_text(json.dumps(result, indent=2), "utf-8")
     print(json.dumps(result))

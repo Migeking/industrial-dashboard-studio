@@ -125,7 +125,13 @@ export async function protocolSample(source, dir) {
     signal: AbortSignal.timeout(5000),
   });
   if (!response.ok) throw Error("协议连接建立中或已中断，请稍后读取");
-  return { ...(await response.json()), requestedPollMs: source.pollMs };
+  const snapshot = await response.json();
+  if (Number.isFinite(source.maxAgeMs) && source.maxAgeMs > 0) {
+    const capturedAt = Date.parse(snapshot.receivedAt);
+    if (!Number.isFinite(capturedAt) || Date.now() - capturedAt > source.maxAgeMs)
+      throw Error("协议采样已停止更新，请检查设备连接");
+  }
+  return { ...snapshot, requestedPollMs: source.pollMs };
 }
 
 const cleanup = setInterval(() => {

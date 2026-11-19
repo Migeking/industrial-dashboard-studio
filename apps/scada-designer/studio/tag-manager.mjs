@@ -476,6 +476,16 @@ export const TagManager = {
         </option>
       </select><small v-if="source.pollMs !== configuredPollMs">原设置 {{ source.pollMs }} ms，使用桥接下限 {{ configuredPollMs }} ms</small></label
     >
+    <label class="short">
+      超时判定（ms）
+      <input
+        aria-label="最大数据年龄（ms）"
+        type="number"
+        min="1"
+        v-model.number="source.maxAgeMs"
+        :disabled="busy"
+      />
+    </label>
   </div>
   <div
     class="tag-workspace"
@@ -768,15 +778,9 @@ export const TagManager = {
                 >
                   {{ o }}
                 </option>
-              </select></label
-            ><label
-              >超时判定（ms）<input
-                aria-label="最大数据年龄（ms）"
-                type="number"
-                min="1"
-                v-model.number="source.maxAgeMs"
-            /></label></details
-        ></template>
+              </select></label>
+          </details>
+        </template>
       </fieldset>
       <p v-else>在点位表中选择一行，查看或修改属性。</p>
     </aside>
