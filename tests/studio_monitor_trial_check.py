@@ -1,4 +1,5 @@
-"""Exercise a read-only upstream snapshot, historical quality, event order and rollback."""
+"""Exercise a read-only upstream snapshot, point crosswalk and monitoring workflow."""
+import csv
 import hashlib
 import json
 import os
@@ -148,7 +149,33 @@ def exercise(browser, base, source):
     expect(connection.get_by_text("已对照 2 / 3 个。", exact=False)).to_be_visible()
     choice = connection.get_by_label("level 的接口测点", exact=True)
     assert choice.locator("option").evaluate_all("(rows) => rows.map(row => row.value)") == ["", "LT-101.PV"]
-    choice.select_option("LT-101.PV")
+    with editor.expect_download() as download:
+        connection.get_by_role("button", name="导出对照 CSV", exact=True).click()
+    exported = Path(download.value.path()).read_bytes()
+    assert exported.startswith(b"\xef\xbb\xbf")
+    records = list(csv.DictReader(exported.decode("utf-8-sig").splitlines()))
+    assert records[0]["画面业务位号"] == "level" and not records[0]["现场点位或字段"]
+    assert {r["画面业务位号"] for r in records} == {"level", "history", "events"}
+    picker = connection.get_by_label("导入对照 CSV", exact=True)
+    picker.set_input_files({
+        "name": "invalid.csv", "mimeType": "text/csv",
+        "buffer": ("画面业务位号,现场点位或字段\r\nlevel,LT-101.PV\r\n"
+                   "history,LT-101.PV\r\nmissing,events").encode("utf-8-sig"),
+    })
+    import_errors = connection.get_by_role("alert")
+    expect(import_errors).to_contain_text("第 2 条记录 · history · 接口点 LT-101.PV 的数据类型不匹配")
+    expect(import_errors).to_contain_text("第 3 条记录 · missing · 画面位号不存在")
+    expect(import_errors).to_be_focused()
+    expect(choice).to_have_value("")
+    editor.screenshot(path=str(OUT / "crosswalk-rejected.png"))
+    picker.set_input_files({
+        "name": "point-crosswalk.csv", "mimeType": "text/csv",
+        "buffer": ("画面业务位号,数据类型,现场来源,现场点位或字段\r\n"
+                   "level,number,REST,LT-101.PV\r\nhistory,dataset,REST,").encode("utf-8-sig"),
+    })
+    expect(import_errors).to_have_count(0)
+    expect(connection.get_by_text("已载入 1 个接口编号", exact=False)).to_be_visible()
+    expect(choice).to_have_value("LT-101.PV")
     expect(connection.get_by_text("16000 → 4.50 m", exact=True)).to_be_visible()
     expect(connection.get_by_text("已对照 3 / 3 个。", exact=False)).to_be_visible()
     editor.screenshot(path=str(OUT / "point-review.png"))
@@ -393,6 +420,7 @@ def main():
     result = {"scope": "local read-only upstream fixture", **timings, "verified": [
         "sample field suggestions", "raw and engineering values", "history quality and order",
         "point crosswalk preserves canvas bindings and conversion with undo/redo",
+        "CSV export round trip, row errors are atomic, blank entries preserve selections",
         "point diagnostics show raw out-of-range values, timestamps, device location and disconnect reason",
         "alarm pagination stays pinned during refresh, opens device and returns to live",
         "device trend custom fields and gaps", "stale values while transport stays connected",

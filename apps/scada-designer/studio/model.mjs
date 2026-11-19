@@ -110,6 +110,50 @@ export function snapshotPointRows(payload) {
 export function snapshotPointMapping(mapping, upstreamId) {
   return { ...mapping, ...bridgePointLocation(upstreamId, "timestamp") };
 }
+const snapshotCrosswalkColumns = ["画面业务位号", "现场点位或字段", "数据类型", "画面单位", "显示名称"];
+
+export function exportSnapshotCrosswalk(review) {
+  const lines = [snapshotCrosswalkColumns, ...review.map(({ mapping, selected }) =>
+    [mapping.id, selected, mapping.kind, mapping.unit, mapping.label],
+  )];
+  return "\uFEFF" + lines.map((line) => line.map((value) => {
+    const text = String(value ?? "");
+    // A CSV opened by a spreadsheet should keep external identifiers as data.
+    const safe = /^\s*[=+@-]|^[\t\r\n]/.test(text) ? "'" + text : text;
+    return '"' + safe.replaceAll('"', '""') + '"';
+  }).join(",")).join("\r\n") + "\r\n";
+}
+
+export function importSnapshotCrosswalk(text, mappings, sampleRows) {
+  const rows = csv(text);
+  const [projectColumn, sourceColumn] = snapshotCrosswalkColumns;
+  if (!rows.length || !Object.hasOwn(rows[0], projectColumn) || !Object.hasOwn(rows[0], sourceColumn))
+    throw Error("CSV 需有“画面业务位号”和“现场点位或字段”两列及对照记录");
+  const projectPoints = new Map(mappings.map((m) => [m.id, m]));
+  const preserveId = (value, index) => {
+    if (index.has(value)) return value;
+    if (value.startsWith("'") && index.has(value.slice(1))) return value.slice(1);
+    return value.trim();
+  };
+  const choices = new Map(), errors = [], seen = new Set();
+  for (const [index, row] of rows.entries()) {
+    const id = preserveId(row[projectColumn] ?? "", projectPoints);
+    const source = preserveId(row[sourceColumn] ?? "", sampleRows);
+    if (!source) continue;
+    const point = projectPoints.get(id);
+    const upstream = sampleRows.get(source);
+    const location = `第 ${index + 1} 条记录${id ? " · " + id : ""}`;
+    if (seen.has(id)) errors.push(location + " · 画面位号重复");
+    else if (!point) errors.push(location + " · 画面位号不存在");
+    else if (!upstream) errors.push(location + " · 接口样本中无唯一编号 " + source);
+    else if (upstream.kind !== point.kind)
+      errors.push(location + " · 接口点 " + source + " 的数据类型不匹配");
+    else choices.set(id, source);
+    seen.add(id);
+  }
+  return { choices: errors.length ? new Map() : choices, errors };
+}
+
 export function protocolMappings(rows, protocol, previous) {
   return rows.map((r) => ({
     id: r.id,

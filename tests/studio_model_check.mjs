@@ -14,6 +14,8 @@ import {
   protocolMappings,
   snapshotPointRows,
   snapshotPointMapping,
+  exportSnapshotCrosswalk,
+  importSnapshotCrosswalk,
   campusBindings,
   campusState,
 } from "../apps/scada-designer/studio/model.mjs";
@@ -39,6 +41,23 @@ assert.equal(reconciled.conversion, baseline.conversion);
 assert.equal(normalize(snapshotPayload, reconciled, time, 1000, time).value, 4.5);
 assert.equal(normalize(snapshotPayload, reconciled, time, 1000, time).timestamp, time - 100);
 assert.equal(normalize(snapshotPayload, reconciled, time, 50, time).quality, "stale");
+const specialPoint = { ...baseline, id: "-backup", label: '试验 "位号", 输入', kind: "number" };
+const specialSource = '=-LT,"A"';
+const crosswalkSamples = new Map([[snapshotLevel.id, snapshotLevel], [specialSource, { kind: "number" }]]);
+const exportedCrosswalk = exportSnapshotCrosswalk([{ mapping: specialPoint, selected: specialSource }]);
+assert.equal(exportedCrosswalk.codePointAt(0), 0xFEFF);
+assert.equal(csv(exportedCrosswalk)[0]["现场点位或字段"], "'" + specialSource);
+assert.equal(csv(exportedCrosswalk)[0]["显示名称"], specialPoint.label);
+const importedCrosswalk = importSnapshotCrosswalk(exportedCrosswalk, [baseline, specialPoint], crosswalkSamples);
+assert.deepEqual([...importedCrosswalk.choices], [[specialPoint.id, specialSource]]);
+assert.deepEqual(importedCrosswalk.errors, []);
+const rejectedCrosswalk = importSnapshotCrosswalk(
+  "画面业务位号,现场点位或字段\r\nlevel,LT-101.PV\r\nlevel,LT-101.PV\r\nmissing,LT-101.PV",
+  [baseline], crosswalkSamples,
+);
+assert.equal(rejectedCrosswalk.choices.size, 0);
+assert.match(rejectedCrosswalk.errors[0], /第 2 条记录.*位号重复/);
+assert.match(rejectedCrosswalk.errors[1], /第 3 条记录.*位号不存在/);
 assert.equal(campusBindings(legacyCampus.nodes[0])[0].run, "fan");
 const entityBinding = {
   entity: "D.FAN.NW",

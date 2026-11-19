@@ -817,6 +817,17 @@
         <section v-else-if="dialog === 'data' && snapshotSelections" class="snapshot-review">
           <h2 id="snapshot-review-title" tabindex="-1">对照现有点位</h2>
           <p aria-live="polite">已对照 {{ snapshotMatchCount }} / {{ snapshotReview.length }} 个。未选的点位保留当前配置。</p>
+          <div class="snapshot-review-files">
+            <button type="button" @click="downloadSnapshotCrosswalk">导出对照 CSV</button>
+            <button type="button" @click="$refs.snapshotCrosswalkFile.click()">导入对照 CSV</button>
+            <input ref="snapshotCrosswalkFile" hidden type="file" accept=".csv,text/csv" aria-label="导入对照 CSV"
+              @change="loadSnapshotCrosswalk($event.target.files[0]);$event.target.value=''" />
+          </div>
+          <div v-if="crosswalkErrors.length" id="snapshot-crosswalk-errors" tabindex="-1" role="alert" class="snapshot-crosswalk-errors">
+            <b>文件未采用，当前选择保留。修改下列记录后可重新导入。</b>
+            <ul><li v-for="(error,i) in crosswalkErrors" :key="i">{{error}}</li></ul>
+          </div>
+          <p v-if="crosswalkNotice" aria-live="polite" class="snapshot-crosswalk-notice">{{crosswalkNotice}}</p>
           <div class="snapshot-review-list" tabindex="0" role="region" aria-label="点位对照表">
             <table>
               <thead><tr><th scope="col">工程测点</th><th scope="col">接口测点</th><th scope="col">原值 → 工程值</th><th scope="col">试读质量</th></tr></thead>

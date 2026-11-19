@@ -13,6 +13,8 @@ import {
   protocolMappings,
   snapshotPointRows,
   snapshotPointMapping,
+  exportSnapshotCrosswalk,
+  importSnapshotCrosswalk,
   compatibleMappings,
   bindingProblem,
   campusBindings,
@@ -399,6 +401,8 @@ async function boot() {
       const sampleSource = ref("");
       const sampleReceived = ref(0);
       const snapshotSelections = ref(null);
+      const crosswalkErrors = ref([]), crosswalkNotice = ref("");
+      let crosswalkImport = 0;
       const lastSaved = ref(JSON.stringify(initial)),
         saving = ref(false),
         published = ref(false);
@@ -972,6 +976,8 @@ async function boot() {
           selections.set(mapping.id, match?.id || "");
         }
         snapshotSelections.value = selections;
+        crosswalkErrors.value = [];
+        crosswalkNotice.value = "";
         nextTick(() => document.getElementById("snapshot-review-title")?.focus());
       }
       function closeSnapshotReview() {
@@ -997,6 +1003,38 @@ async function boot() {
       const snapshotMatchCount = computed(() =>
         snapshotReview.value.filter(({ updated }) => updated).length,
       );
+      function downloadSnapshotCrosswalk() {
+        download("点位对照.csv", exportSnapshotCrosswalk(snapshotReview.value), "text/csv;charset=utf-8");
+      }
+      async function loadSnapshotCrosswalk(file) {
+        if (!file) return;
+        const attempt = ++crosswalkImport;
+        const selections = snapshotSelections.value;
+        const current = () => dialog.value === "data" && snapshotSelections.value === selections &&
+          attempt === crosswalkImport;
+        const showErrors = (errors) => {
+          crosswalkErrors.value = errors;
+          crosswalkNotice.value = "";
+          nextTick(() => document.getElementById("snapshot-crosswalk-errors")?.focus());
+        };
+        try {
+          const content = await file.text();
+          if (!current()) return;
+          const { choices, errors } = importSnapshotCrosswalk(content, config.value.mappings, snapshotRows.value);
+          if (errors.length) {
+            showErrors(errors);
+            return;
+          }
+          crosswalkErrors.value = [];
+          if (choices.size) snapshotSelections.value = new Map([...selections, ...choices]);
+          crosswalkNotice.value = choices.size
+            ? `已载入 ${choices.size} 个接口编号，请核对试读后采用。`
+            : "文件中未填写接口编号，当前选择保留。";
+        } catch (error) {
+          if (!current()) return;
+          showErrors([error.message]);
+        }
+      }
       function adoptSnapshotReview() {
         if (!snapshotMatchCount.value) return;
         const count = snapshotMatchCount.value;
@@ -1500,6 +1538,10 @@ async function boot() {
         openSnapshotReview,
         closeSnapshotReview,
         adoptSnapshotReview,
+        crosswalkErrors,
+        crosswalkNotice,
+        downloadSnapshotCrosswalk,
+        loadSnapshotCrosswalk,
         addMap,
         loadImage,
         runExport,
