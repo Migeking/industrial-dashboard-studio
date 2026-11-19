@@ -215,10 +215,41 @@ def verify_direct_business_links(page, base, port, registers):
     dialog.get_by_label("点位名称", exact=True).fill("现地流量 FT-101")
     dialog.get_by_label("寄存器序号", exact=True).fill("2")
     dialog.get_by_label("数据格式", exact=True).select_option("float32")
-    existing.select_option("influent.flow")
     dialog.get_by_role("button", name="试读点位", exact=True).click()
     table = dialog.locator(".tag-selected")
     expect(table.get_by_role("row", name="现地液位 LT-101", exact=False)).to_contain_text("4.50 m", timeout=15000)
+    dialog.get_by_role("button",name="批量关联位号",exact=True).click()
+    heading = dialog.get_by_role("heading",name="批量关联画面位号",exact=True)
+    expect(heading).to_be_focused()
+    selected = dialog.get_by_label("导入设备对照 CSV",exact=True)
+
+    def upload(rows):
+        selected.set_input_files({
+            "name":"关联.csv","mimeType":"text/csv",
+            "buffer":("画面业务位号,现场点位或字段\n"+rows).encode("utf-8-sig"),
+        })
+
+    confirmation = dialog.get_by_role("button",name="确认关联",exact=True)
+    with page.expect_download() as download:
+        dialog.get_by_role("button",name="导出位号对照 CSV",exact=True).click()
+    template = OUT/"protocol-crosswalk-template.csv"
+    download.value.save_as(template)
+    assert "influent.flow" in template.read_text(encoding="utf-8-sig")
+    with page.expect_download() as download:
+        dialog.get_by_role("button",name="导出设备点清单",exact=True).click()
+    devices = OUT/"protocol-commissioned-points.csv"
+    download.value.save_as(devices)
+    assert "3x 2" in devices.read_text(encoding="utf-8-sig")
+    upload("influent.flow,3x 1\n")
+    expect(dialog.get_by_role("alert")).to_contain_text("同时关联设备点")
+    expect(confirmation).to_be_disabled()
+    upload("influent.flow,3x 2\nalarm.history,\n")
+    preview = dialog.get_by_role("region", name="设备点位关联预览",exact=True)
+    expect(preview).to_contain_text("influent.flow")
+    expect(preview).to_contain_text("18.25 → 18.25 m³/h")
+    expect(preview).to_contain_text("有效")
+    page.screenshot(path=str(OUT/"protocol-crosswalk.png"))
+    confirmation.click()
     expect(table.get_by_role("row", name="现地流量 FT-101", exact=False)).to_contain_text("18.25 m³/h")
     expect(dialog).to_contain_text("未关联 2 个画面位号")
     page.screenshot(path=str(OUT / "direct-business-link.png"))
@@ -513,7 +544,7 @@ def main():
         "outOfRange": 3999, "engineeredFlow": 18.25,
         "verified": ["commissioning", "batch preview/apply/undo", "invalid range rejection",
                      "binding", "publish", "live trend", "stalled acquisition and recovery",
-                     "normalized direct protocol association keeps existing bindings and unlinked history",
+                     "manual and CSV protocol association preserve existing bindings and conversion",
                      "protocol current values with independent REST history and alarms, expiry, recovery and offline export"],
     }
     (OUT / "results.json").write_text(json.dumps(result, indent=2), "utf-8")

@@ -435,6 +435,15 @@ async function boot() {
         const action = screenActionProblem(n, project.value);
         return action ? { tab: "action", reason: action } : null;
       }
+      const usedPointIds = computed(() => {
+        const items = screen.value ? screenPageItems(project.value) : doc.value.nodes;
+        return new Set(items.flatMap(item => [
+          ...Object.values(item.bindings || {}),
+          item.binding,
+          ...(item.type === "campus" ? campusBindings(item).flatMap(entity =>
+            [entity.run, entity.fault, entity.value]) : []),
+        ]).filter(Boolean));
+      });
       const bindingNodes = computed(() => {
         const items = screen.value ? screenPageItems(project.value) : screenItems.value;
         return items.filter((n) => mapped(n) || (screen.value && (screenControlKinds.has(n.symbol) || screenAssetProblem(n) || n.action?.type && n.action.type !== "none")));
@@ -1625,6 +1634,8 @@ async function boot() {
         crosswalkErrors,
         crosswalkNotice,
         downloadSnapshotCrosswalk,
+        downloadCrosswalkFile: (name, text) => download(name, text, "text/csv;charset=utf-8"),
+        usedPointIds,
         loadSnapshotCrosswalk,
         addMap,
         loadImage,

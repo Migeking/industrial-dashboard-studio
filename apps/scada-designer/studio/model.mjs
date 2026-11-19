@@ -131,6 +131,10 @@ export function exportSnapshotCrosswalk(review) {
   const lines = [snapshotCrosswalkColumns, ...review.map(({ mapping, selected }) =>
     [mapping.id, selected, mapping.kind, mapping.unit, mapping.label],
   )];
+  return crosswalkCsv(lines);
+}
+
+function crosswalkCsv(lines) {
   return "\uFEFF" + lines.map((line) => line.map((value) => {
     const text = String(value ?? "");
     // A CSV opened by a spreadsheet should keep external identifiers as data.
@@ -139,7 +143,7 @@ export function exportSnapshotCrosswalk(review) {
   }).join(",")).join("\r\n") + "\r\n";
 }
 
-export function importSnapshotCrosswalk(text, mappings, sampleRows) {
+export function importSnapshotCrosswalk(text, mappings, sampleRows, protocol = false) {
   const rows = csv(text);
   const [projectColumn, sourceColumn] = snapshotCrosswalkColumns;
   if (!rows.length || !Object.hasOwn(rows[0], projectColumn) || !Object.hasOwn(rows[0], sourceColumn))
@@ -160,9 +164,9 @@ export function importSnapshotCrosswalk(text, mappings, sampleRows) {
     const location = `第 ${index + 1} 条记录${id ? " · " + id : ""}`;
     if (seen.has(id)) errors.push(location + " · 画面位号重复");
     else if (!point) errors.push(location + " · 画面位号不存在");
-    else if (!upstream) errors.push(location + " · 接口样本中无唯一编号 " + source);
+    else if (!upstream) errors.push(location + (protocol ? " · 设备点表中无唯一点位 " : " · 接口样本中无唯一编号 ") + source);
     else if (upstream.kind !== point.kind)
-      errors.push(location + " · 接口点 " + source + " 的数据类型不匹配");
+      errors.push(location + (protocol ? " · 设备点 " : " · 接口点 ") + source + " 的数据类型不匹配");
     else choices.set(id, source);
     seen.add(id);
   }
@@ -219,6 +223,64 @@ export function syncProtocolMappings(points, protocol, previous, existing) {
     if ((kept.has(mapping.id) || mapping.kind === "dataset") && !active.has(mapping.id))
       result.push({ ...mapping, protocolUnmapped: true });
   return result;
+}
+
+export function protocolPointAddress(point) {
+  return point.nodeId || { 1: "0x", 2: "1x", 3: "4x", 4: "3x" }[point.function] +
+    " " + (point.address + 1);
+}
+
+export function exportProtocolPointList(points) {
+  return crosswalkCsv([
+    ["现场点位或字段", "设备名称", "地址", "数据类型"],
+    ...points.map(point => [point.id, point.label, protocolPointAddress(point), point.kind]),
+  ]);
+}
+
+export function importProtocolCrosswalk(text, points, protocol, mappings, existing, usedIds = new Set()) {
+  const existingIds = new Set(existing.map(mapping => mapping.id));
+  const business = mappings.filter(mapping => existingIds.has(mapping.id) && mapping.kind !== "dataset");
+  const addressBook = new Map();
+  for (const point of points) {
+    const address = point.nodeId || (Number.isInteger(point.address) ? protocolPointAddress(point) : "");
+    for (const key of new Set([point.id, address].filter(Boolean)))
+      addressBook.set(key, addressBook.has(key) ? null : point);
+  }
+  const imported = importSnapshotCrosswalk(text, business, addressBook, true);
+  if (imported.errors.length) return { errors: imported.errors, rows: [] };
+  const claimed = new Set([...imported.choices.values()].map(selection => addressBook.get(selection).id));
+  const assigned = new Map(), released = new Set(), rows = [], errors = [];
+  for (const mapping of business) {
+    const selection = imported.choices.get(mapping.id);
+    const current = mapping.protocolUnmapped ? null : addressBook.get(mapping.keyValue);
+    const point = selection ? addressBook.get(selection) : current;
+    if (!point) continue;
+    if (!selection && mapping.id === point.id && claimed.has(point.id) && !usedIds.has(mapping.id)) {
+      released.add(mapping.id);
+      continue;
+    }
+    const owner = assigned.get(point.id);
+    if (owner) errors.push(mapping.id + " 与 " + owner + " 同时关联设备点 " + point.id);
+    else assigned.set(point.id, mapping.id);
+    if (selection && current?.id !== point.id)
+      rows.push({ point, mapping: protocolPointMapping(point, protocol, mapping), previous: current });
+  }
+  if (errors.length) return { errors, rows: [] };
+
+  const byBusiness = new Map(rows.map(({ mapping }) => [mapping.id, mapping]));
+  const reserved = new Set(rows.map(({ point }) => point.id));
+  const candidates = mappings.flatMap(mapping => {
+    if (byBusiness.has(mapping.id)) return [byBusiness.get(mapping.id)];
+    if (released.has(mapping.id)) return [];
+    if (!existingIds.has(mapping.id) && !mapping.protocolUnmapped &&
+        mapping.kind !== "dataset" && mapping.root === "points" &&
+        mapping.keyField === "id" && reserved.has(mapping.keyValue)) return [];
+    return [mapping];
+  });
+  return {
+    rows: rows.map(row => ({ ...row, released: released.has(row.point.id) ? row.point.id : "" })),
+    errors, mappings: syncProtocolMappings(points, protocol, candidates, existing),
+  };
 }
 
 export function compatibleMappings(type, mappings) {

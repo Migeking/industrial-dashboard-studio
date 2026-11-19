@@ -18,6 +18,8 @@ import {
   snapshotPointMapping,
   exportSnapshotCrosswalk,
   importSnapshotCrosswalk,
+  importProtocolCrosswalk,
+  exportProtocolPointList,
   campusBindings,
   campusState,
 } from "../apps/scada-designer/studio/model.mjs";
@@ -177,6 +179,38 @@ assert.equal(changed.find(mapping => mapping.id === business.id).kind, "number")
 assert.ok(changed.find(mapping => mapping.id === business.id).protocolUnmapped);
 assert.equal(syncProtocolMappings([], "modbus", unlinked, existing).length, 2);
 assert.equal(snapshotPointMapping(unlinked[2], "bus-history").protocolUnmapped, undefined);
+
+const address1 = { ...levelTag, function: 4, address: 0 };
+const address2 = { ...levelTag, id: "PLC2", function: 4, address: 1 };
+const flowBusiness = { ...business, id: "flow", unit: "m³/h", conversion: { mode:"identity" } };
+const oldBusiness = [business, flowBusiness, history];
+const nativeRegistry = syncProtocolMappings([address1,address2], "modbus", oldBusiness, oldBusiness);
+const crosswalk = (rows, points = [address1,address2], mappings = nativeRegistry,
+  existing = oldBusiness, used = new Set()) => importProtocolCrosswalk(
+    "画面业务位号,现场点位或字段\n" + rows, points, "modbus", mappings, existing, used,
+  );
+const importedProtocol = crosswalk("level,3x 1\nflow,PLC2\nhistory,");
+assert.deepEqual(importedProtocol.rows.map(r => r.point.id), ["PLC1","PLC2"]);
+assert.equal(importedProtocol.mappings.some(m => m.id === "PLC1"), false);
+assert.deepEqual(importedProtocol.mappings.find(m => m.id === "flow").conversion, flowBusiness.conversion);
+assert.deepEqual(importedProtocol.mappings.find(m => m.id === "history"), nativeRegistry.find(m => m.id === "history"));
+assert.equal(normalize(modbusPayload, importedProtocol.mappings.find(m => m.id === "level"), time, 1000, time).value, 4.5);
+assert.match(crosswalk("level,PLC1\nflow,3x 1").errors[0], /同时关联设备点 PLC1/);
+assert.match(crosswalk("level,3x 1", [address1,{ ...address2,address:0 }]).errors[0], /无唯一点位/);
+assert.match(crosswalk("level,PLC1", [address1,address2], nativeRegistry, nativeRegistry, new Set(["PLC1"])).errors[0],
+  /同时关联设备点/);
+const replaceDefault = crosswalk("level,PLC1", [address1,address2], nativeRegistry, nativeRegistry);
+assert.equal(replaceDefault.rows[0].released, "PLC1");
+assert.equal(replaceDefault.mappings.some(m => m.id === "PLC1"), false);
+const swap = crosswalk("level,PLC2\nflow,PLC1", [address1,address2], importedProtocol.mappings);
+assert.deepEqual(swap.mappings.filter(m => m.kind === "number").map(m => [m.id,m.keyValue]),
+  [["flow","PLC1"],["level","PLC2"]]);
+const uaDevice = { ...levelTag, nodeId: "ns=2;s=PLC.LT01" };
+const uaTable = importProtocolCrosswalk("画面业务位号,现场点位或字段\nlevel,ns=2;s=PLC.LT01",
+  [uaDevice], "opcua", syncProtocolMappings([uaDevice], "opcua", existing, existing), existing);
+assert.equal(uaTable.rows[0].mapping.timePath, "timestamp");
+assert.equal(uaTable.mappings.find(m => m.id === "level").keyValue, uaDevice.id);
+assert.equal(csv(exportProtocolPointList([uaDevice]))[0]["地址"], uaDevice.nodeId);
 assert.equal(bindingProblem(doc.nodes[0], doc.mappings), "");
 assert.equal(
   bindingProblem({ ...doc.nodes[0], binding: "missing" }, doc.mappings),

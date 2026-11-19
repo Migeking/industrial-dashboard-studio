@@ -1523,6 +1523,15 @@ fieldset small {
 .editor-shell .dialog:not(.tag-dialog) .connection-context {
   margin: 0 -16px 12px;
 }
+.tag-crosswalk {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 16px;
+}
+.tag-crosswalk .snapshot-review-files {
+  flex-wrap: wrap;
+}
 .snapshot-review h2 {
   margin: 0;
   font-size: 18px;

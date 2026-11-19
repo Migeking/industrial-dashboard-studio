@@ -3,6 +3,7 @@ import {
   importNorthbound, minimumProtocolPollMs, modbusBatchPoints,
   normalize, pointReasonLabels, protocolPointMapping, syncProtocolMappings,
   configuredDatasetId, primarySourceSettings, snapshotPointMapping, snapshotPointRows,
+  exportSnapshotCrosswalk, exportProtocolPointList, importProtocolCrosswalk, protocolPointAddress,
 } from "./model.mjs";
 
 function formatPointValue(value, precision) {
@@ -118,10 +119,12 @@ export const TagManager = {
     "nextOffset",
     "notice",
     "readDatasets",
+    "downloadCrosswalk",
+    "usedPointIds",
   ],
   emits: ["browse", "read", "finish", "kind-change", "endpoint-change"],
   setup(props, { emit }) {
-    const { ref, computed, watch } = Vue;
+    const { ref, computed, watch, nextTick } = Vue;
     const search = ref(""),
       selectedSearch = ref(""),
       checked = ref([]),
@@ -136,6 +139,10 @@ export const TagManager = {
       () => props.sampleSource === JSON.stringify(primarySourceSettings(source.value)),
     );
     const points = computed(() => source.value.connection.points);
+    const crosswalkOpen = ref(false), crosswalkTitle = ref(null), crosswalkButton = ref(null);
+    const crosswalkText = ref(null), crosswalkReadError = ref(""), crosswalkLoading = ref(false);
+    const crosswalkInput = ref(null);
+    let crosswalkRead = 0;
     const current = computed(
       () =>
         points.value.find((p) => p.id === selectedId.value) || points.value[0],
@@ -261,6 +268,69 @@ export const TagManager = {
     }
     const businessChoices = computed(() => unmappedBusiness.value.filter(mapping => mapping.kind === current.value?.kind));
     const isExisting = (mapping) => existingIds.value.has(mapping?.id);
+    const businessMappings = computed(() => props.config.mappings.filter(mapping =>
+      mapping.kind !== "dataset" && isExisting(mapping) &&
+      (mapping.protocolUnmapped || mapping.id !== mapping.keyValue || props.usedPointIds.has(mapping.id))));
+    const crosswalkResult = computed(() => {
+      if (crosswalkReadError.value) return { rows: [], errors: [crosswalkReadError.value] };
+      if (crosswalkText.value === null) return null;
+      try {
+        return importProtocolCrosswalk(crosswalkText.value, points.value, source.value.kind,
+          props.config.mappings, props.existingMappings, props.usedPointIds);
+      } catch (error) {
+        return { rows: [], errors: [error.message] };
+      }
+    });
+    const crosswalkRows = computed(() => (crosswalkResult.value?.rows || []).map(row => {
+      const stamp = props.sampleReceived;
+      const reading = sampleMatches.value && props.sample
+        ? normalize(props.sample, row.mapping, stamp, source.value.maxAgeMs, stamp) : null;
+      return { ...row, reading: pointPreview(reading, row.mapping) };
+    }));
+    function showCrosswalk() {
+      crosswalkOpen.value = true;
+      nextTick(() => crosswalkTitle.value?.focus());
+    }
+    function closeCrosswalk() {
+      ++crosswalkRead;
+      crosswalkOpen.value = false;
+      crosswalkLoading.value = false;
+      crosswalkText.value = null;
+      crosswalkReadError.value = "";
+      nextTick(() => crosswalkButton.value?.focus());
+    }
+    function exportBusinessCrosswalk() {
+      props.downloadCrosswalk("设备点位对照.csv", exportSnapshotCrosswalk(
+        businessMappings.value.map(mapping => ({
+          mapping, selected: mapping.protocolUnmapped ? "" : mapping.keyValue,
+        })),
+      ));
+    }
+    async function loadProtocolCrosswalk(file) {
+      if (!file) return;
+      const request = ++crosswalkRead;
+      crosswalkLoading.value = true;
+      crosswalkText.value = null;
+      crosswalkReadError.value = "";
+      try {
+        const text = await file.text();
+        if (request === crosswalkRead) crosswalkText.value = text;
+      } catch (error) {
+        if (request === crosswalkRead) crosswalkReadError.value = error.message;
+      } finally {
+        if (request === crosswalkRead) crosswalkLoading.value = false;
+      }
+    }
+    function applyProtocolCrosswalk() {
+      const result = crosswalkResult.value;
+      if (!result?.rows.length || result.errors.length || crosswalkLoading.value) return;
+      props.config.mappings = result.mappings;
+      conversionBatchOpen.value = false;
+      conversionBatchUndo.value = [];
+      localError.value = "";
+      batchMessage.value = "已关联 " + result.rows.length + " 个画面业务位号";
+      closeCrosswalk();
+    }
     function sync() {
       props.config.mappings = syncProtocolMappings(points.value, source.value.kind,
         props.config.mappings, props.existingMappings);
@@ -427,14 +497,6 @@ export const TagManager = {
       localError.value = "";
       batchMessage.value = "已撤销批量换算";
     }
-    function address(p) {
-      return (
-        p.nodeId ||
-        { 1: "0x", 2: "1x", 3: "4x", 4: "3x" }[p.function] +
-          " " +
-          (p.address + 1)
-      );
-    }
     const typeNames = {
       boolean: "Boolean · 开关量",
       number: "Number · 数值",
@@ -479,7 +541,11 @@ export const TagManager = {
       canApplyConversion,
       applyConversionBatch,
       undoConversionBatch,
-      address,
+      address: protocolPointAddress,
+      businessMappings, crosswalkOpen, crosswalkTitle, crosswalkButton, crosswalkInput, crosswalkLoading,
+      crosswalkResult, crosswalkRows, showCrosswalk, closeCrosswalk, exportBusinessCrosswalk,
+      loadProtocolCrosswalk, applyProtocolCrosswalk,
+      exportDevicePoints: () => props.downloadCrosswalk("已选设备点位.csv", exportProtocolPointList(points.value)),
       typeNames,
       localError,
       showSystem,
@@ -607,7 +673,42 @@ export const TagManager = {
       </label>
     </div>
   </details>
-  <div
+  <section v-if="crosswalkOpen" class="tag-crosswalk snapshot-review">
+    <h2 ref="crosswalkTitle" tabindex="-1">批量关联画面位号</h2>
+    <p>填写对照 CSV 的「现场点位或字段」列，可用已选设备点编号或清单中的地址。</p>
+    <div class="snapshot-review-files">
+      <button type="button" @click="exportBusinessCrosswalk" :disabled="busy">导出位号对照 CSV</button>
+      <button type="button" @click="exportDevicePoints" :disabled="busy">导出设备点清单</button>
+      <button type="button" @click="crosswalkInput.click()" :disabled="busy || crosswalkLoading">导入对照 CSV</button>
+      <input ref="crosswalkInput" hidden type="file" aria-label="导入设备对照 CSV" accept=".csv,text/csv"
+        @change="loadProtocolCrosswalk($event.target.files[0]);$event.target.value=''" />
+    </div>
+    <div v-if="crosswalkResult?.errors.length" role="alert" class="snapshot-crosswalk-errors">
+      <b>文件未采用，请修正后重新导入。</b>
+      <ul><li v-for="(error,i) in crosswalkResult.errors" :key="i">{{error}}</li></ul>
+    </div>
+    <p v-else-if="crosswalkLoading" role="status">正在读取对照表…</p>
+    <p v-else-if="crosswalkResult && !crosswalkRows.length" role="status">对照表没有需要变更的关联。</p>
+    <p v-if="crosswalkRows.length" class="snapshot-crosswalk-notice" role="status">待确认 {{crosswalkRows.length}} 项关联</p>
+    <div v-if="crosswalkRows.length" class="snapshot-review-list" tabindex="0" role="region" aria-label="设备点位关联预览">
+      <table><thead><tr><th scope="col">画面位号</th><th scope="col">设备点与地址</th><th scope="col">原值 → 工程值</th><th scope="col">试读质量</th></tr></thead>
+        <tbody><tr v-for="{point,mapping,previous,released,reading} in crosswalkRows" :key="mapping.id">
+          <th scope="row"><b>{{mapping.label || mapping.id}}</b><small>{{mapping.id}}</small></th>
+          <td>{{point.label || point.id}}<small>{{point.id}} · {{address(point)}}</small>
+            <small v-if="previous">原关联 {{previous.id}} · {{address(previous)}}</small>
+            <small v-if="released">替换未引用的设备默认位号 {{released}}</small></td>
+          <td>{{reading.raw === reading.value ? reading.value : reading.raw + ' → ' + reading.value}}</td>
+          <td>{{reading.quality}}<small v-if="reading.reason">{{reading.reason}}</small></td>
+        </tr></tbody>
+      </table>
+    </div>
+    <div class="snapshot-review-actions">
+      <button type="button" @click="closeCrosswalk">返回设备点表</button>
+      <button type="button" class="primary" @click="applyProtocolCrosswalk"
+        :disabled="busy || crosswalkLoading || !crosswalkRows.length">确认关联</button>
+    </div>
+  </section>
+  <div v-else
     class="tag-workspace"
     :class="{ 'modbus-tags': source.kind === 'modbus' }"
   >
@@ -737,7 +838,9 @@ export const TagManager = {
                   $event.target.value = '';
                 "
                 :disabled="busy" /></label></template
-          ><button @click="conversionBatchOpen = !conversionBatchOpen"
+          ><button ref="crosswalkButton" @click="showCrosswalk" :disabled="busy || !points.length || !businessMappings.length">
+            批量关联位号
+          </button><button @click="conversionBatchOpen = !conversionBatchOpen"
             :disabled="busy || mapping?.kind !== 'number' || !conversionTargets.length">
             批量套用换算
           </button><button v-if="conversionBatchUndo.length" @click="undoConversionBatch" :disabled="busy">
@@ -933,7 +1036,7 @@ export const TagManager = {
     ><button
       class="primary"
       @click="$emit('finish')"
-      :disabled="busy || datasetBusy || !points.length"
+      :disabled="busy || datasetBusy || crosswalkOpen || !points.length"
     >
       完成并返回画布
     </button>
