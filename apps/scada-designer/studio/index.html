@@ -383,9 +383,13 @@
               <small v-if="screen">{{bindingReason(n)}}</small>
             </div>
           </div>
-          <div v-if="invalidPoints" class="quality-note">
-            {{ invalidPoints }} 个测点当前无有效读数。{{previewSamples.size?"当前含临时演练值。":"展示端会保留质量提示。"}}
-          </div>
+          <details v-if="invalidPoints.length" class="review-item quality-note">
+            <summary>{{ invalidPoints.length }} 个测点当前无有效读数</summary>
+            <small v-for="point in invalidPoints" :key="point.id">
+              {{ point.label && point.label !== point.id ? point.label + ' · ' : '' }}{{ point.id }} · {{ point.reason }}
+            </small>
+            <button class="wide" @click="openConfig">检查数据连接与点位</button>
+          </details>
           <button class="wide" @click="goStep('bind')">检查数据绑定</button>
 <p v-if="published" class="publish-success">发布成功，展示端已更新。</p>
         </template>

@@ -8,6 +8,7 @@ import {
   validate,
   csv,
   normalize,
+  pointReasonLabels,
   effectivePollMs,
   protocolMappings,
   compatibleMappings,
@@ -433,9 +434,9 @@ async function boot() {
       );
       const invalidPoints = computed(
         () =>
-          doc.value.mappings.filter(
-            (m) => points.value[m.id]?.quality !== "good",
-          ).length,
+          doc.value.mappings.filter(m => livePoints.value[m.id]?.quality !== "good")
+            .map(m => ({ id: m.id, label: m.label,
+              reason: pointReasonLabels[livePoints.value[m.id]?.reason] || "暂无有效读数" })),
       );
       function selectBinding(n) {
         if(screen.value)switchScreenPage(screenPageForNode(project.value,n.id));
@@ -1138,11 +1139,9 @@ async function boot() {
         };
         s.kind === "ws" ? connect() : poll();
       }
-      const points = computed(() =>
+      const livePoints = computed(() =>
         Object.fromEntries(
           doc.value.mappings.map((m) => {
-            const simulated = canRehearse.value && previewSamples.value.get(m.id);
-            if (simulated) return [m.id, simulated];
             const fixed = ["json", "csv"].includes(doc.value.source.kind);
             const p = normalize(
               raw.value,
@@ -1160,6 +1159,11 @@ async function boot() {
             return [m.id, p];
           }),
         ),
+      );
+      const points = computed(() =>
+        canRehearse.value && previewSamples.value.size
+          ? { ...livePoints.value, ...Object.fromEntries(previewSamples.value) }
+          : livePoints.value,
       );
       watch(() => JSON.stringify(doc.value.source), restart, {
         immediate: true,

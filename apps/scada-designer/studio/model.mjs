@@ -67,6 +67,7 @@ export function engineeringProblem(mapping) {
 
 export const pointReasonLabels = {
   "source-quality": "数据源报告无效",
+  "missing-record": "样本缺少该测点记录",
   "missing-value": "样本无数值",
   "invalid-timestamp": "时间戳无效",
   "invalid-number": "输入不是有效数值",
@@ -627,7 +628,8 @@ export function normalize(payload, m, receivedAt, maxAgeMs, now = Date.now()) {
   const q = m.qualityPath ? at(record, m.qualityPath) : "good";
   const sourceDetail = m.qualityReasonPath ? at(record, m.qualityReasonPath) : null;
   let reason = "";
-  if (q === "offline") reason = "disconnected";
+  if (record == null) reason = "missing-record";
+  else if (q === "offline") reason = "disconnected";
   else if (q === "stale") reason = "too-old";
   else if (!["good", "GOOD", true, 1].includes(q))
     reason = Object.hasOwn(pointReasonLabels, sourceDetail) ? sourceDetail : "source-quality";

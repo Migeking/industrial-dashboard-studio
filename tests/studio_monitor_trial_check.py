@@ -19,6 +19,7 @@ OUT = ROOT / "works/hmi-monitor-acceptance"
 
 class Snapshot(BaseHTTPRequestHandler):
     offline = False
+    missing_events = False
 
     def log_message(self, *_):
         pass
@@ -45,6 +46,8 @@ class Snapshot(BaseHTTPRequestHandler):
             {"id": "history", "value": historical, "kind": "dataset", "label": "进水历史", "unit": "m"},
             {"id": "events", "value": events, "kind": "dataset", "label": "上游告警"},
         ]
+        if self.missing_events:
+            points = [point for point in points if point["id"] != "events"]
         for point in points:
             point.update(quality="good", receivedAt=stamp)
         data = json.dumps({"points": points}, ensure_ascii=False).encode()
@@ -103,7 +106,18 @@ def exercise(browser, base):
     field = editor.get_by_label("序列 1 质量字段", exact=True)
     field.fill("quality")
     field.press("Tab")
-    publish(editor)
+    Snapshot.missing_events = True
+    try:
+        editor.get_by_role("button", name="预览发布", exact=True).click()
+        status = editor.locator("details.quality-note")
+        expect(status.locator("summary")).to_have_text("1 个测点当前无有效读数")
+        status.locator("summary").click()
+        expect(status).to_contain_text("events · 样本缺少该测点记录")
+        expect(editor.get_by_role("button", name="发布", exact=True)).to_be_enabled()
+    finally:
+        Snapshot.missing_events = False
+    expect(status).to_have_count(0)
+    editor.get_by_role("button", name="发布", exact=True).click()
     expect(editor.get_by_role("status")).to_contain_text("已发布")
 
     def runtime_ready():
@@ -187,7 +201,8 @@ def main():
         fixture.server_close()
     result = {"scope": "local read-only upstream fixture", **timings, "verified": [
         "sample field suggestions", "raw and engineering values", "history quality and order",
-        "alarm lifecycle readback", "offline and recovery", "published version rollback",
+        "missing source records in publish review", "alarm lifecycle readback",
+        "offline and recovery", "published version rollback",
     ]}
     (OUT / "results.json").write_text(json.dumps(result, indent=2), "utf-8")
     print(json.dumps(result))
