@@ -441,7 +441,7 @@ export function screenChartResult(
   }
   return { option, quality };
 }
-export function screenTableResult(n, points, mappings, pageNodes = []) {
+export function screenTableResult(n, points, mappings, pageNodes = [], requestedPage = 1) {
   const slot = screenRoleSlot(n, "value"),
     point = points[n.bindings[slot?.key]],
     source =
@@ -511,12 +511,15 @@ export function screenTableResult(n, points, mappings, pageNodes = []) {
     }
     return typeof value === "object" ? JSON.stringify(value) : String(value);
   };
+  const limit = n.params.limit || 8;
+  const pages = n.symbol === "events" ? Math.max(1, Math.ceil(rows.length / limit)) : 1;
+  const page = Number.isInteger(requestedPage) ? Math.max(1, Math.min(pages, requestedPage)) : 1;
   return {
     quality: widgetQualityNames[point?.quality] || "未绑定",
     fields,
     columns,
     rows: rows
-      .slice(0, n.params.limit || 8)
+      .slice((page - 1) * limit, page * limit)
       .map((row) => ({
         severity: String(
           screenField(row, n.params.severityField || "level") ?? "",
@@ -525,5 +528,7 @@ export function screenTableResult(n, points, mappings, pageNodes = []) {
         ...(deviceField ? { device: resolveDevice(row) } : {}),
       })),
     total: rows.length,
+    page,
+    pages,
   };
 }

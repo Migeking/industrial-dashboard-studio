@@ -180,6 +180,26 @@ assert.deepEqual(eventRows.rows.map(row => row.device?.id), [
   "pump-one", "pump-one", undefined, undefined, undefined, undefined, undefined,
 ]);
 assert.deepEqual(eventRows.columns.map(col => col.field), ["message"]);
+events.params.limit = 2;
+events.params.sortField = "time";
+events.params.sortDirection = "desc";
+events.params.columns = [
+  { field: "time", title: "时间", format: "time", unit: "" },
+  { field: "message", title: "告警", format: "text", unit: "" },
+];
+const olderAlarms = screenTableResult(events, { hist: {
+  quality: "good",
+  value: [
+    { time: "2026-11-19T14:02:00+08:00", message: "较早记录", assetRef: "pump-one" },
+    { time: "2026-11-19T06:06:00Z", message: "最新" },
+    { time: "2026-11-19T14:04:00+08:00", message: "较新记录" },
+  ],
+} }, doc.mappings, equipment, 2);
+assert.equal(olderAlarms.page, 2);
+assert.equal(olderAlarms.pages, 2);
+assert.equal(olderAlarms.total, 3);
+assert.equal(olderAlarms.rows[0].cells[1], "较早记录");
+assert.equal(olderAlarms.rows[0].device.id, "pump-one");
 assert.equal(
   screenTableResult(
     table,

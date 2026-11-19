@@ -44,6 +44,31 @@ const screenStateColors = {
   未知: "#9baab5",
 };
 
+function screenEventPager(move) {
+  const nav = document.createElement("nav");
+  nav.className = "screen-event-pages";
+  nav.setAttribute("aria-label", "告警分页");
+  nav.hidden = true;
+  const button = (label, step) => {
+    const element = document.createElement("button");
+    element.type = "button";
+    element.textContent = label;
+    element.onclick = (event) => {
+      event.stopPropagation();
+      move(step);
+    };
+    return element;
+  };
+  const status = document.createElement("span"),
+    previous = button("上一页", -1),
+    next = button("下一页", 1),
+    latest = button("返回实时", "latest");
+  status.setAttribute("aria-live", "polite");
+  status.setAttribute("aria-atomic", "true");
+  nav.append(status, previous, next, latest);
+  return { nav, status, previous, next, latest, page: 1, pages: 1, point: null, snapshot: null };
+}
+
 function screenArtworkAt(node, x, y) {
   const { w, h } = screenSymbols[node.symbol];
   const sx = node.w / w,
@@ -299,10 +324,9 @@ class ScreenGraph {
       host = document.createElement("div"),
       quality = document.createElement("small");
     host.className = "screen-chart-host";
-    const table = screenTableKinds.has(
-      this.props().doc.nodes.find((n) => n.id === cell.id)?.symbol,
-    );
-    const control=screenControlKinds.has(this.props().doc.nodes.find(n=>n.id===cell.id)?.symbol);
+    const symbol = this.props().doc.nodes.find((n) => n.id === cell.id)?.symbol;
+    const table = screenTableKinds.has(symbol);
+    const control = screenControlKinds.has(symbol);
     if (table) {
       host.className = "screen-table-host";
       card.classList.add("screen-data-table");
@@ -315,6 +339,10 @@ class ScreenGraph {
       quality,
       chart: null,
     };
+    if (symbol === "events") {
+      entry.pager = screenEventPager((move) => this.moveEventPage(cell.id, move));
+      card.append(entry.pager.nav);
+    }
     this.charts.set(cell.id, entry);
     requestAnimationFrame(() => {
       if (!host.isConnected) return;
@@ -1310,6 +1338,27 @@ class ScreenGraph {
       this.applying = false;
     }
   }
+  moveEventPage(id, move) {
+    const p = this.props();
+    const n = p.doc.nodes.find((node) => node.id === id);
+    const entry = this.charts.get(id);
+    const pager = entry?.pager;
+    if (p.editing || !n || !pager?.point) return;
+    const page = move === "latest" ? 1 : pager.page + move;
+    if (page < 1 || page > pager.pages || page === pager.page) return;
+    const focused = document.activeElement;
+    pager.page = page;
+    pager.snapshot = page === 1 ? null : pager.snapshot || {
+      point: pager.point,
+      signature: JSON.stringify(pager.point.value),
+      checked: pager.point.value,
+      updated: false,
+    };
+    entry.host.scrollTop = 0;
+    this.projectChart(n, entry);
+    if (pager.nav.contains(focused) && (focused.disabled || focused.hidden))
+      (pager.next.disabled ? pager.previous : pager.next).focus();
+  }
   projectChart(n, entry) {
     const p = this.props(),
       dynamic = screenRuleProjection(n, p.points);
@@ -1334,10 +1383,42 @@ class ScreenGraph {
     if (screenTableKinds.has(n.symbol)) {
       entry.card.classList.toggle("is-compact", n.params.compact || n.h < 180);
       const showDevice = n.symbol === "events" && !!n.params.deviceRefField;
-      const data = screenTableResult(n, p.points, p.doc.mappings, p.doc.nodes),
+      const pager = entry.pager;
+      const binding = n.bindings[screenRoleSlot(n, "value")?.key];
+      const point = p.points[binding];
+      if (pager) {
+        const active = !p.editing && point?.quality === "good" && Array.isArray(point.value);
+        if (!active || pager.sourceVersion !== p.sourceVersion || pager.binding !== binding) {
+          pager.page = 1;
+          pager.snapshot = null;
+        }
+        pager.sourceVersion = p.sourceVersion;
+        pager.binding = binding;
+        pager.point = active ? point : null;
+      }
+      const snapshot = pager?.snapshot;
+      if (snapshot && !snapshot.updated && snapshot.checked !== point.value) {
+        snapshot.checked = point.value;
+        snapshot.updated = JSON.stringify(point.value) !== snapshot.signature;
+      }
+      const shown = snapshot ? { [binding]: snapshot.point } : p.points;
+      const data = screenTableResult(n, shown, p.doc.mappings, p.doc.nodes, pager?.page),
         key = JSON.stringify([data, n.params, p.editing]);
+      if (pager) {
+        pager.page = data.page;
+        pager.pages = data.pages;
+        pager.nav.hidden = !pager.point || data.pages < 2;
+        pager.previous.disabled = data.page <= 1;
+        pager.next.disabled = data.page >= data.pages;
+        pager.latest.hidden = !pager.snapshot;
+        const status = `第 ${data.page} / ${data.pages} 页 · ${data.total} 条` +
+          (snapshot ? " · 查阅快照" : "") +
+          (snapshot?.updated ? " · 实时列表有更新" : "");
+        if (pager.status.textContent !== status) pager.status.textContent = status;
+      }
       entry.quality.textContent = data.quality + " · " + data.total + " 行";
-      entry.quality.style.display=n.params.compact&&data.quality==='有效'?'none':'';
+      entry.quality.style.display =
+        (n.params.compact || (pager && !pager.nav.hidden)) && data.quality === "有效" ? "none" : "";
       if (entry.tableKey === key) return;
       entry.tableKey = key;
       const table = document.createElement("table"),

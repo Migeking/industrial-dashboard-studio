@@ -22,6 +22,8 @@ class Snapshot(BaseHTTPRequestHandler):
     offline = False
     missing_events = False
     frozen_at = None
+    new_alarm = False
+    new_alarm_seen = threading.Event()
 
     def log_message(self, *_):
         pass
@@ -42,7 +44,13 @@ class Snapshot(BaseHTTPRequestHandler):
              "state": "已恢复", "message": "原水液位恢复"},
             {"occurredAt": "2026-11-19T06:06:00Z", "level": "高",
              "state": "活动 · 待确认", "message": "格栅压差高"},
+            {"occurredAt": "2026-11-19T06:02:00Z", "level": "警告",
+             "state": "已恢复", "message": "历史进水液位高", "deviceRef": "level-tank"},
         ]
+        new_alarm = self.new_alarm
+        if new_alarm:
+            events.append({"occurredAt": "2026-11-19T06:12:00Z", "level": "高",
+                           "state": "活动 · 待确认", "message": "新到告警 流量偏低"})
         points = [
             {"id": "LT-101.PV", "value": 16000, "kind": "number", "label": "进水液位", "unit": "原码"},
             {"id": "history", "value": historical, "kind": "dataset", "label": "进水历史", "unit": "m"},
@@ -58,6 +66,8 @@ class Snapshot(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
+        if new_alarm:
+            self.new_alarm_seen.set()
 
 
 def make_doc():
@@ -101,7 +111,12 @@ def make_doc():
         {field:'state',title:'状态',format:'text',unit:''},
       ];
       events.sortField='occurredAt'; events.sortDirection='desc';
+      events.limit=2; events.deviceRefField='deviceRef';
+      const tank=screenNode('tank','level-tank',610,70);
+      tank.title='进水池'; tank.w=180; tank.h=205; tank.bindings.value='level';
+      doc.nodes.push(tank);
       const picture=screenNode('image','sample-image',1450,90);
+      picture.w=160; picture.h=90;
       picture.image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jM4sAAAAASUVORK5CYII=';
       doc.nodes.push(picture);
       console.log(JSON.stringify(doc));
@@ -179,7 +194,7 @@ def exercise(browser, base, source):
     def runtime_ready():
         expect(viewer.locator('[data-cell-id="level"]')).to_contain_text("4.50 m", timeout=12000)
         viewer.wait_for_function("""() => {
-            const host = document.querySelector(".screen-chart-host");
+            const host = document.querySelector('[data-cell-id="history"] .screen-chart-host');
             const data = host && echarts.getInstanceByDom(host)?.getOption()?.series[0]?.data;
             return data?.length === 3 && String(data.map(p => p[1])) === "3,,4.5";
         }""")
@@ -192,6 +207,34 @@ def exercise(browser, base, source):
     viewer.goto(base + "/view")
     runtime_ready()
     viewer.screenshot(path=str(OUT / "online.png"))
+    events = viewer.locator('[data-cell-id="events"]')
+    pager = events.get_by_role("navigation", name="告警分页")
+    expect(pager).to_contain_text("第 1 / 2 页")
+    expect(events).not_to_contain_text("历史进水液位高")
+    next_page = pager.get_by_role("button", name="下一页", exact=True)
+    next_page.focus()
+    next_page.press("Enter")
+    expect(pager).to_contain_text("第 2 / 2 页 · 3 条 · 查阅快照")
+    expect(events).to_contain_text("历史进水液位高")
+    expect(pager.get_by_role("button", name="上一页", exact=True)).to_be_focused()
+    Snapshot.new_alarm_seen.clear()
+    Snapshot.new_alarm = True
+    try:
+        assert Snapshot.new_alarm_seen.wait(6), "浏览页未刷新实时告警"
+        expect(pager).to_contain_text("第 2 / 2 页 · 3 条 · 查阅快照 · 实时列表有更新")
+        expect(events).to_contain_text("历史进水液位高")
+        expect(events).not_to_contain_text("原水液位恢复")
+        viewer.screenshot(path=str(OUT / "event-page-two.png"))
+        events.get_by_role("button", name="查看设备 进水池", exact=True).click()
+        details = viewer.get_by_role("dialog", name="进水池 设备详情")
+        expect(details).to_contain_text("只读监视")
+        details.get_by_role("button", name="关闭详情").click()
+        pager.get_by_role("button", name="返回实时").click()
+        expect(pager).to_contain_text("第 1 / 2 页 · 4 条")
+        expect(events).to_contain_text("新到告警 流量偏低")
+    finally:
+        Snapshot.new_alarm = False
+    runtime_ready()
     level = viewer.locator('[data-cell-id="level"]')
     level.click()
     popup = viewer.get_by_role("dialog", name="进水池液位 设备详情")
@@ -217,17 +260,22 @@ def exercise(browser, base, source):
     expect(popup).to_contain_text("上游历史数据")
     popup.get_by_role("button", name="关闭详情").click()
     runtime_ready()
+    next_page.click()
+    expect(events).to_contain_text("历史进水液位高")
     disconnected_at = time.monotonic()
     Snapshot.offline = True
     try:
         expect(viewer.locator('[data-cell-id="level"]')).to_contain_text("离线", timeout=12000)
         expect(viewer.locator('[data-cell-id="events"]')).not_to_contain_text("格栅压差高")
+        expect(events).not_to_contain_text("历史进水液位高")
+        expect(pager).not_to_be_visible()
         detection_ms = round((time.monotonic() - disconnected_at) * 1000)
         viewer.screenshot(path=str(OUT / "disconnected.png"))
     finally:
         Snapshot.offline = False
     reconnect_at = time.monotonic()
     runtime_ready()
+    expect(pager).to_contain_text("第 1 / 2 页")
     recovery_ms = round((time.monotonic() - reconnect_at) * 1000)
 
     original = editor.request.get(base + "/api/published").json()
@@ -307,6 +355,7 @@ def main():
     result = {"scope": "local read-only upstream fixture", **timings, "verified": [
         "sample field suggestions", "raw and engineering values", "history quality and order",
         "point crosswalk preserves canvas bindings and conversion with undo/redo",
+        "alarm pagination stays pinned during refresh, opens device and returns to live",
         "device trend custom fields and gaps", "stale values while transport stays connected",
         "missing source records in publish review", "alarm lifecycle readback",
         "offline and recovery", "published version rollback", "release manifest and snapshot trace",

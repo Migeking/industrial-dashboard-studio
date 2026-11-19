@@ -21,6 +21,13 @@
 .screen-table-host .screen-event-device{padding:2px 5px;background:transparent;color:inherit;border:0;text-decoration:underline;text-underline-offset:2px;font:inherit;cursor:pointer}
 .screen-event-device:hover{text-decoration-thickness:2px}
 .screen-event-device:focus-visible{outline:2px solid currentColor;outline-offset:1px}
+.screen-data-table .screen-table-host th{color:inherit}
+.screen-event-pages{display:flex;flex:none;align-items:center;flex-wrap:wrap;gap:6px;padding:5px 12px;border-top:1px solid #9fb6c344;font-size:14px;color:inherit}
+.screen-event-pages[hidden],.screen-event-pages button[hidden]{display:none}
+.screen-event-pages span{margin-right:auto}
+.screen-event-pages button{min-height:34px;padding:4px 7px;border:1px solid currentColor;background:transparent;color:inherit;font:inherit}
+.screen-event-pages button:disabled{opacity:.45}
+.screen-event-pages button:focus-visible{outline:2px solid currentColor;outline-offset:1px}
 .screen-data-table.is-compact>small{padding:4px 12px;font-size:13px}
 .screen-faceplate{position:absolute;top:45px;right:45px;width:440px;max-height:calc(100% - 90px);overflow:auto;background:#fff;border:1px solid #acc1d0;border-radius:6px;box-shadow:0 12px 50px #263e5330;padding:22px;font-size:22px;z-index:10}
 .screen-faceplate>header{display:flex;height:auto;padding:0 0 16px;background:transparent;border-bottom:1px solid #dde6ec;color:#304c5d;justify-content:space-between}
