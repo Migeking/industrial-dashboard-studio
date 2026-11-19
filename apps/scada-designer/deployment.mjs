@@ -60,11 +60,13 @@ export async function deploymentDigest() {
   const dependencies = [...new Set([
     ...[...files.values()].filter(file => !file.startsWith("project-platform/")),
     "server.mjs", "deployment.mjs", "project-store.mjs", "protocol.mjs", "bridge.py", "bridge-requirements.txt",
-    "model-assistant.mjs", "model-schema.mjs",
+    "case-library.mjs", "model-assistant.mjs", "model-schema.mjs",
   ])].sort();
-  const checksums = await Promise.all(dependencies.map(async file =>
-    [file, sha256(await fs.readFile(path.resolve(here, file)))],
-  ));
+  const checksums = await Promise.all(dependencies.map(async file => {
+    // The runtime files are text. Git archives use LF even from a CRLF checkout.
+    const source = await fs.readFile(path.resolve(here, file), "utf8");
+    return [file, sha256(source.replace(/\r\n/g, "\n"))];
+  }));
   return sha256(JSON.stringify(checksums));
 }
 
