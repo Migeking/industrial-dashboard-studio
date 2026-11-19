@@ -25,6 +25,18 @@ export const mapped = (value) => {
 };
 export const analogRawRange = Object.freeze({ min: 4000, max: 20000 });
 export const minimumProtocolPollMs = 500;
+const engineeringUnitFactors = Object.freeze({
+  m: ["length", 1], cm: ["length", .01], mm: ["length", .001],
+  Pa: ["pressure", 1], kPa: ["pressure", 1000], MPa: ["pressure", 1e6], bar: ["pressure", 1e5],
+  "m³/h": ["flow", 1], "L/s": ["flow", 3.6], "L/min": ["flow", .06],
+  "m³": ["volume", 1], L: ["volume", .001],
+});
+export const engineeringUnits = Object.keys(engineeringUnitFactors);
+
+function unitFactor(unit) {
+  const key = typeof unit === "string" ? unit.trim().replace("m3", "m³") : "";
+  return Object.hasOwn(engineeringUnitFactors, key) ? engineeringUnitFactors[key] : null;
+}
 
 export function effectivePollMs(source) {
   return ["opcua", "modbus"].includes(source.kind)
@@ -35,9 +47,13 @@ export function effectivePollMs(source) {
 export function engineeringProblem(mapping) {
   const rule = mapping.conversion;
   if (rule == null) return "";
-  if (mapping.kind !== "number" || !["identity", "linear", "raw420"].includes(rule.mode))
+  if (mapping.kind !== "number" || !["identity", "linear", "raw420", "unit"].includes(rule.mode))
     return "工程换算方式无效";
   if (rule.mode === "identity") return "";
+  if (rule.mode === "unit") {
+    const input = unitFactor(rule.inputUnit), output = unitFactor(mapping.unit);
+    return input && output && input[0] === output[0] ? "" : "输入与输出单位必须为同一量纲";
+  }
   if (![rule.engineeringMin, rule.engineeringMax].every(Number.isFinite) ||
       rule.engineeringMin === rule.engineeringMax ||
       !Number.isFinite(rule.engineeringMax - rule.engineeringMin))
@@ -629,6 +645,8 @@ export function normalize(payload, m, receivedAt, maxAgeMs, now = Date.now()) {
     value = Number(value);
     if (engineeringProblem(m)) reason ||= "invalid-conversion";
     else if (!rule) value = value * m.scale + m.offset;
+    else if (rule.mode === "unit")
+      value = value * (unitFactor(rule.inputUnit)[1] / unitFactor(m.unit)[1]);
     else if (rule.mode !== "identity") {
       const { min, max } = rule.mode === "raw420"
         ? analogRawRange : { min: rule.rawMin, max: rule.rawMax };

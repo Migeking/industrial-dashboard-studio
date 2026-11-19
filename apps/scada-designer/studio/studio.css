@@ -631,6 +631,18 @@ fieldset small {
 .tag-scroll th:first-child {
   width: 32px;
 }
+.tag-conversion-batch table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  text-align: left;
+  font-size: 12px;
+}
+.tag-conversion-batch th,
+.tag-conversion-batch td {
+  padding: 5px 8px;
+  border-bottom: 1px solid #d6e2e9;
+}
 .tag-scroll tbody tr:hover {
   background: #eff6fb;
 }

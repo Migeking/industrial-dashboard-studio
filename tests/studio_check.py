@@ -186,7 +186,7 @@ def tag_browser_flow(page, base):
     page.get_by_label('选择标签 P101',exact=True).check()
     page.get_by_role('button',name='添加所选 →',exact=True).click()
     expect(page.locator('.tag-selected tbody tr')).to_have_count(3)
-    page.get_by_label('移除选择 P001',exact=True).check()
+    page.get_by_label('选择点位 P001',exact=True).check()
     page.get_by_role('button',name='移除',exact=True).click()
     expect(page.locator('.tag-selected tbody tr')).to_have_count(2)
     source.select_option('modbus')

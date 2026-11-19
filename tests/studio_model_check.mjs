@@ -189,6 +189,9 @@ assert.equal(read({ flow: 12000, q: "stale" }, { ...currentLoop, qualityPath: "q
 assert.equal(read({ flow: 12000, q: "offline" }, { ...currentLoop, qualityPath: "q" }).quality, "offline");
 const engineered = { ...m, scale: 10, offset: 1, conversion: { mode: "identity" } };
 assert.equal(read({ flow: 18.25 }, engineered).value, 18.25);
+const unitMapping = { ...m, unit: "m3/h", conversion: { mode: "unit", inputUnit: "L/s" } };
+assert.equal(read({ flow: 10 }, unitMapping).value, 36);
+assert.equal(read({ flow: 10 }, { ...unitMapping, unit: "kPa" }).reason, "invalid-conversion");
 const linear = {
   ...m, conversion: { mode: "linear", rawMin: -10, rawMax: 10, engineeringMin: 5, engineeringMax: 1 },
 };

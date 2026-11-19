@@ -1,5 +1,6 @@
 import {
-  analogRawRange, effectivePollMs, engineeringProblem, importNorthbound, minimumProtocolPollMs, modbusBatchPoints,
+  analogRawRange, effectivePollMs, engineeringProblem, engineeringUnits,
+  importNorthbound, minimumProtocolPollMs, modbusBatchPoints,
   normalize, pointReasonLabels, protocolMappings,
 } from "./model.mjs";
 
@@ -23,6 +24,31 @@ function pointPreview(reading, mapping) {
   };
 }
 
+function conversionSettings(mapping) {
+  const { scale, offset, precision, unit, conversion, enumMap } = mapping;
+  return JSON.parse(JSON.stringify({ scale, offset, precision, unit, conversion, enumMap }));
+}
+
+function applyConversion(mapping, settings) {
+  delete mapping.conversion;
+  delete mapping.enumMap;
+  Object.assign(mapping, JSON.parse(JSON.stringify(settings)));
+}
+
+const conversionNames = {
+  identity: "直接使用", linear: "自定义量程", raw420: "4–20 mA 原码",
+  unit: "单位换算", legacy: "倍率与偏移",
+};
+function describeConversion(mapping) {
+  const rule = mapping.conversion;
+  const name = conversionNames[rule?.mode || "legacy"];
+  const detail = rule?.mode === "unit" ? rule.inputUnit + " → " + mapping.unit :
+    rule?.mode === "raw420" || rule?.mode === "linear"
+      ? rule.engineeringMin + "–" + rule.engineeringMax + " " + mapping.unit :
+    rule?.mode === "identity" ? mapping.unit : "×" + mapping.scale + "，偏移 " + mapping.offset + " " + mapping.unit;
+  return [name, String(detail ?? "").trim()].filter(Boolean).join(" · ");
+}
+
 export const PointConversion = {
   props: ["mapping", "reading"],
   setup(props) {
@@ -34,7 +60,7 @@ export const PointConversion = {
       if (mode === "legacy") delete props.mapping.conversion;
       else props.mapping.conversion = { ...rule.value, mode };
     }
-    return { rule, issue, display, setMode, range: analogRawRange };
+    return { rule, issue, display, setMode, range: analogRawRange, engineeringUnits };
   },
   template: `
     <div class="point-conversion">
@@ -44,6 +70,7 @@ export const PointConversion = {
           <option value="identity">已是工程值 · 直接使用</option>
           <option value="raw420">4–20 mA 原码</option>
           <option value="linear">自定义输入量程</option>
+          <option value="unit">单位换算</option>
         </select></label>
         <div v-if="!rule" class="pair">
           <label>倍率<input type="number" step="any" v-model.number="mapping.scale" /></label>
@@ -54,7 +81,11 @@ export const PointConversion = {
           <label>输入下限<input type="number" step="any" v-model.number="rule.rawMin" /></label>
           <label>输入上限<input type="number" step="any" v-model.number="rule.rawMax" /></label>
         </div>
-        <div v-if="rule && rule.mode !== 'identity'" class="pair">
+        <label v-if="rule?.mode === 'unit'">输入单位<select v-model="rule.inputUnit">
+          <option disabled :value="undefined">选择输入单位</option>
+          <option v-for="unit in engineeringUnits" :value="unit">{{ unit }}</option>
+        </select></label>
+        <div v-if="rule?.mode === 'raw420' || rule?.mode === 'linear'" class="pair">
           <label>工程下限<input type="number" step="any" v-model.number="rule.engineeringMin" /></label>
           <label>工程上限<input type="number" step="any" v-model.number="rule.engineeringMax" /></label>
         </div>
@@ -265,6 +296,57 @@ export const TagManager = {
     const previews = computed(() => new Map(points.value.map(p =>
       [p.id, pointPreview(readings.value.get(p.id), mapFor(p))]
     )));
+    const conversionBatchOpen = ref(false);
+    const conversionBatchUndo = ref([]);
+    const conversionTargets = computed(() => points.value.filter(p =>
+      p.id !== current.value?.id && removeIds.value.includes(p.id)
+    ));
+    const conversionDiffs = computed(() => {
+      if (!conversionBatchOpen.value || !mapping.value) return [];
+      const settings = conversionSettings(mapping.value);
+      return conversionTargets.value.map(p => {
+        const target = mapFor(p);
+        const candidate = { ...target };
+        applyConversion(candidate, settings);
+        const before = conversionSettings(target);
+        const validFormat = [candidate.scale, candidate.offset].every(Number.isFinite) &&
+          Number.isInteger(candidate.precision) && candidate.precision >= 0 && candidate.precision <= 10;
+        return {
+          point: p, before, after: settings,
+          from: describeConversion(target),
+          to: describeConversion(candidate),
+          issue: target.kind !== "number" ? "仅适用于数值点" :
+            engineeringProblem(candidate) || (!validFormat ? "倍率、偏移或小数位无效" : ""),
+          changed: JSON.stringify(before) !== JSON.stringify(settings),
+        };
+      });
+    });
+    const canApplyConversion = computed(() =>
+      !conversionDiffs.value.some(row => row.issue) && conversionDiffs.value.some(row => row.changed)
+    );
+    function applyConversionBatch() {
+      if (!canApplyConversion.value) return;
+      const changes = conversionDiffs.value.filter(row => row.changed);
+      for (const row of changes) applyConversion(mapFor(row.point), row.after);
+      conversionBatchUndo.value = changes;
+      conversionBatchOpen.value = false;
+      localError.value = "";
+      batchMessage.value = "已更新 " + changes.length + " 个点位的换算设置";
+    }
+    function undoConversionBatch() {
+      const targets = conversionBatchUndo.value.map(row => ({
+        row, target: points.value.some(p => p.id === row.point.id) ? mapFor(row.point) : null,
+      }));
+      if (targets.some(({ row, target }) => !target ||
+          JSON.stringify(conversionSettings(target)) !== JSON.stringify(row.after))) {
+        localError.value = "批量套用后有点位被移除或修改，无法整体撤销";
+        return;
+      }
+      for (const { row, target } of targets) applyConversion(target, row.before);
+      conversionBatchUndo.value = [];
+      localError.value = "";
+      batchMessage.value = "已撤销批量换算";
+    }
     function address(p) {
       return (
         p.nodeId ||
@@ -303,6 +385,13 @@ export const TagManager = {
       formatChanged,
       previews,
       currentReading,
+      conversionBatchOpen,
+      conversionBatchUndo,
+      conversionTargets,
+      conversionDiffs,
+      canApplyConversion,
+      applyConversionBatch,
+      undoConversionBatch,
       address,
       typeNames,
       localError,
@@ -517,7 +606,12 @@ export const TagManager = {
                   $event.target.value = '';
                 "
                 :disabled="busy" /></label></template
-          ><button @click="remove" :disabled="busy || !removeIds.length">
+          ><button @click="conversionBatchOpen = !conversionBatchOpen"
+            :disabled="busy || mapping?.kind !== 'number' || !conversionTargets.length">
+            批量套用换算
+          </button><button v-if="conversionBatchUndo.length" @click="undoConversionBatch" :disabled="busy">
+            撤销批量换算
+          </button><button @click="remove" :disabled="busy || !removeIds.length">
             移除
           </button>
         </div>
@@ -527,7 +621,22 @@ export const TagManager = {
           <div class="pair"><label>地址区<select aria-label="批量读取功能" v-model.number="batch.function" @change="batchFormat"><option :value="1">0x · 线圈</option><option :value="2">1x · 离散输入</option><option :value="3">4x · 保持寄存器</option><option :value="4">3x · 输入寄存器</option></select></label><label v-if="batch.function>2">数据类型<select aria-label="批量数据格式" v-model="batch.format" @change="batchFormat"><option v-for="f in ['uint16','int16','uint32','int32','float32']">{{f}}</option></select></label></div>
           <div class="pair"><label>起始序号<input type="number" aria-label="批量起始序号" v-model.number="batch.start" min="1" /></label><label>点数<input type="number" aria-label="批量点数" v-model.number="batch.count" min="1" max="500" /></label><label>地址步长<input type="number" aria-label="批量地址步长" v-model.number="batch.step" min="1" /></label><label v-if="batch.function>2">字节顺序<select aria-label="批量字节顺序" v-model="batch.order"><option v-for="o in ['uint16','int16'].includes(batch.format)?['AB','BA']:['ABCD','CDAB','BADC','DCBA']">{{o}}</option></select></label></div>
           <p>将添加 {{batch.prefix}}{{String(batch.serial).padStart(3,'0')}} 起 {{batch.count}} 点；地址序号 {{batch.start}} ～ {{batch.start+(batch.count-1)*batch.step}}。</p><button class="primary" @click="addBatch" :disabled="busy">添加这批点位</button><button @click="batchOpen=false">取消批量</button>
-        </div><p v-if="batchMessage" role="status">{{batchMessage}}</p>
+        </div>
+        <section class="tag-batch tag-conversion-batch" v-if="conversionBatchOpen" aria-label="批量换算差异">
+          <b>从 {{ current?.label }} 套用换算</b>
+          <p>已勾选 {{ conversionTargets.length }} 个目标点位。检查量程和单位后确认。</p>
+          <table>
+            <thead><tr><th>目标点位</th><th>当前</th><th>应用后</th></tr></thead>
+            <tbody><tr v-for="row in conversionDiffs" :key="row.point.id">
+              <td>{{ row.point.label }}</td>
+              <td>{{ row.from }}</td>
+              <td>{{ row.issue || (row.changed ? row.to : '相同') }}</td>
+            </tr></tbody>
+          </table>
+          <button class="primary" @click="applyConversionBatch" :disabled="busy || !canApplyConversion">确认套用换算</button>
+          <button @click="conversionBatchOpen = false">取消</button>
+        </section>
+        <p v-if="batchMessage" role="status">{{batchMessage}}</p>
         <div class="tag-scroll">
           <table>
             <thead>
@@ -554,7 +663,7 @@ export const TagManager = {
                     type="checkbox"
                     v-model="removeIds"
                     :value="p.id"
-                    :aria-label="'移除选择 ' + p.label"
+                    :aria-label="'选择点位 ' + p.label"
                     :disabled="busy"
                     @click.stop
                   />

@@ -8,8 +8,11 @@ import tempfile
 import threading
 import time
 from pathlib import Path
-from urllib.request import urlopen
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
+from asyncua import ua
+from asyncua.sync import Server as UaServer
 from playwright.sync_api import expect, sync_playwright
 from pymodbus.datastore import ModbusSequentialDataBlock, ModbusServerContext, ModbusSlaveContext
 from pymodbus.server.sync import ModbusTcpServer
@@ -45,6 +48,9 @@ def exercise(page, base, device_port, registers):
     dialog.get_by_label("点位单位", exact=True).fill("m³/h")
     dialog.get_by_label("倍率", exact=True).fill("100")
     dialog.get_by_label("换算方式", exact=True).select_option("identity")
+    dialog.get_by_role("button", name="新建点位", exact=True).click()
+    dialog.get_by_label("点位名称", exact=True).fill("备用液位 LT-102")
+    dialog.get_by_label("寄存器序号", exact=True).fill("4")
     dialog.get_by_role("button", name="试读点位", exact=True).click()
 
     def row(name):
@@ -54,8 +60,15 @@ def exercise(page, base, device_port, registers):
     expect(row("LT-101")).to_contain_text("12000")
     expect(row("FT-101")).to_contain_text("18.25 m³/h")
     expect(row("FT-101")).to_contain_text("有效")
-    page.screenshot(path=str(OUT / "point-list.png"))
     row("LT-101").click()
+    dialog.get_by_label("选择点位 备用液位 LT-102", exact=True).check()
+    dialog.get_by_role("button", name="批量套用换算", exact=True).click()
+    expect(dialog.get_by_role("region", name="批量换算差异")).to_contain_text("0–6 m")
+    dialog.get_by_role("button", name="确认套用换算", exact=True).click()
+    expect(row("LT-102")).to_contain_text("4.50 m")
+    dialog.get_by_role("button", name="撤销批量换算", exact=True).click()
+    expect(row("LT-102")).to_contain_text("16000.00")
+    page.screenshot(path=str(OUT / "point-list.png"))
     dialog.get_by_label("工程上限", exact=True).fill("0")
     dialog.get_by_role("button", name="完成并返回画布", exact=True).click()
     expect(dialog.get_by_role("alert").filter(has_text="工程量程").first).to_be_visible()
@@ -86,7 +99,7 @@ def exercise(page, base, device_port, registers):
     publish(page)
     expect(page.get_by_role("status")).to_contain_text("已发布")
     saved = page.request.get(base + "/api/published").json()
-    assert {m["conversion"]["mode"] for m in saved["mappings"]} == {"identity", "raw420"}
+    assert {m.get("conversion", {}).get("mode") for m in saved["mappings"]} == {"identity", "raw420", None}
     page.goto(base + "/view")
     liquid = page.locator(f'.x6-node[data-cell-id="{level}"]')
     flow_display = page.locator(f'.x6-node[data-cell-id="{flow}"]')
@@ -121,15 +134,88 @@ def exercise(page, base, device_port, registers):
     assert not errors, errors
 
 
+def post(base, path, data, wait_for_sample=False):
+    request = Request(base + path, json.dumps(data).encode(),
+                      {"Content-Type": "application/json"}, method="POST")
+    for _ in range(30 if wait_for_sample else 1):
+        try:
+            with urlopen(request, timeout=12) as response:
+                return json.load(response)
+        except HTTPError as error:
+            if not wait_for_sample or "协议连接建立中" not in error.read().decode():
+                raise
+            time.sleep(.2)
+    raise AssertionError(f"Timed out waiting for {data['kind']} samples")
+
+
+def check_protocols(base, device_port):
+    values = [True, False, 12000, 16000, 38.5, 18.25, -320, 480, 226, 52]
+    types = [ua.VariantType.Boolean, ua.VariantType.Boolean, ua.VariantType.UInt16,
+             ua.VariantType.UInt16, ua.VariantType.Float, ua.VariantType.Double,
+             ua.VariantType.Int16, ua.VariantType.UInt16, ua.VariantType.UInt16, ua.VariantType.UInt16]
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        endpoint = f"opc.tcp://127.0.0.1:{listener.getsockname()[1]}/engineering"
+    server = UaServer()
+    server.set_endpoint(endpoint)
+    server.set_security_policy([ua.SecurityPolicyType.NoSecurity])
+    namespace = server.register_namespace("urn:studio:engineering-test")
+    station = server.nodes.objects.add_object(namespace, "Engineering Fixture")
+    points = []
+    for index, (value, data_type) in enumerate(zip(values, types)):
+        label = f"Point {index:02}"
+        node = station.add_variable(namespace, label, ua.Variant(value, data_type))
+        points.append(dict(id=f"point{index}", label=label, nodeId=node.nodeid.to_string(),
+                           kind="boolean" if isinstance(value, bool) else "number"))
+    server.start()
+    try:
+        browse = post(base, "/api/opcua/browse", {"endpoint": endpoint, "nodeId": station.nodeid.to_string()})
+        assert {row["nodeId"] for row in browse["nodes"]} == {row["nodeId"] for row in points}
+        opc = post(base, "/api/protocol/sample", {
+            "kind": "opcua", "pollMs": 200, "connection": {"endpoint": endpoint, "points": points},
+        }, wait_for_sample=True)
+        assert all(row["timestamp"] for row in opc["points"])
+        assert opc["requestedPollMs"] == 200
+        modbus_addresses = [
+            (2, 0, None, None), (2, 1, None, None),
+            (4, 0, "uint16", None), (4, 3, "uint16", None),
+            (4, 4, "float32", "CDAB"), (4, 1, "float32", "ABCD"),
+            (4, 6, "int16", None), (4, 7, "uint16", None),
+            (4, 8, "uint16", None), (4, 9, "uint16", None),
+        ]
+        registers = []
+        for source, (fc, address, data_type, order) in zip(points, modbus_addresses):
+            point = dict(id=source["id"], label=source["label"], kind=source["kind"],
+                         function=fc, address=address)
+            if data_type:
+                point["format"] = data_type
+            if order:
+                point["order"] = order
+            registers.append(point)
+        modbus = post(base, "/api/protocol/sample", {
+            "kind": "modbus", "pollMs": 500,
+            "connection": {"host": "127.0.0.1", "port": device_port, "unitId": 1, "points": registers},
+        }, wait_for_sample=True)
+        for sample in (opc, modbus):
+            assert sample["configuredPollMs"] == 500
+            assert all(row["quality"] == "good" and row["raw"] == row["value"] for row in sample["points"])
+            assert [row["value"] for row in sample["points"]] == values
+    finally:
+        server.stop()
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         port = listener.getsockname()[1]
     base = f"http://127.0.0.1:{port}"
-    registers = ModbusSequentialDataBlock(0, [12000, *struct.unpack(">HH", struct.pack(">f", 18.25))])
+    flow = struct.unpack(">HH", struct.pack(">f", 18.25))
+    frequency = struct.unpack(">HH", struct.pack(">f", 38.5))
+    registers = ModbusSequentialDataBlock(0, [12000, *flow, 16000, *reversed(frequency), 0xFEC0, 480, 226, 52])
+    discrete = ModbusSequentialDataBlock(0, [True, False])
     device = ModbusTcpServer(
-        ModbusServerContext(slaves=ModbusSlaveContext(ir=registers, zero_mode=True)),
+        ModbusServerContext(slaves=ModbusSlaveContext(ir=registers, di=discrete, zero_mode=True)),
         address=("127.0.0.1", 0),
     )
     threading.Thread(target=device.serve_forever, daemon=True).start()
@@ -146,6 +232,7 @@ def main():
                         break
                     except OSError:
                         time.sleep(.1)
+                check_protocols(base, device.server_address[1])
                 with sync_playwright() as playwright:
                     browser = playwright.chromium.launch()
                     page = browser.new_page(viewport={"width": 1440, "height": 900})
@@ -163,10 +250,12 @@ def main():
         device.shutdown()
         device.server_close()
     result = {
-        "transport": "local deterministic Modbus TCP server",
+        "transport": "local deterministic OPC UA and Modbus TCP servers",
+        "representativePointsPerProtocol": 10,
         "levels": {"4000": 0, "12000": 3, "16000": 4.5, "20000": 6},
         "outOfRange": 3999, "engineeredFlow": 18.25,
-        "verified": ["commissioning", "invalid range rejection", "binding", "publish", "live trend"],
+        "verified": ["commissioning", "batch preview/apply/undo", "invalid range rejection",
+                     "binding", "publish", "live trend"],
     }
     (OUT / "results.json").write_text(json.dumps(result, indent=2), "utf-8")
     print(json.dumps(result))
