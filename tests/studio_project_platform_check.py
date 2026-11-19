@@ -25,12 +25,16 @@ def check(page, base):
     expect(page.get_by_role('heading', name='项目管理', exact=True)).to_be_visible()
     initial = page.request.get(base + '/api/projects').json()
     cases = initial['cases']
-    assert {row['id'] for row in cases} == {f'{i:02}' for i in range(1,31)} | {'cso-05'}
+    expected_case_ids = {f'{i:02}' for i in range(1, 31)}
+    if (ROOT / 'scenarios/custom-cso/05-cso-ss02-odor-safety-ventilation.html').is_file():
+        expected_case_ids.add('cso-05')
+    assert {row['id'] for row in cases} == expected_case_ids
     for row in cases:
         assert page.request.get(base + row['url']).ok, row['id']
+        assert page.request.get(base + row['thumbnail']).ok, row['id']
 
     page.get_by_role('navigation',name='工作台导航').get_by_role('link', name='案例库').click()
-    expect(page.locator('.case-card')).to_have_count(31)
+    expect(page.locator('.case-card')).to_have_count(len(expected_case_ids))
     page.get_by_label('行业',exact=True).select_option('process-control')
     expect(page.locator('.case-card')).to_have_count(2)
     page.get_by_label('搜索',exact=True).fill('连续分离')
@@ -94,7 +98,7 @@ def check(page, base):
     assert project_id(page) not in [first,second]
     page.get_by_role('link',name='项目管理',exact=True).click()
     page.get_by_role('navigation',name='工作台导航').get_by_role('link',name='案例库').click()
-    expect(page.locator('.case-card')).to_have_count(31)
+    expect(page.locator('.case-card')).to_have_count(len(expected_case_ids))
     page.get_by_label('搜索',exact=True).fill('15')
     page.get_by_role('button',name='查看 2 个关联工程').click()
     expect(page.locator('.project-row')).to_have_count(2)

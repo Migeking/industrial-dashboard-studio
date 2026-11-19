@@ -1,23 +1,38 @@
 param(
-  [string]$OutputPath = (Join-Path $PSScriptRoot '..\release\industrial-dashboard-offline.zip')
+  [string]$OutputPath = (Join-Path $PSScriptRoot '..\release\industrial-dashboard-offline.zip'),
+  [string]$Ref = 'HEAD'
 )
 
+$ErrorActionPreference = 'Stop'
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$releaseDir = Split-Path -Parent $OutputPath
-$staging = Join-Path $releaseDir 'industrial-dashboard-offline'
+$commit = & git -C $projectRoot rev-parse --verify --end-of-options ($Ref + '^{commit}')
+if ($LASTEXITCODE -ne 0) { throw "Cannot resolve release ref: $Ref" }
 
+$destination = [IO.Path]::GetFullPath($OutputPath)
+$releaseDir = [IO.Path]::GetDirectoryName($destination)
 New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
-if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurse -Force }
-if (Test-Path -LiteralPath $OutputPath) { Remove-Item -LiteralPath $OutputPath -Force }
-New-Item -ItemType Directory -Force -Path $staging | Out-Null
+$temporaryFile = Join-Path $releaseDir ('.industrial-hmi-' + [guid]::NewGuid() + '.zip')
 
-foreach ($entry in 'apps', 'assets', 'scenarios', 'packages', 'skills', 'vendor') {
-  Copy-Item -LiteralPath (Join-Path $projectRoot $entry) -Destination (Join-Path $staging $entry) -Recurse -Force
+$paths = @(
+  'apps', 'assets', 'packages', 'skills', 'vendor',
+  'scenarios/water-treatment', 'scenarios/process-control',
+  'scenarios/predictive-maintenance', 'scenarios/reactor-safety',
+  'scenarios/building-automation',
+  'docs/screenshots', 'docs/acceptance', 'docs/architecture.md', 'docs/offline-delivery.md',
+  'README.md', 'README_EN.md', 'LICENSE',
+  'tests/studio_monitor_soak.py', 'tests/studio_project_platform_check.py'
+)
+
+try {
+  & git -C $projectRoot archive --format=zip "--output=$temporaryFile" $commit -- @paths
+  if ($LASTEXITCODE -ne 0) { throw "Cannot archive release commit: $commit" }
+  Move-Item -LiteralPath $temporaryFile -Destination $destination -Force
+} finally {
+  if (Test-Path -LiteralPath $temporaryFile) {
+    Remove-Item -LiteralPath $temporaryFile -Force
+  }
 }
-New-Item -ItemType Directory -Force -Path (Join-Path $staging 'docs') | Out-Null
-Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\architecture.md') -Destination (Join-Path $staging 'docs\architecture.md') -Force
-Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\offline-delivery.md') -Destination (Join-Path $staging 'docs\offline-delivery.md') -Force
-Copy-Item -LiteralPath (Join-Path $projectRoot 'README.md') -Destination (Join-Path $staging 'README.md') -Force
-Get-ChildItem -LiteralPath $staging -Force | Compress-Archive -DestinationPath $OutputPath -CompressionLevel Optimal
-Remove-Item -LiteralPath $staging -Recurse -Force
-Write-Output "已生成离线交付包：$OutputPath"
+
+Write-Output "Archive: $destination"
+Write-Output "Commit:  $commit"
+Write-Output "SHA256:  $((Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash)"

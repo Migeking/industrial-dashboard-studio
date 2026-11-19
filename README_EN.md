@@ -804,7 +804,7 @@ node scripts/screenshot.js
 
 ```powershell
 ./scripts/build-release.ps1
-# Output -> release/industrial-dashboard-offline.zip (~1.07 MB)
+# Output -> release/industrial-dashboard-offline.zip
 ```
 
 Unzip and open `apps/showcase/index.html`. The bundle includes: entries + designer, all templates, local deps, 3D models, runtime + Skills, product docs. See `docs/offline-delivery.md`.

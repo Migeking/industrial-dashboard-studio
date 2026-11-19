@@ -814,7 +814,7 @@ node scripts/screenshot.js
 
 ```powershell
 ./scripts/build-release.ps1
-# 输出 -> release/industrial-dashboard-offline.zip (约 1.07 MB)
+# 输出 -> release/industrial-dashboard-offline.zip
 ```
 
 解压后打开 `apps/showcase/index.html` 即可。交付包含：体验入口与设计器、三套样板、本地依赖、三维模型、运行时与 Skill、产品文档。详见 `docs/offline-delivery.md`。
