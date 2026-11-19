@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import os
 import time
 from collections import Counter
 from datetime import datetime, timezone
@@ -77,6 +78,35 @@ def probe(page):
     return result
 
 
+def published_points(document, view):
+    query = parse_qs(urlsplit(view).query)
+    requested = query.get("page", [document.get("defaultPageId") or "main"])[0]
+    page = next((p for p in document.get("pages", []) if p["id"] == requested), document)
+    page_id = page["id"] if page is not document else "main"
+    used = {point for item in page["nodes"] + page["pipes"] if not item.get("hidden")
+            for point in item.get("bindings", {}).values() if point}
+    datasets = (document["source"].get("datasets") or {}).get("bindings", {})
+    points = {mapping["id"]: (mapping["kind"], "datasets" if mapping["kind"] == "dataset" and
+                              datasets.get(mapping["id"]) else "primary")
+              for mapping in document["mappings"] if mapping["id"] in used}
+    if not points or set(points) != used:
+        raise RuntimeError("已发布画面缺少可核对的测点或映射")
+    return page_id, points
+
+
+def verify_observed_points(reading, expected):
+    actual = {item["id"]: (item["kind"], item["channel"]) for item in reading["points"]}
+    if len(actual) != len(reading["points"]):
+        raise RuntimeError("测点诊断中出现重复的业务位号")
+    missing = sorted(expected.keys() - actual.keys())
+    extra = sorted(actual.keys() - expected.keys())
+    changed = sorted(key for key in actual.keys() & expected.keys() if actual[key] != expected[key])
+    differences = [label + " " + ", ".join(keys) for label, keys in (
+        ("缺少测点", missing), ("多出测点", extra), ("类型或来源不符", changed)) if keys]
+    if differences:
+        raise RuntimeError("测点诊断与已发布画面不一致。" + " · ".join(differences))
+
+
 def observed_gap(previous, current):
     return max(current[0] - previous[0], current[1] - previous[1])
 
@@ -131,6 +161,11 @@ def record_observation(summary, reading, source_timed_points, elapsed, observed_
         stats["lastGoodAt"] = observed_at
         received_at = point["receivedAtMs"]
         if isinstance(received_at, (int, float)) and received_at > 0:
+            previous = stats.get("lastGoodReceivedAtMs")
+            stats.setdefault("receiveTimeAdvances", 0)
+            if previous is not None and received_at > previous:
+                stats["receiveTimeAdvances"] += 1
+            stats["lastGoodReceivedAtMs"] = received_at
             age = reading["browserAtMs"] - received_at
             if age >= 0:
                 stats["maxReceiveAgeMs"] = max(stats.get("maxReceiveAgeMs", 0), age)
@@ -187,12 +222,17 @@ def observe(page, args, emit, summary):
     only_bad = page.get_by_role("checkbox", name="仅显示异常", exact=True)
     only_bad.uncheck(timeout=5000)
     document = published.json()
-    source_timed_points = {m["id"] for m in document["mappings"] if m.get("timePath")}
-    source_timed_points.update(document["source"].get("datasets", {}).get("bindings", {}))
-    summary.update(documentSha256=document_hash, requestedPollMs=document["source"]["pollMs"])
+    page_id, expected_points = published_points(document, args.view)
+    source = document["source"]
+    source_timed_points = {mapping["id"] for mapping in document["mappings"] if mapping.get("timePath")}
+    source_timed_points.update(id for id, (_, channel) in expected_points.items() if channel == "datasets")
+    has_datasets = bool((source.get("datasets") or {}).get("bindings"))
+    summary.update(documentSha256=document_hash, requestedPollMs=source["pollMs"],
+                   pageId=page_id, sourceKind=source["kind"],
+                   expectedPointCounts=Counter(channel for _, channel in expected_points.values()))
+    loaded_view = page.url
     previous = first = None
     next_release_check = time.monotonic() + args.release_check_seconds
-    expected_points = None
     while True:
         reading = probe(page)
         current = (time.monotonic(), time.time())
@@ -203,10 +243,9 @@ def observe(page, args, emit, summary):
             raise RuntimeError(f"观测缺口 {gap:.2f} 秒，超过本次设置的 {args.max_gap_seconds:g} 秒")
         if blocked or script_errors:
             raise RuntimeError("浏览器出现写入尝试或脚本异常")
-        keys = {p["id"] for p in reading["points"]}
-        if expected_points is not None and keys != expected_points:
-            raise RuntimeError("画面内的测点集合发生变化")
-        expected_points = keys
+        if page.url != loaded_view or reading["source"] != source["kind"] or bool(reading["datasetsLink"]) != has_datasets:
+            raise RuntimeError("值守画面或数据源发生变化")
+        verify_observed_points(reading, expected_points)
         elapsed = current[0] - first[0]
         summary["observations"] += 1
         summary["observedSeconds"] = round(elapsed, 3)
@@ -228,6 +267,57 @@ def observe(page, args, emit, summary):
         page.wait_for_timeout(max(0, due - time.monotonic()) * 1000)
 
 
+def write_summary(path, summary):
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    temporary.replace(path)
+
+
+def run_monitor(args):
+    args.out.mkdir(parents=True, exist_ok=False)
+    summary = {
+        "scope": args.scope, "observerPid": os.getpid(), "status": "starting",
+        "requestedSeconds": args.seconds, "intervalSeconds": args.interval_seconds,
+        "allowedGapSeconds": args.max_gap_seconds, "observations": 0, "observedSeconds": 0,
+        "maxObservationGapSeconds": 0, "linkObservations": Counter(),
+        "pointQualityObservations": Counter(),
+    }
+    next_report_at = 0
+    progress = args.out / "progress.json"
+    summary["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    write_summary(progress, summary)
+    with (args.out / "observations.jsonl").open("w", encoding="utf-8") as log:
+        def emit(event, **data):
+            nonlocal next_report_at
+            now = datetime.now(timezone.utc).isoformat()
+            log.write(json.dumps({"utc": now, "event": event, **data}, ensure_ascii=False) + "\n")
+            log.flush()
+            if event == "observation" and summary["observedSeconds"] >= next_report_at:
+                summary.update(status="running", updatedAt=now)
+                write_summary(progress, summary)
+                next_report_at = summary["observedSeconds"] + 60
+
+        emit("started", scope=args.scope, requestedSeconds=args.seconds,
+             intervalSeconds=args.interval_seconds, allowedGapSeconds=args.max_gap_seconds)
+        try:
+            with sync_playwright() as playwright:
+                browser = playwright.chromium.launch()
+                try:
+                    page = browser.new_page(viewport={"width": 1366, "height": 768})
+                    observe(page, args, emit, summary)
+                finally:
+                    browser.close()
+            summary["status"] = "completed"
+        except (Exception, KeyboardInterrupt) as error:
+            summary["status"] = "interrupted"
+            summary["reason"] = str(error) or type(error).__name__
+        emit(summary["status"], observedSeconds=summary["observedSeconds"], reason=summary.get("reason"))
+    summary["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    write_summary(args.out / "results.json", summary)
+    write_summary(progress, summary)
+    return summary
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--view", required=True)
@@ -247,35 +337,7 @@ def main():
         endpoints(args.view)
     except ValueError as error:
         parser.error(str(error))
-    args.out.mkdir(parents=True, exist_ok=False)
-    summary = {
-        "scope": args.scope, "requestedSeconds": args.seconds, "intervalSeconds": args.interval_seconds,
-        "allowedGapSeconds": args.max_gap_seconds, "observations": 0, "observedSeconds": 0,
-        "maxObservationGapSeconds": 0, "linkObservations": Counter(),
-        "pointQualityObservations": Counter(),
-    }
-    with (args.out / "observations.jsonl").open("w", encoding="utf-8") as log:
-        def emit(event, **data):
-            row = {"utc": datetime.now(timezone.utc).isoformat(), "event": event, **data}
-            log.write(json.dumps(row, ensure_ascii=False) + "\n")
-            log.flush()
-
-        emit("started", scope=args.scope, requestedSeconds=args.seconds,
-             intervalSeconds=args.interval_seconds, allowedGapSeconds=args.max_gap_seconds)
-        try:
-            with sync_playwright() as playwright:
-                browser = playwright.chromium.launch()
-                try:
-                    page = browser.new_page(viewport={"width": 1366, "height": 768})
-                    observe(page, args, emit, summary)
-                finally:
-                    browser.close()
-            summary["status"] = "completed"
-        except (Exception, KeyboardInterrupt) as error:
-            summary["status"] = "interrupted"
-            summary["reason"] = str(error) or type(error).__name__
-        emit(summary["status"], observedSeconds=summary["observedSeconds"], reason=summary.get("reason"))
-    (args.out / "results.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), "utf-8")
+    summary = run_monitor(args)
     print(json.dumps(summary, ensure_ascii=False))
     return int(summary["status"] != "completed")
 

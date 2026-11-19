@@ -516,6 +516,30 @@ def exercise(browser, base, source):
         assert len(samples[-1]["points"]) == 3
         assert all(p["quality"] == "good" for p in samples[-1]["points"])
         assert samples[-1]["trendSamples"] == [[3]]
+        assert observations["pageId"] == "main"
+        assert observations["expectedPointCounts"] == {"primary": 3}
+
+    finally:
+        observer.close()
+    observer = browser.new_page()
+    try:
+        observer.add_init_script("""(() => {
+            const original = Element.prototype.querySelectorAll;
+            Element.prototype.querySelectorAll = function (selector) {
+                const elements = original.call(this, selector);
+                return selector === '[data-monitor-point]' && this.matches('.runtime-point-dialog')
+                    ? [...elements].slice(1) : elements;
+            };
+        })()""")
+        omitted = {"maxObservationGapSeconds": 0, "observations": 0,
+                   "linkObservations": Counter(), "pointQualityObservations": Counter()}
+        try:
+            observe(observer, arguments, lambda event, **sample: None, omitted)
+        except RuntimeError as error:
+            assert "测点诊断与已发布画面不一致。缺少测点" in str(error)
+        else:
+            raise AssertionError("Missing diagnostic row was accepted as the initial baseline")
+        assert omitted["observations"] == 0
     finally:
         observer.close()
     observer = browser.new_page()
