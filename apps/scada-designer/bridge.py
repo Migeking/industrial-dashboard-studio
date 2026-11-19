@@ -15,12 +15,15 @@ from pathlib import Path
 def stamp():
     return datetime.now(timezone.utc).isoformat()
 
-def point(tag, value=None, quality="bad", source_time=None):
+def point(tag, value=None, quality="bad", source_time=None, reason=None):
     if isinstance(value, float) and not math.isfinite(value):
         quality = "bad"
+        value = None
+        reason = "invalid-number"
     return {"id": tag["id"], "label": tag.get("label", tag["id"]), "kind": tag["kind"],
             "unit": tag.get("unit", ""), "value": value if quality == "good" else None,
-            "quality": quality, "timestamp": source_time.isoformat() if source_time else None,
+            "raw": value, "quality": quality, "reason": reason,
+            "timestamp": source_time.isoformat() if source_time else None,
             "receivedAt": stamp()}
 
 async def browse(config):
@@ -103,8 +106,8 @@ def modbus_rows(client, config):
             canonical = bytes(raw[order.index(char)] for char in expected)
             value = struct.unpack(">"+formats[tag["format"]], canonical)[0]
         valid = tag.get("rawMin", -math.inf) <= value <= tag.get("rawMax", math.inf)
-        row = point(tag, value, "good" if valid else "bad")
-        row["raw"] = value
+        row = point(tag, value, "good" if valid else "bad",
+                    reason=None if valid else "out-of-range")
         rows.append(row)
     return rows
 
@@ -132,9 +135,14 @@ async def run(config, port):
         raise ValueError("Minimum bridge interval is 0.5 seconds")
     protocol = config["protocol"]
     sample = {"points": [point(t) for t in tags], "status": "connecting"}
+    last_sample = None
     def publish(rows, status="connected"):
-        nonlocal sample
-        sample = {"protocol": protocol, "points": rows, "status": status, "receivedAt": stamp()}
+        nonlocal sample, last_sample
+        now = time.monotonic()
+        measured = round((now - last_sample) * 1000) if status == "connected" and last_sample is not None else None
+        last_sample = now if status == "connected" else None
+        sample = {"protocol": protocol, "points": rows, "status": status, "receivedAt": stamp(),
+                  "configuredPollMs": round(config.get("interval", 2) * 1000), "sampleIntervalMs": measured}
     last_request = time.monotonic()
     def active():
         return time.monotonic() - last_request < 45

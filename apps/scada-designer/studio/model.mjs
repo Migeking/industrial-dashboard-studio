@@ -23,6 +23,45 @@ export const mapped = (value) => {
   if (typeof value === "object" && nativeTypes.has(value.type)) return !!value.slots?.length;
   return ["kpi", "chart", "status", "flow", "campus", "table"].includes(typeof value === "object" ? value.type : value);
 };
+export const analogRawRange = Object.freeze({ min: 4000, max: 20000 });
+export const minimumProtocolPollMs = 500;
+
+export function effectivePollMs(source) {
+  return ["opcua", "modbus"].includes(source.kind)
+    ? Math.max(minimumProtocolPollMs, source.pollMs)
+    : source.pollMs;
+}
+
+export function engineeringProblem(mapping) {
+  const rule = mapping.conversion;
+  if (rule == null) return "";
+  if (mapping.kind !== "number" || !["identity", "linear", "raw420"].includes(rule.mode))
+    return "工程换算方式无效";
+  if (rule.mode === "identity") return "";
+  if (![rule.engineeringMin, rule.engineeringMax].every(Number.isFinite) ||
+      rule.engineeringMin === rule.engineeringMax ||
+      !Number.isFinite(rule.engineeringMax - rule.engineeringMin))
+    return "请输入不同的有限工程量程端点";
+  if (rule.mode === "linear" &&
+      (![rule.rawMin, rule.rawMax].every(Number.isFinite) || rule.rawMax <= rule.rawMin ||
+       !Number.isFinite(rule.rawMax - rule.rawMin)))
+    return "输入量程上限必须大于下限";
+  return "";
+}
+
+export const pointReasonLabels = {
+  "source-quality": "数据源报告无效",
+  "missing-value": "样本无数值",
+  "invalid-timestamp": "时间戳无效",
+  "invalid-number": "输入不是有效数值",
+  "invalid-boolean": "输入不是有效开关量",
+  "invalid-type": "输入类型不匹配",
+  "invalid-conversion": "换算参数无效",
+  "out-of-range": "原值超出输入量程",
+  "too-old": "超过最大数据年龄",
+  "disconnected": "数据源连接中断",
+};
+
 export function protocolMappings(rows, protocol, previous) {
   return rows.map((r) => ({
     id: r.id,
@@ -36,6 +75,8 @@ export function protocolMappings(rows, protocol, previous) {
     timePath: protocol === "opcua" ? "timestamp" : "receivedAt",
     fallbackTimePath: "receivedAt",
     qualityPath: "quality",
+    qualityReasonPath: "reason",
+    rawPath: "raw",
     scale: 1,
     offset: 0,
     precision: r.unit === "原码" ? 0 : 2,
@@ -332,6 +373,8 @@ export function validate(doc, publishing) {
       ![m.scale, m.offset].every(Number.isFinite)
     )
       fail("测点编号、类型、路径或换算参数无效");
+    const problem = engineeringProblem(m);
+    if (problem) fail(m.id + " · " + problem);
     ids.add(m.id);
   }
   if (doc.schemaVersion === 2) return validateNative(doc, publishing);
@@ -559,44 +602,66 @@ export function normalize(payload, m, receivedAt, maxAgeMs, now = Date.now()) {
       ? root.find((row) => String(at(row, m.keyField)) === String(m.keyValue))
       : root;
   let value = at(record, m.path);
+  const rawValue = (m.rawPath ? at(record, m.rawPath) ?? value : value) ?? null;
   const stamp = m.timePath
     ? (at(record, m.timePath) ??
       (m.fallbackTimePath ? at(record, m.fallbackTimePath) : null))
     : receivedAt;
   const timestamp = typeof stamp === "number" ? stamp : Date.parse(stamp);
   const q = m.qualityPath ? at(record, m.qualityPath) : "good";
-  let quality = "good";
-  if (
-    !["good", "GOOD", true, 1].includes(q) ||
-    !Number.isFinite(timestamp) ||
-    value == null
-  )
-    quality = "bad";
-  if (m.enumMap && Object.hasOwn(m.enumMap, String(value)))
+  const sourceDetail = m.qualityReasonPath ? at(record, m.qualityReasonPath) : null;
+  let reason = "";
+  if (q === "offline") reason = "disconnected";
+  else if (q === "stale") reason = "too-old";
+  else if (!["good", "GOOD", true, 1].includes(q))
+    reason = Object.hasOwn(pointReasonLabels, sourceDetail) ? sourceDetail : "source-quality";
+  else if (!Number.isFinite(timestamp)) reason = "invalid-timestamp";
+  else if (value == null) reason = "missing-value";
+  if (!m.conversion && m.enumMap && Object.hasOwn(m.enumMap, String(value)))
     value = m.enumMap[String(value)];
   if (m.kind === "number") {
     if (
       !["number", "string"].includes(typeof value) ||
       String(value).trim() === ""
     )
-      quality = "bad";
-    value = Number(value) * m.scale + m.offset;
-    if (!Number.isFinite(value)) quality = "bad";
+      reason ||= "invalid-number";
+    const rule = m.conversion;
+    value = Number(value);
+    if (engineeringProblem(m)) reason ||= "invalid-conversion";
+    else if (!rule) value = value * m.scale + m.offset;
+    else if (rule.mode !== "identity") {
+      const { min, max } = rule.mode === "raw420"
+        ? analogRawRange : { min: rule.rawMin, max: rule.rawMax };
+      const input = typeof rawValue === "number" ||
+        (typeof rawValue === "string" && rawValue.trim()) ? Number(rawValue) : NaN;
+      if (input < min || input > max) {
+        if (!reason || reason === "source-quality") reason = "out-of-range";
+      }
+      else if (Number.isFinite(input)) {
+        const ratio = (input - min) / (max - min);
+        value = rule.engineeringMin + ratio * (rule.engineeringMax - rule.engineeringMin);
+      } else reason ||= "invalid-number";
+    }
+    if (!Number.isFinite(value)) reason ||= "invalid-number";
   } else if (m.kind === "boolean") {
     if ([true, 1, "1", "true"].includes(value)) value = true;
     else if ([false, 0, "0", "false"].includes(value)) value = false;
-    else quality = "bad";
+    else reason ||= "invalid-boolean";
   } else if (m.kind === "dataset") {
     if (
       !Array.isArray(value) ||
       !value.every((r) => r && typeof r === "object" && !Array.isArray(r))
     )
-      quality = "bad";
-  } else if (typeof value !== "string") quality = "bad";
-  if (quality === "good" && now - timestamp > maxAgeMs) quality = "stale";
+      reason ||= "invalid-type";
+  } else if (typeof value !== "string") reason ||= "invalid-type";
+  if (!reason && now - timestamp > maxAgeMs) reason = "too-old";
+  const quality = reason === "disconnected" ? "offline" :
+    reason === "too-old" ? "stale" : reason ? "bad" : "good";
   return {
     value: quality === "good" ? value : null,
+    rawValue,
     quality,
+    reason,
     timestamp,
     receivedAt,
     unit: m.unit,

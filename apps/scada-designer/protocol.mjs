@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { validateConnection } from "./studio/model.mjs";
+import { effectivePollMs, validateConnection } from "./studio/model.mjs";
 
 const script = fileURLToPath(new URL("./bridge.py", import.meta.url));
 const sessions = new Map();
@@ -57,7 +57,7 @@ export async function protocolSample(source, dir) {
   const config = {
     ...source.connection,
     protocol: source.kind,
-    interval: Math.max(0.5, source.pollMs / 1000),
+    interval: effectivePollMs(source) / 1000,
   };
   const key = createHash("sha256").update(JSON.stringify(config)).digest("hex");
   let session = sessions.get(key);
@@ -125,7 +125,7 @@ export async function protocolSample(source, dir) {
     signal: AbortSignal.timeout(5000),
   });
   if (!response.ok) throw Error("协议连接建立中或已中断，请稍后读取");
-  return response.json();
+  return { ...(await response.json()), requestedPollMs: source.pollMs };
 }
 
 const cleanup = setInterval(() => {

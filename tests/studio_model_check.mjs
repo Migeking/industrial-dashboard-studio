@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   csv,
   normalize,
+  effectivePollMs,
   template,
   legacyTemplate,
   validate,
@@ -161,6 +162,43 @@ assert.equal(
 assert.equal(read({ flow: null }, m).quality, "bad");
 assert.equal(read({ flow: 1 }, m, time + 5001).quality, "stale");
 assert.equal(read({ flow: 1, t: "?" }, { ...m, timePath: "t" }).quality, "bad");
+const currentLoop = {
+  ...m, unit: "m", conversion: { mode: "raw420", engineeringMin: 0, engineeringMax: 6 },
+};
+for (const [rawValue, expected] of [[4000, 0], [12000, 3], [16000, 4.5], [20000, 6]]) {
+  const measured = read({ flow: rawValue }, currentLoop);
+  assert.equal(measured.rawValue, rawValue);
+  assert.equal(measured.value, expected);
+  assert.equal(measured.unit, "m");
+  assert.equal(measured.quality, "good");
+}
+for (const rawValue of [3999, 20001]) {
+  const measured = read({ flow: rawValue }, currentLoop);
+  assert.equal(measured.rawValue, rawValue);
+  assert.equal(measured.value, null);
+  assert.equal(measured.quality, "bad");
+  assert.equal(measured.reason, "out-of-range");
+}
+const bridgeMapping = protocolMappings([{ id: "level", kind: "number" }], "modbus", [])[0];
+const diagnosis = read({ points: [{ id: "level", raw: 3999, value: null, quality: "bad",
+  reason: "out-of-range", receivedAt: time }] }, bridgeMapping);
+assert.equal(diagnosis.rawValue, 3999);
+assert.equal(diagnosis.reason, "out-of-range");
+assert.equal(read({ flow: true }, currentLoop).reason, "invalid-number");
+assert.equal(read({ flow: 12000, q: "stale" }, { ...currentLoop, qualityPath: "q" }).quality, "stale");
+assert.equal(read({ flow: 12000, q: "offline" }, { ...currentLoop, qualityPath: "q" }).quality, "offline");
+const engineered = { ...m, scale: 10, offset: 1, conversion: { mode: "identity" } };
+assert.equal(read({ flow: 18.25 }, engineered).value, 18.25);
+const linear = {
+  ...m, conversion: { mode: "linear", rawMin: -10, rawMax: 10, engineeringMin: 5, engineeringMax: 1 },
+};
+assert.equal(read({ flow: 0 }, linear).value, 3);
+const badRange = { ...currentLoop, conversion: { ...currentLoop.conversion, engineeringMax: 0 } };
+assert.equal(read({ flow: 5000 }, badRange).reason, "invalid-conversion");
+assert.throws(() => validate({ ...doc, mappings: [badRange, ...doc.mappings.slice(1)] }, false), /工程量程/);
+assert.equal(effectivePollMs({ kind: "modbus", pollMs: 200 }), 500);
+assert.equal(effectivePollMs({ kind: "opcua", pollMs: 1000 }), 1000);
+assert.equal(effectivePollMs({ kind: "rest", pollMs: 200 }), 200);
 const rows = csv('id,raw,unit\r\na,0,m\r\nb,"4,5","a""b"');
 assert.equal(rows[1].unit, 'a"b');
 assert.equal(
@@ -191,5 +229,5 @@ assert.throws(() => validate(c, true), /三维对象/);
 doc.nodes.push(node("status", "extra", "flow"));
 assert.throws(() => validate(doc, true), /绑定类型/);
 console.log(
-  "PASS: templates, mapping, enum, timestamps, zero, false, CSV, invalid bindings and asset IDs",
+  "PASS: templates, mapping, engineering range, raw quality, scan floor, enum, timestamps, zero, false, CSV, invalid bindings and asset IDs",
 );

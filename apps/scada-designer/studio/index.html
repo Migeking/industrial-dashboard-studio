@@ -764,6 +764,7 @@
             :config="config"
             :sample="sample"
             :sample-source="sampleSource"
+            :sample-received="sampleReceived"
             :busy="protocolBusy"
             :path="browsePath"
             :results="browseResults"
@@ -874,7 +875,7 @@
                 </datalist>
                 <div class="pair">
                   <label
-                    >类型<select v-model="currentMap.kind">
+                    >类型<select v-model="currentMap.kind" @change="currentMap.kind !== 'number' && delete currentMap.conversion">
                       <option value="number">数值</option>
                       <option value="boolean">布尔</option>
                       <option value="text">文本</option>
@@ -882,19 +883,9 @@
                     </select></label
                   ><label>单位<input v-model="currentMap.unit" /></label>
                 </div>
+                <point-conversion :mapping="currentMap" :reading="mappingReadback"></point-conversion>
                 <details>
-                  <summary>换算、行筛选与质量</summary>
-                  <div class="pair">
-                    <label
-                      v-for="(name, k) in {
-                        scale: '倍率',
-                        offset: '偏移',
-                        precision: '小数位',
-                      }"
-                      >{{ name
-                      }}<input type="number" v-model.number="currentMap[k]"
-                    /></label>
-                  </div>
+                  <summary>行筛选与质量</summary>
                   <label
                     v-for="(name, k) in {
                       root: '根路径',
@@ -907,7 +898,7 @@
                     }}<input
                       v-model="currentMap[k]"
                       list="field-paths" /></label
-                  ><label
+                  ><label v-if="!currentMap.conversion"
                     >枚举换算 JSON<input
                       :value="JSON.stringify(currentMap.enumMap || {})"
                       @change="setEnum($event.target.value)"

@@ -8,6 +8,7 @@ import {
   validate,
   csv,
   normalize,
+  effectivePollMs,
   protocolMappings,
   compatibleMappings,
   bindingProblem,
@@ -15,7 +16,7 @@ import {
   campusState,
 } from "./model.mjs";
 import { Widget } from "./widgets.mjs";
-import { TagManager } from "./tag-manager.mjs";
+import { PointConversion, TagManager } from "./tag-manager.mjs";
 import { isNative, nativeTypes, nativeSlots, nativeSlotMappings, nativeBranch, cloneNativeBranch, nativeRecipes, nativeRecipe, nativeBlank } from "../../../packages/runtime/studio/native-model.mjs";
 import { NativeStage } from "../../../packages/runtime/studio/native-renderer.mjs";
 import { isScreen, blankScreen, copyScreenSelection,validateScreenAsset,screenAssetProblem } from "../../../packages/runtime/studio/screen-model.mjs";
@@ -81,7 +82,7 @@ async function boot() {
     offline || (await api(viewer ? "/api/published" : "/api/draft"));
   document.getElementById("app").classList.toggle("editor-shell", !viewer);
   Vue.createApp({
-    components: { ScreenAssistant,Widget, TagManager, NativeStage, ScreenStage, ScreenInspector,ScreenLibrary,ScreenViewportTools,ScreenRulers,ScreenPageNavigator },
+    components: { ScreenAssistant,Widget, TagManager, PointConversion, NativeStage, ScreenStage, ScreenInspector,ScreenLibrary,ScreenViewportTools,ScreenRulers,ScreenPageNavigator },
     setup() {
       const {
         ref,
@@ -384,6 +385,7 @@ async function boot() {
         sample = ref(null),
         versionInfo = ref({ versions: [] });
       const sampleSource = ref("");
+      const sampleReceived = ref(0);
       const lastSaved = ref(JSON.stringify(initial)),
         saving = ref(false),
         published = ref(false);
@@ -907,6 +909,7 @@ async function boot() {
               )
                 throw Error("连接配置已变化，请重新读取样本");
               sample.value = value;
+              sampleReceived.value = Date.now();
               sampleSource.value = JSON.stringify(source);
               if (["opcua", "modbus"].includes(source.kind)) bridgeMappings();
               return;
@@ -972,6 +975,13 @@ async function boot() {
       const currentMap = computed(
         () => config.value?.mappings[mappingIndex.value],
       );
+      const mappingReadback = computed(() => {
+        const source = config.value?.source;
+        if (!source || !currentMap.value || sample.value == null ||
+            sampleSource.value !== JSON.stringify(source)) return null;
+        const stamp = sampleReceived.value;
+        return normalize(sample.value, currentMap.value, stamp, source.maxAgeMs, stamp);
+      });
       const paths = computed(() => {
         const list = [];
         function visit(v, p) {
@@ -1077,7 +1087,9 @@ async function boot() {
             ? "离线演示快照"
             : ["json", "csv"].includes(s.kind)
               ? "本地样本"
-              : "已连接 · " + s.kind.toUpperCase();
+              : "已连接 · " + s.kind.toUpperCase() +
+                (v?.configuredPollMs ? " · 扫描设定 " + v.configuredPollMs + " ms" : "") +
+                (v?.sampleIntervalMs ? " · 实测 " + v.sampleIntervalMs + " ms" : "");
         };
         const fail = (e) => {
           if (!closed) {
@@ -1093,7 +1105,7 @@ async function boot() {
             fail(e);
           }
           if (!closed && ["rest", "opcua", "modbus"].includes(s.kind))
-            timer = setTimeout(poll, s.pollMs);
+            timer = setTimeout(poll, effectivePollMs(s));
         }
         function connect() {
           if (closed) return;
@@ -1141,6 +1153,7 @@ async function boot() {
             );
             if (!connected.value) {
               p.quality = "offline";
+              p.reason = "disconnected";
               p.value = null;
             }
             return [m.id, p];
@@ -1312,9 +1325,11 @@ async function boot() {
         sourceVersion,
         config,
         currentMap,
+        mappingReadback,
         mappingIndex,
         sample,
         sampleSource,
+        sampleReceived,
         paths,
         versionInfo,
         undoCount,

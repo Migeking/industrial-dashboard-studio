@@ -1,10 +1,83 @@
-import { protocolMappings, importNorthbound, normalize, modbusBatchPoints } from "./model.mjs";
+import {
+  analogRawRange, effectivePollMs, engineeringProblem, importNorthbound, minimumProtocolPollMs, modbusBatchPoints,
+  normalize, pointReasonLabels, protocolMappings,
+} from "./model.mjs";
+
+function formatPointValue(value, precision) {
+  if (value == null) return "—";
+  if (Array.isArray(value)) return value.length + " 行";
+  return typeof value === "number" && Number.isInteger(precision) && precision >= 0 && precision <= 10
+    ? value.toFixed(precision)
+    : String(value);
+}
+
+function pointPreview(reading, mapping) {
+  if (!reading) return { raw: "—", value: "—", quality: "未试读", reason: "" };
+  return {
+    raw: formatPointValue(reading.rawValue),
+    value: reading.quality === "good"
+      ? [formatPointValue(reading.value, mapping.precision), mapping.unit].filter(Boolean).join(" ")
+      : "—",
+    quality: { good: "有效", bad: "无效", stale: "过期", offline: "离线" }[reading.quality],
+    reason: pointReasonLabels[reading.reason] || "",
+  };
+}
+
+export const PointConversion = {
+  props: ["mapping", "reading"],
+  setup(props) {
+    const { computed } = Vue;
+    const rule = computed(() => props.mapping.conversion);
+    const issue = computed(() => engineeringProblem(props.mapping));
+    const display = computed(() => pointPreview(props.reading, props.mapping));
+    function setMode(mode) {
+      if (mode === "legacy") delete props.mapping.conversion;
+      else props.mapping.conversion = { ...rule.value, mode };
+    }
+    return { rule, issue, display, setMode, range: analogRawRange };
+  },
+  template: `
+    <div class="point-conversion">
+      <template v-if="mapping.kind === 'number'">
+        <label>换算方式<select aria-label="换算方式" :value="rule?.mode || 'legacy'" @change="setMode($event.target.value)">
+          <option value="legacy">倍率与偏移</option>
+          <option value="identity">已是工程值 · 直接使用</option>
+          <option value="raw420">4–20 mA 原码</option>
+          <option value="linear">自定义输入量程</option>
+        </select></label>
+        <div v-if="!rule" class="pair">
+          <label>倍率<input type="number" step="any" v-model.number="mapping.scale" /></label>
+          <label>偏移<input type="number" step="any" v-model.number="mapping.offset" /></label>
+        </div>
+        <p v-if="rule?.mode === 'raw420'" class="point-range-note">输入原码 {{ range.min }}–{{ range.max }}</p>
+        <div v-if="rule?.mode === 'linear'" class="pair">
+          <label>输入下限<input type="number" step="any" v-model.number="rule.rawMin" /></label>
+          <label>输入上限<input type="number" step="any" v-model.number="rule.rawMax" /></label>
+        </div>
+        <div v-if="rule && rule.mode !== 'identity'" class="pair">
+          <label>工程下限<input type="number" step="any" v-model.number="rule.engineeringMin" /></label>
+          <label>工程上限<input type="number" step="any" v-model.number="rule.engineeringMax" /></label>
+        </div>
+        <label>小数位<input type="number" min="0" max="10" v-model.number="mapping.precision" /></label>
+        <p v-if="issue" class="quality-note" role="alert">{{ issue }}</p>
+      </template>
+      <dl v-if="reading" class="point-readback" aria-label="点位试读结果">
+        <div><dt>原值</dt><dd>{{ display.raw }}</dd></div>
+        <div><dt>工程值</dt><dd>{{ display.value }}</dd></div>
+        <div><dt>质量</dt><dd>{{ display.quality }}<small v-if="display.reason"> · {{ display.reason }}</small></dd></div>
+        <div><dt>样本读取</dt><dd>{{ new Date(reading.receivedAt).toLocaleTimeString() }}</dd></div>
+      </dl>
+    </div>
+  `,
+};
 
 export const TagManager = {
+  components: { PointConversion },
   props: [
     "config",
     "sample",
     "sampleSource",
+    "sampleReceived",
     "busy",
     "path",
     "results",
@@ -21,6 +94,8 @@ export const TagManager = {
       selectedId = ref(""),
       cache = ref({});
     const source = computed(() => props.config.source);
+    const pollChoices = [minimumProtocolPollMs, 1000, 2000, 5000];
+    const configuredPollMs = computed(() => effectivePollMs(source.value));
     const showSystem = ref(false);
     const sampleMatches = computed(
       () => props.sampleSource === JSON.stringify(source.value),
@@ -174,25 +249,22 @@ export const TagManager = {
         delete current.value.rawMin;
         delete current.value.rawMax;
         if (mapping.value?.unit === "原码") mapping.value.unit = "";
+        if (mapping.value) delete mapping.value.conversion;
       }
       if (mapping.value) mapping.value.kind = current.value.kind;
     }
-    function preview(p) {
-      const m = mapFor(p),
-        row = props.sample?.points?.find((r) => r.id === p.id);
-      if (!row || !m || !sampleMatches.value)
-        return { value: "—", quality: "未试读" };
-      const r = normalize(props.sample, m, Date.now(), source.value.maxAgeMs);
-      return {
-        value:
-          r.quality !== "good"
-            ? "—"
-            : typeof r.value === "number"
-              ? r.value.toFixed(m.precision)
-              : String(r.value),
-        quality: { good: "有效", bad: "无效", stale: "过期" }[r.quality],
-      };
-    }
+    const readings = computed(() => {
+      if (!sampleMatches.value || !props.sample) return new Map();
+      const now = props.sampleReceived;
+      return new Map(points.value.map(p => {
+        const m = mapFor(p);
+        return [p.id, m ? normalize(props.sample, m, now, source.value.maxAgeMs, now) : null];
+      }));
+    });
+    const currentReading = computed(() => readings.value.get(current.value?.id));
+    const previews = computed(() => new Map(points.value.map(p =>
+      [p.id, pointPreview(readings.value.get(p.id), mapFor(p))]
+    )));
     function address(p) {
       return (
         p.nodeId ||
@@ -208,6 +280,8 @@ export const TagManager = {
     };
     return {
       source,
+      pollChoices,
+      configuredPollMs,
       points,
       current,
       mapping,
@@ -227,7 +301,8 @@ export const TagManager = {
       importFile,
       nameChanged,
       formatChanged,
-      preview,
+      previews,
+      currentReading,
       address,
       typeNames,
       localError,
@@ -298,21 +373,18 @@ export const TagManager = {
     <label class="short"
       >扫描周期<select
         aria-label="刷新周期（ms）"
-        v-model.number="source.pollMs"
+        :value="configuredPollMs"
+        @change="source.pollMs = Number($event.target.value)"
         :disabled="busy"
       >
-        <option :value="200">200 ms</option>
-        <option :value="500">500 ms</option>
-        <option :value="1000">1 秒</option>
-        <option :value="2000">2 秒</option>
-        <option :value="5000">5 秒</option>
+        <option v-for="period in pollChoices" :value="period">{{ period }} ms</option>
         <option
-          v-if="![200, 500, 1000, 2000, 5000].includes(source.pollMs)"
-          :value="source.pollMs"
+          v-if="!pollChoices.includes(configuredPollMs)"
+          :value="configuredPollMs"
         >
-          {{ source.pollMs }} ms
+          {{ configuredPollMs }} ms
         </option>
-      </select></label
+      </select><small v-if="source.pollMs !== configuredPollMs">原设置 {{ source.pollMs }} ms，使用桥接下限 {{ configuredPollMs }} ms</small></label
     >
   </div>
   <div
@@ -463,7 +535,8 @@ export const TagManager = {
                 <th></th>
                 <th>点位名称</th>
                 <th>地址</th>
-                <th>当前值</th>
+                <th>原值</th>
+                <th>工程值</th>
                 <th>质量</th>
               </tr>
             </thead>
@@ -488,11 +561,14 @@ export const TagManager = {
                 </td>
                 <td>{{ p.label }}</td>
                 <td :title="address(p)">{{ address(p) }}</td>
-                <td>{{ preview(p).value }}</td>
-                <td>{{ preview(p).quality }}</td>
+                <td :title="previews.get(p.id).raw">{{ previews.get(p.id).raw }}</td>
+                <td :title="previews.get(p.id).value">{{ previews.get(p.id).value }}</td>
+                <td :title="previews.get(p.id).reason">
+                  {{ previews.get(p.id).quality }}<template v-if="previews.get(p.id).reason"> · {{ previews.get(p.id).reason }}</template>
+                </td>
               </tr>
               <tr v-if="!selected.length && points.length">
-                <td colspan="5">
+                <td colspan="6">
                   没有匹配的已选点位
                 </td>
               </tr>
@@ -564,24 +640,7 @@ export const TagManager = {
           ><label v-if="current.kind === 'number'"
             >单位<input aria-label="点位单位" v-model="mapping.unit"
           /></label>
-          <details v-if="current.kind === 'number'">
-            <summary>工程量换算</summary>
-            <label
-              >倍率<input
-                type="number"
-                v-model.number="mapping.scale" /></label
-            ><label
-              >偏移<input
-                type="number"
-                v-model.number="mapping.offset" /></label
-            ><label
-              >小数位<input
-                type="number"
-                min="0"
-                max="10"
-                v-model.number="mapping.precision"
-            /></label>
-          </details>
+          <point-conversion :mapping="mapping" :reading="currentReading"></point-conversion>
           <details>
             <summary>高级设置</summary>
             <label
@@ -619,7 +678,7 @@ export const TagManager = {
       (busy
         ? "正在连接，请稍候…"
         : sample
-          ? "试读已完成，可查看点值和质量"
+          ? "试读已完成" + (sample.sampleIntervalMs ? " · 实测扫描间隔 " + sample.sampleIntervalMs + " ms" : "，可查看点值和质量")
           : "选择点位后，可试读检查当前值。")
     }}</span
     ><button @click="$emit('read')" :disabled="busy || !points.length">
