@@ -1524,10 +1524,19 @@ fieldset small {
   margin: 0 -16px 12px;
 }
 .tag-crosswalk {
+  display: flex;
   flex: 1;
+  flex-direction: column;
   min-height: 0;
   overflow: auto;
   padding: 12px 16px;
+}
+.tag-crosswalk > :not(.snapshot-review-list) {
+  flex: none;
+}
+.tag-crosswalk .snapshot-review-list {
+  flex: 0 1 auto;
+  min-height: 0;
 }
 .tag-crosswalk .snapshot-review-files {
   flex-wrap: wrap;

@@ -693,7 +693,7 @@ export const TagManager = {
     <div v-if="crosswalkRows.length" class="snapshot-review-list" tabindex="0" role="region" aria-label="设备点位关联预览">
       <table><thead><tr><th scope="col">画面位号</th><th scope="col">设备点与地址</th><th scope="col">原值 → 工程值</th><th scope="col">试读质量</th></tr></thead>
         <tbody><tr v-for="{point,mapping,previous,released,reading} in crosswalkRows" :key="mapping.id">
-          <th scope="row"><b>{{mapping.label || mapping.id}}</b><small>{{mapping.id}}</small></th>
+          <th scope="row"><b>{{mapping.label || mapping.id}}</b><small v-if="mapping.label && mapping.label !== mapping.id">{{mapping.id}}</small></th>
           <td>{{point.label || point.id}}<small>{{point.id}} · {{address(point)}}</small>
             <small v-if="previous">原关联 {{previous.id}} · {{address(previous)}}</small>
             <small v-if="released">替换未引用的设备默认位号 {{released}}</small></td>
