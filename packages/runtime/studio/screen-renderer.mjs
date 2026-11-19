@@ -365,13 +365,25 @@ class ScreenGraph {
   }
   bindEvents() {
     const graph = this.graph;
+    const freePipeTarget = (event, point) => {
+      const hit = document.elementFromPoint(event.clientX, event.clientY)?.closest("[port]");
+      const id = hit?.closest(".x6-node")?.dataset.cellId;
+      const node = this.props().doc.nodes.find((item) => item.id === id);
+      const port = screenPorts(node).find((item) => item.id === hit?.getAttribute("port"));
+      return port && port.direction !== "out"
+        ? { nodeId: node.id, portId: port.id }
+        : { x: Math.max(0, Math.min(1920, point.x)), y: Math.max(0, Math.min(1080, point.y)) };
+    };
     const start = (event) => {
       const p = this.props();
       if (!p.editing || event.button !== 0) return;
       this.emit("start");
+      const hitNode = event.target.closest(".x6-node");
+      const backdrop = hitNode && p.doc.nodes.find((node) => node.id === hitNode.dataset.cellId);
       if (
         p.tool === "pipe" &&
-        !event.target.closest(".x6-node,.x6-edge,.x6-port,.x6-cell-tools")
+        !event.target.closest(".x6-edge,.x6-port,.x6-cell-tools") &&
+        (!hitNode || (backdrop?.symbol === "rect" && !screenPorts(backdrop).length))
       ) {
         event.stopPropagation();
         event.preventDefault();
@@ -409,16 +421,8 @@ class ScreenGraph {
     const move = (event) => {
       if (this.pipeDrawing) {
         const point = graph.snapToGrid(event.clientX, event.clientY);
-        this.pipeDrawing.target = {
-          x: Math.max(0, Math.min(1920, point.x)),
-          y: Math.max(0, Math.min(1080, point.y)),
-        };
-        if (
-          Math.hypot(
-            this.pipeDrawing.target.x - this.pipeDrawing.source.x,
-            this.pipeDrawing.target.y - this.pipeDrawing.source.y,
-          ) >= 10
-        ) {
+        if (Math.hypot(point.x - this.pipeDrawing.source.x, point.y - this.pipeDrawing.source.y) >= 10) {
+          this.pipeDrawing.target = freePipeTarget(event, point);
           const { created, ...definition } = this.pipeDrawing;
           this.emit("pipe", definition);
           this.pipeDrawing.created = true;
@@ -453,12 +457,15 @@ class ScreenGraph {
         ...shapePoints,
       });
     };
-    const up = () => {
+    const up = (event) => {
       this.flushPipes?.();
       if (this.pipeDrawing) {
-        const pipe = this.pipeDrawing;
+        const { created, ...pipe } = this.pipeDrawing;
         this.pipeDrawing = null;
-        if (pipe.created) {
+        if (created) {
+          const point = graph.snapToGrid(event.clientX, event.clientY);
+          if (Math.hypot(point.x - pipe.source.x, point.y - pipe.source.y) >= 10)
+            this.emit("pipe", { ...pipe, target: freePipeTarget(event, point) });
           this.emit("select", [pipe.id]);
           this.emit("tool", "select");
         }
