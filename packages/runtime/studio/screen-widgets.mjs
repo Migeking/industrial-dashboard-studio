@@ -32,6 +32,9 @@ export function screenNumeric(value) {
       ? Number(value)
       : null;
 }
+function widgetTime(value) {
+  return typeof value === "number" ? value : Date.parse(value);
+}
 export function screenSeries(n) {
   return n.params.series?.length
     ? n.params.series
@@ -101,6 +104,8 @@ export function validateScreenWidget(n) {
         throw Error("图表序列定义无效");
       if (s.color !== undefined && !/^#[\da-f]{6}$/i.test(s.color))
         throw Error("序列颜色无效");
+      if (s.qualityField !== undefined && typeof s.qualityField !== "string")
+        throw Error("序列质量字段无效");
       ids.add(s.id);
     }
   }
@@ -233,19 +238,20 @@ export function screenChartResult(
       rows = point.value
         .map((row) => {
           const x = screenField(row, xField);
+          const valid = !s.qualityField ||
+            ["good", "GOOD", true, 1].includes(screenField(row, s.qualityField));
           return {
             x:
               xType === "time"
-                ? typeof x === "number"
-                  ? x
-                  : Date.parse(x)
+                ? widgetTime(x)
                 : x === undefined || x === null
                   ? ""
                   : String(x),
-            y: screenNumeric(screenField(row, s.field)),
+            y: valid ? screenNumeric(screenField(row, s.field)) : null,
           };
         })
         .filter((r) => xType !== "time" || Number.isFinite(r.x));
+      if (xType === "time") rows.sort((a, b) => a.x - b.x);
     }
     if(n.params.rangeActive&&xType==='time'&&rows.length){
       const latest=rows.reduce((max,r)=>Math.max(max,r.x),-Infinity);rows=rows.filter(r=>r.x>=latest-n.params.windowSeconds*1000);
@@ -440,14 +446,15 @@ export function screenTableResult(n, points, mappings) {
           .slice(0, 6)
           .map((field) => ({ field, title: field, format: "text", unit: "" }));
   const rows = [...source];
+  const sortAsTime = columns.some(col => col.field === n.params.sortField && col.format === "time");
   if (n.params.sortField)
     rows.sort((a, b) => {
       const av = screenField(a, n.params.sortField),
         bv = screenField(b, n.params.sortField),
-        an = screenNumeric(av),
-        bn = screenNumeric(bv),
+        an = sortAsTime ? widgetTime(av) : screenNumeric(av),
+        bn = sortAsTime ? widgetTime(bv) : screenNumeric(bv),
         result =
-          an !== null && bn !== null
+          Number.isFinite(an) && Number.isFinite(bn)
             ? an - bn
             : String(av ?? "").localeCompare(String(bv ?? ""), "zh-CN", {
                 numeric: true,
@@ -469,7 +476,7 @@ export function screenTableResult(n, points, mappings) {
           ? "否"
           : "—";
     if (col.format === "time") {
-      const time = typeof value === "number" ? value : Date.parse(value);
+      const time = widgetTime(value);
       return Number.isFinite(time)
         ? new Date(time).toLocaleString("zh-CN", { hour12: false })
         : "—";
