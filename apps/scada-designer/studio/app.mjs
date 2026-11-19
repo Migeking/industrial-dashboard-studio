@@ -8,6 +8,9 @@ import {
   validate,
   csv,
   normalize,
+  datasetFilterProblem,
+  datasetFieldSamples,
+  at,
   pointReasonLabels,
   effectivePollMs,
   protocolMappings,
@@ -1092,6 +1095,32 @@ async function boot() {
         const stamp = sampleReceived.value;
         return normalize(sample.value, currentMap.value, stamp, source.maxAgeMs, stamp);
       });
+      function duplicateDataset() {
+        const base = currentMap.value;
+        if (base?.kind !== "dataset") return;
+        const ids = new Set(config.value.mappings.map(m => m.id));
+        let suffix = 1, id = base.id + ".copy";
+        while (ids.has(id)) id = base.id + ".copy" + ++suffix;
+        config.value.mappings.push({ ...clone(base), id, label: base.label + " 副本" });
+        mappingIndex.value = config.value.mappings.length - 1;
+      }
+      const filterProblem = computed(() =>
+        currentMap.value ? datasetFilterProblem(currentMap.value) : "",
+      );
+      const filterFields = computed(() =>
+        datasetFieldSamples(mappingReadback.value?.datasetInput || []),
+      );
+      const filterValues = computed(() => {
+        const field = currentMap.value?.rowFilter?.field?.trim();
+        const rows = mappingReadback.value?.datasetInput;
+        if (!field || !rows) return [];
+        const options = new Set();
+        for (const row of rows.slice(0, 100)) {
+          const value = at(row, field);
+          if (["string", "number", "boolean"].includes(typeof value)) options.add(String(value));
+        }
+        return [...options];
+      });
       const paths = computed(() => {
         const list = [];
         function visit(v, p) {
@@ -1504,6 +1533,10 @@ async function boot() {
         sourceVersion,
         config,
         currentMap,
+        duplicateDataset,
+        filterProblem,
+        filterFields,
+        filterValues,
         mappingReadback,
         mappingIndex,
         sample,

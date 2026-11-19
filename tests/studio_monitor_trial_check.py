@@ -53,10 +53,18 @@ class Snapshot(BaseHTTPRequestHandler):
             {"occurredAt": "2026-11-19T06:02:00Z", "level": "警告",
              "state": "已恢复", "message": "历史进水液位高", "deviceRef": "level-tank"},
         ]
+        for row in historical:
+            row["equipment"] = {"id": "LT-101"}
+        historical.append({"observedAt": stamp - 1500, "reading": 71, "quality": "good",
+                           "equipment": {"id": "LT-102"}})
+        for row in events:
+            row["area"] = "预处理"
+        events.append({"occurredAt": "2026-11-19T06:08:00Z", "level": "高",
+                       "state": "活动 · 待确认", "message": "外区设备故障", "area": "外区"})
         new_alarm = self.new_alarm
         if new_alarm:
             events.append({"occurredAt": "2026-11-19T06:12:00Z", "level": "高",
-                           "state": "活动 · 待确认", "message": "新到告警 流量偏低"})
+                           "state": "活动 · 待确认", "message": "新到告警 流量偏低", "area": "预处理"})
         points = [
             {"id": "LT-101.PV", "value": self.level_raw, "kind": "number", "label": "进水液位", "unit": "原码"},
             {"id": "history", "value": historical, "kind": "dataset", "label": "进水历史", "unit": "m"},
@@ -183,6 +191,38 @@ def exercise(browser, base, source):
     expect(connection.get_by_text("已对照 3 / 3 个。", exact=False)).to_be_visible()
     editor.screenshot(path=str(OUT / "point-review.png"))
     connection.get_by_role("button", name="采用对照结果", exact=True).click()
+    points = connection.get_by_label("测点", exact=True)
+    filtration = connection.get_by_role("group", name="数据集行筛选")
+
+    def add_filter(index, field, value):
+        points.select_option(index=index)
+        filtration.get_by_role("button", name="添加行筛选").click()
+        expect(filtration.get_by_role("status")).to_contain_text("请输入筛选字段")
+        expect(filtration.locator(f'#dataset-filter-fields option[value="{field}"]')).to_have_count(1)
+        filtration.get_by_label("筛选字段").fill(field)
+        expect(filtration.locator(f'#dataset-filter-values option[value="{value}"]')).to_have_count(1)
+        return filtration.get_by_label("筛选匹配值")
+
+    matching_value = add_filter(1, "equipment.id", "LT-101")
+    matching_value.fill("不存在的点")
+    expect(filtration.get_by_role("status")).to_contain_text("命中 0 / 4 行")
+    matching_value.fill("LT-101")
+    expect(filtration.get_by_role("status")).to_contain_text("命中 3 / 4 行")
+    expect(connection.get_by_role("button", name="应用数据配置", exact=True)).to_be_in_viewport()
+    editor.screenshot(path=str(OUT / "dataset-filter-preview.png"))
+    connection.get_by_role("button", name="复制数据集").click()
+    expect(connection.locator("select[aria-label='测点'] option:checked")).to_contain_text("history.copy")
+    expect(filtration.get_by_label("筛选字段")).to_have_value("equipment.id")
+    matching_value.fill("LT-102")
+    expect(filtration.get_by_role("status")).to_contain_text("命中 1 / 4 行")
+    points.select_option(index=1)
+    expect(matching_value).to_have_value("LT-101")
+    points.select_option(index=3)
+    filtration.get_by_role("button", name="清除行筛选").click()
+    expect(filtration.get_by_role("button", name="添加行筛选")).to_be_visible()
+    connection.get_by_role("button", name="移除测点").click()
+    add_filter(2, "area", "预处理").fill("预处理")
+    expect(filtration.get_by_role("status")).to_contain_text("命中 3 / 4 行")
     connection.get_by_role("button", name="应用数据配置", exact=True).click()
     expect(connection).to_have_count(0)
     editor.get_by_role("button", name="撤销", exact=True).click()
@@ -223,16 +263,17 @@ def exercise(browser, base, source):
     editor.get_by_role("button", name="发布", exact=True).click()
     expect(editor.get_by_role("status")).to_contain_text("已发布")
 
-    def runtime_ready():
-        expect(viewer.locator('[data-cell-id="level"]')).to_contain_text("4.50 m", timeout=12000)
-        viewer.wait_for_function("""() => {
+    def runtime_ready(page=viewer):
+        expect(page.locator('[data-cell-id="level"]')).to_contain_text("4.50 m", timeout=12000)
+        page.wait_for_function("""() => {
             const host = document.querySelector('[data-cell-id="history"] .screen-chart-host');
             const data = host && echarts.getInstanceByDom(host)?.getOption()?.series[0]?.data;
             return data?.length === 3 && String(data.map(p => p[1])) === "3,,4.5";
         }""")
-        events = viewer.locator('[data-cell-id="events"]')
+        events = page.locator('[data-cell-id="events"]')
         expect(events).to_contain_text("活动 · 待确认")
         expect(events).to_contain_text("已恢复")
+        expect(events).not_to_contain_text("外区设备故障")
         messages = events.text_content()
         assert messages.index("格栅压差高") < messages.index("原水液位恢复")
 
@@ -346,8 +387,28 @@ def exercise(browser, base, source):
     expect(pager).to_contain_text("第 1 / 2 页")
     recovery_ms = round((time.monotonic() - reconnect_at) * 1000)
 
+    editor.locator(".project-menu summary").click()
+    with editor.expect_download() as download:
+        editor.get_by_role("button", name="导出离线演示", exact=True).click()
+    offline_path = OUT / "filtered-offline.html"
+    download.value.save_as(offline_path)
+    offline = browser.new_page(offline=True)
+    network = []
+    offline.on("pageerror", lambda error: errors.append(str(error)))
+    offline.on("request", lambda request: network.append(request.url) if request.url.startswith("http") else None)
+    try:
+        offline.goto(offline_path.resolve().as_uri())
+        runtime_ready(offline)
+        assert not network, network
+    finally:
+        offline.close()
+
     original = editor.request.get(base + "/api/published").json()
     assert original["source"]["kind"] == "rest"
+    assert {m["id"]: m["rowFilter"] for m in original["mappings"] if "rowFilter" in m} == {
+        "history": {"field": "equipment.id", "value": "LT-101"},
+        "events": {"field": "area", "value": "预处理"},
+    }
     assert original["nodes"][0]["bindings"] == {"value": "level", "history": "history"}
     level_mapping = next(row for row in original["mappings"] if row["id"] == "level")
     assert level_mapping["keyValue"] == "LT-101.PV"
@@ -436,6 +497,7 @@ def main():
         fixture.server_close()
     result = {"scope": "local read-only upstream fixture", **timings, "verified": [
         "sample field suggestions", "raw and engineering values", "history quality and order",
+        "dataset filter preview and copy, shared device history and alarm filtering through publish and offline export",
         "point crosswalk preserves canvas bindings and conversion with undo/redo",
         "CSV export round trip, row errors are atomic, blank entries preserve selections",
         "point diagnostics show raw out-of-range values, timestamps, device location and disconnect reason",

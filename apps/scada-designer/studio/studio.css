@@ -1425,13 +1425,40 @@ fieldset small {
   background: #e7eef3;
   color: #365568;
 }
-.editor-shell .dialog:not(.tag-dialog) > .primary {
+.editor-shell .dialog:not(.tag-dialog) .connection-actions {
+  position: sticky;
+  bottom: -16px;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  margin: 12px -16px -16px;
+  padding: 10px 16px;
+  border-top: 1px solid #dce5ea;
+  background: #f7f9fb;
+}
+.editor-shell .dialog:not(.tag-dialog) > .primary,
+.editor-shell .dialog:not(.tag-dialog) .connection-actions .primary {
   background: #087f85;
   color: #fff;
   border-color: #087f85;
 }
 .editor-shell .dialog:not(.tag-dialog) button {
   font-size: 13px;
+}
+.editor-shell .dialog:not(.tag-dialog) .columns button {
+  background: #fff;
+  color: #294659;
+  border-color: #b8cbd8;
+}
+.dataset-filter-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.dataset-filter-result > p {
+  margin: 0;
 }
 .editor-shell .dialog:not(.tag-dialog) .connection-context {
   margin: 0 -16px 12px;

@@ -1,3 +1,4 @@
+import { datasetFieldSamples } from "./model.mjs";
 import {
   screenSlots,
   screenRoleSlot,
@@ -38,32 +39,8 @@ function screenWidgetForm(props, emit) {
   return { form, error, commit };
 }
 function widgetFieldSamples(point) {
-  const rows = point?.quality === "good" && Array.isArray(point.value)
-    ? point.value.slice(0, 12) : [];
-  const fields = new Map();
-  const types = { number: "数值", string: "文本", boolean: "布尔" };
-  const add = (row, prefix = "", depth = 0) => {
-    for (const [key, value] of Object.entries(row)) {
-      const field = prefix ? prefix + "." + key : key;
-      if (value && typeof value === "object" && !Array.isArray(value) && depth < 3) {
-        add(value, field, depth + 1);
-        continue;
-      }
-      if (!fields.has(field)) {
-        if (fields.size >= 100) continue;
-        fields.set(field, { field, types: new Set(), examples: new Set() });
-      }
-      if (value == null) continue;
-      const sample = fields.get(field);
-      sample.types.add(types[typeof value] || (Array.isArray(value) ? "数组" : "对象"));
-      if (sample.examples.size < 3 && types[typeof value])
-        sample.examples.add(String(value).slice(0, 72));
-    }
-  };
-  for (const row of rows) add(row);
-  return [...fields.values()].map(({field, types, examples}) => ({
-    field, type: [...types].join(" / ") || "空值", example: [...examples].join(" / ") || "—",
-  }));
+  return point?.quality === "good" && Array.isArray(point.value)
+    ? datasetFieldSamples(point.value) : [];
 }
 
 const ScreenWidgetSource = {

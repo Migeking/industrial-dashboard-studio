@@ -41,6 +41,37 @@ assert.equal(reconciled.conversion, baseline.conversion);
 assert.equal(normalize(snapshotPayload, reconciled, time, 1000, time).value, 4.5);
 assert.equal(normalize(snapshotPayload, reconciled, time, 1000, time).timestamp, time - 100);
 assert.equal(normalize(snapshotPayload, reconciled, time, 50, time).quality, "stale");
+const fullDataset = [
+  { equipment: { id: "P-01" }, value: 0, quality: "good", running: false },
+  { equipment: { id: "P-02" }, value: 12, quality: "good", running: true },
+  { equipment: { id: "P-01" }, value: 999, quality: "bad" },
+  { value: 42 },
+];
+const dataset = {
+  id: "dataset.history", kind: "dataset", path: "records", scale: 1, offset: 0, precision: 2,
+  rowFilter: { field: "equipment.id", value: "P-01" },
+};
+const normalizeDataset = (mapping, now = time) =>
+  normalize({ records: fullDataset }, mapping, time, 1000, now);
+assert.deepEqual(normalizeDataset(dataset).value, [fullDataset[0], fullDataset[2]]);
+assert.equal(normalizeDataset(dataset).rawValue, fullDataset);
+assert.equal(normalizeDataset(dataset, time + 1001).value, null);
+assert.equal(normalizeDataset(dataset, time + 1001).quality, "stale");
+assert.deepEqual(normalizeDataset({ ...dataset, rowFilter: { field: "running", value: "false" } }).value,
+  [fullDataset[0]]);
+assert.deepEqual(normalizeDataset({ ...dataset, rowFilter: { field: "value", value: "0" } }).value,
+  [fullDataset[0]]);
+assert.deepEqual(normalizeDataset({ ...dataset, rowFilter: { field: "equipment.id", value: "p-01" } }).value, []);
+assert.equal(normalizeDataset({ ...dataset, rowFilter: { field: "", value: "P-01" } }).reason,
+  "invalid-row-filter");
+const filterDoc = { ...doc, mappings: [...doc.mappings, dataset] };
+validate(filterDoc, false);
+assert.throws(() => validate({ ...doc, mappings: [{ ...dataset, rowFilter: { field: "equipment.id", value: "" } }] }, false),
+  /dataset.history · 请输入筛选匹配值/);
+assert.throws(() => validate({ ...doc, mappings: [{ ...dataset, kind: "number" }] }, false),
+  /筛选仅适用于行数据集/);
+assert.deepEqual(snapshotPointMapping(dataset, "history").rowFilter, dataset.rowFilter);
+
 const specialPoint = { ...baseline, id: "-backup", label: '试验 "位号", 输入', kind: "number" };
 const specialSource = '=-LT,"A"';
 const crosswalkSamples = new Map([[snapshotLevel.id, snapshotLevel], [specialSource, { kind: "number" }]]);

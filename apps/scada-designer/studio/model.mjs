@@ -74,6 +74,7 @@ export const pointReasonLabels = {
   "invalid-boolean": "输入不是有效开关量",
   "invalid-type": "输入类型不匹配",
   "invalid-conversion": "换算参数无效",
+  "invalid-row-filter": "数据集筛选配置无效",
   "out-of-range": "原值超出输入量程",
   "too-old": "超过最大数据年龄",
   "disconnected": "数据源连接中断",
@@ -457,7 +458,7 @@ export function validate(doc, publishing) {
       ![m.scale, m.offset].every(Number.isFinite)
     )
       fail("测点编号、类型、路径或换算参数无效");
-    const problem = engineeringProblem(m);
+    const problem = engineeringProblem(m) || datasetFilterProblem(m);
     if (problem) fail(m.id + " · " + problem);
     ids.add(m.id);
   }
@@ -679,6 +680,49 @@ export function at(data, path) {
       data,
     );
 }
+export function datasetFieldSamples(rows) {
+  const fields = new Map();
+  const types = { number: "数值", string: "文本", boolean: "布尔" };
+  const add = (row, prefix = "", depth = 0) => {
+    for (const [key, value] of Object.entries(row)) {
+      const field = prefix ? prefix + "." + key : key;
+      if (value && typeof value === "object" && !Array.isArray(value) && depth < 3) {
+        add(value, field, depth + 1);
+        continue;
+      }
+      if (!fields.has(field)) {
+        if (fields.size >= 100) continue;
+        fields.set(field, { field, types: new Set(), examples: new Set() });
+      }
+      if (value == null) continue;
+      const sample = fields.get(field);
+      sample.types.add(types[typeof value] || (Array.isArray(value) ? "数组" : "对象"));
+      if (sample.examples.size < 3 && types[typeof value])
+        sample.examples.add(String(value).slice(0, 72));
+    }
+  };
+  for (const row of rows.slice(0, 12)) add(row);
+  return [...fields.values()].map(({field, types, examples}) => ({
+    field, type: [...types].join(" / ") || "空值", example: [...examples].join(" / ") || "—",
+  }));
+}
+
+export function datasetFilterProblem(mapping) {
+  const filter = mapping.rowFilter;
+  if (filter === undefined) return "";
+  if (mapping.kind !== "dataset") return "筛选仅适用于行数据集";
+  if (!filter || typeof filter.field !== "string" || !filter.field.trim())
+    return "请输入筛选字段";
+  if (typeof filter.value !== "string" || !filter.value.trim())
+    return "请输入筛选匹配值";
+  return "";
+}
+
+function matchDatasetRow(row, { field, value }) {
+  const candidate = at(row, field.trim());
+  return ["string", "number", "boolean"].includes(typeof candidate) && String(candidate) === value;
+}
+
 export function normalize(payload, m, receivedAt, maxAgeMs, now = Date.now()) {
   const root = at(payload, m.root);
   const record =
@@ -694,7 +738,7 @@ export function normalize(payload, m, receivedAt, maxAgeMs, now = Date.now()) {
   const timestamp = typeof stamp === "number" ? stamp : Date.parse(stamp);
   const q = m.qualityPath ? at(record, m.qualityPath) : "good";
   const sourceDetail = m.qualityReasonPath ? at(record, m.qualityReasonPath) : null;
-  let reason = "";
+  let reason = "", datasetInput;
   if (record == null) reason = "missing-record";
   else if (q === "offline") reason = "disconnected";
   else if (q === "stale") reason = "too-old";
@@ -738,8 +782,13 @@ export function normalize(payload, m, receivedAt, maxAgeMs, now = Date.now()) {
     if (
       !Array.isArray(value) ||
       !value.every((r) => r && typeof r === "object" && !Array.isArray(r))
-    )
+    ) {
       reason ||= "invalid-type";
+    } else if (m.rowFilter !== undefined) {
+      datasetInput = value;
+      if (datasetFilterProblem(m)) reason ||= "invalid-row-filter";
+      else if (!reason) value = value.filter(row => matchDatasetRow(row, m.rowFilter));
+    }
   } else if (typeof value !== "string") reason ||= "invalid-type";
   if (!reason && now - timestamp > maxAgeMs) reason = "too-old";
   const quality = reason === "disconnected" ? "offline" :
@@ -747,6 +796,7 @@ export function normalize(payload, m, receivedAt, maxAgeMs, now = Date.now()) {
   return {
     value: quality === "good" ? value : null,
     rawValue,
+    ...(datasetInput ? { datasetInput } : {}),
     quality,
     reason,
     timestamp,

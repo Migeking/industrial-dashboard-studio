@@ -943,6 +943,7 @@
                   </option>
                 </select></label
               ><button @click="addMap">新增测点</button>
+              <button v-if="currentMap?.kind === 'dataset'" @click="duplicateDataset">复制数据集</button>
               <button
                 v-if="currentMap"
                 @click="
@@ -966,7 +967,10 @@
                 </datalist>
                 <div class="pair">
                   <label
-                    >类型<select v-model="currentMap.kind" @change="currentMap.kind !== 'number' && delete currentMap.conversion">
+                    >类型<select v-model="currentMap.kind" @change="
+                    if (currentMap.kind !== 'number') delete currentMap.conversion;
+                    if (currentMap.kind !== 'dataset') delete currentMap.rowFilter;
+                  ">
                       <option value="number">数值</option>
                       <option value="boolean">布尔</option>
                       <option value="text">文本</option>
@@ -974,9 +978,37 @@
                     </select></label
                   ><label>单位<input v-model="currentMap.unit" /></label>
                 </div>
+                <fieldset v-if="currentMap.kind === 'dataset'" class="definition-card">
+                  <legend>数据集行筛选</legend>
+                  <button v-if="!currentMap.rowFilter" @click="currentMap.rowFilter = { field: '', value: '' }">
+                    添加行筛选
+                  </button>
+                  <template v-else>
+                    <div class="pair">
+                      <label>筛选字段<input v-model="currentMap.rowFilter.field" list="dataset-filter-fields"
+                        :aria-invalid="!!filterProblem && !currentMap.rowFilter.field?.trim()" /></label>
+                      <datalist id="dataset-filter-fields">
+                        <option v-for="field in filterFields" :key="field.field" :value="field.field">
+                          {{field.type}} · {{field.example}}
+                        </option>
+                      </datalist>
+                      <label>字段值等于<input aria-label="筛选匹配值" v-model="currentMap.rowFilter.value" list="dataset-filter-values"
+                        :aria-invalid="!!filterProblem && !currentMap.rowFilter.value?.trim()" /></label>
+                      <datalist id="dataset-filter-values"><option v-for="value in filterValues" :key="value" :value="value"></option></datalist>
+                    </div>
+                    <div class="dataset-filter-result">
+                      <p v-if="filterProblem" class="definition-error" role="status">{{filterProblem}}</p>
+                      <p v-else-if="mappingReadback?.quality === 'good'" role="status">
+                        命中 {{mappingReadback.value.length}} / {{mappingReadback.datasetInput.length}} 行
+                      </p>
+                      <p v-else class="muted" role="status">读取有效样本后查看命中行数。</p>
+                      <button @click="delete currentMap.rowFilter">清除行筛选</button>
+                    </div>
+                  </template>
+                </fieldset>
                 <point-conversion :mapping="currentMap" :reading="mappingReadback"></point-conversion>
                 <details>
-                  <summary>行筛选与质量</summary>
+                  <summary>记录定位与质量</summary>
                   <label
                     v-for="(name, k) in {
                       root: '根路径',
@@ -997,9 +1029,11 @@
               ></template>
             </div>
           </div>
-          <button class="primary" @click="applyConfig" :disabled="protocolBusy">
-            应用数据配置
-          </button></template
+          <footer class="connection-actions">
+            <button class="primary" @click="applyConfig" :disabled="protocolBusy">
+              应用数据配置
+            </button>
+          </footer></template
         >
         <template v-else
           ><p v-if="!versionInfo.versions.length">尚无发布版本</p>
