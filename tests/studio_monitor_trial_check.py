@@ -1,4 +1,5 @@
 """Exercise a read-only upstream snapshot, historical quality, event order and rollback."""
+import hashlib
 import json
 import os
 import socket
@@ -87,6 +88,9 @@ def make_doc(source):
         {field:'state',title:'状态',format:'text',unit:''},
       ];
       events.sortField='occurredAt'; events.sortDirection='desc';
+      const picture=screenNode('image','sample-image',1450,90);
+      picture.image='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jM4sAAAAASUVORK5CYII=';
+      doc.nodes.push(picture);
       console.log(JSON.stringify(doc));
     """
     return json.loads(subprocess.check_output(["node", "--input-type=module", "-e", script, source], cwd=ROOT))
@@ -150,14 +154,32 @@ def exercise(browser, base):
     recovery_ms = round((time.monotonic() - reconnect_at) * 1000)
 
     original = editor.request.get(base + "/api/published").json()
-    updated = {**original, "title": original["title"] + " · 二版"}
+    recorded = editor.request.get(base + "/api/versions").json()
+    first = recorded["versions"][0]
+    receipt = first["manifest"]
+    assert receipt["projectId"] == "local" and receipt["points"] == 3
+    assert first["documentMatches"] and first["deploymentMatches"]
+    assert receipt["assets"] == [{
+        "symbol": "image", "version": None,
+        "sha256": hashlib.sha256(original["nodes"][-1]["image"].encode()).hexdigest(),
+    }]
+    assert original["source"]["url"] not in json.dumps(receipt)
+    updated = {**original, "title": original["title"] + " · 二版",
+               "mappings": [{**m, "precision": 1} if m["id"] == "level" else m
+                            for m in original["mappings"]]}
     assert editor.request.post(base + "/api/draft", data=updated).ok
     editor.goto(base)
     publish(editor)
     expect(editor.get_by_role("status")).to_contain_text("已发布")
     editor.get_by_role("button", name="版本", exact=True).click()
+    editor.get_by_text("发布追溯", exact=True).first.click()
+    expect(editor.get_by_role("dialog")).to_contain_text("当前部署文件 与发布时一致")
+    versions = editor.request.get(base + "/api/versions").json()["versions"]
+    assert versions[0]["manifest"]["mappingsSha256"] != receipt["mappingsSha256"]
+    assert versions[1]["manifest"] == receipt
     editor.get_by_role("button", name="回退至此版", exact=True).click()
     assert editor.request.get(base + "/api/published").json() == original
+    assert editor.request.get(base + "/api/versions").json()["active"] == recorded["active"]
     viewer.reload()
     runtime_ready()
     assert not errors, errors
@@ -202,7 +224,7 @@ def main():
     result = {"scope": "local read-only upstream fixture", **timings, "verified": [
         "sample field suggestions", "raw and engineering values", "history quality and order",
         "missing source records in publish review", "alarm lifecycle readback",
-        "offline and recovery", "published version rollback",
+        "offline and recovery", "published version rollback", "release manifest and snapshot trace",
     ]}
     (OUT / "results.json").write_text(json.dumps(result, indent=2), "utf-8")
     print(json.dumps(result))

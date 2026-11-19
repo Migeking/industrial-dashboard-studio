@@ -916,7 +916,8 @@
         >
         <template v-else
           ><p v-if="!versionInfo.versions.length">尚无发布版本</p>
-          <p v-for="v in versionInfo.versions">
+          <div v-for="v in versionInfo.versions" :key="v.id" class="review-item">
+            <p>
             {{ new Date(v.time).toLocaleString() }} · {{ v.title }}
             <button
               :disabled="versionInfo.active === v.id"
@@ -924,7 +925,16 @@
             >
               {{ versionInfo.active === v.id ? "当前展示" : "回退至此版" }}
             </button>
-          </p></template
+            </p>
+            <details v-if="v.manifest">
+              <summary>发布追溯</summary>
+              <small>{{ v.manifest.pages }} 张画面 · {{ v.manifest.points }} 个测点 · {{ v.manifest.assets.length }} 份图稿</small>
+              <small>工程文档 {{ v.documentMatches ? '与发布记录一致' : '与发布记录有差异' }}</small>
+              <small :title="v.manifest.mappingsSha256">点表指纹 {{ v.manifest.mappingsSha256.slice(0, 12) }}</small>
+              <small>当前部署文件 {{ v.deploymentMatches ? '与发布时一致' : '与发布时有差异' }}</small>
+            </details>
+            <small v-else>此版本发布时未生成追溯记录。</small>
+          </div></template
         >
       </section>
     </div>
