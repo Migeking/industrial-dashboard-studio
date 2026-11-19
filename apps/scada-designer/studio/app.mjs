@@ -1,3 +1,4 @@
+import {screenControlKinds,screenControlProblem} from '../../../packages/runtime/studio/screen-controls.mjs';
 import {
   types,
   fans,
@@ -18,7 +19,10 @@ import { TagManager } from "./tag-manager.mjs";
 import { isNative, nativeTypes, nativeSlots, nativeSlotMappings, nativeBranch, cloneNativeBranch, nativeRecipes, nativeRecipe, nativeBlank } from "../../../packages/runtime/studio/native-model.mjs";
 import { NativeStage } from "../../../packages/runtime/studio/native-renderer.mjs";
 import { isScreen, blankScreen, copyScreenSelection,validateScreenAsset,screenAssetProblem } from "../../../packages/runtime/studio/screen-model.mjs";
-import { screenSymbols } from "../../../packages/components/studio/screen-symbols.mjs";
+import { screenDepthArtwork } from "../../../packages/components/studio/screen-artwork.mjs";
+import { waterArtwork } from '../../../packages/components/studio/water-artwork.mjs';
+import { waterEquipment, waterEquipmentGroups } from '../../../packages/components/studio/water-equipment.mjs';
+import { screenSymbols, screenPidSymbols } from "../../../packages/components/studio/screen-symbols.mjs";
 import { ScreenStage } from "../../../packages/runtime/studio/screen-renderer.mjs";
 import { ScreenInspector } from "./screen-inspector.mjs";
 import {ScreenLibrary} from "./screen-library.mjs";
@@ -26,11 +30,14 @@ import {placeScreenSymbol} from "../../../packages/runtime/studio/screen-library
 import {useScreenViewport,ScreenViewportTools,ScreenRulers} from "./screen-viewport.mjs";
 import {screenPages,screenPageView,addScreenPage,screenPageForNode,screenPageItems,removeScreenPage,screenActionProblem} from "../../../packages/runtime/studio/screen-pages.mjs";
 import {ScreenPageNavigator} from "./screen-pages.mjs";
-import {screenThemes,screenPurposes,applyScreenPurpose,applyScreenTheme,applyScreenNodeTheme,applyScreenNodeDefaults} from "../../../packages/runtime/studio/screen-themes.mjs";
+import {screenDrawingAppearances,applyScreenAppearance,screenThemes,screenPurposes,applyScreenPurpose,applyScreenTheme,applyScreenNodeTheme,applyScreenNodeDefaults} from "../../../packages/runtime/studio/screen-themes.mjs";
 const screenPaletteGroups = {
-  devices: { label: "独立设备图元", symbols: ["pump", "valve", "checkValve", "tank", "fan", "junction"] },
+  devices: { label: "独立设备", symbols: ["pump", "valve", "checkValve", "tank", "fan", ...waterEquipmentGroups.devices] },
+  units: { label:'成套工艺单元', symbols:waterEquipmentGroups.units },
   measurements: { label: "数据与素材", symbols: ["readout", "trend", "image"] },
-  widgets: { label: "驾驶舱组件", symbols: ["status", "barGauge", "gauge", "barChart", "pieChart", "table", "events", "button"] },
+  widgets: { label: "驾驶舱组件", symbols: ["modeSwitch", "numberStepper", "trendRange", "status", "barGauge", "gauge", "barChart", "pieChart", "table", "events", "button"] },
+  pid: { label: "工业控制 · P&ID", symbols: Object.keys(screenPidSymbols) },
+  shapes: { label:'基础图形与管网', symbols:['junction','rect','ellipse','line','polyline','polygon','text'] },
 };
 const offline = window.OFFLINE;
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -93,9 +100,14 @@ async function boot() {
           [...doc.value.nodes,...(isScreen(doc.value)?doc.value.pipes:[])].find((n) => n.id === ids.value.at(-1)),
         );
       const screen = computed(()=>isScreen(doc.value)), screenTool = ref("select"), libraryTab = ref("symbols");
+      const componentQuery=ref(''),componentCategory=ref('all');
+      const componentCategories={all:'全部组件',units:'成套工艺单元',devices:'独立设备',pid:'工业控制 · P&ID',measurements:'数据与素材',widgets:'驾驶舱组件',shapes:'基础图形与管网'};
+      const componentArtwork={...screenDepthArtwork,...waterArtwork};
       const screenPaletteSections = computed(() => {
         const preset = screenPurposes[doc.value.canvas?.purpose] || screenPurposes.process;
-        return preset.groups.map((key) => ({ key, ...screenPaletteGroups[key] }));
+        const order=preset.groups[0]==='widgets'?['widgets','measurements','pid','units','devices','shapes']:['units','devices','pid','measurements','widgets','shapes'];
+        const query=componentQuery.value.trim().toLowerCase();
+        return order.filter(key=>componentCategory.value==='all'||componentCategory.value===key).map(key=>({key,...screenPaletteGroups[key],symbols:screenPaletteGroups[key].symbols.filter(symbol=>!query||[symbol,screenSymbols[symbol].label,waterEquipment[symbol]?.keywords].join(' ').toLowerCase().includes(query))})).filter(group=>group.symbols.length);
       });
       const screenView=useScreenViewport(stage,screen,editing,zoom);
       const pages=computed(()=>screen.value?screenPages(project.value):[]),publishedUrl=computed(()=>"/view"+(screen.value&&activePageId.value!=="main"?"?page="+encodeURIComponent(activePageId.value):""));
@@ -104,6 +116,13 @@ async function boot() {
       function switchScreenPage(id){if(!pages.value.some(p=>p.id===id)){message.value="目标画面已不存在";return;}if(activePageId.value===id)return;activePageId.value=id;ids.value=[];screenTool.value="select";screenView.fit();if(viewer)window.history.replaceState(null,"",publishedUrl.value);}
       function addPage(){snapshot();const page=addScreenPage(project.value,crypto.randomUUID());switchScreenPage(page.id);preview.value=false;activeStep.value="canvas";message.value="已添加空白画面，连接、点表和我的图元共用。";}
       function pageAction(key,value){try{if(key==="rename"){if(!value?.trim())throw Error("请填写画面名称");snapshot();doc.value.title=value.trim();}else if(key==="home"){snapshot();project.value.defaultPageId=activePageId.value;}else if(key==="remove"){removeScreenPage(clone(project.value),activePageId.value);snapshot();removeScreenPage(project.value,activePageId.value);switchScreenPage("main");}message.value="画面设置已更新";}catch(e){message.value=e.message;}}
+      function openWorkspaceCategory(category) {
+        componentCategory.value = category;
+        componentQuery.value = "";
+        libraryTab.value = "symbols";
+        screenView.leftCollapsed = false;
+        if (activeStep.value === "scene") goStep("canvas");
+      }
       const screenItems = computed(()=>[...doc.value.nodes,...(screen.value?doc.value.pipes:[])]);
       function screenLayerName(item) {
         if (item.type !== "pipe" || item.title !== "工艺管道") return item.title;
@@ -111,6 +130,26 @@ async function boot() {
           ("开放端 (" + Math.round(end.x) + ", " + Math.round(end.y) + ")");
         return label(item.source) + " → " + label(item.target);
       }
+      const screenLayerSections = computed(() => {
+        const groups = [
+          { key:"overlay", label:"前景 · 标注与数据", items:[] },
+          { key:"equipment", label:"设备与工艺", items:[] },
+          { key:"pipes", label:"管线与接头", items:[] },
+          { key:"background", label:"背景与底板", items:[] },
+        ];
+        const query = layerSearch.value.trim().toLowerCase();
+        const foreground = new Set([...screenPaletteGroups.measurements.symbols, ...screenPaletteGroups.widgets.symbols,
+          "pidInstrument", "pidInterlock", "text"]);
+        for (const node of [...screenItems.value].sort((a,b)=>(b.z??0)-(a.z??0))) {
+          const description = screenLayerName(node) + " " + (screenSymbols[node.symbol]?.label || "管道");
+          if (query && !description.toLowerCase().includes(query)) continue;
+          const group = node.type === "pipe" || node.symbol === "junction" ? 2
+            : node.z < 0 ? 3
+            : foreground.has(node.symbol) ? 0 : 1;
+          groups[group].items.push(node);
+        }
+        return groups.filter(group=>group.items.length);
+      });
       function newScreen() {
         if(screen.value)return addPage();
         snapshot();
@@ -125,6 +164,17 @@ async function boot() {
         snapshot();
         applyScreenPurpose(doc.value, purpose);
       }
+      function setScreenDrawingAppearance(value) {
+        if (!Object.hasOwn(screenDrawingAppearances,value)) return;
+        snapshot(); doc.value.canvas.appearance=value;
+      }
+      function applyDrawingAppearance(selectedOnly) {
+        const targets=selectedOnly?ids.value:undefined;
+        if (selectedOnly&&!targets.length) { message.value="请先选择需要换外观的设备或管道。"; return; }
+        snapshot();
+        const count=applyScreenAppearance(doc.value,doc.value.canvas.appearance||"classic",targets);
+        message.value=`已更新 ${count} 个对象的外观；锁定对象和自带图稿已保留。`;
+      }
       function screenSelect(selected) { ids.value=selected; }
       function screenGeometry(change) {
         const n=doc.value.nodes.find((n)=>n.id===change.id); if(!n||n.locked)return;
@@ -133,15 +183,21 @@ async function boot() {
         n.w=Math.max(16,Math.min(1920,n.w)); n.h=Math.max(16,Math.min(1080,n.h));
         n.x=Math.max(0,Math.min(1920-n.w,n.x)); n.y=Math.max(0,Math.min(1080-n.h,n.y));
       }
-      function screenInsert(n) {applyScreenNodeDefaults(n,doc.value.canvas);doc.value.nodes.push(n);ids.value=[n.id];inspectorTab.value="appearance";}
+      function screenInsert(n) {if(componentArtwork[n.symbol])n.params.appearance="depth";applyScreenNodeDefaults(n,doc.value.canvas);doc.value.nodes.push(n);ids.value=[n.id];inspectorTab.value="appearance";}
       function screenPipe(pipe) {
+
         const index = doc.value.pipes.findIndex((p) => p.id === pipe.id);
         if (index >= 0) {
+          // A drag emits geometry repeatedly from its original definition.
+          // Keep defaults/inspector styling already applied to the saved edge.
+          pipe.style = { ...pipe.style, ...doc.value.pipes[index].style };
           doc.value.pipes[index] = pipe;
           return;
         }
         if (doc.value.canvas.theme === "cockpit-dark")
           pipe.style = { ...pipe.style, color: "#224253", width: 8, appearance: "detailed" };
+        if(doc.value.canvas.appearance) pipe.style.appearance=doc.value.canvas.appearance;
+        if([pipe.source,pipe.target].some(e=>doc.value.nodes.find(n=>n.id===e.nodeId)?.params.appearance==="depth"))pipe.style={...pipe.style,appearance:"depth",width:5};
         doc.value.pipes.push(pipe);
       }
       function setScreenTool(tool) {screenView.panTool=false;screenTool.value=tool;if(tool==="pipe")ids.value=[];}
@@ -317,6 +373,8 @@ async function boot() {
         const binding = bindingProblem(n, doc.value.mappings);
         if (binding) return { tab: "binding", reason: binding };
         if (!screen.value) return null;
+        const control=screenControlProblem(n,screenPages(project.value).find(p=>p.nodes.some(item=>item.id===n.id))||doc.value);
+        if(control)return {tab:'appearance',reason:control};
         const asset = screenAssetProblem(n);
         if (asset) return { tab: "appearance", reason: asset };
         const action = screenActionProblem(n, project.value);
@@ -324,7 +382,7 @@ async function boot() {
       }
       const bindingNodes = computed(() => {
         const items = screen.value ? screenPageItems(project.value) : screenItems.value;
-        return items.filter((n) => mapped(n) || (screen.value && (screenAssetProblem(n) || n.action?.type && n.action.type !== "none")));
+        return items.filter((n) => mapped(n) || (screen.value && (screenControlKinds.has(n.symbol) || screenAssetProblem(n) || n.action?.type && n.action.type !== "none")));
       });
       const bindingReason = (n) => reviewIssue(n)?.reason || "";
       const bindingIssueLabel = (n) => (reviewIssue(n)?.tab === "binding" ? "去绑定：" : "去配置：") + n.title;
@@ -1160,7 +1218,8 @@ async function boot() {
         reader.readAsDataURL(file);
       }
       return {
-        screen,screenSymbols,screenTool,libraryTab,screenItems,screenLayerName,newScreen,screenSelect,screenGeometry,screenInsert,screenPipe,setScreenTool,screenDrag,screenCommand,screenLibraryPlace,screenView,screenThemes,setScreenTheme,screenPurposes,screenPaletteSections,setScreenPurpose,project,pages,activePageId,publishedUrl,bindingReason,bindingIssueLabel,switchScreenPage,addPage,pageAction,
+        componentQuery,componentCategory,componentCategories,componentArtwork,waterEquipment,
+        screenDepthArtwork,screenDrawingAppearances,setScreenDrawingAppearance,applyDrawingAppearance,screen,screenSymbols,screenTool,libraryTab,screenItems,screenLayerName,screenLayerSections,openWorkspaceCategory,newScreen,screenSelect,screenGeometry,screenInsert,screenPipe,setScreenTool,screenDrag,screenCommand,screenLibraryPlace,screenView,screenThemes,setScreenTheme,screenPurposes,screenPaletteSections,setScreenPurpose,project,pages,activePageId,publishedUrl,bindingReason,bindingIssueLabel,switchScreenPage,addPage,pageAction,
         native, legacyTypes, nativeRecipes, addNative, nativeSelect, nativeMove, nativePatch, nativeRects, rectValue, rectDraft, rectInputValue, startRect, chosenDataMode, nodeCount, pipePoints, updatePipe,
         navigatorNodes, depth, expandable, collapsed, toggleTree, layerSearch, hasBindings, nativeBindingTargets, nativeSlots, nativeSlotMappings, nativeBinding, nativeReadback,
         activeStep,

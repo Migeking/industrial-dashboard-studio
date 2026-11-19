@@ -1,0 +1,2773 @@
+{
+  "format": "screen-document",
+  "version": 1,
+  "template": "blank",
+  "title": "05 污泥回流泵站 · 通用图元实测",
+  "canvas": {
+    "width": 1920,
+    "height": 1080,
+    "background": "#080f16",
+    "theme": "cockpit-dark",
+    "appearance": "depth"
+  },
+  "source": {
+    "kind": "json",
+    "data": "{\"points\": [{\"id\": \"P-01.run\", \"label\": \"P-01 运行反馈\", \"kind\": \"boolean\", \"value\": true, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-01.fault\", \"label\": \"P-01 故障反馈\", \"kind\": \"boolean\", \"value\": false, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-01.hz\", \"label\": \"P-01 频率\", \"kind\": \"number\", \"value\": 38.5, \"unit\": \"Hz\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-01.mode\", \"label\": \"P-01 工作模式\", \"kind\": \"text\", \"value\": \"自动\", \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-01.amps\", \"label\": \"P-01 电流\", \"kind\": \"number\", \"value\": 18.2, \"unit\": \"A\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-01.flow\", \"label\": \"P-01 支路有流量\", \"kind\": \"boolean\", \"value\": true, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-02.run\", \"label\": \"P-02 运行反馈\", \"kind\": \"boolean\", \"value\": true, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-02.fault\", \"label\": \"P-02 故障反馈\", \"kind\": \"boolean\", \"value\": false, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-02.hz\", \"label\": \"P-02 频率\", \"kind\": \"number\", \"value\": 38.5, \"unit\": \"Hz\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-02.mode\", \"label\": \"P-02 工作模式\", \"kind\": \"text\", \"value\": \"自动\", \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-02.amps\", \"label\": \"P-02 电流\", \"kind\": \"number\", \"value\": 18.0, \"unit\": \"A\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-02.flow\", \"label\": \"P-02 支路有流量\", \"kind\": \"boolean\", \"value\": true, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-03.run\", \"label\": \"P-03 运行反馈\", \"kind\": \"boolean\", \"value\": false, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-03.fault\", \"label\": \"P-03 故障反馈\", \"kind\": \"boolean\", \"value\": false, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-03.hz\", \"label\": \"P-03 频率\", \"kind\": \"number\", \"value\": 0, \"unit\": \"Hz\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-03.mode\", \"label\": \"P-03 工作模式\", \"kind\": \"text\", \"value\": \"自动\", \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-03.amps\", \"label\": \"P-03 电流\", \"kind\": \"number\", \"value\": 0, \"unit\": \"A\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-03.flow\", \"label\": \"P-03 支路有流量\", \"kind\": \"boolean\", \"value\": false, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-04.run\", \"label\": \"P-04 运行反馈\", \"kind\": \"boolean\", \"value\": false, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-04.fault\", \"label\": \"P-04 故障反馈\", \"kind\": \"boolean\", \"value\": false, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-04.hz\", \"label\": \"P-04 频率\", \"kind\": \"number\", \"value\": 0, \"unit\": \"Hz\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-04.mode\", \"label\": \"P-04 工作模式\", \"kind\": \"text\", \"value\": \"自动\", \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-04.amps\", \"label\": \"P-04 电流\", \"kind\": \"number\", \"value\": 0, \"unit\": \"A\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-04.flow\", \"label\": \"P-04 支路有流量\", \"kind\": \"boolean\", \"value\": false, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"P-01.interlock\", \"label\": \"P-01 保护联锁\", \"kind\": \"boolean\", \"value\": false, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"HEADER.flowing\", \"label\": \"回流母管有流量\", \"kind\": \"boolean\", \"value\": true, \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"station.runningCount\", \"label\": \"运行泵数（模拟）\", \"kind\": \"number\", \"value\": 2, \"unit\": \"台\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"LT-101.PV\", \"label\": \"集泥井液位\", \"kind\": \"number\", \"value\": 3.24, \"unit\": \"m\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"LT-101.SP\", \"label\": \"液位设定参考值\", \"kind\": \"number\", \"value\": 3.2, \"unit\": \"m\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"FT-101.PV\", \"label\": \"回流总管流量\", \"kind\": \"number\", \"value\": 684, \"unit\": \"m³/h\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"station.permissions\", \"label\": \"控制许可反馈（模拟）\", \"kind\": \"dataset\", \"value\": [{\"检查项\": \"井位高于低限\", \"反馈\": \"正常\"}, {\"检查项\": \"吸入蝶阀 V-in\", \"反馈\": \"全开到位\"}, {\"检查项\": \"出水闸阀 V-out\", \"反馈\": \"全开到位\"}, {\"检查项\": \"停机保护时间锁\", \"反馈\": \"倒计时 0 s\"}, {\"检查项\": \"急停与过载保护\", \"反馈\": \"无动作\"}], \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"alarm.summary\", \"label\": \"当前报警说明\", \"kind\": \"text\", \"value\": \"预警  ·  P-02 轴承温度偏高（演示）\", \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}, {\"id\": \"alarm.events\", \"label\": \"演示报警\", \"kind\": \"dataset\", \"value\": [{\"时间\": \"16:10:20\", \"设备\": \"P-02\", \"level\": \"预警\", \"描述\": \"轴承温度偏高（示例）\"}], \"unit\": \"\", \"receivedAt\": 1795013689980, \"quality\": \"good\"}]}",
+    "url": "",
+    "pollMs": 1000,
+    "maxAgeMs": 10000,
+    "demo": true
+  },
+  "mappings": [
+    {
+      "id": "P-01.run",
+      "label": "P-01 运行反馈",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-01.run",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-01.fault",
+      "label": "P-01 故障反馈",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-01.fault",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-01.hz",
+      "label": "P-01 频率",
+      "unit": "Hz",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-01.hz",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-01.mode",
+      "label": "P-01 工作模式",
+      "unit": "",
+      "kind": "text",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-01.mode",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-01.amps",
+      "label": "P-01 电流",
+      "unit": "A",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-01.amps",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-01.flow",
+      "label": "P-01 支路有流量",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-01.flow",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-02.run",
+      "label": "P-02 运行反馈",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-02.run",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-02.fault",
+      "label": "P-02 故障反馈",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-02.fault",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-02.hz",
+      "label": "P-02 频率",
+      "unit": "Hz",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-02.hz",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-02.mode",
+      "label": "P-02 工作模式",
+      "unit": "",
+      "kind": "text",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-02.mode",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-02.amps",
+      "label": "P-02 电流",
+      "unit": "A",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-02.amps",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-02.flow",
+      "label": "P-02 支路有流量",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-02.flow",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-03.run",
+      "label": "P-03 运行反馈",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-03.run",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-03.fault",
+      "label": "P-03 故障反馈",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-03.fault",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-03.hz",
+      "label": "P-03 频率",
+      "unit": "Hz",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-03.hz",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-03.mode",
+      "label": "P-03 工作模式",
+      "unit": "",
+      "kind": "text",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-03.mode",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-03.amps",
+      "label": "P-03 电流",
+      "unit": "A",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-03.amps",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-03.flow",
+      "label": "P-03 支路有流量",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-03.flow",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-04.run",
+      "label": "P-04 运行反馈",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-04.run",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-04.fault",
+      "label": "P-04 故障反馈",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-04.fault",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-04.hz",
+      "label": "P-04 频率",
+      "unit": "Hz",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-04.hz",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-04.mode",
+      "label": "P-04 工作模式",
+      "unit": "",
+      "kind": "text",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-04.mode",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-04.amps",
+      "label": "P-04 电流",
+      "unit": "A",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-04.amps",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-04.flow",
+      "label": "P-04 支路有流量",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-04.flow",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "P-01.interlock",
+      "label": "P-01 保护联锁",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "P-01.interlock",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "HEADER.flowing",
+      "label": "回流母管有流量",
+      "unit": "",
+      "kind": "boolean",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "HEADER.flowing",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "station.runningCount",
+      "label": "运行泵数（模拟）",
+      "unit": "台",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "station.runningCount",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "LT-101.PV",
+      "label": "集泥井液位",
+      "unit": "m",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "LT-101.PV",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "LT-101.SP",
+      "label": "液位设定参考值",
+      "unit": "m",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "LT-101.SP",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "FT-101.PV",
+      "label": "回流总管流量",
+      "unit": "m³/h",
+      "kind": "number",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "FT-101.PV",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "station.permissions",
+      "label": "控制许可反馈（模拟）",
+      "unit": "",
+      "kind": "dataset",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "station.permissions",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "alarm.summary",
+      "label": "当前报警说明",
+      "unit": "",
+      "kind": "text",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "alarm.summary",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    },
+    {
+      "id": "alarm.events",
+      "label": "演示报警",
+      "unit": "",
+      "kind": "dataset",
+      "path": "value",
+      "root": "points",
+      "keyField": "id",
+      "keyValue": "alarm.events",
+      "timePath": "",
+      "fallbackTimePath": "",
+      "qualityPath": "quality",
+      "scale": 1,
+      "offset": 0,
+      "precision": 2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "9c5e5b96-7df7-4af8-b55e-ca12c068114a",
+      "type": "screen-node",
+      "symbol": "text",
+      "title": "标题",
+      "x": 24,
+      "y": 9,
+      "w": 670,
+      "h": 50,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "transparent",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 29,
+        "align": "left"
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "text": "污泥回流泵站 SCADA 监控"
+    },
+    {
+      "id": "bef4c8e4-f575-4caa-844b-44e364c5658c",
+      "type": "screen-node",
+      "symbol": "text",
+      "title": "数据说明",
+      "x": 1510,
+      "y": 9,
+      "w": 378,
+      "h": 50,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "transparent",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 21,
+        "align": "left"
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "text": "本地模拟   /   只读监视"
+    },
+    {
+      "id": "1c63eccf-9b78-40dd-bdb1-de0de5ad3dbd",
+      "type": "screen-node",
+      "symbol": "rect",
+      "title": "报警条底色",
+      "x": 20,
+      "y": 57,
+      "w": 1880,
+      "h": 31,
+      "angle": 0,
+      "z": -10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#2f1922",
+        "stroke": "#713941",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {}
+    },
+    {
+      "id": "ae63c9e0-e665-418a-bbf9-692ddffe6f81",
+      "type": "screen-node",
+      "symbol": "text",
+      "title": "当前报警",
+      "x": 32,
+      "y": 49,
+      "w": 1300,
+      "h": 50,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "transparent",
+        "stroke": "#426a83",
+        "color": "#ffbdbe",
+        "fontSize": 21,
+        "align": "left"
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {
+        "data_1": "alarm.summary"
+      },
+      "text": "",
+      "dataSlots": [
+        {
+          "key": "data_1",
+          "label": "报警文字",
+          "kinds": [
+            "text"
+          ],
+          "required": false,
+          "role": "text"
+        }
+      ]
+    },
+    {
+      "id": "57069b67-7fb7-4436-b2bb-d471e79eafe6",
+      "type": "screen-node",
+      "symbol": "rect",
+      "title": "回路参数分区",
+      "x": 20,
+      "y": 103,
+      "w": 298,
+      "h": 783,
+      "angle": 0,
+      "z": -10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#0d1d29",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {}
+    },
+    {
+      "id": "e83f16fe-c3bc-42d5-bbf2-2288e68e681c",
+      "type": "screen-node",
+      "symbol": "rect",
+      "title": "工艺管网分区",
+      "x": 330,
+      "y": 103,
+      "w": 1210,
+      "h": 783,
+      "angle": 0,
+      "z": -10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#080f16",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {}
+    },
+    {
+      "id": "029b85b5-5c27-43a2-a79d-203b1bbcb1a0",
+      "type": "screen-node",
+      "symbol": "text",
+      "title": "回路参数标题",
+      "x": 39,
+      "y": 109,
+      "w": 250,
+      "h": 50,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "transparent",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 17,
+        "align": "left"
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "text": "控制回路参数"
+    },
+    {
+      "id": "789e2da3-889f-4e91-a4e6-76bf44f4b68e",
+      "type": "screen-node",
+      "symbol": "text",
+      "title": "工艺标题",
+      "x": 350,
+      "y": 119,
+      "w": 720,
+      "h": 50,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "transparent",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 17,
+        "align": "left"
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "text": "工艺管网   /   二沉池回流"
+    },
+    {
+      "id": "cbac5943-161d-425a-9399-3db4dfb7bc5a",
+      "type": "screen-node",
+      "symbol": "readout",
+      "title": "集泥井液位 PV",
+      "x": 33,
+      "y": 154,
+      "w": 134,
+      "h": 76,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 44,
+        "fontFamily": "Consolas"
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {
+        "value": "LT-101.PV"
+      }
+    },
+    {
+      "id": "9fb3ebe9-45c3-46e9-b893-bb3acf50f371",
+      "type": "screen-node",
+      "symbol": "readout",
+      "title": "设定参考 SP",
+      "x": 174,
+      "y": 154,
+      "w": 132,
+      "h": 76,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 44,
+        "fontFamily": "Consolas"
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {
+        "value": "LT-101.SP"
+      }
+    },
+    {
+      "id": "a496d787-f19d-45ba-b610-3855c218c447",
+      "type": "screen-node",
+      "symbol": "readout",
+      "title": "主泵运行频率",
+      "x": 33,
+      "y": 240,
+      "w": 134,
+      "h": 76,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 44,
+        "fontFamily": "Consolas"
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 1,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {
+        "value": "P-01.hz"
+      }
+    },
+    {
+      "id": "0f90de68-8c9c-4976-8729-db662f9fe879",
+      "type": "screen-node",
+      "symbol": "readout",
+      "title": "运行泵数",
+      "x": 174,
+      "y": 240,
+      "w": 132,
+      "h": 76,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 44,
+        "fontFamily": "Consolas"
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 0,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {
+        "value": "station.runningCount"
+      }
+    },
+    {
+      "id": "740f0d57-0f15-487b-93c2-4d76b2bb6ff2",
+      "type": "screen-node",
+      "symbol": "text",
+      "title": "操作提示",
+      "x": 37,
+      "y": 319,
+      "w": 255,
+      "h": 50,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "transparent",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 15,
+        "align": "left"
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "text": "点击设备查看读数和质量"
+    },
+    {
+      "id": "d6874ab4-4133-4159-8da0-251669512321",
+      "type": "screen-node",
+      "symbol": "table",
+      "title": "控制许可反馈 · 模拟",
+      "x": 1552,
+      "y": 103,
+      "w": 348,
+      "h": 783,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {
+        "value": "station.permissions"
+      }
+    },
+    {
+      "id": "d6b0305e-3435-4ee2-ac80-0e7c91082654",
+      "type": "screen-node",
+      "symbol": "tank",
+      "title": "二沉池集泥井",
+      "x": 338,
+      "y": 220,
+      "w": 252,
+      "h": 516,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "waterColor": "#3887a6",
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "value": "LT-101.PV"
+      },
+      "ports": [
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 76,
+          "direction": "both"
+        }
+      ]
+    },
+    {
+      "id": "7bae12d7-385e-49d4-8e60-9c74e3f985b9",
+      "type": "screen-node",
+      "symbol": "readout",
+      "title": "FT-101",
+      "x": 1286,
+      "y": 409,
+      "w": 136,
+      "h": 114,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 44,
+        "fontFamily": "Consolas"
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "monitor"
+      },
+      "bindings": {
+        "value": "FT-101.PV"
+      },
+      "ports": [
+        {
+          "id": "port-adb75a9d-bbf3-405b-9299-e59e2c621bf4",
+          "label": "流量计入口",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "port-ee0bdf67-5611-4857-85ae-10b4d8a49fc6",
+          "label": "流量计出口",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        }
+      ]
+    },
+    {
+      "id": "38d0e0ab-e6ce-4d2f-bad8-c3290b7bba66",
+      "type": "screen-node",
+      "symbol": "text",
+      "title": "出水方向",
+      "x": 1410,
+      "y": 410,
+      "w": 126,
+      "h": 50,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "transparent",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 17,
+        "align": "left"
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "text": "去生化池 →"
+    },
+    {
+      "id": "48a4fa05-680c-4244-80c3-d0fa5f7376f6",
+      "type": "screen-node",
+      "symbol": "events",
+      "title": "报警与事件 · 本地模拟",
+      "x": 20,
+      "y": 900,
+      "w": 1880,
+      "h": 138,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "columns": [
+          {
+            "field": "时间",
+            "title": "时间",
+            "format": "text",
+            "unit": ""
+          },
+          {
+            "field": "设备",
+            "title": "设备",
+            "format": "text",
+            "unit": ""
+          },
+          {
+            "field": "level",
+            "title": "级别",
+            "format": "text",
+            "unit": ""
+          },
+          {
+            "field": "描述",
+            "title": "描述",
+            "format": "text",
+            "unit": ""
+          }
+        ]
+      },
+      "bindings": {
+        "value": "alarm.events"
+      }
+    },
+    {
+      "id": "aa125012-f362-471a-998c-20b4c1ee3f6a",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "吸水分支 1",
+      "x": 638,
+      "y": 309,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {}
+    },
+    {
+      "id": "9bc426b3-fab4-4e87-b9c4-3a056d67942b",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "汇流分支 1",
+      "x": 1150,
+      "y": 309,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {}
+    },
+    {
+      "id": "e28d4adb-4dce-4267-9ff7-3055cbd57ecd",
+      "type": "screen-node",
+      "symbol": "pump",
+      "title": "P-01",
+      "x": 851,
+      "y": 261,
+      "w": 128,
+      "h": 116,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 1,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-01.run",
+        "fault": "P-01.fault",
+        "value": "P-01.hz",
+        "data_1": "P-01.mode",
+        "data_2": "P-01.amps",
+        "data_3": "P-01.interlock"
+      },
+      "dataSlots": [
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": true,
+          "role": "run"
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": false,
+          "role": "fault"
+        },
+        {
+          "key": "value",
+          "label": "运行数值",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "value"
+        },
+        {
+          "key": "data_1",
+          "label": "工作模式",
+          "kinds": [
+            "text"
+          ],
+          "required": false,
+          "role": "text"
+        },
+        {
+          "key": "data_2",
+          "label": "电机电流",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "extra"
+        },
+        {
+          "key": "data_3",
+          "label": "保护联锁",
+          "kinds": [
+            "boolean"
+          ],
+          "required": false,
+          "role": "extra"
+        }
+      ]
+    },
+    {
+      "id": "e9ed214e-5c51-41bc-abcd-54dc4642d4f7",
+      "type": "screen-node",
+      "symbol": "checkValve",
+      "title": "CV-01 · 止回阀",
+      "x": 1006,
+      "y": 297,
+      "w": 52,
+      "h": 44,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADSCAYAAADwkv2oAAAec0lEQVR42u3de5RV1Z0n8O9vn3PuPee+qiACPhIfOBIVBIVSfGEkY0RRRkOs6qUGxx4VYtaYTGfsTkc769Z1qd09E0yM3RKwtbPaqEOVIaCiZrURFAUFwUciRhyRmLGVV73u+57Hnj9uXawnj7IeF+r7WcvlEv3Dtc853/M7++7f3gARERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERER0dAQDsFhdK20Rn1zsxrTOlEBmzkiX8gMtI7ZHjTX1wcQAQDNMSH6wrTUNzUZHIehVR5jzRc4KywaqGRSq1RKgso/3/bstkTLR38414nWnpfPpAOBVhylAbwCIIETi6t8tm3D2JOmvPbA3Ekd/Y05MbDoEFx//6MJpWLnGbbzA2h9jue5tU68BkEQ8OINOLAApRTy6XaYptUGkY1+IX9fEGQ2PPb9BR0cIQYWHezDpLU0NjZKKpUKbnzo2Xlaq4cD3x1nhmx4xTy01tBau7x0g1BniVgiAjPswCsVoAxrt0hw0y9vmft0MplUjY2NWkQ4t8XAor4/AZMKANYC6vijz15hWqF5vldC4HkakAACxes26MUWoBEAWinTFMMMwXNLT3/82ab5FwMBAKRSKX4iVgnOgVRZWG3dulWOP7puZTgSm+cW8r7veRoiAoHRGVQMq8F9YZfHVkR8z9NuIe+HI7F5xx9dt3Lr1q3S9doQKywqfwcKRHR9fZNhf91ZFYrErih0tLuixOrzPw/4wh+Um1/1nUM60K6dqLFKuczqwov5q5qbG/zKNeKoMbBGfVgl1641PvxzKYxMcbkdTVyR72jrHVbluSso04QVCqO8dojPz4Bve63hlooIPA8i0jme3UPLSdRahWzHasTCf3HyV0LF1MUX+wytkWVyCEbWwmXLzNSiRe51P19xZ/yoCVdkWnYXRUm4x0Q8lGEgFAoj296KDzZtQOD7fN18gZkrZRg4Yco0RGvGlIPL98vBta/6EiufbivGxo67Ir1n5+2pG+akFi5dai0DXA4gKyyM1sWKzQ0NwYIHV/5nw7J/47luGIFvdn1ytNYwQyEUs1lsf/sN7HhnC7JtbZ3VFS/fwOfaBdHaWpw4dTomTqtD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Fi5dai1btMi97ucrkvGjJjRmWnYXRSTc69BUw4AVCiPb3oo//eFtBL7Pq/cF8koZBk6YMg3RmjFwS0UEvt9r3kprXYyNHRdO79nZ+Pj35qcq14oDyMAazbsuSHLtWuPDP5fCyBSX29HEFfmONleUWH3tf6VME1Yo3DmXxS+TAd/2WpeDqrLWrWdYBdp1ErVWIduxGrHwX5z8lVAxdfHFPj8HGViktUBE19c3GfbXnVWhSOyKQkd779Dqsk6Lhu4gCh1o107UWKVcZnXhxfxVzc0NfuUacdQYWAQgmUwqANi6davYX79hVTgSv6KQbvc1tBIuxhqurZO1QAI7XmMUc+nVhRf/7arTTz9dA0AqleJbgoFFfYXWWkAdf/TZK0wrNM/3Sgg8TwMSQPb9qsvrNoibj0IjALRSpimGGYLnlp7++LNN8y8GAoYVA4v2/5aXxsZGSaVSwY0PPTtPa/Vw4LvjzJANr5iv7OPu8tINwppdEUtEYIYdeKUClGHtFglu+uUtc59OJpOqsbFRCz8DGVh08K6//9GEUrHzDNv5AbQ+x/PcWidegyAIePG+QFmllEI+3Q7TtNogstEv5O8LgsyGx76/oIMjxMCiAX0iapVKyb7Pkdue3ZZo+egP5zrR2vPymXQg0Fz4O7DaKnBicZXPtm0Ye9KU1x6YO6mjvzEnokN7vKS+qcngOAyt8hhrvsBZYdGgXSutUd/crMa0TlTAZo7IFzIDrWO2B8319UHnGizOVREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREQ2+/w9uwzAnYtm7JQAAAABJRU5ErkJggg=="
+    },
+    {
+      "id": "0ae358e8-d281-4cec-9b05-96ee7c1553da",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "吸水分支 2",
+      "x": 638,
+      "y": 407,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {}
+    },
+    {
+      "id": "d605b55e-e1fe-4ced-afe4-1dced2bb17b5",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "汇流分支 2",
+      "x": 1150,
+      "y": 407,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {}
+    },
+    {
+      "id": "e0ef7c99-7e0d-4b2a-8d8e-beb269171f38",
+      "type": "screen-node",
+      "symbol": "pump",
+      "title": "P-02",
+      "x": 851,
+      "y": 359,
+      "w": 128,
+      "h": 116,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 1,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-02.run",
+        "fault": "P-02.fault",
+        "value": "P-02.hz",
+        "data_1": "P-02.mode",
+        "data_2": "P-02.amps"
+      },
+      "dataSlots": [
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": true,
+          "role": "run"
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": false,
+          "role": "fault"
+        },
+        {
+          "key": "value",
+          "label": "运行数值",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "value"
+        },
+        {
+          "key": "data_1",
+          "label": "工作模式",
+          "kinds": [
+            "text"
+          ],
+          "required": false,
+          "role": "text"
+        },
+        {
+          "key": "data_2",
+          "label": "电机电流",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "extra"
+        }
+      ]
+    },
+    {
+      "id": "54922989-a78b-4c92-9b66-85bfb7429796",
+      "type": "screen-node",
+      "symbol": "checkValve",
+      "title": "CV-02 · 止回阀",
+      "x": 1006,
+      "y": 395,
+      "w": 52,
+      "h": 44,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADSCAYAAADwkv2oAAAec0lEQVR42u3de5RV1Z0n8O9vn3PuPee+qiACPhIfOBIVBIVSfGEkY0RRRkOs6qUGxx4VYtaYTGfsTkc769Z1qd09E0yM3RKwtbPaqEOVIaCiZrURFAUFwUciRhyRmLGVV73u+57Hnj9uXawnj7IeF+r7WcvlEv3Dtc853/M7++7f3gARERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERER0dAQDsFhdK20Rn1zsxrTOlEBmzkiX8gMtI7ZHjTX1wcQAQDNMSH6wrTUNzUZHIehVR5jzRc4KywaqGRSq1RKgso/3/bstkTLR38414nWnpfPpAOBVhylAbwCIIETi6t8tm3D2JOmvPbA3Ekd/Y05MbDoEFx//6MJpWLnGbbzA2h9jue5tU68BkEQ8OINOLAApRTy6XaYptUGkY1+IX9fEGQ2PPb9BR0cIQYWHezDpLU0NjZKKpUKbnzo2Xlaq4cD3x1nhmx4xTy01tBau7x0g1BniVgiAjPswCsVoAxrt0hw0y9vmft0MplUjY2NWkQ4t8XAor4/AZMKANYC6vijz15hWqF5vldC4HkakAACxes26MUWoBEAWinTFMMMwXNLT3/82ab5FwMBAKRSKX4iVgnOgVRZWG3dulWOP7puZTgSm+cW8r7veRoiAoHRGVQMq8F9YZfHVkR8z9NuIe+HI7F5xx9dt3Lr1q3S9doQKywqfwcKRHR9fZNhf91ZFYrErih0tLuixOrzPw/4wh+Um1/1nUM60K6dqLFKuczqwov5q5qbG/zKNeKoMbBGfVgl1641PvxzKYxMcbkdTVyR72jrHVbluSso04QVCqO8dojPz4Bve63hlooIPA8i0jme3UPLSdRahWzHasTCf3HyV0LF1MUX+wytkWVyCEbWwmXLzNSiRe51P19xZ/yoCVdkWnYXRUm4x0Q8lGEgFAoj296KDzZtQOD7fN18gZkrZRg4Yco0RGvGlIPL98vBta/6EiufbivGxo67Ir1n5+2pG+akFi5dai0DXA4gKyyM1sWKzQ0NwYIHV/5nw7J/47luGIFvdn1ytNYwQyEUs1lsf/sN7HhnC7JtbZ3VFS/fwOfaBdHaWpw4dTomTqtD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Fi5dai1btMi97ucrkvGjJjRmWnYXRSTc69BUw4AVCiPb3oo//eFtBL7Pq/cF8koZBk6YMg3RmjFwS0UEvt9r3kprXYyNHRdO79nZ+Pj35qcq14oDyMAazbsuSHLtWuPDP5fCyBSX29HEFfmONleUWH3tf6VME1Yo3DmXxS+TAd/2WpeDqrLWrWdYBdp1ErVWIduxGrHwX5z8lVAxdfHFPj8HGViktUBE19c3GfbXnVWhSOyKQkd779Dqsk6Lhu4gCh1o107UWKVcZnXhxfxVzc0NfuUacdQYWAQgmUwqANi6davYX79hVTgSv6KQbvc1tBIuxhqurZO1QAI7XmMUc+nVhRf/7arTTz9dA0AqleJbgoFFfYXWWkAdf/TZK0wrNM/3Sgg8TwMSQPb9qsvrNoibj0IjALRSpimGGYLnlp7++LNN8y8GAoYVA4v2/5aXxsZGSaVSwY0PPTtPa/Vw4LvjzJANr5iv7OPu8tINwppdEUtEYIYdeKUClGHtFglu+uUtc59OJpOqsbFRCz8DGVh08K6//9GEUrHzDNv5AbQ+x/PcWidegyAIePG+QFmllEI+3Q7TtNogstEv5O8LgsyGx76/oIMjxMCiAX0iapVKyb7Pkdue3ZZo+egP5zrR2vPymXQg0Fz4O7DaKnBicZXPtm0Ye9KU1x6YO6mjvzEnokN7vKS+qcngOAyt8hhrvsBZYdGgXSutUd/crMa0TlTAZo7IFzIDrWO2B8319UHnGizOVREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREQ2+/w9uwzAnYtm7JQAAAABJRU5ErkJggg=="
+    },
+    {
+      "id": "bed0f2b6-548d-4832-a872-71117b22ee93",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "吸水分支 3",
+      "x": 638,
+      "y": 504,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {}
+    },
+    {
+      "id": "b0a9d4c7-24d9-432d-aadb-f1bb2d902e8b",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "汇流分支 3",
+      "x": 1150,
+      "y": 504,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {}
+    },
+    {
+      "id": "7efd8b70-5c8d-4011-a706-31a474e76646",
+      "type": "screen-node",
+      "symbol": "pump",
+      "title": "P-03",
+      "x": 851,
+      "y": 456,
+      "w": 128,
+      "h": 116,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 1,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-03.run",
+        "fault": "P-03.fault",
+        "value": "P-03.hz",
+        "data_1": "P-03.mode",
+        "data_2": "P-03.amps"
+      },
+      "dataSlots": [
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": true,
+          "role": "run"
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": false,
+          "role": "fault"
+        },
+        {
+          "key": "value",
+          "label": "运行数值",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "value"
+        },
+        {
+          "key": "data_1",
+          "label": "工作模式",
+          "kinds": [
+            "text"
+          ],
+          "required": false,
+          "role": "text"
+        },
+        {
+          "key": "data_2",
+          "label": "电机电流",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "extra"
+        }
+      ]
+    },
+    {
+      "id": "9f8f7d13-4744-418a-ad8a-3e63a8a35bbd",
+      "type": "screen-node",
+      "symbol": "checkValve",
+      "title": "CV-03 · 止回阀",
+      "x": 1006,
+      "y": 492,
+      "w": 52,
+      "h": 44,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADSCAYAAADwkv2oAAAec0lEQVR42u3de5RV1Z0n8O9vn3PuPee+qiACPhIfOBIVBIVSfGEkY0RRRkOs6qUGxx4VYtaYTGfsTkc769Z1qd09E0yM3RKwtbPaqEOVIaCiZrURFAUFwUciRhyRmLGVV73u+57Hnj9uXawnj7IeF+r7WcvlEv3Dtc853/M7++7f3gARERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERER0dAQDsFhdK20Rn1zsxrTOlEBmzkiX8gMtI7ZHjTX1wcQAQDNMSH6wrTUNzUZHIehVR5jzRc4KywaqGRSq1RKgso/3/bstkTLR38414nWnpfPpAOBVhylAbwCIIETi6t8tm3D2JOmvPbA3Ekd/Y05MbDoEFx//6MJpWLnGbbzA2h9jue5tU68BkEQ8OINOLAApRTy6XaYptUGkY1+IX9fEGQ2PPb9BR0cIQYWHezDpLU0NjZKKpUKbnzo2Xlaq4cD3x1nhmx4xTy01tBau7x0g1BniVgiAjPswCsVoAxrt0hw0y9vmft0MplUjY2NWkQ4t8XAor4/AZMKANYC6vijz15hWqF5vldC4HkakAACxes26MUWoBEAWinTFMMMwXNLT3/82ab5FwMBAKRSKX4iVgnOgVRZWG3dulWOP7puZTgSm+cW8r7veRoiAoHRGVQMq8F9YZfHVkR8z9NuIe+HI7F5xx9dt3Lr1q3S9doQKywqfwcKRHR9fZNhf91ZFYrErih0tLuixOrzPw/4wh+Um1/1nUM60K6dqLFKuczqwov5q5qbG/zKNeKoMbBGfVgl1641PvxzKYxMcbkdTVyR72jrHVbluSso04QVCqO8dojPz4Bve63hlooIPA8i0jme3UPLSdRahWzHasTCf3HyV0LF1MUX+wytkWVyCEbWwmXLzNSiRe51P19xZ/yoCVdkWnYXRUm4x0Q8lGEgFAoj296KDzZtQOD7fN18gZkrZRg4Yco0RGvGlIPL98vBta/6EiufbivGxo67Ir1n5+2pG+akFi5dai0DXA4gKyyM1sWKzQ0NwYIHV/5nw7J/47luGIFvdn1ytNYwQyEUs1lsf/sN7HhnC7JtbZ3VFS/fwOfaBdHaWpw4dTomTqtD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Fi5dai1btMi97ucrkvGjJjRmWnYXRSTc69BUw4AVCiPb3oo//eFtBL7Pq/cF8koZBk6YMg3RmjFwS0UEvt9r3kprXYyNHRdO79nZ+Pj35qcq14oDyMAazbsuSHLtWuPDP5fCyBSX29HEFfmONleUWH3tf6VME1Yo3DmXxS+TAd/2WpeDqrLWrWdYBdp1ErVWIduxGrHwX5z8lVAxdfHFPj8HGViktUBE19c3GfbXnVWhSOyKQkd779Dqsk6Lhu4gCh1o107UWKVcZnXhxfxVzc0NfuUacdQYWAQgmUwqANi6davYX79hVTgSv6KQbvc1tBIuxhqurZO1QAI7XmMUc+nVhRf/7arTTz9dA0AqleJbgoFFfYXWWkAdf/TZK0wrNM/3Sgg8TwMSQPb9qsvrNoibj0IjALRSpimGGYLnlp7++LNN8y8GAoYVA4v2/5aXxsZGSaVSwY0PPTtPa/Vw4LvjzJANr5iv7OPu8tINwppdEUtEYIYdeKUClGHtFglu+uUtc59OJpOqsbFRCz8DGVh08K6//9GEUrHzDNv5AbQ+x/PcWidegyAIePG+QFmllEI+3Q7TtNogstEv5O8LgsyGx76/oIMjxMCiAX0iapVKyb7Pkdue3ZZo+egP5zrR2vPymXQg0Fz4O7DaKnBicZXPtm0Ye9KU1x6YO6mjvzEnokN7vKS+qcngOAyt8hhrvsBZYdGgXSutUd/crMa0TlTAZo7IFzIDrWO2B8319UHnGizOVREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREQ2+/w9uwzAnYtm7JQAAAABJRU5ErkJggg=="
+    },
+    {
+      "id": "f0901e83-1aea-4836-8c74-8205c8cb0eab",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "吸水分支 4",
+      "x": 638,
+      "y": 602,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {}
+    },
+    {
+      "id": "c1e776d3-1fed-4a1f-811e-578f02a20a01",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "汇流分支 4",
+      "x": 1150,
+      "y": 602,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {}
+    },
+    {
+      "id": "028c73fa-6967-4304-b299-1f7ee7474b36",
+      "type": "screen-node",
+      "symbol": "pump",
+      "title": "P-04",
+      "x": 851,
+      "y": 554,
+      "w": 128,
+      "h": 116,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 1,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-04.run",
+        "fault": "P-04.fault",
+        "value": "P-04.hz",
+        "data_1": "P-04.mode",
+        "data_2": "P-04.amps"
+      },
+      "dataSlots": [
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": true,
+          "role": "run"
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": false,
+          "role": "fault"
+        },
+        {
+          "key": "value",
+          "label": "运行数值",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "value"
+        },
+        {
+          "key": "data_1",
+          "label": "工作模式",
+          "kinds": [
+            "text"
+          ],
+          "required": false,
+          "role": "text"
+        },
+        {
+          "key": "data_2",
+          "label": "电机电流",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "extra"
+        }
+      ]
+    },
+    {
+      "id": "f82bed06-c929-4b79-bd89-da052306cb8d",
+      "type": "screen-node",
+      "symbol": "checkValve",
+      "title": "CV-04 · 止回阀",
+      "x": 1006,
+      "y": 590,
+      "w": 52,
+      "h": 44,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADSCAYAAADwkv2oAAAec0lEQVR42u3de5RV1Z0n8O9vn3PuPee+qiACPhIfOBIVBIVSfGEkY0RRRkOs6qUGxx4VYtaYTGfsTkc769Z1qd09E0yM3RKwtbPaqEOVIaCiZrURFAUFwUciRhyRmLGVV73u+57Hnj9uXawnj7IeF+r7WcvlEv3Dtc853/M7++7f3gARERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERER0dAQDsFhdK20Rn1zsxrTOlEBmzkiX8gMtI7ZHjTX1wcQAQDNMSH6wrTUNzUZHIehVR5jzRc4KywaqGRSq1RKgso/3/bstkTLR38414nWnpfPpAOBVhylAbwCIIETi6t8tm3D2JOmvPbA3Ekd/Y05MbDoEFx//6MJpWLnGbbzA2h9jue5tU68BkEQ8OINOLAApRTy6XaYptUGkY1+IX9fEGQ2PPb9BR0cIQYWHezDpLU0NjZKKpUKbnzo2Xlaq4cD3x1nhmx4xTy01tBau7x0g1BniVgiAjPswCsVoAxrt0hw0y9vmft0MplUjY2NWkQ4t8XAor4/AZMKANYC6vijz15hWqF5vldC4HkakAACxes26MUWoBEAWinTFMMMwXNLT3/82ab5FwMBAKRSKX4iVgnOgVRZWG3dulWOP7puZTgSm+cW8r7veRoiAoHRGVQMq8F9YZfHVkR8z9NuIe+HI7F5xx9dt3Lr1q3S9doQKywqfwcKRHR9fZNhf91ZFYrErih0tLuixOrzPw/4wh+Um1/1nUM60K6dqLFKuczqwov5q5qbG/zKNeKoMbBGfVgl1641PvxzKYxMcbkdTVyR72jrHVbluSso04QVCqO8dojPz4Bve63hlooIPA8i0jme3UPLSdRahWzHasTCf3HyV0LF1MUX+wytkWVyCEbWwmXLzNSiRe51P19xZ/yoCVdkWnYXRUm4x0Q8lGEgFAoj296KDzZtQOD7fN18gZkrZRg4Yco0RGvGlIPL98vBta/6EiufbivGxo67Ir1n5+2pG+akFi5dai0DXA4gKyyM1sWKzQ0NwYIHV/5nw7J/47luGIFvdn1ytNYwQyEUs1lsf/sN7HhnC7JtbZ3VFS/fwOfaBdHaWpw4dTomTqtD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Fi5dai1btMi97ucrkvGjJjRmWnYXRSTc69BUw4AVCiPb3oo//eFtBL7Pq/cF8koZBk6YMg3RmjFwS0UEvt9r3kprXYyNHRdO79nZ+Pj35qcq14oDyMAazbsuSHLtWuPDP5fCyBSX29HEFfmONleUWH3tf6VME1Yo3DmXxS+TAd/2WpeDqrLWrWdYBdp1ErVWIduxGrHwX5z8lVAxdfHFPj8HGViktUBE19c3GfbXnVWhSOyKQkd779Dqsk6Lhu4gCh1o107UWKVcZnXhxfxVzc0NfuUacdQYWAQgmUwqANi6davYX79hVTgSv6KQbvc1tBIuxhqurZO1QAI7XmMUc+nVhRf/7arTTz9dA0AqleJbgoFFfYXWWkAdf/TZK0wrNM/3Sgg8TwMSQPb9qsvrNoibj0IjALRSpimGGYLnlp7++LNN8y8GAoYVA4v2/5aXxsZGSaVSwY0PPTtPa/Vw4LvjzJANr5iv7OPu8tINwppdEUtEYIYdeKUClGHtFglu+uUtc59OJpOqsbFRCz8DGVh08K6//9GEUrHzDNv5AbQ+x/PcWidegyAIePG+QFmllEI+3Q7TtNogstEv5O8LgsyGx76/oIMjxMCiAX0iapVKyb7Pkdue3ZZo+egP5zrR2vPymXQg0Fz4O7DaKnBicZXPtm0Ye9KU1x6YO6mjvzEnokN7vKS+qcngOAyt8hhrvsBZYdGgXSutUd/crMa0TlTAZo7IFzIDrWO2B8319UHnGizOVREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREQ2+/w9uwzAnYtm7JQAAAABJRU5ErkJggg=="
+    }
+  ],
+  "pipes": [
+    {
+      "id": "53b27569-b0cc-43d5-b0a2-0371b90dee4e",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "HEADER.flowing"
+      },
+      "source": {
+        "nodeId": "d6b0305e-3435-4ee2-ac80-0e7c91082654",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "f0901e83-1aea-4836-8c74-8205c8cb0eab",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "8ebb70cb-0a61-48c3-8289-751b1a786593",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "HEADER.flowing"
+      },
+      "source": {
+        "nodeId": "0ae358e8-d281-4cec-9b05-96ee7c1553da",
+        "portId": "top"
+      },
+      "target": {
+        "nodeId": "aa125012-f362-471a-998c-20b4c1ee3f6a",
+        "portId": "bottom"
+      },
+      "vertices": []
+    },
+    {
+      "id": "bc47a66a-005b-4f3b-845f-99f45cee6b45",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "HEADER.flowing"
+      },
+      "source": {
+        "nodeId": "9bc426b3-fab4-4e87-b9c4-3a056d67942b",
+        "portId": "bottom"
+      },
+      "target": {
+        "nodeId": "d605b55e-e1fe-4ced-afe4-1dced2bb17b5",
+        "portId": "top"
+      },
+      "vertices": []
+    },
+    {
+      "id": "04ebf6a9-5e34-4b08-9830-b16e59af2d66",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "HEADER.flowing"
+      },
+      "source": {
+        "nodeId": "bed0f2b6-548d-4832-a872-71117b22ee93",
+        "portId": "top"
+      },
+      "target": {
+        "nodeId": "0ae358e8-d281-4cec-9b05-96ee7c1553da",
+        "portId": "bottom"
+      },
+      "vertices": []
+    },
+    {
+      "id": "412b894d-3f63-42e7-8d46-1bc4c646f370",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "HEADER.flowing"
+      },
+      "source": {
+        "nodeId": "d605b55e-e1fe-4ced-afe4-1dced2bb17b5",
+        "portId": "bottom"
+      },
+      "target": {
+        "nodeId": "b0a9d4c7-24d9-432d-aadb-f1bb2d902e8b",
+        "portId": "top"
+      },
+      "vertices": []
+    },
+    {
+      "id": "d43396df-9fce-43d5-9ce5-bea2627cb00f",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "HEADER.flowing"
+      },
+      "source": {
+        "nodeId": "f0901e83-1aea-4836-8c74-8205c8cb0eab",
+        "portId": "top"
+      },
+      "target": {
+        "nodeId": "bed0f2b6-548d-4832-a872-71117b22ee93",
+        "portId": "bottom"
+      },
+      "vertices": []
+    },
+    {
+      "id": "323738e1-b7d2-4ae4-9f05-55fa654fa8a4",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "HEADER.flowing"
+      },
+      "source": {
+        "nodeId": "b0a9d4c7-24d9-432d-aadb-f1bb2d902e8b",
+        "portId": "bottom"
+      },
+      "target": {
+        "nodeId": "c1e776d3-1fed-4a1f-811e-578f02a20a01",
+        "portId": "top"
+      },
+      "vertices": []
+    },
+    {
+      "id": "69cbe267-d2fa-40fe-9a57-2c8baf367bd7",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-01.flow"
+      },
+      "source": {
+        "nodeId": "aa125012-f362-471a-998c-20b4c1ee3f6a",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "e28d4adb-4dce-4267-9ff7-3055cbd57ecd",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "0056a140-df7d-4b8f-8bc5-c13c1bf79df1",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-01.flow"
+      },
+      "source": {
+        "nodeId": "e28d4adb-4dce-4267-9ff7-3055cbd57ecd",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "e9ed214e-5c51-41bc-abcd-54dc4642d4f7",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "e4d67f5b-c65b-4354-9d5a-523e3d511b3f",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-01.flow"
+      },
+      "source": {
+        "nodeId": "e9ed214e-5c51-41bc-abcd-54dc4642d4f7",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "9bc426b3-fab4-4e87-b9c4-3a056d67942b",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "b8fde493-7565-4661-a1d2-ecf393cd9599",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-02.flow"
+      },
+      "source": {
+        "nodeId": "0ae358e8-d281-4cec-9b05-96ee7c1553da",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "e0ef7c99-7e0d-4b2a-8d8e-beb269171f38",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "857bd0fb-b3c6-4b87-b971-5fea2ae36184",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-02.flow"
+      },
+      "source": {
+        "nodeId": "e0ef7c99-7e0d-4b2a-8d8e-beb269171f38",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "54922989-a78b-4c92-9b66-85bfb7429796",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "95f167df-c2ae-4eb2-af83-60220062da5d",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-02.flow"
+      },
+      "source": {
+        "nodeId": "54922989-a78b-4c92-9b66-85bfb7429796",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "d605b55e-e1fe-4ced-afe4-1dced2bb17b5",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "7b374a15-0b02-4bc9-88ea-f9de4ec90af3",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-03.flow"
+      },
+      "source": {
+        "nodeId": "bed0f2b6-548d-4832-a872-71117b22ee93",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "7efd8b70-5c8d-4011-a706-31a474e76646",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "cd3fb2bb-0aac-45c7-8a12-fe32c5c507b2",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-03.flow"
+      },
+      "source": {
+        "nodeId": "7efd8b70-5c8d-4011-a706-31a474e76646",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "9f8f7d13-4744-418a-ad8a-3e63a8a35bbd",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "da0f79c0-aee5-4bb9-a473-798d72936f48",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-03.flow"
+      },
+      "source": {
+        "nodeId": "9f8f7d13-4744-418a-ad8a-3e63a8a35bbd",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "b0a9d4c7-24d9-432d-aadb-f1bb2d902e8b",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "bada77b9-939a-45dc-ade3-b2894fe2a034",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-04.flow"
+      },
+      "source": {
+        "nodeId": "f0901e83-1aea-4836-8c74-8205c8cb0eab",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "028c73fa-6967-4304-b299-1f7ee7474b36",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "e75515e8-cd0d-438c-a1c9-736595caefd1",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-04.flow"
+      },
+      "source": {
+        "nodeId": "028c73fa-6967-4304-b299-1f7ee7474b36",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "f82bed06-c929-4b79-bd89-da052306cb8d",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "4f8620d1-d250-4438-bb9f-7702eacd08c1",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "P-04.flow"
+      },
+      "source": {
+        "nodeId": "f82bed06-c929-4b79-bd89-da052306cb8d",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "c1e776d3-1fed-4a1f-811e-578f02a20a01",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "88c3cf75-58c1-4c42-8ec8-2f860804e2d8",
+      "type": "pipe",
+      "title": "回流母管至 FT-101",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {
+        "run": "HEADER.flowing"
+      },
+      "source": {
+        "nodeId": "c1e776d3-1fed-4a1f-811e-578f02a20a01",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "7bae12d7-385e-49d4-8e60-9c74e3f985b9",
+        "portId": "port-adb75a9d-bbf3-405b-9299-e59e2c621bf4"
+      },
+      "vertices": [
+        {
+          "x": 1280,
+          "y": 612
+        },
+        {
+          "x": 1280,
+          "y": 466
+        }
+      ]
+    },
+    {
+      "id": "479d3d5e-92e1-4214-bc79-a6f2b0227bf3",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth",
+        "arrow": "forward"
+      },
+      "bindings": {
+        "run": "HEADER.flowing"
+      },
+      "source": {
+        "nodeId": "7bae12d7-385e-49d4-8e60-9c74e3f985b9",
+        "portId": "port-ee0bdf67-5611-4857-85ae-10b4d8a49fc6"
+      },
+      "target": {
+        "x": 1520,
+        "y": 466
+      },
+      "vertices": []
+    }
+  ],
+  "symbols": [
+    {
+      "id": "3dc1343b-2b8f-4fde-9831-fbb3f558c23d",
+      "name": "05 单泵出水支路",
+      "version": 1,
+      "w": 207,
+      "h": 116,
+      "nodes": [
+        {
+          "id": "e28d4adb-4dce-4267-9ff7-3055cbd57ecd",
+          "type": "screen-node",
+          "symbol": "pump",
+          "title": "P-01",
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 116,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 20
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 1,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14,
+            "appearance": "monitor"
+          },
+          "bindings": {},
+          "dataSlots": [
+            {
+              "key": "run",
+              "label": "运行反馈",
+              "kinds": [
+                "boolean"
+              ],
+              "required": true,
+              "role": "run"
+            },
+            {
+              "key": "fault",
+              "label": "故障反馈",
+              "kinds": [
+                "boolean"
+              ],
+              "required": false,
+              "role": "fault"
+            },
+            {
+              "key": "value",
+              "label": "运行数值",
+              "kinds": [
+                "number"
+              ],
+              "required": false,
+              "role": "value"
+            },
+            {
+              "key": "data_1",
+              "label": "工作模式",
+              "kinds": [
+                "text"
+              ],
+              "required": false,
+              "role": "text"
+            },
+            {
+              "key": "data_2",
+              "label": "电机电流",
+              "kinds": [
+                "number"
+              ],
+              "required": false,
+              "role": "extra"
+            },
+            {
+              "key": "data_3",
+              "label": "保护联锁",
+              "kinds": [
+                "boolean"
+              ],
+              "required": false,
+              "role": "extra"
+            }
+          ],
+          "ports": [
+            {
+              "id": "left",
+              "label": "左侧",
+              "x": 0,
+              "y": 50,
+              "direction": "both"
+            },
+            {
+              "id": "right",
+              "label": "右侧",
+              "x": 100,
+              "y": 50,
+              "direction": "both"
+            }
+          ]
+        },
+        {
+          "id": "e9ed214e-5c51-41bc-abcd-54dc4642d4f7",
+          "type": "screen-node",
+          "symbol": "checkValve",
+          "title": "CV-01 · 止回阀",
+          "x": 155,
+          "y": 36,
+          "w": 52,
+          "h": 44,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 20
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 2,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14,
+            "appearance": "picture"
+          },
+          "bindings": {},
+          "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADSCAYAAADwkv2oAAAec0lEQVR42u3de5RV1Z0n8O9vn3PuPee+qiACPhIfOBIVBIVSfGEkY0RRRkOs6qUGxx4VYtaYTGfsTkc769Z1qd09E0yM3RKwtbPaqEOVIaCiZrURFAUFwUciRhyRmLGVV73u+57Hnj9uXawnj7IeF+r7WcvlEv3Dtc853/M7++7f3gARERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERER0dAQDsFhdK20Rn1zsxrTOlEBmzkiX8gMtI7ZHjTX1wcQAQDNMSH6wrTUNzUZHIehVR5jzRc4KywaqGRSq1RKgso/3/bstkTLR38414nWnpfPpAOBVhylAbwCIIETi6t8tm3D2JOmvPbA3Ekd/Y05MbDoEFx//6MJpWLnGbbzA2h9jue5tU68BkEQ8OINOLAApRTy6XaYptUGkY1+IX9fEGQ2PPb9BR0cIQYWHezDpLU0NjZKKpUKbnzo2Xlaq4cD3x1nhmx4xTy01tBau7x0g1BniVgiAjPswCsVoAxrt0hw0y9vmft0MplUjY2NWkQ4t8XAor4/AZMKANYC6vijz15hWqF5vldC4HkakAACxes26MUWoBEAWinTFMMMwXNLT3/82ab5FwMBAKRSKX4iVgnOgVRZWG3dulWOP7puZTgSm+cW8r7veRoiAoHRGVQMq8F9YZfHVkR8z9NuIe+HI7F5xx9dt3Lr1q3S9doQKywqfwcKRHR9fZNhf91ZFYrErih0tLuixOrzPw/4wh+Um1/1nUM60K6dqLFKuczqwov5q5qbG/zKNeKoMbBGfVgl1641PvxzKYxMcbkdTVyR72jrHVbluSso04QVCqO8dojPz4Bve63hlooIPA8i0jme3UPLSdRahWzHasTCf3HyV0LF1MUX+wytkWVyCEbWwmXLzNSiRe51P19xZ/yoCVdkWnYXRUm4x0Q8lGEgFAoj296KDzZtQOD7fN18gZkrZRg4Yco0RGvGlIPL98vBta/6EiufbivGxo67Ir1n5+2pG+akFi5dai0DXA4gKyyM1sWKzQ0NwYIHV/5nw7J/47luGIFvdn1ytNYwQyEUs1lsf/sN7HhnC7JtbZ3VFS/fwOfaBdHaWpw4dTomTqtD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Fi5dai1btMi97ucrkvGjJjRmWnYXRSTc69BUw4AVCiPb3oo//eFtBL7Pq/cF8koZBk6YMg3RmjFwS0UEvt9r3kprXYyNHRdO79nZ+Pj35qcq14oDyMAazbsuSHLtWuPDP5fCyBSX29HEFfmONleUWH3tf6VME1Yo3DmXxS+TAd/2WpeDqrLWrWdYBdp1ErVWIduxGrHwX5z8lVAxdfHFPj8HGViktUBE19c3GfbXnVWhSOyKQkd779Dqsk6Lhu4gCh1o107UWKVcZnXhxfxVzc0NfuUacdQYWAQgmUwqANi6davYX79hVTgSv6KQbvc1tBIuxhqurZO1QAI7XmMUc+nVhRf/7arTTz9dA0AqleJbgoFFfYXWWkAdf/TZK0wrNM/3Sgg8TwMSQPb9qsvrNoibj0IjALRSpimGGYLnlp7++LNN8y8GAoYVA4v2/5aXxsZGSaVSwY0PPTtPa/Vw4LvjzJANr5iv7OPu8tINwppdEUtEYIYdeKUClGHtFglu+uUtc59OJpOqsbFRCz8DGVh08K6//9GEUrHzDNv5AbQ+x/PcWidegyAIePG+QFmllEI+3Q7TtNogstEv5O8LgsyGx76/oIMjxMCiAX0iapVKyb7Pkdue3ZZo+egP5zrR2vPymXQg0Fz4O7DaKnBicZXPtm0Ye9KU1x6YO6mjvzEnokN7vKS+qcngOAyt8hhrvsBZYdGgXSutUd/crMa0TlTAZo7IFzIDrWO2B8319UHnGizOVREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREQ2+/w9uwzAnYtm7JQAAAABJRU5ErkJggg==",
+          "ports": [
+            {
+              "id": "left",
+              "label": "左侧",
+              "x": 0,
+              "y": 50,
+              "direction": "both"
+            },
+            {
+              "id": "right",
+              "label": "右侧",
+              "x": 100,
+              "y": 50,
+              "direction": "both"
+            }
+          ],
+          "dataSlots": []
+        }
+      ],
+      "pipes": [
+        {
+          "id": "0056a140-df7d-4b8f-8bc5-c13c1bf79df1",
+          "type": "pipe",
+          "title": "工艺管道",
+          "style": {
+            "color": "#224253",
+            "width": 8,
+            "appearance": "detailed"
+          },
+          "bindings": {},
+          "source": {
+            "nodeId": "e28d4adb-4dce-4267-9ff7-3055cbd57ecd",
+            "portId": "right"
+          },
+          "target": {
+            "nodeId": "e9ed214e-5c51-41bc-abcd-54dc4642d4f7",
+            "portId": "left"
+          },
+          "vertices": []
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "id": "0035da0f-b91f-4455-8781-bf76045b848a",
+      "title": "画面 2",
+      "canvas": {
+        "width": 1920,
+        "height": 1080,
+        "background": "#080f16",
+        "theme": "cockpit-dark"
+      },
+      "nodes": [
+        {
+          "id": "98b17f7f-33a1-4ae3-8b61-df8d88ee0553",
+          "type": "screen-node",
+          "symbol": "pump",
+          "title": "P-01",
+          "x": 600,
+          "y": 450,
+          "w": 128,
+          "h": 116,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 20
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 1,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14,
+            "appearance": "monitor"
+          },
+          "bindings": {
+            "run": "P-03.run",
+            "fault": "P-03.fault",
+            "value": "P-03.hz",
+            "data_1": "P-03.mode"
+          },
+          "dataSlots": [
+            {
+              "key": "run",
+              "label": "运行反馈",
+              "kinds": [
+                "boolean"
+              ],
+              "required": true,
+              "role": "run"
+            },
+            {
+              "key": "fault",
+              "label": "故障反馈",
+              "kinds": [
+                "boolean"
+              ],
+              "required": false,
+              "role": "fault"
+            },
+            {
+              "key": "value",
+              "label": "运行数值",
+              "kinds": [
+                "number"
+              ],
+              "required": false,
+              "role": "value"
+            },
+            {
+              "key": "data_1",
+              "label": "工作模式",
+              "kinds": [
+                "text"
+              ],
+              "required": false,
+              "role": "text"
+            },
+            {
+              "key": "data_2",
+              "label": "电机电流",
+              "kinds": [
+                "number"
+              ],
+              "required": false,
+              "role": "extra"
+            },
+            {
+              "key": "data_3",
+              "label": "保护联锁",
+              "kinds": [
+                "boolean"
+              ],
+              "required": false,
+              "role": "extra"
+            }
+          ],
+          "ports": [
+            {
+              "id": "left",
+              "label": "左侧",
+              "x": 0,
+              "y": 50,
+              "direction": "both"
+            },
+            {
+              "id": "right",
+              "label": "右侧",
+              "x": 100,
+              "y": 50,
+              "direction": "both"
+            }
+          ],
+          "group": "feb9f986-0f3e-4084-bc32-b0c01474b8cb"
+        },
+        {
+          "id": "63f088da-c914-41a1-b8df-16068f322555",
+          "type": "screen-node",
+          "symbol": "checkValve",
+          "title": "CV-01 · 止回阀",
+          "x": 755,
+          "y": 486,
+          "w": 52,
+          "h": 44,
+          "angle": 0,
+          "z": 10,
+          "locked": false,
+          "hidden": false,
+          "style": {
+            "fill": "#102d42",
+            "stroke": "#426a83",
+            "color": "#d5e9f4",
+            "fontSize": 20
+          },
+          "params": {
+            "min": 0,
+            "max": 6,
+            "unit": "",
+            "precision": 2,
+            "windowSeconds": 120,
+            "theme": "cockpit-dark",
+            "cardPadding": 14,
+            "appearance": "picture"
+          },
+          "bindings": {},
+          "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADSCAYAAADwkv2oAAAec0lEQVR42u3de5RV1Z0n8O9vn3PuPee+qiACPhIfOBIVBIVSfGEkY0RRRkOs6qUGxx4VYtaYTGfsTkc769Z1qd09E0yM3RKwtbPaqEOVIaCiZrURFAUFwUciRhyRmLGVV73u+57Hnj9uXawnj7IeF+r7WcvlEv3Dtc853/M7++7f3gARERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERER0dAQDsFhdK20Rn1zsxrTOlEBmzkiX8gMtI7ZHjTX1wcQAQDNMSH6wrTUNzUZHIehVR5jzRc4KywaqGRSq1RKgso/3/bstkTLR38414nWnpfPpAOBVhylAbwCIIETi6t8tm3D2JOmvPbA3Ekd/Y05MbDoEFx//6MJpWLnGbbzA2h9jue5tU68BkEQ8OINOLAApRTy6XaYptUGkY1+IX9fEGQ2PPb9BR0cIQYWHezDpLU0NjZKKpUKbnzo2Xlaq4cD3x1nhmx4xTy01tBau7x0g1BniVgiAjPswCsVoAxrt0hw0y9vmft0MplUjY2NWkQ4t8XAor4/AZMKANYC6vijz15hWqF5vldC4HkakAACxes26MUWoBEAWinTFMMMwXNLT3/82ab5FwMBAKRSKX4iVgnOgVRZWG3dulWOP7puZTgSm+cW8r7veRoiAoHRGVQMq8F9YZfHVkR8z9NuIe+HI7F5xx9dt3Lr1q3S9doQKywqfwcKRHR9fZNhf91ZFYrErih0tLuixOrzPw/4wh+Um1/1nUM60K6dqLFKuczqwov5q5qbG/zKNeKoMbBGfVgl1641PvxzKYxMcbkdTVyR72jrHVbluSso04QVCqO8dojPz4Bve63hlooIPA8i0jme3UPLSdRahWzHasTCf3HyV0LF1MUX+wytkWVyCEbWwmXLzNSiRe51P19xZ/yoCVdkWnYXRUm4x0Q8lGEgFAoj296KDzZtQOD7fN18gZkrZRg4Yco0RGvGlIPL98vBta/6EiufbivGxo67Ir1n5+2pG+akFi5dai0DXA4gKyyM1sWKzQ0NwYIHV/5nw7J/47luGIFvdn1ytNYwQyEUs1lsf/sN7HhnC7JtbZ3VFS/fwOfaBdHaWpw4dTomTqtD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Fi5dai1btMi97ucrkvGjJjRmWnYXRSTc69BUw4AVCiPb3oo//eFtBL7Pq/cF8koZBk6YMg3RmjFwS0UEvt9r3kprXYyNHRdO79nZ+Pj35qcq14oDyMAazbsuSHLtWuPDP5fCyBSX29HEFfmONleUWH3tf6VME1Yo3DmXxS+TAd/2WpeDqrLWrWdYBdp1ErVWIduxGrHwX5z8lVAxdfHFPj8HGViktUBE19c3GfbXnVWhSOyKQkd779Dqsk6Lhu4gCh1o107UWKVcZnXhxfxVzc0NfuUacdQYWAQgmUwqANi6davYX79hVTgSv6KQbvc1tBIuxhqurZO1QAI7XmMUc+nVhRf/7arTTz9dA0AqleJbgoFFfYXWWkAdf/TZK0wrNM/3Sgg8TwMSQPb9qsvrNoibj0IjALRSpimGGYLnlp7++LNN8y8GAoYVA4v2/5aXxsZGSaVSwY0PPTtPa/Vw4LvjzJANr5iv7OPu8tINwppdEUtEYIYdeKUClGHtFglu+uUtc59OJpOqsbFRCz8DGVh08K6//9GEUrHzDNv5AbQ+x/PcWidegyAIePG+QFmllEI+3Q7TtNogstEv5O8LgsyGx76/oIMjxMCiAX0iapVKyb7Pkdue3ZZo+egP5zrR2vPymXQg0Fz4O7DaKnBicZXPtm0Ye9KU1x6YO6mjvzEnokN7vKS+qcngOAyt8hhrvsBZYdGgXSutUd/crMa0TlTAZo7IFzIDrWO2B8319UHnGizOVREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREQ2+/w9uwzAnYtm7JQAAAABJRU5ErkJggg==",
+          "ports": [
+            {
+              "id": "left",
+              "label": "左侧",
+              "x": 0,
+              "y": 50,
+              "direction": "both"
+            },
+            {
+              "id": "right",
+              "label": "右侧",
+              "x": 100,
+              "y": 50,
+              "direction": "both"
+            }
+          ],
+          "dataSlots": [],
+          "group": "feb9f986-0f3e-4084-bc32-b0c01474b8cb"
+        }
+      ],
+      "pipes": [
+        {
+          "id": "c8040b2b-a427-474b-8903-80680a0685b2",
+          "type": "pipe",
+          "title": "工艺管道",
+          "style": {
+            "color": "#224253",
+            "width": 8,
+            "appearance": "detailed"
+          },
+          "bindings": {
+            "run": "P-03.flow"
+          },
+          "source": {
+            "nodeId": "98b17f7f-33a1-4ae3-8b61-df8d88ee0553",
+            "portId": "right"
+          },
+          "target": {
+            "nodeId": "63f088da-c914-41a1-b8df-16068f322555",
+            "portId": "left"
+          },
+          "vertices": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import {screenControlDefaults,validateScreenControl} from './screen-controls.mjs';
 import {
   screenSymbols,
   screenSlots,
@@ -49,7 +50,7 @@ export function screenNode(symbol, id, x, y, siblings = []) {
     w: def.w,
     h: def.h,
     angle: 0,
-    z: symbol === "rect" ? -10 : 10,
+    z: symbol === "rect" ? -10 : symbol === "pidBasin" ? 2 : symbol === "pidInstrument" ? 20 : 10,
     locked: false,
     hidden: false,
     style: {
@@ -57,6 +58,7 @@ export function screenNode(symbol, id, x, y, siblings = []) {
         symbol === "text"
           ? "transparent"
           : [
+                "pidInstrument",
                 "readout",
                 "trend",
                 "barChart",
@@ -71,7 +73,7 @@ export function screenNode(symbol, id, x, y, siblings = []) {
               : "#e5edf2",
       stroke: "#547185",
       color: "#304c5d",
-      fontSize: symbol === "text" ? 32 : symbol === "readout" ? 44 : 20,
+      fontSize: symbol === "text" ? 32 : symbol === "readout" ? 44 : symbol === "pidBasin" ? 18 : 20,
     },
     params: {
       min: 0,
@@ -79,6 +81,8 @@ export function screenNode(symbol, id, x, y, siblings = []) {
       unit: "",
       precision: 2,
       windowSeconds: 120,
+      ...screenControlDefaults(symbol),
+      ...(def.pictureHeight ? {appearance:'depth'} : {}),
     },
     bindings: {},
     ...(["line", "polyline", "polygon"].includes(symbol)
@@ -144,6 +148,8 @@ export function validateScreen(doc, publishing, project = doc) {
     )
   )
     throw Error("画面主题无效");
+  if (doc.canvas.appearance !== undefined && !["classic", "detailed", "depth"].includes(doc.canvas.appearance))
+    throw Error("绘图外观无效");
   if (doc.canvas.purpose !== undefined && !Object.hasOwn(screenPurposes, doc.canvas.purpose))
     throw Error("画面用途无效");
   if (doc.pages !== undefined) {
@@ -396,6 +402,9 @@ export function validateScreen(doc, publishing, project = doc) {
           !Object.hasOwn(screenAppearanceOptions("pipe"), n.style.appearance)) ||
         (n.style.flowColor !== undefined &&
           !/^#[\da-f]{6}$/i.test(n.style.flowColor)) ||
+        (n.style.pattern !== undefined && !["solid","dashed"].includes(n.style.pattern)) ||
+        (n.style.jump !== undefined && typeof n.style.jump !== "boolean") ||
+        (n.style.animateFlow!==undefined&&typeof n.style.animateFlow!=='boolean') ||
         !Number.isFinite(n.style.width) ||
         n.style.width < 1 ||
         n.style.width > 30
@@ -452,6 +461,7 @@ export function validateScreen(doc, publishing, project = doc) {
     }
     validateScreenRules(n);
     validateScreenWidget(n);
+    validateScreenControl(n,doc,publishing);
     if (n.action !== undefined) {
       if (
         !n.action ||
@@ -582,6 +592,7 @@ export function copyScreenSelection(
   const copies = originals.map((n) => {
     const c = JSON.parse(JSON.stringify(n));
     c.id = remap.get(n.id);
+    if(c.symbol==='trendRange')c.params.targetId=remap.get(c.params.targetId)||c.params.targetId;
     c.title += " 副本";
     if (!keepBindings) c.bindings = {};
     c.locked = false;

@@ -1,3 +1,5 @@
+import {ScreenControlSettings} from './screen-control-settings.mjs';
+import {screenControlKinds} from '../../../packages/runtime/studio/screen-controls.mjs';
 import {
   screenSymbols,
   screenSlots,
@@ -5,6 +7,7 @@ import {
   screenPorts,
   screenAppearanceOptions,
 } from "../../../packages/components/studio/screen-symbols.mjs";
+import { waterEquipment } from '../../../packages/components/studio/water-equipment.mjs';
 import {
   editScreenEndpoint,
   screenEndpointPosition,
@@ -23,6 +26,7 @@ import {
 
 export const ScreenInspector = {
   components: {
+    ScreenControlSettings,
     ScreenDefinitions,
     ScreenRules,
     ScreenActions,
@@ -159,14 +163,15 @@ export const ScreenInspector = {
         key,
         value: event.target.value,
       });
-      emit("start");
     };
     const commitGeometry = (key, event) => {
-      if (event.target.value.trim() !== "")
+      if (event.target.value.trim() !== "" && Number.isFinite(Number(event.target.value)) && Number(event.target.value)!==props.item[key]) {
+        emit("start");
         emit("geometry", {
           id: props.item.id,
           [key]: Number(event.target.value),
         });
+      }
       geometryDraft.id = "";
       event.target.value = props.item[key];
     };
@@ -241,9 +246,11 @@ export const ScreenInspector = {
     );
     return {
       search,
+      screenControlKinds,
       screenChartKinds,
       screenAppearanceOptions,
       screenTableKinds,
+      waterEquipment,
       endpointError,
       waypointError,
       setWaypoints,
@@ -279,9 +286,10 @@ export const ScreenInspector = {
   },
   template: `<div class="screen-inspector">
     <div class="inspector-heading"><small>{{kind}}<span v-if="count>1"> · 已选 {{count}} 个对象</span></small><b>{{item.title}}</b></div>
+    <p v-if="waterEquipment[item.symbol]" class="equipment-contract-note">{{waterEquipment[item.symbol].description}}<br><small>{{slots.length}} 个独立测点槽位；图稿不包含实时状态。</small></p>
     <div class="inspector-tabs" role="tablist" aria-label="图元设置"><button role="tab" :aria-selected="tab==='appearance'" @click="$emit('tab','appearance')">外观</button><button role="tab" :aria-selected="tab==='binding'" @click="$emit('tab','binding')">动态与测点</button><button role="tab" :aria-selected="tab==='definition'" @click="$emit('tab','definition')">元素定义</button><button v-if="item.type!=='pipe'" role="tab" :aria-selected="tab==='action'" @click="$emit('tab','action')">交互</button></div>
     <screen-definitions v-if="tab==='definition'" :item="item" :doc="doc" @start="$emit('start')" @tool="$emit('tab',$event)"></screen-definitions>
-    <screen-actions v-else-if="tab==='action'&&item.type!=='pipe'" :item="item" :project="project" @start="$emit('start')"></screen-actions><template v-else-if="tab==='binding'">
+    <p v-else-if="tab==='action'&&screenControlKinds.has(item.symbol)" class="muted">本组件的运行交互在“外观 → 运行交互设置”中配置。</p><p class="muted" v-else-if="tab==='action'&&screenControlKinds.has(item.symbol)">本组件的运行交互在“外观 → 运行交互设置”中配置。</p><screen-actions v-else-if="tab==='action'&&item.type!=='pipe'" :item="item" :project="project" @start="$emit('start')"></screen-actions><template v-else-if="tab==='binding'">
       <button class="source-link wide" @click="$emit('data')">管理连接与点位</button>
       <p class="muted">选择测点后立即显示结果。{{doc.mappings.length}} 个测点可用。</p>
       <input aria-label="搜索测点" placeholder="查找名称或业务编号" v-model="search" />
@@ -298,11 +306,14 @@ export const ScreenInspector = {
     </template>
     <template v-else>
       <label>名称 / 位号<input aria-label="图元名称" v-model="item.title" @focus="$emit('start')" /></label>
-      <template v-if="item.type!=='pipe'"><screen-chart-settings v-if="screenChartKinds.has(item.symbol)" :item="item" :doc="doc" :points="points" @start="$emit('start')"></screen-chart-settings><screen-table-settings v-if="screenTableKinds.has(item.symbol)" :item="item" :doc="doc" :points="points" @start="$emit('start')"></screen-table-settings>
+      <label v-if="waterEquipment[item.symbol]||['readout','trend','table','events'].includes(item.symbol)" class="screen-check"><input type="checkbox" aria-label="简洁显示" :checked="!!item.params.compact" @change="$emit('start');item.params.compact=$event.target.checked" />{{waterEquipment[item.symbol]?'仅显示设备图稿（异常仍提示）':'隐藏标题脚注 / 有效质量文字（异常仍显示）'}}</label>
+      <screen-control-settings v-if="screenControlKinds.has(item.symbol)" :item="item" :doc="doc" :points="points" @start="$emit('start')"></screen-control-settings><template v-if="item.type!=='pipe'"><screen-chart-settings v-if="screenChartKinds.has(item.symbol)" :item="item" :doc="doc" :points="points" @start="$emit('start')"></screen-chart-settings><screen-table-settings v-if="screenTableKinds.has(item.symbol)" :item="item" :doc="doc" :points="points" @start="$emit('start')"></screen-table-settings>
+<label v-if="item.symbol==='readout'" class="screen-check"><input type="checkbox" aria-label="单位独立显示" :checked="!!item.params.separateUnit" @change="$emit('start');item.params.separateUnit=$event.target.checked" />单位使用独立字号</label>
  <label v-if="item.symbol==='readout'">指标符号<select aria-label="指标符号" :value="item.params.icon||''" @focus="$emit('start')" @change="item.params.icon=$event.target.value"><option value="">不显示</option><option v-for="icon in ['Σ','%','≈','⚙','●']" :value="icon">{{icon}}</option></select></label><template v-if="item.symbol==='status'"><div class="pair"><label>信号成立文字<input aria-label="状态成立文字" v-model="item.params.onText" @focus="$emit('start')" placeholder="运行" /></label><label>信号释放文字<input aria-label="状态释放文字" v-model="item.params.offText" @focus="$emit('start')" placeholder="停止" /></label></div><div class="pair"><label>成立颜色<input type="color" aria-label="状态成立颜色" :value="item.params.onColor||'#3c9c77'" @focus="$emit('start')" @change="item.params.onColor=$event.target.value" /></label><label>释放颜色<input type="color" aria-label="状态释放颜色" :value="item.params.offColor||'#d5dfe6'" @focus="$emit('start')" @change="item.params.offColor=$event.target.value" /></label></div></template>
  <div v-if="item.symbol==='barGauge'" class="pair"><label>仪表下限<input type="number" aria-label="仪表下限" v-model.number="item.params.min" @focus="$emit('start')" /></label><label>仪表上限<input type="number" aria-label="仪表上限" v-model.number="item.params.max" @focus="$emit('start')" /></label></div>
         <template v-if="Object.keys(screenAppearanceOptions(item.symbol)).length">
           <label>外观预设<select aria-label="外观预设" :value="item.params.appearance||'classic'" @focus="$emit('start')" @change="item.params.appearance=$event.target.value"><option v-for="(label,key) in screenAppearanceOptions(item.symbol)" :value="key">{{label}}</option></select></label>
+          <p v-if="item.params.appearance==='depth'" class="note">内置设备外观与实时读数分别绘制；连接点、量程和测点沿用当前设置。</p>
           <template v-if="item.params.appearance==='picture'">
             <label class="button">载入设备图片<input aria-label="载入设备图片" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" @change="$emit('action',{key:'device-picture',file:$event.target.files[0]});$event.target.value=''" /></label>
             <p class="muted">{{item.image?'图片已内嵌，可更换。':'请选择透明 PNG、WebP 或其他本地图形。'}}连接点、测点和设备状态独立保存。</p>
@@ -311,7 +322,7 @@ export const ScreenInspector = {
           <label v-if="['pump','fan','valve','tank'].includes(item.symbol)&&item.params.appearance!=='monitor'">位号位置<select aria-label="位号位置" :value="item.params.labelPosition||'bottom'" @focus="$emit('start')" @change="item.params.labelPosition=$event.target.value"><option value="bottom">设备下方</option><option value="top">设备上方</option><option value="none">隐藏位号</option></select></label>
         </template>
         <template v-if="item.symbol==='valve'"><label>阀门类型<select aria-label="阀门类型" :value="item.params.valveMode||'switch'" @change="valveMode($event.target.value)"><option value="switch">开关阀</option><option value="control">调节阀</option></select></label><div v-if="item.params.valveMode==='control'" class="pair"><label>开度下限<input type="number" aria-label="开度下限" :value="item.params.positionMin??0" @focus="$emit('start')" @change="item.params.positionMin=Number($event.target.value)" /></label><label>开度上限<input type="number" aria-label="开度上限" :value="item.params.positionMax??100" @focus="$emit('start')" @change="item.params.positionMax=Number($event.target.value)" /></label></div></template>
-        <label v-if="['tank','barGauge'].includes(item.symbol)">液位 / 棒图颜色<input type="color" aria-label="液位颜色" :value="item.params.waterColor||'#66abc5'" @focus="$emit('start')" @change="item.params.waterColor=$event.target.value" /></label><label v-if="item.symbol==='tank'">液位填充方向<select aria-label="液位填充方向" :value="item.params.levelDirection||'up'" @focus="$emit('start')" @change="item.params.levelDirection=$event.target.value"><option value="up">从下向上</option><option value="down">从上向下</option></select></label>
+        <label v-if="['tank','barGauge','pidBasin'].includes(item.symbol)">液位 / 棒图颜色<input type="color" aria-label="液位颜色" :value="item.params.waterColor||'#66abc5'" @focus="$emit('start')" @change="item.params.waterColor=$event.target.value" /></label><label v-if="item.symbol==='tank'">液位填充方向<select aria-label="液位填充方向" :value="item.params.levelDirection||'up'" @focus="$emit('start')" @change="item.params.levelDirection=$event.target.value"><option value="up">从下向上</option><option value="down">从上向下</option></select></label>
         <div class="pair"><label v-for="(label,key) in {x:'位置 X',y:'位置 Y',w:'宽度',h:'高度',angle:'角度'}">{{label}}<input type="number" :aria-label="label" :value="geometryValue(key)" @focus="startGeometry(key,$event)" @input="geometryDraft.value=$event.target.value" @change="commitGeometry(key,$event)" @blur="geometryDraft.id=''" /></label></div>
         <label v-if="item.symbol==='text'">文字内容<textarea aria-label="文字内容" v-model="item.text" @focus="$emit('start')"></textarea></label>
         <template v-if="Array.isArray(item.points)"><h2>图形顶点</h2><p class="muted">拖动画布上的蓝色顶点，或按宽高百分比编辑位置。</p><div v-for="(point,i) in item.points" class="pair"><label>X {{i+1}} %<input type="number" min="0" max="100" :aria-label="'顶点 '+(i+1)+' X'" v-model.number="point.x" @focus="$emit('start')" /></label><label>Y {{i+1}} %<input type="number" min="0" max="100" :aria-label="'顶点 '+(i+1)+' Y'" v-model.number="point.y" @focus="$emit('start')" /></label><button v-if="item.symbol!=='line'" :disabled="item.points.length<=(item.symbol==='polygon'?3:2)" @click="$emit('start');item.points.splice(i,1)">移除顶点 {{i+1}}</button></div><button v-if="item.symbol!=='line'" @click="$emit('start');item.points.push({x:50,y:50})">添加顶点</button></template>
@@ -322,7 +333,7 @@ export const ScreenInspector = {
         <template v-if="['pump','valve','fan','tank','readout','trend'].includes(item.symbol)||slots.some(s=>(s.role||s.key)==='value')">
           <label v-if="!screenTableKinds.has(item.symbol)">显示单位（留空跟随测点）<input aria-label="显示单位" v-model="item.params.unit" @focus="$emit('start')" /></label>
           <label>小数位<input aria-label="小数位" type="number" min="0" max="10" v-model.number="item.params.precision" @focus="$emit('start')" /></label>
-          <div v-if="item.symbol==='tank'" class="pair"><label>液位下限<input type="number" aria-label="液位下限" v-model.number="item.params.min" @focus="$emit('start')" /></label><label>液位上限<input type="number" aria-label="液位上限" v-model.number="item.params.max" @focus="$emit('start')" /></label></div>
+          <div v-if="['tank','pidBasin'].includes(item.symbol)" class="pair"><label>液位下限<input type="number" aria-label="液位下限" v-model.number="item.params.min" @focus="$emit('start')" /></label><label>液位上限<input type="number" aria-label="液位上限" v-model.number="item.params.max" @focus="$emit('start')" /></label></div>
           <label v-if="item.symbol==='trend'">显示时长（秒）<input type="number" min="10" max="86400" aria-label="趋势时长" v-model.number="item.params.windowSeconds" @focus="$emit('start')" /></label>
         </template>
         <label v-if="item.symbol==='image'" class="button">载入本地图片<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" @change="$emit('action',{key:'image',file:$event.target.files[0]})" /></label>
@@ -332,14 +343,19 @@ export const ScreenInspector = {
         <p class="muted">端点：{{doc.nodes.find(n=>n.id===item.source.nodeId)?.title||'开放端'}} → {{doc.nodes.find(n=>n.id===item.target.nodeId)?.title||'开放端'}}。拖动端点手柄或在下方重新连接。</p>
         <p v-if="endpointError" role="alert" class="definition-error">{{endpointError}}</p><fieldset class="definition-card" v-for="(label,key) in {source:'起点',target:'终点'}"><legend>{{label}}</legend><label>连接元素<select :aria-label="label+'元素'" :value="item[key].nodeId||''" @change="endpointNode(key,$event.target.value)"><option value="">开放端（未连接）</option><option v-for="n in endpointNodes" :value="n.id">{{n.title}}</option></select></label><label v-if="item[key].nodeId">连接点<select :aria-label="label+'连接点'" :value="item[key].portId" @change="setEndpoint(key,{nodeId:item[key].nodeId,portId:$event.target.value})"><option v-for="p in endPorts(key)" :value="p.id">{{p.label}}</option></select></label><div v-else class="pair"><label>X<input type="number" :aria-label="label+' X'" :value="item[key].x" @change="setEndpoint(key,{...item[key],x:Number($event.target.value)})" /></label><label>Y<input type="number" :aria-label="label+' Y'" :value="item[key].y" @change="setEndpoint(key,{...item[key],y:Number($event.target.value)})" /></label></div></fieldset>
         <details class="definition-card"><summary>转折点 · {{item.vertices.length}}</summary>
+          <p class="muted">留空时自动避让设备并随移动、缩放重新计算。手动转折优先。</p><button :disabled="!item.vertices.length" @click="setWaypoints([])">恢复自动走线</button>
           <p v-if="waypointError" role="alert" class="definition-error">{{waypointError}}</p>
           <div class="pair" v-for="(point,i) in item.vertices" :key="i">
             <label v-for="axis in ['x','y']">转折 {{i+1}} {{axis.toUpperCase()}}<input type="number" :aria-label="'转折 '+(i+1)+' '+axis.toUpperCase()" :value="point[axis]" @change="changeWaypoint(i,axis,$event)" /></label>
             <button @click="setWaypoints(item.vertices.filter((_,j)=>j!==i))">移除转折 {{i+1}}</button>
           </div><button @click="addWaypoint">添加转折点</button>
         </details>
+        <div class="pair">
+          <label>线型<select aria-label="管道线型" :value="item.style.pattern||'solid'" @focus="$emit('start')" @change="item.style.pattern=$event.target.value"><option value="solid">实线</option><option value="dashed">虚线</option></select></label>
+          <label class="screen-check"><input type="checkbox" aria-label="跨线桥" :checked="!!item.style.jump" @change="$emit('start');item.style.jump=$event.target.checked" />跨线桥</label>
+        </div>
         <label>管道外观<select aria-label="管道外观" :value="item.style.appearance||'classic'" @focus="$emit('start')" @change="item.style.appearance=$event.target.value"><option v-for="(label,key) in screenAppearanceOptions('pipe')" :key="key" :value="key">{{label}}</option></select></label>
-        <div class="pair"><label>管道颜色<input type="color" aria-label="管道颜色" v-model="item.style.color" @focus="$emit('start')" /></label><label>管道宽度<input type="number" min="1" max="30" aria-label="管道宽度" v-model.number="item.style.width" @focus="$emit('start')" /></label></div>
+        <label class="screen-check"><input type="checkbox" aria-label="管道流动动画" :checked="item.style.animateFlow!==false" @change="$emit('start');item.style.animateFlow=$event.target.checked" />显示流动动画</label><div class="pair"><label>管道颜色<input type="color" aria-label="管道颜色" v-model="item.style.color" @focus="$emit('start')" /></label><label>管道宽度<input type="number" min="1" max="30" aria-label="管道宽度" v-model.number="item.style.width" @focus="$emit('start')" /></label></div>
         <div class="pair"><label>箭头<select aria-label="管道箭头" :value="item.style.arrow||'none'" @focus="$emit('start')" @change="item.style.arrow=$event.target.value"><option value="none">无</option><option value="forward">起点到终点</option><option value="reverse">终点到起点</option><option value="both">双向</option></select></label><label>流动方向<select aria-label="管道流动方向" :value="item.style.flowDirection||'forward'" @focus="$emit('start')" @change="item.style.flowDirection=$event.target.value"><option value="forward">起点到终点</option><option value="reverse">终点到起点</option></select></label></div>
         <label>流动颜色<input type="color" aria-label="管道流动颜色" :value="item.style.flowColor||'#36c2ff'" @change="$emit('start');item.style.flowColor=$event.target.value" /></label>
         <p class="muted">在画布选中管道后拖动管段或转折点；“动态与测点”可绑定流动状态。</p>

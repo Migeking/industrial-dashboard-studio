@@ -1,3 +1,4 @@
+import { waterEquipment } from './water-equipment.mjs';
 // Independent symbols. No scene HTML, CSS, node IDs or sample points are used.
 const slot = (key, label, kinds, required = false) => ({
   key,
@@ -5,7 +6,27 @@ const slot = (key, label, kinds, required = false) => ({
   kinds,
   required,
 });
+const pidRunSlots = () => [
+  slot("run", "运行反馈", ["boolean"], true),
+  slot("fault", "故障反馈", ["boolean"]),
+  slot("value", "运行数值", ["number"]),
+];
+export const screenPidSymbols = {
+  pidBasin: {label:"直壁工艺池", prefix:"TK", w:250, h:340, ports:["left","right","top","bottom"],
+    slots:[slot("value","液位",["number"],true)]},
+  pidInstrument: {label:"位号仪表", prefix:"AIT", w:190, h:60, ports:[],
+    slots:[slot("value","过程值",["number"],true),{...slot("setpoint","设定反馈",["number"]),role:"extra"},{...slot("output","输出反馈",["number"]),role:"extra"}]},
+  pidMixer: {label:"潜水搅拌器符号", prefix:"MX", w:115, h:75, ports:[], slots:pidRunSlots()},
+  pidMeteringPump: {label:"计量泵符号", prefix:"DP", w:130, h:82, ports:["left","right"], slots:pidRunSlots()},
+  pidInterlock: {label:"联锁反馈", prefix:"IL", w:228, h:48, ports:[],
+    slots:[slot("run","联锁成立",["boolean"],true)]},
+};
 export const screenSymbols = {
+  modeSwitch:{label:'工况切换',w:580,h:85,ports:[],slots:[slot('value','当前工况',['number'],true)]},
+  numberStepper:{label:'数值加减',w:240,h:100,ports:[],slots:[slot('value','调节数值',['number'],true)]},
+  trendRange:{label:'趋势时间切换',w:210,h:44,ports:[],slots:[]},
+  ...waterEquipment,
+  ...screenPidSymbols,
   pump: {
     label: "离心泵",
     prefix: "P",
@@ -47,7 +68,7 @@ export const screenSymbols = {
     slots: [slot("value", "液位", ["number"], true)],
   },
   fan: {
-    label: "风机 / 电机",
+    label: "离心风机",
     prefix: "M",
     w: 170,
     h: 160,
@@ -143,6 +164,7 @@ export const screenSymbols = {
 };
 export const pipeSlots = [slot("run", "流动状态", ["boolean"])];
 export function screenAppearanceOptions(symbol) {
+  if (waterEquipment[symbol]) return {depth:'内置设备图稿',picture:'本地图片外观'};
   if (
     !["pump", "fan", "valve", "tank", "readout", "checkValve", "junction", "pipe"].includes(symbol)
   )
@@ -150,6 +172,9 @@ export function screenAppearanceOptions(symbol) {
   const options = { classic: "经典平面", detailed: "精细平面" };
   if (["pump", "fan", "readout"].includes(symbol)) options.monitor = "监控铭牌";
   if (symbol === "tank") options.monitor = "监控液位";
+  if (["pump", "fan", "valve", "checkValve", "tank", "readout", "junction"].includes(symbol)) options.depth = "2.5D 设备外观";
+  if(symbol==='junction') options.process='管线接头';
+  if (symbol === "pipe") {options.depth = "2.5D 管壁";options.process="工艺管线";}
   if (["pump", "fan", "valve", "checkValve"].includes(symbol))
     options.picture = "本地图片外观";
   return options;
@@ -161,7 +186,7 @@ export function screenSlots(n) {
     n?.dataSlots ??
     defaults.map((s) => ({
       ...s,
-      role: n?.type === "pipe" && s.key === "run" ? "flow" : s.key,
+      role: s.role || (n?.type === "pipe" && s.key === "run" ? "flow" : s.key),
     }));
   return n?.symbol === "valve" &&
     n.params?.valveMode === "control" &&
@@ -189,9 +214,17 @@ export const screenSlotRoles = {
   flow: "管道流动",
 };
 export function screenPorts(n) {
+  const equipment=waterEquipment[n?.symbol];
+  if(equipment&&!n.ports){
+    const sx=(n.w||equipment.w)/equipment.w,sy=(n.h||equipment.h)/equipment.h,k=Math.min(sx,sy);
+    return equipment.portDefinitions.map(p=>{
+      const [ax,ay]=p.anchor||[p.x,p.y],cy=equipment.pictureHeight/equipment.h*50;
+      return {...p,x:50+(ax-50)*k/sx,y:cy+(ay-cy)*k/sy};
+    });
+  }
   return (
     n?.ports ??
-    (screenSymbols[n?.symbol]?.ports || []).map((id) => ({
+    screenSymbols[n?.symbol]?.portDefinitions ?? (screenSymbols[n?.symbol]?.ports || []).map((id) => ({
       id,
       label: screenPortSides[id],
       x: id === "left" ? 0 : id === "right" ? 100 : 50,
@@ -204,7 +237,7 @@ export function screenRoleSlot(n, role) {
   return screenSlots(n).find((s) => (s.role || s.key) === role);
 }
 export function screenDefaultAction(n) {
-  return ["trend", "barChart", "pieChart", "gauge", "table", "events"].includes(
+  return ["trend", "barChart", "pieChart", "gauge", "table", "events", "modeSwitch", "numberStepper", "trendRange"].includes(
     n?.symbol,
   )
     ? "none"
@@ -223,7 +256,7 @@ export function screenGraphPorts(n) {
         position: "absolute",
         attrs: {
           circle: {
-            r: 7,
+            r: 5.5,
             magnet: true,
             stroke: "#087f85",
             strokeWidth: 2,
@@ -253,7 +286,7 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
         position: name,
         attrs: {
           circle: {
-            r: 7,
+            r: 5.5,
             magnet: true,
             stroke: "#087f85",
             strokeWidth: 2,
@@ -333,6 +366,22 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
       visibility: "hidden",
     },
   });
+  for (const [symbol,def] of Object.entries(waterEquipment)) {
+    const pictureHeight=def.pictureHeight;
+    const numeric=def.slots.filter(s=>s.kinds.includes('number')).slice(0,def.category==='devices'?1:3);
+    artwork(symbol,[
+      transparent(def.w,def.h),
+      {tagName:'path',selector:'equipmentStubs',attrs:{fill:'none',stroke:'#547185',strokeWidth:4}},
+      {...devicePicture(0,0,def.w,pictureHeight),attrs:{x:0,y:0,width:def.w,height:pictureHeight,preserveAspectRatio:'xMidYMid meet',pointerEvents:'none'}},
+      text('caption',def.w/2,pictureHeight+22,def.category==='units'?23:18),
+      {...badgeBox('stateBadge',def.w/2-48,pictureHeight+31,96,24),attrs:{x:def.w/2-48,y:pictureHeight+31,width:96,height:24,rx:12}},
+      text('state',def.w/2,pictureHeight+48,14),
+      ...numeric.flatMap((_,i)=>{
+        const x=def.w*(i+.5)/numeric.length;
+        return [text('metricLabel'+i,x,pictureHeight+77,12),text('metricValue'+i,x,pictureHeight+100,def.category==='units'?20:17)];
+      }),
+    ]);
+  }
   for (const symbol of ["pump", "fan"])
     artwork(symbol, [
       transparent(170, 160),
@@ -431,6 +480,19 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
     transparent(220, 300),
     {
       tagName: "path",
+      selector: "tankShell",
+      attrs: {
+        class: "screen-tank-shell",
+        d: "M25 25L42 10H208V250L195 265V25ZM195 25L208 10",
+        fill: "#294453",
+        stroke: "#5c798a",
+        strokeWidth: 2,
+        visibility: "hidden",
+        pointerEvents: "none",
+      },
+    },
+    {
+      tagName: "path",
       selector: "tankStubs",
       attrs: {
         d: "M0 150H25M195 150H220M110 0V25M110 265V300",
@@ -461,7 +523,48 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
     text("value", 110, 158, 26),
     text("caption", 110, 289),
   ]);
+  const pidRect = (selector, x, y, width, height, fill, stroke = "none") => ({
+    tagName: "rect", selector, attrs: { x, y, width, height, fill, stroke, rx: 2 },
+  });
+  const pidPath = (selector, d, stroke, fill = "none") => ({
+    tagName: "path", selector, attrs: { d, stroke, fill, strokeWidth: 2 },
+  });
+  const pidCircle = (selector, cx, cy, r, fill) => ({
+    tagName: "circle", selector, attrs: { cx, cy, r, fill, stroke: "#647b85", strokeWidth: 1.6 },
+  });
+  artwork("pidBasin", [
+    pidRect("body", 0, 0, 250, 340, "#cdd7db", "#879fa9"),
+    pidRect("interior", 9, 72, 232, 258, "#eff2f3"),
+    pidRect("level", 9, 72, 232, 0, "#b3c6ce"),
+    pidPath("scale", "M17 81V325 M17 81h9 M17 142h6 M17 203h9 M17 264h6 M17 325h9", "#6f858d"),
+    text("caption", 125, 31, 18), text("value", 125, 54, 13),
+  ]);
+  artwork("pidInstrument", [
+    transparent(190,60),
+    pidRect("field", 45, 6, 140, 32, "#ffffff", "#91a5ae"),
+    pidCircle("bubble", 23, 22, 20, "#f5f8f9"),
+    text("caption", 23, 26, 10), text("value", 115, 28, 21), text("quality", 115, 55, 12),
+  ]);
+  artwork("pidMixer", [
+    transparent(115,75),
+    pidCircle("body", 57.5, 23, 18, "#eef2f4"),
+    pidPath("rotor", "M45 21L70 25 M59 11L56 36", "#456674"),
+    text("caption", 57.5, 55, 13), text("state", 57.5, 71, 12),
+  ]);
+  artwork("pidMeteringPump", [
+    transparent(130,82),
+    pidPath("stubs", "M0 41H30 M100 41H130", "#6a7d85"),
+    pidRect("body", 29, 20, 72, 41, "#dbe4e8", "#607986"),
+    pidPath("diaphragm", "M35 41H45L52 30L65 51L77 30L85 41H95", "#426573"),
+    text("caption", 65, 13, 14), text("state", 65, 79, 12),
+  ]);
+  artwork("pidInterlock", [
+    pidRect("body", 0, 0, 228, 48, "#f6f8f9", "#b1c0c6"),
+    pidCircle("indicator", 16, 24, 4.5, "#8397a2"),
+    text("caption", 82, 29, 14), text("state", 179, 29, 13),
+  ]);
   artwork("junction", [
+    {tagName:"path",selector:"junctionLinks",attrs:{d:"",fill:"none",strokeWidth:5,strokeLinecap:"round"}},
     {
       tagName: "circle",
       selector: "body",
@@ -532,6 +635,7 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
         fontFamily: "Microsoft YaHei,sans-serif",
       },
     },
+    {tagName:'text',selector:'unit',attrs:{x:150,y:93,fontSize:18,fill:'#536f82',visibility:'hidden',fontFamily:'Microsoft YaHei,sans-serif'}},
   ]);
   for (const symbol of ["line", "polyline", "polygon"]) {
     const def = screenSymbols[symbol];
@@ -629,6 +733,7 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
     "gauge",
     "table",
     "events",
+    "modeSwitch", "numberStepper", "trendRange",
   ])
     Shape.HTML.register({
       shape: "screen-" + symbol,

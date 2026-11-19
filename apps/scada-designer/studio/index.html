@@ -89,16 +89,30 @@
         <template v-if="screen && activeStep!=='scene'">
           <div class="screen-library-tabs" role="tablist" aria-label="绘图资源"><button role="tab" aria-label="图元与工具" :aria-selected="libraryTab==='symbols'" @click="libraryTab='symbols'">绘图</button><button role="tab" :aria-selected="libraryTab==='layers'" @click="libraryTab='layers'">图层 {{screenItems.length}}</button><button role="tab" :aria-selected="libraryTab==='mine'" @click="libraryTab='mine'">我的图元</button></div>
           <template v-if="libraryTab==='symbols'">
-            <h2>绘图工具</h2><div class="tools screen-tools"><button v-for="(label,key) in {select:'↖ 选择',pipe:'⌁ 连管',rect:'▭ 矩形',ellipse:'◯ 椭圆',line:'直线',polyline:'折线',polygon:'多边形',text:'T 文字'}" :data-tool="key" :class="{active:screenTool===key}" @click="setScreenTool(key)">{{label}}</button></div>
-            <p class="muted">拖入图元，或点击后在画布放置。</p>
+            <div class="component-browse">
+              <label>组件分类<select aria-label="组件分类" v-model="componentCategory"><option v-for="(label,key) in componentCategories" :value="key">{{label}}</option></select></label>
+              <input aria-label="搜索组件" placeholder="搜索设备、工艺或英文简称" v-model="componentQuery" />
+              <p class="muted">拖入组件，或点击后在画布放置。外观在右侧属性中调整。</p>
+            </div>
             <section v-for="group in screenPaletteSections" :key="group.key" :data-palette-section="group.key">
-              <h2>{{group.label}}</h2>
-              <div class="tools screen-symbols"><button v-for="symbol in group.symbols" :key="symbol" :data-symbol="symbol" draggable="true" @dragstart="screenDrag($event,symbol)" @click="setScreenTool(symbol)">{{screenSymbols[symbol].label}}</button></div>
+              <h2>{{group.label}}<small>{{group.symbols.length}}</small></h2>
+              <div class="tools screen-symbols" :class="{'component-cards':['units','devices'].includes(group.key)}"><button v-for="symbol in group.symbols" :key="symbol" :data-symbol="symbol" :data-tool="group.key==='shapes'?symbol:undefined" :class="{active:screenTool===symbol}" :title="waterEquipment[symbol]?.description||screenSymbols[symbol].label" draggable="true" @dragstart="screenDrag($event,symbol)" @click="setScreenTool(symbol)"><img v-if="componentArtwork[symbol]" :src="componentArtwork[symbol]" alt="" loading="lazy" class="screen-equipment-preview" /><span v-else-if="['units','devices'].includes(group.key)" class="component-letter" aria-hidden="true">{{screenSymbols[symbol].label.slice(0,2)}}</span><span>{{screenSymbols[symbol].label}}</span><small v-if="waterEquipment[symbol]">{{waterEquipment[symbol].ports.length}} 接口 · {{waterEquipment[symbol].slots.length}} 测点槽位</small></button></div>
             </section>
+            <div v-if="!screenPaletteSections.length" class="component-empty" role="status"><b>没有匹配的组件</b><p>试试“沉淀”“加药”“MBR”，或查看全部分类。</p><button @click="componentCategory='all';componentQuery=''">查看全部组件</button></div>
             <div class="screen-source-summary"><b>{{sourceTitle}}</b><span>{{connection}}</span><small>{{doc.mappings.length}} 个测点</small><button @click="openConfig">管理连接与点位</button></div>
             <p class="muted">Shift 多选 / 框选，方向键微移，Ctrl+D 复制。先选“连管”，再拖动设备的圆形接口。</p>
           </template>
-          <template v-else-if="libraryTab==='layers'"><input aria-label="查找画布对象" placeholder="查找设备、管道或文字" v-model="layerSearch" /><button v-for="n in screenItems.filter(n=>!layerSearch||screenLayerName(n).toLowerCase().includes(layerSearch.toLowerCase()))" class="layer" :class="{active:ids.includes(n.id)}" :data-layer="n.id" @click="screenSelect($event.altKey?[n.id]:$event.shiftKey?[...new Set([...ids,n.id])]:n.group?doc.nodes.filter(v=>v.group===n.group).map(v=>v.id):[n.id])"><span>{{n.locked?'▣ ':''}}{{n.hidden?'◌ ':''}}{{screenLayerName(n)}}</span><small>{{n.type==='pipe'?'管道':screenSymbols[n.symbol].label}}<span v-if="bindingReason(n)"> · 待绑定</span></small></button><p v-if="!screenItems.length" class="muted">画布为空，切换到图元与工具开始绘制。</p></template>
+          <template v-else-if="libraryTab==='layers'">
+            <input aria-label="查找画布对象" placeholder="查找名称、位号或图元类型" v-model="layerSearch" />
+            <section v-for="group in screenLayerSections" :key="group.key" class="screen-layer-group" :data-layer-group="group.key">
+              <h2>{{group.label}} <small>{{group.items.length}}</small></h2>
+              <button v-for="n in group.items" :key="n.id" class="layer" :class="{active:ids.includes(n.id)}" :data-layer="n.id" @click="screenSelect($event.altKey?[n.id]:$event.shiftKey?[...new Set([...ids,n.id])]:n.group?doc.nodes.filter(v=>v.group===n.group).map(v=>v.id):[n.id])">
+                <span>{{n.locked?'▣ ':''}}{{n.hidden?'◌ ':''}}{{screenLayerName(n)}}</span>
+                <small>{{n.type==='pipe'?'管道':screenSymbols[n.symbol].label}}<span v-if="bindingReason(n)"> · 待绑定</span></small>
+              </button>
+            </section>
+            <p v-if="!screenLayerSections.length" class="muted">{{screenItems.length?'没有匹配的画布对象':'画布为空，去组件库放置图元。'}}</p>
+          </template>
           <screen-library v-else :doc="doc" :selected="ids" @start="snapshot" @place="setScreenTool('library:'+$event)"></screen-library>
         </template>
         <template v-else>
@@ -230,6 +244,24 @@
       </aside>
       <div class="canvas-workspace">
         <screen-page-navigator v-if="screen&&(editing||pages.length>1)" :project="project" :pages="pages" :active="activePageId" :editing="editing" @change="switchScreenPage" @add="addPage" @rename="pageAction('rename',$event)" @home="pageAction('home')" @remove="pageAction('remove')"></screen-page-navigator>
+        <div v-if="screen&&editing" class="screen-workspace-tools" role="toolbar" aria-label="画布工具">
+          <div class="screen-tools">
+            <button data-tool="select" :aria-pressed="screenTool==='select'" :class="{active:screenTool==='select'}" @click="setScreenTool('select')">选择</button>
+            <button data-tool="pipe" :aria-pressed="screenTool==='pipe'" :class="{active:screenTool==='pipe'}" @click="setScreenTool('pipe')">连管</button>
+          </div>
+          <label>打开组件库
+            <select aria-label="工作区组件分类" :value="libraryTab==='symbols'&&!screenView.leftCollapsed?componentCategory:''" @change="openWorkspaceCategory($event.target.value)">
+              <option value="" disabled>选择分类</option>
+              <option v-for="(label,key) in componentCategories" :key="key" :value="key">{{label}}</option>
+            </select>
+          </label>
+          <button @click="libraryTab='layers';screenView.leftCollapsed=false;if(activeStep==='scene')goStep('canvas')" aria-label="打开图层面板">图层</button>
+          <div class="screen-arrange">
+            <button aria-label="选中对象置顶" :disabled="!sel||sel.type==='pipe'" @click="screenCommand({key:'front'})">置顶</button>
+            <button aria-label="选中对象置底" :disabled="!sel||sel.type==='pipe'" @click="screenCommand({key:'back'})">置底</button>
+            <button aria-label="锁定或解锁选中对象" :disabled="!sel||sel.type==='pipe'" @click="screenCommand({key:'lock'})">{{sel?.locked?'解锁':'锁定'}}</button>
+          </div>
+        </div>
         <div v-if="!viewer" class="canvas-toolbar">
           <screen-viewport-tools v-if="screen&&editing" :view="screenView" @pan="screenTool='select'"></screen-viewport-tools><b>{{ preview ? "页面预览" : "场景画布" }}</b
           ><span>1920 × 1080</span
@@ -356,6 +388,7 @@
 <p v-if="published" class="publish-success">发布成功，展示端已更新。</p>
         </template>
         <template v-else>
+          <details v-if="screen" class="screen-page-appearance"><summary>基础图元与管道外观</summary><label>默认外观<select aria-label="绘图外观" :value="doc.canvas.appearance||'classic'" @change="setScreenDrawingAppearance($event.target.value)"><option v-for="(label,key) in screenDrawingAppearances" :value="key">{{label}}</option></select></label><div class="pair"><button @click="applyDrawingAppearance(true)">应用到选中</button><button @click="applyDrawingAppearance(false)">应用到本页</button></div><p class="muted">成套组件使用自带图稿。锁定对象和本地图片保持原样，可撤销。</p></details>
           <template v-if="screen && sel">
             <screen-inspector :item="sel" :doc="doc" :project="project" :points="points" :tab="inspectorTab" :count="ids.length" @start="snapshot" @geometry="screenGeometry" @action="screenCommand" @tab="inspectorTab=$event" @data="openConfig"></screen-inspector>
           </template>
@@ -665,7 +698,7 @@
             </template>
           </template>
           <template v-else
-            ><h2>页面设置</h2>
+            ><div v-if="screen&&waterEquipment[screenTool]" class="component-place-preview"><b>准备放置 · {{screenSymbols[screenTool].label}}</b><img :src="componentArtwork[screenTool]" :alt="screenSymbols[screenTool].label+' 设备预览'" /><p>{{waterEquipment[screenTool].description}}</p><small>点击画布放置，Esc 返回选择。</small></div><h2>页面设置</h2>
             <label
               >名称<input
                 aria-label="名称"

@@ -187,7 +187,7 @@ export function screenChartResult(
     n.style,
     n.params,
     n.bindings,
-    resolved.map((r) => [r.map, r.point?.quality]),
+    resolved.map((r) => [r.map, r.point?.quality, r.point?.value]),
     sequence,
     sourceVersion,
   ]);
@@ -209,7 +209,7 @@ export function screenChartResult(
         h = { binding: map.id, key: "", rows: [] };
         entry.histories.set(s.id, h);
       }
-      const sampleKey = JSON.stringify([sequence, point?.quality, map]);
+      const sampleKey = JSON.stringify([sequence, point?.quality, point?.value, map]);
       if (h.key !== sampleKey) {
         h.key = sampleKey;
         h.rows.push([
@@ -218,7 +218,7 @@ export function screenChartResult(
         ]);
       }
       h.rows = h.rows
-        .filter((r) => r[0] >= now - n.params.windowSeconds * 1000)
+        .filter((r) => r[0] >= now - Math.max(n.params.windowSeconds,86400) * 1000)
         .slice(-600);
       rows =
         xType === "time"
@@ -246,6 +246,9 @@ export function screenChartResult(
           };
         })
         .filter((r) => xType !== "time" || Number.isFinite(r.x));
+    }
+    if(n.params.rangeActive&&xType==='time'&&rows.length){
+      const latest=rows.reduce((max,r)=>Math.max(max,r.x),-Infinity);rows=rows.filter(r=>r.x>=latest-n.params.windowSeconds*1000);
     }
     plots.push({
       spec: s,
@@ -362,7 +365,7 @@ export function screenChartResult(
     const right = plots.some((p) => p.spec.axis === 1);
     option = {
       ...base,
-      grid: { left: 58, right: right ? 65 : 22, top: 52, bottom: 42 },
+      grid: { left: 58, right: right ? 65 : 22, top: n.params.compact?32:52, bottom: n.params.compact?28:42 },
       xAxis: {
         type: xType,
         ...range,
@@ -370,7 +373,7 @@ export function screenChartResult(
           ? { data: categories }
           : {
               axisLabel: {
-                formatter: "{HH}:{mm}:{ss}",
+                formatter: n.params.timeFormat==='hours'?"{HH}:{mm}":"{HH}:{mm}:{ss}",
                 hideOverlap: true,
                 color,
               },
@@ -378,7 +381,7 @@ export function screenChartResult(
         axisLabel: {
           color,
           hideOverlap: true,
-          ...(xType === "time" ? { formatter: "{HH}:{mm}:{ss}" } : {}),
+          ...(xType === "time" ? { formatter: n.params.timeFormat==='hours'?"{HH}:{mm}":"{HH}:{mm}:{ss}" } : {}),
         },
       },
       yAxis: right ? axes : [axes[0]],
@@ -386,7 +389,8 @@ export function screenChartResult(
         type: p.spec.type,
         name: p.name,
         yAxisIndex: p.spec.axis,
-        showSymbol: p.rows.length < 100,
+        showSymbol: n.params.showSymbol??p.rows.length < 100,
+        smooth:!!n.params.smooth,
         connectNulls: false,
         data:
           xType === "time"

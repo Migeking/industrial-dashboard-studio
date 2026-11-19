@@ -1,3 +1,19 @@
+import { screenAppearanceOptions } from "../../components/studio/screen-symbols.mjs";
+
+export const screenDrawingAppearances = { classic: "经典平面", detailed: "精细平面", depth: "2.5D 立体" };
+export function applyScreenAppearance(doc, appearance, selected) {
+  if (!Object.hasOwn(screenDrawingAppearances, appearance)) throw Error("绘图外观无效");
+  let count = 0;
+  for (const item of [...doc.nodes, ...doc.pipes]) {
+    if (item.locked || selected && !selected.includes(item.id)) continue;
+    const target = item.type === "pipe" ? item.style : item.params;
+    if (!screenAppearanceOptions(item.type === "pipe" ? "pipe" : item.symbol)[appearance]) continue;
+    if (target.appearance === "picture") continue;
+    if (target.appearance !== appearance) { target.appearance = appearance; count++; }
+  }
+  return count;
+}
+
 export const screenThemes = {
   "process-gray": {
     name: "灰色工艺",
@@ -59,6 +75,8 @@ export function applyScreenPurpose(doc, purpose) {
 
 export function applyScreenNodeDefaults(node, canvas) {
   if (canvas.theme) applyScreenNodeTheme(node, canvas.theme);
+  if (!node.params.appearance && canvas.appearance && screenAppearanceOptions(node.symbol)[canvas.appearance])
+    node.params.appearance = canvas.appearance;
   const size = screenPurposes[canvas.purpose]?.fontSizes?.[node.symbol];
   if (size !== undefined) node.style.fontSize = size;
 }

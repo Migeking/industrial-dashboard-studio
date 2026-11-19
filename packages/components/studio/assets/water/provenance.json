@@ -1,0 +1,315 @@
+{
+  "tool": "built-in image_gen",
+  "assets": [
+    {
+      "id": "lamellaClarifier",
+      "file": "lamellaClarifier.webp",
+      "size": [
+        1024,
+        512
+      ],
+      "bytes": 189056,
+      "sha256": "c735e8cbb95aaf826d8ddc6adaa52f5e4acafee8f1919876a7ae0d64b31e910e",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. A packaged high-rate water clarifier in architectural CUTAWAY: a single integrated rectangular reinforced-concrete structure with three adjacent chambers from LEFT to RIGHT: small rapid-mixing chamber with a visible vertical shaft and turbine impeller, medium flocculation chamber with a visible large slow-speed paddle/guide cylinder, and a wider settling chamber with neatly repeated 60-degree inclined lamella plates above a hopper bottom. Shallow clear turquoise water. Service walkway with fine steel safety railings, two small navy-blue top-mounted mixer gearmotors. Feed flange protrudes far LEFT, clarified-water outlet flange far RIGHT, sludge discharge flange at LOWER RIGHT, two small chemical dosing connection stubs along the top/front. Show the internal process construction clearly, believable plate inclination and separate mixing chambers. Wide landscape asset, visual ratio about 2:1. Avoid an opaque box or a generic swimming pool.",
+      "edits": []
+    },
+    {
+      "id": "submersiblePump",
+      "file": "submersiblePump.webp",
+      "size": [
+        768,
+        768
+      ],
+      "bytes": 73138,
+      "sha256": "9bd4eebda35538b971c49cc2bf9f5e8ac9a7c2f488e96f2cc25599b73b40c8e2",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. One vertical submersible sewage centrifugal pump, isolated industrial product cutout. Dark navy submersible electric motor above a cast ductile-iron volute, flat circular suction base at bottom, side discharge elbow and bolted flange facing RIGHT, lifting handle and realistic short heavy cable rising slightly from the top. Clear flange openings and realistic bolts. No tank, no water around it, no scaffolding. Object fills square frame with generous padding.",
+      "edits": []
+    },
+    {
+      "id": "verticalMixer",
+      "file": "verticalMixer.webp",
+      "size": [
+        768,
+        768
+      ],
+      "bytes": 58406,
+      "sha256": "d5848e34d486fbc72882f0d22aabc5d3933ebd1fdd9c25aba0e7020c8f978968",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. One industrial vertical slow-speed flocculation mixer, isolated product cutout. Navy-blue electric motor and reduction gearbox at TOP on a clean stainless mounting plate, long vertical steel shaft, TWO large two-blade paddle impellers at lower levels with credible engineering proportions. Slightly oblique view shows full shaft and all blades clearly. No tank, no fluid, no environment. Tall equipment shown fully within portrait-like subject area inside square canvas.",
+      "edits": []
+    },
+    {
+      "id": "pressureFilter",
+      "file": "pressureFilter.webp",
+      "size": [
+        747,
+        768
+      ],
+      "bytes": 119910,
+      "sha256": "a27f2b27a18a434ebf344063489bc60e53bf080651acdea05397cfd487b58e56",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. One vertical cylindrical pressure sand-filter vessel for a waterworks, isolated product cutout. Off-white steel cylinder with dished ends, three short support legs, navy-blue short manifold pipe and visible stainless valves, left mid-height inlet flange and right mid-height outlet flange, lower drain nozzle. Small circular top access hatch and subtle pressure gauge (blank dial, no text). Show a narrow cutaway window in one quadrant revealing stratified sand/an­thracite media and bottom underdrain, neatly engineered. No tank farm, no floor, no labels.",
+      "edits": []
+    },
+    {
+      "id": "chemicalTank",
+      "file": "chemicalTank.webp",
+      "size": [
+        664,
+        768
+      ],
+      "bytes": 42748,
+      "sha256": "71ee96775cdfb846de3faa988cf36ef1524dd79d41cd11dcb61b1a0955853d2d",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. One upright cylindrical chemical storage tank in off-white polyethylene, isolated industrial product cutout. Rounded top with one capped manway and short vent, dark blue low-level flange on lower RIGHT, a translucent vertical level sight strip, small mounting feet. No liquid level numbers, no labels, no bund, no pump. Whole tank clearly visible.",
+      "edits": []
+    },
+    {
+      "id": "screenRake",
+      "file": "screenRake.webp",
+      "size": [
+        1024,
+        683
+      ],
+      "bytes": 149962,
+      "sha256": "92497bd59d919ffb7c4b42a9776c9706cd65db008b39588fcb45b9a4db1b7d24",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. One municipal wastewater inclined mechanical bar screen, self-contained packaged machine shown completely isolated in CUTAWAY. Off-white concrete narrow channel segment with shallow turquoise water, a stainless steeply inclined bar rack with credible parallel vertical bars, blue top gearmotor and enclosed upper discharge chute, stainless side guards. Flow enters the front-LEFT and leaves back-RIGHT through short flange openings; no extra equipment. Recognizable coarse-screen machine, not a conveyor belt. Landscape cutout.",
+      "edits": []
+    },
+    {
+      "id": "screwPress",
+      "file": "screwPress.webp",
+      "size": [
+        1024,
+        524
+      ],
+      "bytes": 113614,
+      "sha256": "fdb3d719da841bda54324c27099b609ac7c1313025fc5c22c4b5e778b60c61bd",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. One complete municipal sludge screw press / multi-disc sludge dewatering machine on stainless skid. Credible long inclined cylindrical stacked-disc screw barrel with ring details, small navy gearbox at elevated discharge end, a rectangular feed conditioning box and small motor at the other end, filtrate collection tray below, short sludge cake discharge chute, two stout support frames. White and stainless clean product visualization. No pipes to other machines, no sludge pile, no people. Landscape cutout.",
+      "edits": [
+        "Use case: precise-object-edit. Production SCADA transparent component cutout. Remove ALL textual labels, printed letters, words, arrow markings and informational plaques from this machine. Where a label was stuck to a real machine surface, restore uninterrupted matching stainless steel. Remove any floating or freestanding label boards completely. Keep the entire screw press, metalwork, gearbox, mounting skid, camera angle, silhouette and colors unchanged. Preserve a genuinely transparent background: everything outside the equipment silhouette and all gaps between rails must be alpha zero. Solid structural equipment surfaces must remain opaque, not ghosted. No rectangular scenery, shadows on ground, halos, labels, borders or watermarks. Preserve all other subject details; keep whole equipment in frame with small padding."
+      ]
+    },
+    {
+      "id": "circularClarifier",
+      "file": "circularClarifier.webp",
+      "size": [
+        1024,
+        524
+      ],
+      "bytes": 183224,
+      "sha256": "2f0183fd64c456a552235b252e646a845bae50c45e826146ad22bbfdad7a15c3",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. One circular secondary settling clarifier for municipal wastewater shown as an architectural engineering cutaway. Circular pale-concrete basin with one front quadrant wall cut down to reveal clear turquoise water, central feed well, radial stainless bridge and fine safety rails spanning from central pier to outer rim, navy-blue peripheral drive, conical sloped floor and visible radial scraper blade under water, peripheral overflow launder. Two short inlet/outlet pipe flanges extend at left and right, one bottom sludge outlet. Entire circular basin visible, no surroundings. Landscape isolated cutout.",
+      "edits": []
+    },
+    {
+      "id": "mbrModule",
+      "file": "mbrModule.webp",
+      "size": [
+        1024,
+        524
+      ],
+      "bytes": 148750,
+      "sha256": "ca6936282ea96514024eef591191e5a4e4057103821c032894522fcee7a6a26f",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. One integrated rectangular membrane bioreactor tank module in architectural CUTAWAY, not an entire plant. Off-white structural basin cut open on front side, subtle turquoise water. Two clearly visible removable submerged flat-sheet membrane cassette racks with closely spaced vertical sheets, stainless lift frames, fine-bubble aeration manifold underneath, thin suction headers leading to a short navy-blue outlet manifold on RIGHT. Stainless safety rail at rear, short inlet connection LEFT and air-supply stub at front. No oversized pumps or buildings. Landscape equipment cutout.",
+      "edits": [
+        "Use case: precise-object-edit. Production SCADA transparent component cutout. Remove the ENTIRE outdoor background including grass, soil, concrete ground and plinth around the tank. Retain only the MBR equipment itself: off-white basin and real mounting feet, stainless rails, membrane racks, water inside the basin, all equipment pipework. Outside the equipment must be alpha zero including through railing gaps. Remove ALL labels, text AIR, numbers and arrow stickers, restoring clean unmarked metal surfaces. Keep the geometry, camera, membranes and water unchanged. Preserve a genuinely transparent background: everything outside the equipment silhouette and all gaps between rails must be alpha zero. Solid structural equipment surfaces must remain opaque, not ghosted. No rectangular scenery, shadows on ground, halos, labels, borders or watermarks. Preserve all other subject details; keep whole equipment in frame with small padding."
+      ]
+    },
+    {
+      "id": "dosingSkid",
+      "file": "dosingSkid.webp",
+      "size": [
+        1024,
+        683
+      ],
+      "bytes": 98574,
+      "sha256": "09ea745fc455b58bfd94c3ddbdb470b829d538ee1062b38beaee190584ffae54",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. One complete packaged chemical dosing skid: TWO identical tall off-white cylindrical PE day tanks side by side, TWO small navy diaphragm metering pumps with realistic pump heads on a shared low stainless base at front, concise stainless interconnecting tubing and two outlet dosing stubs on RIGHT, small neat off-white blank control cabinet mounted to rear frame. Short individual mixer shafts visible only at tank lids. Equipment product cutout, no floor, no pipes to external facilities, no text or labels. Landscape asset.",
+      "edits": []
+    },
+    {
+      "id": "filterTrain",
+      "file": "filterTrain.webp",
+      "size": [
+        1024,
+        525
+      ],
+      "bytes": 178492,
+      "sha256": "265cee82f7714f3e3d3121b0ae3ca5dae574cf9f9683bb6cf43cf9a051b162fd",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. One gravity rapid-sand filtration cell for a drinking-water treatment works in architectural CUTAWAY. A single rectangular off-white reinforced-concrete basin, front wall selectively cut down to reveal a turquoise water layer, dark anthracite top media, golden fine sand middle media, pale graded gravel bottom layer, and precise perforated underdrain laterals. Rear stainless service walkway with safety railing, clearly separated LEFT raw-water inlet, RIGHT filtered-water outlet and LOWER backwash inlet stub. One compact dark-blue valve at outlet. No adjacent tanks, no surroundings. Wide landscape cutout.",
+      "edits": [
+        "Use case: precise-object-edit. Production SCADA transparent component cutout. Remove ALL labels, English text, arrow markings, measurement arrows and callout plaques. Restore clean uninterrupted railings or substrate where plaques were attached. Keep the filtration-cell structure, water, filter media layers, underdrain laterals and pipe nozzles unchanged. Do not remove real piping or filter material. No text at all. Preserve a genuinely transparent background: everything outside the equipment silhouette and all gaps between rails must be alpha zero. Solid structural equipment surfaces must remain opaque, not ghosted. No rectangular scenery, shadows on ground, halos, labels, borders or watermarks. Preserve all other subject details; keep whole equipment in frame with small padding."
+      ]
+    },
+    {
+      "id": "roSkid",
+      "file": "roSkid.webp",
+      "size": [
+        1024,
+        524
+      ],
+      "bytes": 163072,
+      "sha256": "b5bdd8164dd45fbd18baa9dfca13c0797ce23cc0c8c5a287ddc404e7e1c42952",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. One compact industrial reverse-osmosis water purification skid, isolated engineering product visualization. Stainless box frame with THREE long horizontal white FRP membrane pressure vessels stacked vertically, navy-blue end caps, well-organized stainless high-pressure feed manifold, one small blue multistage high-pressure pump on the lower skid, two short product and reject outlet stubs at RIGHT and feed stub LEFT, small blank white instrument panel. Realistic vessel supports and minimal gauges without text. No storage tanks, no floor. Wide landscape equipment cutout.",
+      "edits": []
+    },
+    {
+      "id": "uvChannel",
+      "file": "uvChannel.webp",
+      "size": [
+        1024,
+        524
+      ],
+      "bytes": 127386,
+      "sha256": "2321745669a03ed3901291d15138c9245cb05c89f5278da94f111c6ad615bd64",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. One open-channel ultraviolet disinfection module for a waterworks, isolated architectural CUTAWAY. Short rectangular off-white concrete channel segment with turquoise water, two neat banks of evenly spaced stainless submerged UV lamp sleeve racks spanning across the flow channel, visible parallel pale quartz sleeves with a restrained faint cool-blue tint (no neon glow), stainless lift frame and cable tray, small navy electrical junction boxes at rear. LEFT upstream inlet and RIGHT downstream outlet short openings, clear readable structure. No people, no environment. Wide landscape cutout.",
+      "edits": [
+        "Use case: precise-object-edit. Production SCADA transparent component cutout. Remove ALL text, labels, arrows and plaques, including UV DISINFECTION MODULE on the beam and inlet/outlet labels. Restore clean uninterrupted metal beam and pale concrete at those locations. Keep the entire UV channel construction, lamp banks, wiring, water and exact camera angle unchanged. Preserve a genuinely transparent background: everything outside the equipment silhouette and all gaps between rails must be alpha zero. Solid structural equipment surfaces must remain opaque, not ghosted. No rectangular scenery, shadows on ground, halos, labels, borders or watermarks. Preserve all other subject details; keep whole equipment in frame with small padding."
+      ]
+    },
+    {
+      "id": "aerationTank",
+      "file": "aerationTank.webp",
+      "size": [
+        1024,
+        437
+      ],
+      "bytes": 136158,
+      "sha256": "dfad7c842b49d3c44967882157b84a69ca5efaf4946d58ccca1c63f1e33abee5",
+      "prompt": "Use case: stylized-concept. Asset type: production transparent cutout for an industrial water-treatment SCADA component library. Create ONE isolated engineering equipment module, not a complete scene, no sheet of icons. Premium physically based 2.5D orthographic illustration, front-left three-quarter view, looking down 25 degrees, no perspective convergence. Consistent satin off-white structural surfaces, desaturated navy-blue motors, brushed stainless steel pipes/rails, turquoise water where appropriate. Crisp realistic mechanical details and believable construction, precise clean edges, subtle ambient occlusion only on the object, neutral studio lighting from upper left. Legible at 250px wide. Entire object centered, generous 8 percent padding, no cropped parts. TRUE TRANSPARENT background including corners; no floor, no pedestal except equipment's real mounting frame; no ground shadow beyond object. No text, no numbers, no labels, no arrows, no logos, no watermark. This is static equipment art; operating status and values will be added separately by code. One modular activated-sludge aeration basin for municipal wastewater in architectural CUTAWAY. Single long rectangular off-white concrete tank with front wall partially removed to show restrained turquoise water and two uniform floor grids of fine-bubble disk diffusers with clear repeated circular heads, stainless air header pipes and riser at rear, one narrow service bridge and a navy-blue small submersible circulation mixer at one end. LEFT influent flange, RIGHT mixed-liquor outlet flange, small air connection at top-rear. No whole treatment plant, no buildings, no sky. Wide landscape equipment cutout.",
+      "edits": [
+        "Use case: precise-object-edit. Production SCADA transparent component cutout. Remove ALL labels, text, lettering and arrow stickers, including any floating name plate above the railing and inlet/outlet label boards. Restore unmarked concrete, metal and piping where appropriate. Retain the full cutaway aeration basin, diffuser grids, mixer, water, mounting geometry and exact camera angle. No text at all. Preserve a genuinely transparent background: everything outside the equipment silhouette and all gaps between rails must be alpha zero. Solid structural equipment surfaces must remain opaque, not ghosted. No rectangular scenery, shadows on ground, halos, labels, borders or watermarks. Preserve all other subject details; keep whole equipment in frame with small padding."
+      ]
+    },
+    {
+      "id": "motor",
+      "file": "motor.webp",
+      "size": [
+        1024,
+        683
+      ],
+      "bytes": 123756,
+      "sha256": "42e8f1344f7e94dcb7f1648b54fe234e2126b5ace896534512e3744265bdc21d",
+      "prompt": "Production SCADA equipment cutout, one isolated object, true transparent background, no text labels or arrows or watermark anywhere. Premium realistic 2.5D orthographic front-left three-quarter engineering render, satin off-white structures, navy-blue motors, stainless pipes, turquoise water, neutral upper-left light. Whole equipment in frame, 8% transparent padding, no ground or scenery. One standalone horizontal industrial electric motor ONLY, navy finned cylindrical motor housing, terminal box on top, fan cover at rear, bare short steel output shaft facing left, four mounting feet. No pump, fan impeller or gearbox attached.",
+      "edits": []
+    },
+    {
+      "id": "submersibleMixer",
+      "file": "submersibleMixer.webp",
+      "size": [
+        1024,
+        683
+      ],
+      "bytes": 114596,
+      "sha256": "f9c516681587ad60b5884929b0569189009cde6e55a55ff899962ac762497b38",
+      "prompt": "Production SCADA equipment cutout, one isolated object, true transparent background, no text labels or arrows or watermark anywhere. Premium realistic 2.5D orthographic front-left three-quarter engineering render, satin off-white structures, navy-blue motors, stainless pipes, turquoise water, neutral upper-left light. Whole equipment in frame, 8% transparent padding, no ground or scenery. One submersible wastewater propeller mixer, navy compact sealed horizontal motor with THREE large curved stainless propeller blades, short mounting bracket and lifting eye. No tank, no environment, no pump volute.",
+      "edits": []
+    },
+    {
+      "id": "gritSeparator",
+      "file": "gritSeparator.webp",
+      "size": [
+        1024,
+        683
+      ],
+      "bytes": 114178,
+      "sha256": "9630757839c1db202e64352454ca07a745f3c2c2ffc0208c5972b41c070f502c",
+      "prompt": "Production SCADA equipment cutout, one isolated object, true transparent background, no text labels or arrows or watermark anywhere. Premium realistic 2.5D orthographic front-left three-quarter engineering render, satin off-white structures, navy-blue motors, stainless pipes, turquoise water, neutral upper-left light. Whole equipment in frame, 8% transparent padding, no ground or scenery. One complete screw-type grit-water separator, stainless open conical settling hopper with a small turquoise water surface, long inclined enclosed screw conveyor rising to the right, navy gearbox at top end, short grit discharge chute, sturdy stainless support legs. No labels.",
+      "edits": []
+    },
+    {
+      "id": "dissolvedAirFlotation",
+      "file": "dissolvedAirFlotation.webp",
+      "size": [
+        1024,
+        524
+      ],
+      "bytes": 186318,
+      "sha256": "a37adbbe1dffd4f48b1ce2bb5185b5b2096e6ac8b9bccd389ba042b44e9ef492",
+      "prompt": "Production SCADA equipment cutout, one isolated object, true transparent background, no text labels or arrows or watermark anywhere. Premium realistic 2.5D orthographic front-left three-quarter engineering render, satin off-white structures, navy-blue motors, stainless pipes, turquoise water, neutral upper-left light. Whole equipment in frame, 8% transparent padding, no ground or scenery. One packaged rectangular dissolved air flotation wastewater treatment unit in cutaway. Off-white tank, turquoise water, fine microbubbles beneath surface, visible surface chain skimmer and sludge trough, stainless rear rails, small navy recycle pump on real mounting skid, left feed flange and right treated-water flange. Wide landscape, no labels.",
+      "edits": []
+    },
+    {
+      "id": "liftStation",
+      "file": "liftStation.webp",
+      "size": [
+        811,
+        768
+      ],
+      "bytes": 116084,
+      "sha256": "dceeefda4cbb963e79a8bd754c7b228abad01e7e447a91c4d8d1fa506d27c05f",
+      "prompt": "Production SCADA equipment cutout, one isolated object, true transparent background, no text labels or arrows or watermark anywhere. Premium realistic 2.5D orthographic front-left three-quarter engineering render, satin off-white structures, navy-blue motors, stainless pipes, turquoise water, neutral upper-left light. Whole equipment in frame, 8% transparent padding, no ground or scenery. One packaged underground sewage lift station shown as an isolated cutaway vessel, off-white cylindrical wet well open on front to reveal TWO separate navy submersible pumps and two stainless risers, check valves, shared upper outlet header, access lid and service ladder. Turquoise water near base, left inlet flange, right discharge flange, no soil or ground or labels.",
+      "edits": []
+    },
+    {
+      "id": "gravityThickener",
+      "file": "gravityThickener.webp",
+      "size": [
+        1024,
+        683
+      ],
+      "bytes": 113106,
+      "sha256": "dab757663b276c28f3162812281a8e3f05af484dcac6d4bdd67812e052bfc90b",
+      "prompt": "One production SCADA 2.5D equipment cutout, transparent background, clean orthographic front-left view looking down 20 degrees, no text no logos no labels no arrows no surroundings. Satin off-white structures, restrained dark sage-green motors and stainless metal, subtle turquoise liquid where relevant, clean precise industrial engineering product illustration. Entire equipment within frame with padding. A circular gravity sludge thickener in engineering cutaway, pale concrete circular basin, central slow rake mechanism, short vertical motor on a small bridge, quiet turquoise sludge surface, front quarter cut down showing conical hopper base. Short left feed flange and right discharge flange, no separate equipment.",
+      "edits": []
+    },
+    {
+      "id": "screwPump",
+      "file": "screwPump.webp",
+      "size": [
+        1024,
+        475
+      ],
+      "bytes": 81072,
+      "sha256": "640550a1f4499a94aa126eac2545f2054d22d1ab2df50d2e0a588d17e9d2388f",
+      "prompt": "One production SCADA 2.5D equipment cutout, transparent background, clean orthographic front-left view looking down 20 degrees, no text no logos no labels no arrows no surroundings. Satin off-white structures, restrained dark sage-green motors and stainless metal, subtle turquoise liquid where relevant, clean precise industrial engineering product illustration. Entire equipment within frame with padding. A horizontal progressive-cavity sludge screw pump, long narrow pale cylindrical stator from left feed flange to right flange, dark sage-green electric motor and coupling at right on common low steel base. Recognizable long screw pump, not centrifugal volute. Wide landscape.",
+      "edits": []
+    },
+    {
+      "id": "decanterCentrifuge",
+      "file": "decanterCentrifuge.webp",
+      "size": [
+        1024,
+        341
+      ],
+      "bytes": 56874,
+      "sha256": "adb84d939224060150254c9ff6bb1723432628bd20b30a0e26d302a00a940f7c",
+      "prompt": "One production SCADA 2.5D equipment cutout, transparent background, clean orthographic front-left view looking down 20 degrees, no text no logos no labels no arrows no surroundings. Satin off-white structures, restrained dark sage-green motors and stainless metal, subtle turquoise liquid where relevant, clean precise industrial engineering product illustration. Entire equipment within frame with padding. One horizontal decanter centrifuge for sewage sludge dewatering, long tapered stainless solid-bowl centrifuge inside an off-white clean housing, cylindrical left portion and conical right end, dark sage-green main drive motor at right, compact short low skid feet and small feed pipe at left, cake discharge chute underneath right end and filtrate pipe underneath left. Wide 3:1 landscape equipment, no exposed screw or disc filter.",
+      "edits": []
+    },
+    {
+      "id": "polymerPreparation",
+      "file": "polymerPreparation.webp",
+      "size": [
+        1024,
+        683
+      ],
+      "bytes": 161530,
+      "sha256": "6f16c702796844f061d28dc1ddb523e086b7256be78c988d50070a9d9ad1a4f2",
+      "prompt": "One production SCADA 2.5D equipment cutout, transparent background, clean orthographic front-left view looking down 20 degrees, no text no logos no labels no arrows no surroundings. Satin off-white structures, restrained dark sage-green motors and stainless metal, subtle turquoise liquid where relevant, clean precise industrial engineering product illustration. Entire equipment within frame with padding. A compact three-chamber automatic PAM polymer preparation skid in engineering cutaway. Three adjacent off-white rectangular tanks on one base, visible internal separating baffles and three small top-mounted green agitator motors with vertical shafts. Small powder dosing hopper and screw feeder above first chamber on left, short dosing outlet on right. Landscape, not two cylindrical tanks.",
+      "edits": []
+    },
+    {
+      "id": "cakeSilo",
+      "file": "cakeSilo.webp",
+      "size": [
+        1024,
+        683
+      ],
+      "bytes": 87606,
+      "sha256": "1993638c2edaa513036e8884a58558064fdfea58661e5ac67cc9d9c952c2e9be",
+      "prompt": "One production SCADA 2.5D equipment cutout, transparent background, clean orthographic front-left view looking down 20 degrees, no text no logos no labels no arrows no surroundings. Satin off-white structures, restrained dark sage-green motors and stainless metal, subtle turquoise liquid where relevant, clean precise industrial engineering product illustration. Entire equipment within frame with padding. A sludge cake storage hopper and screw conveyor assembly, off-white rectangular upper hopper with clearly visible sloping conical bottom, short stainless horizontal screw conveyor feeding from LEFT into the hopper side, four steel support legs and short gated bottom outlet. No truck or surroundings, short green drive motor on conveyor.",
+      "edits": []
+    },
+    {
+      "id": "staticMixer",
+      "file": "staticMixer.webp",
+      "size": [
+        1024,
+        512
+      ],
+      "bytes": 93352,
+      "sha256": "f97f92dcc57cb4f87c290ebe49274141e4dfcabb8723fb540514257853c51179",
+      "prompt": "One production SCADA 2.5D equipment cutout, transparent background, clean orthographic front-left view looking down 20 degrees, no text no logos no labels no arrows no surroundings. Satin off-white structures, restrained dark sage-green motors and stainless metal, subtle turquoise liquid where relevant, clean precise industrial engineering product illustration. Entire equipment within frame with padding. One short inline static mixing device for sludge conditioning, stainless rectangular tubular housing with front cutaway revealing three staggered fixed helical baffles, matching flanged inlet left and outlet right, no motor no moving parts. Wide landscape isolated component.",
+      "edits": []
+    }
+  ]
+}

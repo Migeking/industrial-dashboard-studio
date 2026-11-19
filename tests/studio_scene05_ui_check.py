@@ -336,13 +336,13 @@ def exercise(page, base, source_url, browser):
     expect(cell(alarm)).to_contain_text("轴承温度偏高")
     expect(cell(valves[0]).locator("image")).to_have_attribute("visibility", "visible")
     expect(cell(tank_pipe).locator(".screen-pipe-flow")).to_have_count(1)
-    inlet_height = cell(tank_pipe).locator("path").nth(1).evaluate("path => path.getBBox().height")
+    inlet_height = cell(tank_pipe).locator("path").nth(2).evaluate("path => path.getBBox().height")
     assert inlet_height < .5, f"Nearly aligned ports should not produce a detour: {inlet_height}"
     expect(cell(events).locator("tbody")).to_contain_text("轴承温度偏高")
     assert cell(events).locator(".screen-table-host").evaluate(
         "host => host.scrollHeight <= host.clientHeight"
     ), "The single alarm row must fit without scrolling"
-    bend_y = cell(bend).locator("path").nth(1).evaluate("path => path.getBBox().y")
+    bend_y = cell(bend).locator("path").nth(2).evaluate("path => path.getBBox().y")
     assert abs(bend_y - 466) < 0.5, f"The router overshot the fixed elbow: {bend_y}"
     page.screenshot(path=str(OUT / "02-published.png"))
     cell(pumps[0]).click()
@@ -464,12 +464,83 @@ def exercise(page, base, source_url, browser):
     original.screenshot(path=str(OUT / "reference-pump-panel.png"))
     original.close()
 
+    # Change only appearances through the production inspector, then exercise the same network.
+    page.goto(base)
+    for id in pumps + [well] + valves:
+        select(id)
+        page.get_by_label("外观预设", exact=True).select_option("depth")
+    for pipe in doc["pipes"]:
+        select(pipe["id"])
+        page.get_by_label("管道外观", exact=True).select_option("depth")
+    page.get_by_role("button", name="保存草稿", exact=True).click()
+    expect(page.get_by_role("status")).to_contain_text("已保存")
+    depth_doc = page.request.get(base + "/api/draft").json()
+    for old, new in zip(doc["nodes"], depth_doc["nodes"], strict=True):
+        if old["id"] in pumps + [well] + valves:
+            assert new["params"]["appearance"] == "depth"
+            assert new == {**old, "params": {**old["params"], "appearance": "depth"}}
+        else:
+            assert new == old
+    for old, new in zip(doc["pipes"], depth_doc["pipes"], strict=True):
+        assert new == {**old, "style": {**old["style"], "appearance": "depth"}}
+    page.reload()
+    expect(cell(pumps[0]).locator("image")).to_have_attribute("visibility", "visible")
+    page.get_by_role("button", name="预览发布", exact=True).click()
+    page.get_by_role("button", name="发布", exact=True).click()
+    expect(page.get_by_role("status")).to_contain_text("已发布")
+    page.goto(base + "/view")
+    expect(cell(pumps[0])).to_contain_text("运行 · 38.5 Hz")
+    expect(cell(pumps[2])).to_have_attribute("data-state", "停止")
+    expect(cell(well)).to_contain_text("3.24 m")
+    expect(cell(well).locator(".screen-tank-shell")).to_have_attribute("visibility", "visible")
+    expect(cell(tank_pipe).locator(".screen-pipe-rim")).to_have_attribute("stroke", "#233947")
+    expect(cell(tank_pipe).locator(".screen-pipe-flow")).to_have_count(1)
+    page.screenshot(path=str(OUT / "08-depth-published.png"))
+    page.set_viewport_size({"width": 1366, "height": 768})
+    expect(cell(pumps[0]).locator("image")).to_be_visible()
+    page.screenshot(path=str(OUT / "09-depth-1366.png"))
+    Source.mode = "fault"
+    expect(cell(pumps[1])).to_have_attribute("data-state", "故障")
+    Source.mode = "bad"
+    expect(cell(pumps[0])).to_have_attribute("data-state", "未知")
+    expect(cell(well)).to_contain_text("—")
+    expect(page.locator(".screen-pipe-flow")).to_have_count(0)
+    Source.mode = "normal"
+    page.goto(base)
+    expect(cell(pumps[0])).to_have_attribute("data-state", "运行")
+    page.locator(".project-menu summary").click()
+    with page.expect_download() as download:
+        page.get_by_role("button", name="导出离线演示", exact=True).click()
+    depth_html = OUT / "scene05-depth-offline.html"
+    download.value.save_as(depth_html)
+    local = browser.new_page(viewport={"width": 1920, "height": 1080})
+    depth_requests = []
+    local.on("request", lambda r: depth_requests.append(r.url) if r.url.startswith("http") else None)
+    local.on("pageerror", lambda error: errors.append(str(error)))
+    local.goto(depth_html.as_uri())
+    expect(local.locator(f'[data-cell-id="{pumps[0]}"] image')).to_be_visible()
+    assert local.evaluate("""async () => {
+      const picture = document.querySelector('.x6-node image[visibility=visible][width="146"]');
+      if (!picture) return false;
+      const bitmap = new Image();
+      bitmap.src = picture.getAttribute('href') || picture.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
+      await bitmap.decode();
+      return bitmap.naturalWidth === 480;
+    }""")
+    expect(local.locator(".screen-pipe-rim[stroke='#233947']")).to_have_count(21)
+    expect(local.locator(f'[data-cell-id="{well}"]')).to_contain_text("3.24 m")
+    assert not depth_requests and not errors, (depth_requests, errors)
+    local.close()
+
     # Keep the UI-authored geometry portable after this temporary fixture exits.
     doc["source"] = {"kind": "json", "data": json.dumps({"points": Source.points()}, ensure_ascii=False),
                      "url": "", "pollMs": 1000, "maxAgeMs": 10000, "demo": True}
     for mapping in doc["mappings"]:
         mapping["timePath"] = ""
         mapping["fallbackTimePath"] = ""
+    depth_doc["source"] = doc["source"]
+    depth_doc["mappings"] = doc["mappings"]
+    (OUT / "scene05-depth-project.json").write_text(json.dumps(depth_doc, ensure_ascii=False, indent=2), "utf-8")
     (OUT / "scene05-project.json").write_text(json.dumps(doc, ensure_ascii=False, indent=2), "utf-8")
     result = {"nodes": dict(Counter(n["symbol"] for n in doc["nodes"])),
               "pipes": len(doc["pipes"]), "pipeBindings": len(flow_bindings),
@@ -477,6 +548,7 @@ def exercise(page, base, source_url, browser):
               "bindings": sum(len(n["bindings"]) for n in doc["nodes"] + doc["pipes"]),
               "statesVerified": ["running", "stopped", "fault", "zero", "bad", "recovered"],
               "reusedBranch": {"nodes": 2, "pipes": 1, "retainedImage": True, "reboundTo": "P-03"},
+              "depth": {"pumps": 4, "tanks": 1, "checkValves": 4, "pipes": 21, "offlineHttpRequests": depth_requests},
               "referenceSchematic": reference, "offlineHttpRequests": requests, "errors": errors}
     (OUT / "results.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), "utf-8")
     print(json.dumps(result, ensure_ascii=False))

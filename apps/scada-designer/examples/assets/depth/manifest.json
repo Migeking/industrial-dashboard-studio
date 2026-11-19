@@ -1,0 +1,42 @@
+{
+  "origin": "imagegen; generated for this project",
+  "preparation": "RGBA preserved; resized and encoded to WebP",
+  "assets": {
+    "pump": {
+      "source": "call_rm357ZJGs3i68qUpGui7PDw7.png",
+      "size": [
+        480,
+        240
+      ],
+      "bytes": 21642,
+      "sha256": "df98b3a19a77d514f8079a0e51a701a53545f2db5a4067f376d81ffd69ea844b"
+    },
+    "fan": {
+      "source": "exec-5c8e3155-6fd7-4185-b132-e98abfdb872f.png",
+      "size": [
+        480,
+        240
+      ],
+      "bytes": 19334,
+      "sha256": "834f91e17c647bf67a1c6595cd93bfc2db5f7376c35c95912f21c0d66efc698a"
+    },
+    "valve": {
+      "source": "exec-364f1e4c-53fa-4226-a706-b5dec6ba005d.png",
+      "size": [
+        328,
+        300
+      ],
+      "bytes": 14644,
+      "sha256": "2ba371e237e734d412001081259de8a850583d395a826e94266e0cb1e5415699"
+    },
+    "checkValve": {
+      "source": "exec-66e8f3e7-9049-45bf-91e4-f3ae4e933b0e.png",
+      "size": [
+        480,
+        240
+      ],
+      "bytes": 15090,
+      "sha256": "b209f6eccfb36b95276c34ebba151db1f08fd58f58a44a696df33cf895451a8f"
+    }
+  }
+}

@@ -33,6 +33,7 @@ export function makeScreenSymbol(doc, selected, name, id) {
     pipes: JSON.parse(JSON.stringify(pipes)),
   };
   for (const n of symbol.nodes) {
+    if(n.symbol==='trendRange'&&!ids.has(n.params.targetId))n.params.targetId='';
     n.x -= minX;
     n.y -= minY;
     n.bindings = {};
@@ -61,6 +62,7 @@ export function placeScreenSymbol(doc, symbol, x, y, idFactory) {
     group = copies.nodes.length > 1 ? idFactory() : undefined;
   for (const n of copies.nodes) {
     n.id = map.get(n.id);
+    if(n.symbol==='trendRange')n.params.targetId=map.get(n.params.targetId)||'';
     n.x += dx;
     n.y += dy;
     n.bindings = {};

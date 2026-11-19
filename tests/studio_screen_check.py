@@ -52,9 +52,9 @@ def exercise(page,base,fixture_url,browser):
     purpose=page.get_by_label('画面用途',exact=True)
     purpose.select_option('process')
     expect(page.get_by_label('画面主题',exact=True)).to_have_value('process-gray')
-    expect(page.locator('[data-palette-section]').first).to_have_attribute('data-palette-section','devices')
+    expect(page.locator('[data-palette-section]').first).to_have_attribute('data-palette-section','units')
     expect(page.locator('.x6-node,.x6-edge')).to_have_count(0)
-    record('空白工艺监控选择灰色主题，设备图元优先，无预置对象')
+    record('空白工艺监控选择灰色主题，成套工艺优先，无预置对象')
 
     def pos(x,y):
         box=page.locator('.board').bounding_box();return(box['x']+x*box['width']/1920,box['y']+y*box['height']/1080)
