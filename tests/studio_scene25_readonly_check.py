@@ -36,12 +36,13 @@ def serve_snapshot(points, state):
             rows = copy.deepcopy(points)
             indexed = {row["id"]: row for row in rows}
             indexed["plant.events"]["value"][0]["deviceRef"] = "unknown-equipment"
-            if mode == "fault":
-                indexed["DC101.fault"]["value"] = True
-                indexed["DC101.run"]["value"] = False
+            if mode in ("fault", "second-fault"):
+                tag, line = ("DC101", "一号") if mode == "fault" else ("DC102", "二号")
+                indexed[tag+".fault"]["value"] = True
+                indexed[tag+".run"]["value"] = False
                 indexed["plant.events"]["value"][0].update({
-                    "级别 / 设备": "故障 · DC101", "事件内容": "一号脱水机故障",
-                    "确认状态": "待确认", "deviceRef": state["equipmentTitle"],
+                    "级别 / 设备": "故障 · " + tag, "事件内容": line + "脱水机故障",
+                    "确认状态": "待确认", "deviceRef": "DC-" + tag[2:],
                 })
             if mode == "recovered":
                 indexed["plant.events"]["value"][0].update({
@@ -78,6 +79,20 @@ def exercise(browser, base, doc, state, out):
     viewer.on("request", lambda request: source_requests.append((request.method, request.url))
               if request.method not in ("GET", "HEAD") else None)
     editor.goto(base)
+    equipment_nodes = [
+        next(node for node in doc["nodes"] if node["symbol"] == "decanterCentrifuge" and
+             node["bindings"].get("fault") == tag + ".fault")
+        for tag in ("DC101","DC102")
+    ]
+    for index, node in enumerate(equipment_nodes, 101):
+        editor.get_by_role("tab", name="图层", exact=False).click()
+        editor.locator(f'[data-layer="{node["id"]}"]').click()
+        editor.get_by_role("tab", name="交互", exact=True).click()
+        code = f"DC-{index}"
+        field = editor.get_by_label("设备编号",exact=True)
+        field.fill(code)
+        field.press("Tab")
+        node["params"]["equipmentCode"] = code
     events_node = next(node for node in doc["nodes"] if node["symbol"] == "events")
     editor.get_by_role("tab", name="图层", exact=False).click()
     editor.locator(f'[data-layer="{events_node["id"]}"]').click()
@@ -101,6 +116,7 @@ def exercise(browser, base, doc, state, out):
 
     flow = bound("readout", "value", "plant.flow")
     equipment = bound("decanterCentrifuge", "fault", "DC101.fault")
+    other_equipment = bound("decanterCentrifuge", "fault", "DC102.fault")
     events = bound("events", "value", "plant.events")
     expect(events.get_by_role("button")).to_have_count(0)
     expect(equipment).to_have_attribute("data-state", "运行")
@@ -124,23 +140,35 @@ def exercise(browser, base, doc, state, out):
     expect(equipment).to_have_attribute("data-state", "故障")
     expect(events).to_contain_text("一号脱水机故障")
     expect(events).to_contain_text("待确认")
-    title = state["equipmentTitle"]
-    events.get_by_role("button", name="查看设备 " + title, exact=True).click()
-    details = viewer.get_by_role("dialog", name=title + " 设备详情", exact=True)
-    expect(details).to_contain_text("只读监视")
-    expect(details).to_contain_text("故障")
-    viewer.screenshot(path=str(out / "alarm-device.png"))
-    details.get_by_role("button", name="关闭详情", exact=True).click()
+    expect(other_equipment).to_have_attribute("data-state", "运行")
+
+    def open_alarm_device(index, screenshot):
+        title = equipment_nodes[index]["title"]
+        events.get_by_role("button", name="查看设备 " + title, exact=True).click()
+        details = viewer.get_by_role("dialog", name=title + " 设备详情", exact=True)
+        expect(details).to_contain_text("只读监视")
+        expect(details).to_contain_text("故障")
+        expect(details).to_contain_text(f"DC-{101+index}")
+        viewer.screenshot(path=str(out / screenshot))
+        details.get_by_role("button", name="关闭详情", exact=True).click()
+
+    open_alarm_device(0, "alarm-device.png")
     viewer.screenshot(path=str(out / "fault.png"))
+    state["mode"] = "second-fault"
+    expect(other_equipment).to_have_attribute("data-state", "故障")
+    expect(equipment).to_have_attribute("data-state", "运行")
+    expect(events).to_contain_text("二号脱水机故障")
+    open_alarm_device(1, "alarm-device-second.png")
     start = time.monotonic()
     state["mode"] = "offline"
     expect(flow).to_contain_text("离线")
-    expect(events).not_to_contain_text("一号脱水机故障")
+    expect(events).not_to_contain_text("二号脱水机故障")
     detection = round((time.monotonic() - start) * 1000)
     viewer.screenshot(path=str(out / "disconnected.png"))
     start = time.monotonic()
     state["mode"] = "recovered"
     expect(equipment).to_have_attribute("data-state", "运行")
+    expect(other_equipment).to_have_attribute("data-state", "运行")
     expect(events).to_contain_text("一号脱水机已恢复")
     recovery = round((time.monotonic() - start) * 1000)
     viewer.screenshot(path=str(out / "recovered.png"))
@@ -173,11 +201,30 @@ def main():
     doc = json.loads(args.project.read_text("utf-8-sig"))
     if doc["source"]["kind"] != "json" or doc["source"].get("demo") is not True:
         raise ValueError("Use the authored 25 local demo source as the fixture")
-    points = json.loads(doc["source"]["data"])["points"]
+    payload = json.loads(doc["source"]["data"])
+    points = payload["points"]
     args.out.mkdir(parents=True, exist_ok=True)
-    title = next(n["title"] for n in doc["nodes"]
-                 if n["symbol"] == "decanterCentrifuge" and n["bindings"].get("fault") == "DC101.fault")
-    state = {"mode": "normal", "samples": 0, "writeRequests": 0, "equipmentTitle": title}
+    labels = {
+        "demo": "工艺监视 · 只读",
+        "kpi-note0": "两路浓缩池进泥汇总",
+        "kpi-note1": "浓缩池出泥",
+        "kpi-note2": "脱水出料",
+        "kpi-note3": "本日干固体累计",
+        "kpi-note4": "脱水机组统计",
+        "bin-note": "料位来自测点反馈",
+        "trend-title": "工艺历史趋势",
+    }
+    for node in doc["nodes"]:
+        if node["symbol"] == "text" and node["title"] in labels:
+            node["text"] = labels[node["title"]]
+    events = next(point for point in points if point["id"] == "plant.events")
+    events["value"] = [
+        {("事件时间" if key == "模拟时刻" else key): value for key, value in row.items()}
+        for row in events["value"]
+    ]
+    demo_title, demo_mappings = doc["title"], copy.deepcopy(doc["mappings"])
+    demo_source = {**doc["source"], "data": json.dumps(payload,ensure_ascii=False)}
+    state = {"mode": "normal", "samples": 0, "writeRequests": 0}
     upstream = ThreadingHTTPServer(("127.0.0.1", 0), serve_snapshot(points, state))
     threading.Thread(target=upstream.serve_forever, daemon=True).start()
     with socket.socket() as listener:
@@ -226,8 +273,11 @@ def main():
               "nodes": len(doc["nodes"]), "pipes": len(doc["pipes"]), "points": len(points),
               "samples": state["samples"], "upstreamWriteRequests": state["writeRequests"],
               "verified": ["publish with original bindings", "read-only controls", "8/24 hour history",
-                           "alarm and equipment status", "open device from alarm", "offline and recovery", "rollback"],
+                           "independent faults and lookup by device code on both centrifuges",
+                            "offline and recovery", "rollback"],
               **observations}
+    demo_doc = {**doc, "title": demo_title, "source": demo_source, "mappings": demo_mappings}
+    (args.out / "scene25-demo-project.json").write_text(json.dumps(demo_doc, ensure_ascii=False, indent=2), "utf-8")
     (args.out / "results.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), "utf-8")
     print(json.dumps(result, ensure_ascii=False))
 

@@ -37,6 +37,7 @@ const pump = screenNode("pump", "p", 600, 400),
   tank = screenNode("tank", "t", 200, 300);
 doc.nodes.push(pump, valve, tank);
 pump.bindings = { run: "run", fault: "fault" };
+pump.params.equipmentCode = "P-101";
 valve.bindings = { open: "open" };
 tank.bindings = { value: "level" };
 doc.pipes.push({
@@ -52,6 +53,11 @@ doc.pipes.push({
 validate(doc, true);
 const unit = makeScreenSymbol(doc, ["p", "v"], "回流泵阀组", "unit");
 assert.equal(unit.revision, 1);
+assert.equal(unit.nodes[0].params.equipmentCode, undefined);
+assert.equal(pump.params.equipmentCode, "P-101");
+const invalidCode = structuredClone(doc);
+invalidCode.nodes[0].params.equipmentCode = "P-101\tSTG";
+assert.throws(() => validate(invalidCode, false), /设备编号无效/);
 const portable = structuredClone(unit);
 delete portable.revision;
 assert.equal(validateScreenSymbol(portable), portable);
@@ -118,6 +124,7 @@ const copies = copyScreenSelection(
 assert.equal(copies.length, 2);
 assert.equal(doc.pipes.length, 2);
 assert.deepEqual(doc.nodes.at(-1).bindings, {});
+assert.equal(doc.nodes.find(n => n.id === copies[0]).params.equipmentCode, undefined);
 assert.deepEqual(doc.pipes.at(-1).bindings, {});
 assert(copies.includes(doc.pipes.at(-1).source.nodeId));
 assert(copies.includes(doc.pipes.at(-1).target.nodeId));

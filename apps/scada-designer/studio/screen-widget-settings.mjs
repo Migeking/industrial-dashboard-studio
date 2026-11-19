@@ -262,6 +262,6 @@ export const ScreenTableSettings = {
     <template v-if="item.symbol==='events'">
       <label>告警定位字段<input aria-label="告警定位字段" v-model.trim="form.deviceRefField" maxlength="128"
         :list="'table-fields-'+item.id" @change="commit()" placeholder="例如 deviceRef" /></label>
-      <p class="muted">字段值填写本画面的图元编号或唯一设备名称。</p>
+      <p class="muted">字段值可使用本画面的设备编号、图元 ID 或唯一设备名称。</p>
     </template></section>`,
 };

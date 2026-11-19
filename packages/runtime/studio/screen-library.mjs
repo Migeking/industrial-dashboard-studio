@@ -41,6 +41,7 @@ export function makeScreenSymbol(doc, selected, name, id) {
     n.x -= minX;
     n.y -= minY;
     n.bindings = {};
+    delete n.params.equipmentCode;
     n.locked = false;
     n.ports = JSON.parse(JSON.stringify(screenPorts(n)));
     n.dataSlots = JSON.parse(JSON.stringify(screenSlots(n)));
@@ -132,6 +133,7 @@ export function placeScreenSymbol(doc, symbol, x, y, idFactory) {
     n.x += dx;
     n.y += dy;
     n.bindings = {};
+    delete n.params.equipmentCode;
     if (group) n.group = group;
     else delete n.group;
   }

@@ -451,10 +451,12 @@ export function screenTableResult(n, points, mappings, pageNodes = [], requested
         ? point.value
         : [];
   const deviceField = n.symbol === "events" ? n.params.deviceRefField : "";
-  const byId = new Map(), byTitle = new Map();
+  const byId = new Map(), byCode = new Map(), byTitle = new Map();
   if (deviceField) {
     for (const node of pageNodes) {
       byId.set(node.id, node);
+      const code = node.params?.equipmentCode;
+      if (code) byCode.set(code, byCode.has(code) ? null : node);
       byTitle.set(node.title, byTitle.has(node.title) ? null : node);
     }
   }
@@ -462,7 +464,10 @@ export function screenTableResult(n, points, mappings, pageNodes = [], requested
     const ref = screenField(row, deviceField);
     if (typeof ref !== "string" || !ref.trim()) return null;
     const key = ref.trim();
-    const node = byId.has(key) ? byId.get(key) : byTitle.get(key);
+    const codeMatch = byCode.get(key);
+    const idMatch = byId.get(key);
+    if (byCode.has(key) && idMatch && codeMatch !== idMatch) return null;
+    const node = byCode.has(key) ? codeMatch : idMatch || byTitle.get(key);
     return node && !node.hidden && (node.action?.type ?? screenDefaultAction(node)) === "details"
       ? { id: node.id, title: node.title }
       : null;

@@ -306,6 +306,11 @@ export function validateScreen(doc, publishing, project = doc) {
         !Object.hasOwn(screenAppearanceOptions(n.symbol), n.params.appearance)
       )
         throw Error("图元外观预设无效");
+      const equipmentCode = n.params.equipmentCode;
+      if (equipmentCode !== undefined &&
+          (typeof equipmentCode !== "string" || equipmentCode.length > 64 ||
+            equipmentCode !== equipmentCode.trim() || /[\x00-\x1f\x7f]/.test(equipmentCode)))
+        throw Error(n.title + " 的设备编号无效");
       if (
         n.params.icon !== undefined &&
         !["", "Σ", "%", "≈", "⚙", "●"].includes(n.params.icon)
@@ -620,6 +625,7 @@ export function copyScreenSelection(
     c.id = remap.get(n.id);
     if(c.symbol==='trendRange')c.params.targetId=remap.get(c.params.targetId)||c.params.targetId;
     c.title += " 副本";
+    delete c.params.equipmentCode;
     if (!keepBindings) c.bindings = {};
     c.locked = false;
     c.x += dx;
