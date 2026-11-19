@@ -12,6 +12,8 @@ import {
   compatibleMappings,
   bindingProblem,
   protocolMappings,
+  snapshotPointRows,
+  snapshotPointMapping,
   campusBindings,
   campusState,
 } from "../apps/scada-designer/studio/model.mjs";
@@ -19,6 +21,24 @@ const doc = legacyTemplate(),
   time = 1700000000000,
   m = doc.mappings[0];
 const legacyCampus = template("30");
+const snapshotLevel = {
+  id: "LT-101.PV", kind: "number", raw: 16000, value: 16000,
+  quality: "good", timestamp: time - 100, receivedAt: time,
+};
+const snapshotPayload = { points: [snapshotLevel,
+  { id: "DUP", kind: "number" }, { id: "DUP", kind: "number" },
+  { id: 123, kind: "number" }, { id: "123", kind: "number" },
+  { id: "INVALID", kind: "unsupported" }, null,
+] };
+assert.deepEqual([...snapshotPointRows(snapshotPayload)], [[snapshotLevel.id, snapshotLevel]]);
+const baseline = { ...m, id: "level", kind: "number", unit: "m", precision: 2,
+  conversion: { mode: "raw420", engineeringMin: 0, engineeringMax: 6 } };
+const reconciled = snapshotPointMapping(baseline, snapshotLevel.id);
+assert.equal(reconciled.id, "level");
+assert.equal(reconciled.conversion, baseline.conversion);
+assert.equal(normalize(snapshotPayload, reconciled, time, 1000, time).value, 4.5);
+assert.equal(normalize(snapshotPayload, reconciled, time, 1000, time).timestamp, time - 100);
+assert.equal(normalize(snapshotPayload, reconciled, time, 50, time).quality, "stale");
 assert.equal(campusBindings(legacyCampus.nodes[0])[0].run, "fan");
 const entityBinding = {
   entity: "D.FAN.NW",

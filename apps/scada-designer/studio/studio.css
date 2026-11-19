@@ -1409,6 +1409,70 @@ fieldset small {
 .editor-shell .dialog:not(.tag-dialog) .connection-context {
   margin: 0 -16px 12px;
 }
+.snapshot-review h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.editor-shell .snapshot-review h2,
+.editor-shell .snapshot-review th,
+.editor-shell .snapshot-review th b {
+  color: #294659;
+}
+.snapshot-review-list {
+  max-height: 52vh;
+  overflow: auto;
+  border: 1px solid #b8cbd8;
+  background: #fff;
+}
+.snapshot-review table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.snapshot-review thead {
+  position: sticky;
+  top: 0;
+  background: #e5eef3;
+}
+.snapshot-review th,
+.snapshot-review td {
+  padding: 8px;
+  font-size: 13px;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid #d6e2ea;
+}
+.snapshot-review th:nth-child(2) { width: 34%; }
+.snapshot-review th:last-child { width: 20%; }
+.snapshot-review small {
+  display: block;
+  margin-top: 4px;
+  color: #435e6d;
+}
+.snapshot-review select {
+  width: 100%;
+  min-height: 36px;
+  scroll-margin-top: 42px;
+}
+.snapshot-review-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.editor-shell .dialog .snapshot-review-actions button {
+  min-height: 40px;
+  color: #294659;
+  background: #fff;
+  border-color: #a2b7c4;
+}
+.editor-shell .dialog .snapshot-review-actions .primary {
+  color: #fff;
+  background: #087579;
+  border-color: #087579;
+}
 @media (max-width: 1400px) {
   .editor-shell .workspace {
     grid-template-columns: 218px minmax(0, 1fr) 290px;

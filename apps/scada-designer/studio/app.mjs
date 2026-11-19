@@ -11,13 +11,15 @@ import {
   pointReasonLabels,
   effectivePollMs,
   protocolMappings,
+  snapshotPointRows,
+  snapshotPointMapping,
   compatibleMappings,
   bindingProblem,
   campusBindings,
   campusState,
 } from "./model.mjs";
 import { Widget } from "./widgets.mjs";
-import { PointConversion, TagManager } from "./tag-manager.mjs";
+import { PointConversion, TagManager, pointPreview } from "./tag-manager.mjs";
 import { isNative, nativeTypes, nativeSlots, nativeSlotMappings, nativeBranch, cloneNativeBranch, nativeRecipes, nativeRecipe, nativeBlank } from "../../../packages/runtime/studio/native-model.mjs";
 import { NativeStage } from "../../../packages/runtime/studio/native-renderer.mjs";
 import { isScreen, blankScreen, copyScreenSelection,validateScreenAsset,screenAssetProblem,screenMediumPipeStyle } from "../../../packages/runtime/studio/screen-model.mjs";
@@ -388,6 +390,7 @@ async function boot() {
         versionInfo = ref({ versions: [] });
       const sampleSource = ref("");
       const sampleReceived = ref(0);
+      const snapshotSelections = ref(null);
       const lastSaved = ref(JSON.stringify(initial)),
         saving = ref(false),
         published = ref(false);
@@ -814,6 +817,7 @@ async function boot() {
       const browseNext = ref(null);
       function resetConnectionPreview() {
         sample.value = null;
+        snapshotSelections.value = null;
         sampleSource.value = "";
         browseResults.value = [];
         browsePath.value = [];
@@ -934,6 +938,63 @@ async function boot() {
           config.value.mappings,
         );
         mappingIndex.value = 0;
+      }
+      const snapshotRows = computed(() =>
+        config.value?.source.kind === "rest" &&
+        sampleSource.value === JSON.stringify(config.value.source)
+          ? snapshotPointRows(sample.value)
+          : new Map(),
+      );
+      const snapshotChoices = computed(() => {
+        const choices = new Map();
+        for (const row of snapshotRows.value.values()) {
+          if (!choices.has(row.kind)) choices.set(row.kind, []);
+          choices.get(row.kind).push(row);
+        }
+        return choices;
+      });
+      function openSnapshotReview() {
+        const selections = new Map();
+        for (const mapping of config.value.mappings) {
+          const prior = mapping.root === "points" && mapping.keyField === "id"
+            ? snapshotRows.value.get(mapping.keyValue)
+            : undefined;
+          const sameId = snapshotRows.value.get(mapping.id);
+          const match = [prior, sameId].find((row) => row?.kind === mapping.kind);
+          selections.set(mapping.id, match?.id || "");
+        }
+        snapshotSelections.value = selections;
+        nextTick(() => document.getElementById("snapshot-review-title")?.focus());
+      }
+      function closeSnapshotReview() {
+        snapshotSelections.value = null;
+        nextTick(() => document.getElementById("open-snapshot-review")?.focus());
+      }
+      const snapshotReview = computed(() => {
+        if (!snapshotSelections.value) return [];
+        const stamp = sampleReceived.value;
+        return config.value.mappings.map((mapping) => {
+          const selected = snapshotSelections.value.get(mapping.id);
+          const row = snapshotRows.value.get(selected);
+          const updated = row?.kind === mapping.kind
+            ? snapshotPointMapping(mapping, selected)
+            : null;
+          const reading = updated
+            ? normalize({ points: [row] }, updated, stamp, config.value.source.maxAgeMs, stamp)
+            : null;
+          return { mapping, selected, row, updated, readback: pointPreview(reading, mapping),
+            choices: snapshotChoices.value.get(mapping.kind) || [] };
+        });
+      });
+      const snapshotMatchCount = computed(() =>
+        snapshotReview.value.filter(({ updated }) => updated).length,
+      );
+      function adoptSnapshotReview() {
+        if (!snapshotMatchCount.value) return;
+        const count = snapshotMatchCount.value;
+        config.value.mappings = snapshotReview.value.map(({ mapping, updated }) => updated || mapping);
+        message.value = `已对照 ${count} 个点位。应用数据配置后生效。`;
+        closeSnapshotReview();
       }
       async function finishTags() {
         // Offline engineering is valid: acquisition quality is decided at runtime.
@@ -1361,6 +1422,13 @@ async function boot() {
         browseNext,
         applyConfig,
         bridgeMappings,
+        snapshotRows,
+        snapshotSelections,
+        snapshotReview,
+        snapshotMatchCount,
+        openSnapshotReview,
+        closeSnapshotReview,
+        adoptSnapshotReview,
         addMap,
         loadImage,
         runExport,

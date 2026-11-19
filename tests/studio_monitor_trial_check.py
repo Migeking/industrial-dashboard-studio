@@ -44,7 +44,7 @@ class Snapshot(BaseHTTPRequestHandler):
              "state": "活动 · 待确认", "message": "格栅压差高"},
         ]
         points = [
-            {"id": "level", "value": 16000, "kind": "number", "label": "进水液位", "unit": "m"},
+            {"id": "LT-101.PV", "value": 16000, "kind": "number", "label": "进水液位", "unit": "原码"},
             {"id": "history", "value": historical, "kind": "dataset", "label": "进水历史", "unit": "m"},
             {"id": "events", "value": events, "kind": "dataset", "label": "上游告警"},
         ]
@@ -60,20 +60,26 @@ class Snapshot(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
 
-def make_doc(source):
+def make_doc():
     script = """
       import { blankScreen, screenNode } from './packages/runtime/studio/screen-model.mjs';
       import { screenSlots } from './packages/components/studio/screen-symbols.mjs';
       import { protocolMappings } from './apps/scada-designer/studio/model.mjs';
       const doc = blankScreen(); doc.title = '预处理进水监视 · 本机台架';
       doc.canvas.theme = 'process-gray'; doc.canvas.purpose = 'process';
-      doc.source = {kind:'rest', url:process.argv[1], pollMs:300, maxAgeMs:3000};
+      doc.source = {kind:'json', demo:true, pollMs:300, maxAgeMs:3000,
+        data:JSON.stringify({points:[
+          {id:'level',value:12000,quality:'good'},
+          {id:'history',value:[],quality:'good'},
+          {id:'events',value:[],quality:'good'},
+        ]})};
       doc.mappings = protocolMappings([
         {id:'level',label:'进水液位',kind:'number',unit:'m'},
         {id:'history',label:'进水历史',kind:'dataset',unit:'m'},
         {id:'events',label:'上游告警',kind:'dataset'},
       ], 'rest', []);
       doc.mappings[0].conversion = {mode:'raw420',engineeringMin:0,engineeringMax:6};
+      for (const m of doc.mappings) m.timePath = '';
       for (const [symbol,id,title,x,y,w,h] of [
         ['readout','level','进水池液位',80,90,460,180],
         ['trend','history','进水池液位历史',80,320,850,450],
@@ -100,16 +106,42 @@ def make_doc(source):
       doc.nodes.push(picture);
       console.log(JSON.stringify(doc));
     """
-    return json.loads(subprocess.check_output(["node", "--input-type=module", "-e", script, source], cwd=ROOT))
+    return json.loads(subprocess.check_output(["node", "--input-type=module", "-e", script], cwd=ROOT))
 
 
-def exercise(browser, base):
+def exercise(browser, base, source):
     editor = browser.new_page(viewport={"width": 1440, "height": 900})
     viewer = browser.new_page(viewport={"width": 1366, "height": 768})
     errors = []
     for page in (editor, viewer):
         page.on("pageerror", lambda error: errors.append(str(error)))
     editor.goto(base)
+    editor.get_by_role("button", name="数据连接", exact=True).click()
+    connection = editor.get_by_role("dialog")
+    connection.get_by_label("来源", exact=True).select_option("rest")
+    connection.get_by_label("接口 URL", exact=True).fill(source)
+    connection.get_by_role("button", name="读取样本", exact=True).click()
+    review = connection.get_by_role("button", name="对照现有点位", exact=True)
+    expect(review).to_be_visible()
+    connection.get_by_label("接口 URL", exact=True).fill(source + "?changed")
+    expect(review).to_have_count(0)
+    expect(connection.get_by_role("button", name="从桥接点表生成映射", exact=True)).to_have_count(0)
+    connection.get_by_label("接口 URL", exact=True).fill(source)
+    review.click()
+    expect(connection.get_by_text("已对照 2 / 3 个。", exact=False)).to_be_visible()
+    choice = connection.get_by_label("level 的接口测点", exact=True)
+    assert choice.locator("option").evaluate_all("(rows) => rows.map(row => row.value)") == ["", "LT-101.PV"]
+    choice.select_option("LT-101.PV")
+    expect(connection.get_by_text("16000 → 4.50 m", exact=True)).to_be_visible()
+    expect(connection.get_by_text("已对照 3 / 3 个。", exact=False)).to_be_visible()
+    editor.screenshot(path=str(OUT / "point-review.png"))
+    connection.get_by_role("button", name="采用对照结果", exact=True).click()
+    connection.get_by_role("button", name="应用数据配置", exact=True).click()
+    expect(connection).to_have_count(0)
+    editor.get_by_role("button", name="撤销", exact=True).click()
+    expect(editor.locator('[data-cell-id="level"]')).to_contain_text("3.00 m")
+    editor.get_by_role("button", name="重做", exact=True).click()
+    expect(editor.locator('[data-cell-id="level"]')).to_contain_text("4.50 m")
     editor.get_by_role("tab", name="图层", exact=False).click()
     editor.locator('[data-layer="history"]').click()
     editor.get_by_role("tab", name="外观", exact=True).click()
@@ -199,6 +231,11 @@ def exercise(browser, base):
     recovery_ms = round((time.monotonic() - reconnect_at) * 1000)
 
     original = editor.request.get(base + "/api/published").json()
+    assert original["source"]["kind"] == "rest"
+    assert original["nodes"][0]["bindings"] == {"value": "level", "history": "history"}
+    level_mapping = next(row for row in original["mappings"] if row["id"] == "level")
+    assert level_mapping["keyValue"] == "LT-101.PV"
+    assert level_mapping["conversion"] == {"mode": "raw420", "engineeringMin": 0, "engineeringMax": 6}
     recorded = editor.request.get(base + "/api/versions").json()
     first = recorded["versions"][0]
     receipt = first["manifest"]
@@ -241,7 +278,8 @@ def main():
     base = f"http://127.0.0.1:{port}"
     try:
         with tempfile.TemporaryDirectory() as directory:
-            doc = make_doc(f"http://127.0.0.1:{fixture.server_port}/snapshot")
+            source = f"http://127.0.0.1:{fixture.server_port}/snapshot"
+            doc = make_doc()
             (Path(directory) / "project.json").write_text(json.dumps({"draft": doc, "versions": [], "active": None}), "utf-8")
             process = subprocess.Popen(
                 ["node", "apps/scada-designer/server.mjs"], cwd=ROOT,
@@ -257,7 +295,7 @@ def main():
                 with sync_playwright() as playwright:
                     browser = playwright.chromium.launch()
                     try:
-                        timings = exercise(browser, base)
+                        timings = exercise(browser, base, source)
                     finally:
                         browser.close()
             finally:
@@ -268,6 +306,7 @@ def main():
         fixture.server_close()
     result = {"scope": "local read-only upstream fixture", **timings, "verified": [
         "sample field suggestions", "raw and engineering values", "history quality and order",
+        "point crosswalk preserves canvas bindings and conversion with undo/redo",
         "device trend custom fields and gaps", "stale values while transport stays connected",
         "missing source records in publish review", "alarm lifecycle readback",
         "offline and recovery", "published version rollback", "release manifest and snapshot trace",

@@ -79,21 +79,44 @@ export const pointReasonLabels = {
   "disconnected": "数据源连接中断",
 };
 
+function bridgePointLocation(id, timePath) {
+  return {
+    path: "value",
+    root: "points",
+    keyField: "id",
+    keyValue: id,
+    timePath,
+    fallbackTimePath: "receivedAt",
+    qualityPath: "quality",
+    qualityReasonPath: "reason",
+    rawPath: "raw",
+  };
+}
+export function snapshotPointRows(payload) {
+  const rows = new Map();
+  if (!Array.isArray(payload?.points)) return rows;
+  for (const row of payload.points) {
+    const sourceId = row?.id;
+    if (!["string", "number", "boolean", "undefined"].includes(typeof sourceId) && sourceId !== null)
+      continue;
+    const id = String(sourceId);
+    const valid = typeof sourceId === "string" && id.trim() &&
+      ["number", "boolean", "text", "dataset"].includes(row.kind);
+    rows.set(id, valid && !rows.has(id) ? row : null);
+  }
+  for (const [id, row] of rows) if (!row) rows.delete(id);
+  return rows;
+}
+export function snapshotPointMapping(mapping, upstreamId) {
+  return { ...mapping, ...bridgePointLocation(upstreamId, "timestamp") };
+}
 export function protocolMappings(rows, protocol, previous) {
   return rows.map((r) => ({
     id: r.id,
     label: r.label || r.id,
     unit: r.unit || "",
     kind: r.kind,
-    path: "value",
-    root: "points",
-    keyField: "id",
-    keyValue: r.id,
-    timePath: protocol === "opcua" ? "timestamp" : "receivedAt",
-    fallbackTimePath: "receivedAt",
-    qualityPath: "quality",
-    qualityReasonPath: "reason",
-    rawPath: "raw",
+    ...bridgePointLocation(r.id, protocol === "opcua" ? "timestamp" : "receivedAt"),
     scale: 1,
     offset: 0,
     precision: r.unit === "原码" ? 0 : 2,

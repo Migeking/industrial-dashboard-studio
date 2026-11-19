@@ -781,6 +781,34 @@
             @finish="finishTags"
           ></tag-manager>
         </template>
+        <section v-else-if="dialog === 'data' && snapshotSelections" class="snapshot-review">
+          <h2 id="snapshot-review-title" tabindex="-1">对照现有点位</h2>
+          <p aria-live="polite">已对照 {{ snapshotMatchCount }} / {{ snapshotReview.length }} 个。未选的点位保留当前配置。</p>
+          <div class="snapshot-review-list" tabindex="0" role="region" aria-label="点位对照表">
+            <table>
+              <thead><tr><th scope="col">工程测点</th><th scope="col">接口测点</th><th scope="col">原值 → 工程值</th><th scope="col">试读质量</th></tr></thead>
+              <tbody>
+                <tr v-for="{mapping, selected, row, choices, readback} in snapshotReview" :key="mapping.id">
+                  <th scope="row"><b>{{ mapping.label || mapping.id }}</b><small>{{ mapping.id }} · {{ kindNames[mapping.kind] }}</small></th>
+                  <td>
+                    <select :aria-label="mapping.id + ' 的接口测点'" :value="selected" @change="snapshotSelections.set(mapping.id, $event.target.value)">
+                      <option value="">保留现有配置</option>
+                      <option v-for="choice in choices" :key="choice.id" :value="choice.id">{{ choice.id }}{{ choice.label && choice.id !== choice.label ? ' · ' + choice.label : '' }}{{ choice.unit ? ' (' + choice.unit + ')' : '' }}</option>
+                    </select>
+                    <small v-if="!choices.length">样本中没有同类型的点位</small>
+                    <small v-else-if="row?.unit && mapping.unit && row.unit !== mapping.unit">接口 {{ row.unit }}，工程 {{ mapping.unit }}。请核对换算。</small>
+                  </td>
+                  <td>{{ !row ? '—' : readback.raw === readback.value ? readback.value : readback.raw + ' → ' + readback.value }}</td>
+                  <td>{{ row ? readback.quality : '未对照' }}<small v-if="readback.reason">{{ readback.reason }}</small></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="snapshot-review-actions">
+            <button @click="closeSnapshotReview">返回连接设置</button>
+            <button class="primary" @click="adoptSnapshotReview" :disabled="!snapshotMatchCount">采用对照结果</button>
+          </div>
+        </section>
         <template v-else-if="dialog === 'data'"
           ><div class="columns">
             <div>
@@ -832,10 +860,18 @@
               ><button @click="readSample" :disabled="protocolBusy">
                 {{ protocolBusy ? "正在连接…" : "读取样本" }}</button
               ><button
+                v-if="snapshotRows.size && config.mappings.length"
+                id="open-snapshot-review"
+                @click="openSnapshotReview"
+              >
+                对照现有点位
+              </button
+              ><button
                 v-if="
                   !['opcua', 'modbus'].includes(config.source.kind) &&
+                  sampleSource === JSON.stringify(config.source) &&
                   Array.isArray(sample?.points) &&
-                  sample.points.every((p) => p.id && p.kind)
+                  sample.points.every((p) => p?.id && p.kind)
                 "
                 @click="bridgeMappings"
               >

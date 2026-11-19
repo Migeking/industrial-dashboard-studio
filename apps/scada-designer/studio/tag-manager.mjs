@@ -12,12 +12,13 @@ function formatPointValue(value, precision) {
     : String(value);
 }
 
-function pointPreview(reading, mapping) {
+export function pointPreview(reading, mapping) {
   if (!reading) return { raw: "—", value: "—", quality: "未试读", reason: "" };
   return {
     raw: formatPointValue(reading.rawValue),
     value: reading.quality === "good"
-      ? [formatPointValue(reading.value, mapping.precision), mapping.unit].filter(Boolean).join(" ")
+      ? [formatPointValue(reading.value, mapping.precision),
+          Array.isArray(reading.value) ? "" : mapping.unit].filter(Boolean).join(" ")
       : "—",
     quality: { good: "有效", bad: "无效", stale: "过期", offline: "离线" }[reading.quality],
     reason: pointReasonLabels[reading.reason] || "",
