@@ -13,10 +13,12 @@ import {
   at,
   pointReasonLabels,
   effectivePollMs,
+  primarySourceSettings,
   protocolMappings,
   syncProtocolMappings,
   snapshotPointRows,
   snapshotPointMapping,
+  configuredDatasetId,
   exportSnapshotCrosswalk,
   importSnapshotCrosswalk,
   compatibleMappings,
@@ -850,6 +852,7 @@ async function boot() {
             demo: false,
           };
           delete source.connection;
+          if (!["opcua", "modbus"].includes(kind)) delete source.datasets;
           if (kind === "opcua") {
             source.connection = { protocol: kind, endpoint: "opc.tcp://127.0.0.1:49320", points: [] };
           } else if (kind === "modbus") {
@@ -894,7 +897,7 @@ async function boot() {
         if (s.kind === "csv") return csv(s.data);
         if (s.kind === "rest") return api("/api/sample", { url: s.url });
         if (["opcua", "modbus"].includes(s.kind))
-          return api("/api/protocol/sample", s);
+          return api("/api/protocol/sample", primarySourceSettings(s));
         return new Promise((ok, no) => {
           const ws = new WebSocket(s.url);
           const timer = setTimeout(() => {
@@ -917,18 +920,23 @@ async function boot() {
           };
         });
       }
+      async function readDatasets(url) {
+        const payload = await once({ kind: "rest", url });
+        if (!Array.isArray(payload?.points)) throw Error("历史与告警接口需要返回 points 数据集列表");
+        return { points: [...snapshotPointRows(payload).values()].filter(point => point.kind === "dataset") };
+      }
       async function readSample() {
         if (protocolBusy.value) return;
         message.value = "";
         protocolBusy.value = true;
         await guarded(async () => {
           sample.value = null;
-          const source = clone(config.value.source);
+          const source = clone(primarySourceSettings(config.value.source));
           for (let attempt = 0; attempt < 40; attempt++) {
             try {
               const value = await once(source);
               if (
-                JSON.stringify(source) !== JSON.stringify(config.value.source)
+                JSON.stringify(source) !== JSON.stringify(primarySourceSettings(config.value.source))
               )
                 throw Error("连接配置已变化，请重新读取样本");
               sample.value = value;
@@ -1053,7 +1061,7 @@ async function boot() {
         return guarded(async () => {
           const native = ["opcua", "modbus"].includes(config.value.source.kind);
           if (native) {
-            const currentSample = sample.value && sampleSource.value === JSON.stringify(config.value.source);
+            const currentSample = sample.value && sampleSource.value === JSON.stringify(primarySourceSettings(config.value.source));
             if (requireSample && !currentSample)
               throw Error("请读取当前连接配置的样本，再应用数据配置");
             config.value.mappings = syncProtocolMappings(config.value.source.connection.points,
@@ -1201,6 +1209,15 @@ async function boot() {
           rehearsal.value = { id: "", quality: "good", value: "", error: "" };
         }
       });
+      const datasetSettings = computed(() => offline?.datasetSnapshot || doc.value.source.datasets);
+      const datasetFrame = ref(null);
+      const datasetLink = computed(() => datasetFrame.value?.link || "waiting");
+      const datasetStatus = computed(() => {
+        if (!Object.keys(datasetSettings.value?.bindings || {}).length) return "";
+        if (offline) return datasetLink.value === "connected" ? "数据集快照" : "数据集快照 · 无数据";
+        return "历史与告警 · " + ({ waiting: "等待数据", connected: "已连接",
+          disconnected: "离线" })[datasetLink.value];
+      });
       function restart() {
         previewSamples.value = new Map();
         rehearsal.value = { id: "", quality: "good", value: "", error: "" };
@@ -1208,10 +1225,16 @@ async function boot() {
         stop();
         let closed = false,
           timer,
+          datasetTimer,
           ws,
           delay = 1000;
         const s = clone(doc.value.source);
         raw.value = null;
+        datasetFrame.value = offline?.datasetSnapshot ? {
+          payload: offline.datasetSnapshot.payload,
+          receivedAt: offline.datasetSnapshot.receivedAt,
+          link: offline.datasetSnapshot.payload ? "connected" : "disconnected",
+        } : null;
         connected.value = false;
         connection.value = "等待数据";
         sequence.value++;
@@ -1246,6 +1269,18 @@ async function boot() {
           if (!closed && ["rest", "opcua", "modbus"].includes(s.kind))
             timer = setTimeout(poll, effectivePollMs(s));
         }
+        async function pollDatasets(settings) {
+          try {
+            const payload = await readDatasets(settings.url);
+            if (closed) return;
+            datasetFrame.value = { payload, receivedAt: Date.now(), link: "connected" };
+          } catch {
+            if (closed) return;
+            datasetFrame.value = { ...datasetFrame.value, link: "disconnected" };
+          }
+          sequence.value++;
+          datasetTimer = setTimeout(() => pollDatasets(settings), effectivePollMs(s));
+        }
         function connect() {
           if (closed) return;
           try {
@@ -1272,23 +1307,26 @@ async function boot() {
         stop = () => {
           closed = true;
           clearTimeout(timer);
+          clearTimeout(datasetTimer);
           ws?.close();
         };
         s.kind === "ws" ? connect() : poll();
+        if (!offline && Object.keys(s.datasets?.bindings || {}).length) pollDatasets(s.datasets);
       }
       const livePoints = computed(() =>
         Object.fromEntries(
           doc.value.mappings.map((m) => {
-            const fixed = ["json", "csv"].includes(doc.value.source.kind);
+            const datasetId = configuredDatasetId(datasetSettings.value, m);
+            const fixed = !datasetId && ["json", "csv"].includes(doc.value.source.kind);
+            const receivedAt = datasetId ? datasetFrame.value?.receivedAt ?? null : received.value;
             const p = normalize(
-              raw.value,
-              m,
-              received.value,
+              datasetId ? datasetFrame.value?.payload : raw.value,
+              datasetId ? snapshotPointMapping(m, datasetId) : m,
+              receivedAt,
               doc.value.source.maxAgeMs,
-              offline?.snapshotTime ??
-                (fixed && !m.timePath ? received.value : clock.value),
+              offline?.snapshotTime ?? (fixed && !m.timePath ? receivedAt : clock.value),
             );
-            if (!connected.value) {
+            if (datasetId ? datasetLink.value !== "connected" : !connected.value) {
               p.quality = "offline";
               p.reason = "disconnected";
               p.value = null;
@@ -1321,21 +1359,24 @@ async function boot() {
         return usage;
       });
       const diagnosedMappings = computed(() => doc.value.mappings.filter((m) => pointUsage.value.has(m.id)));
-      const monitorIssues = computed(() => connection.value === "等待数据" ? 0 :
-        diagnosedMappings.value.filter((m) => livePoints.value[m.id]?.quality !== "good").length);
+      const waitingForMapping = mapping => configuredDatasetId(datasetSettings.value, mapping)
+        ? datasetLink.value === "waiting" : monitorLink.value === "waiting";
+      const monitorIssues = computed(() => diagnosedMappings.value.filter(mapping =>
+        !waitingForMapping(mapping) && livePoints.value[mapping.id]?.quality !== "good").length);
       const monitorTime = (value) =>
         Number.isFinite(value) && Number.isFinite(new Date(value).getTime()) && value > 0
           ? new Date(value).toLocaleString("zh-CN", { hour12: false })
           : "—";
       const monitorRows = computed(() => {
-        const waiting = connection.value === "等待数据";
         return diagnosedMappings.value.flatMap((mapping) => {
+          const waiting = waitingForMapping(mapping);
+          const dataset = !!configuredDatasetId(datasetSettings.value, mapping);
           const point = livePoints.value[mapping.id];
           if (diagnosticsOnlyBad.value && (waiting || point?.quality === "good")) return [];
           const reading = waiting ? { raw: "—", value: "—", reason: "", quality: "等待数据" } :
             pointPreview(point, mapping);
           return [{
-            mapping, reading, point, objects: pointUsage.value.get(mapping.id),
+            mapping, reading, point, waiting, dataset, objects: pointUsage.value.get(mapping.id),
             sampleTime: monitorTime(point?.timestamp),
             receiveTime: monitorTime(point?.receivedAt),
           }];
@@ -1436,6 +1477,7 @@ async function boot() {
               doc: project.value,
               payload: connected.value ? raw.value : null,
               receivedAt: received.value,
+              datasetFrame: datasetLink.value === "connected" ? datasetFrame.value : null,
             }),
             "text/html",
           ),
@@ -1557,6 +1599,9 @@ async function boot() {
         rollback,
         openConfig,
         readSample,
+        readDatasets,
+        datasetStatus,
+        datasetLink,
         protocolBusy,
         browseResults,
         browsePath,

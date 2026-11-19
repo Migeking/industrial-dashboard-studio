@@ -2,6 +2,7 @@ import {
   analogRawRange, effectivePollMs, engineeringProblem, engineeringUnits,
   importNorthbound, minimumProtocolPollMs, modbusBatchPoints,
   normalize, pointReasonLabels, protocolPointMapping, syncProtocolMappings,
+  configuredDatasetId, primarySourceSettings, snapshotPointMapping, snapshotPointRows,
 } from "./model.mjs";
 
 function formatPointValue(value, precision) {
@@ -116,6 +117,7 @@ export const TagManager = {
     "results",
     "nextOffset",
     "notice",
+    "readDatasets",
   ],
   emits: ["browse", "read", "finish", "kind-change", "endpoint-change"],
   setup(props, { emit }) {
@@ -131,7 +133,7 @@ export const TagManager = {
     const configuredPollMs = computed(() => effectivePollMs(source.value));
     const showSystem = ref(false);
     const sampleMatches = computed(
-      () => props.sampleSource === JSON.stringify(source.value),
+      () => props.sampleSource === JSON.stringify(primarySourceSettings(source.value)),
     );
     const points = computed(() => source.value.connection.points);
     const current = computed(
@@ -193,7 +195,70 @@ export const TagManager = {
       .filter(mapping => !mapping.protocolUnmapped && mapping.root === "points" && mapping.keyField === "id")
       .map(mapping => [mapping.keyValue, mapping])));
     const mapFor = (point) => mappedPoints.value.get(point.id);
-    const unmappedBusiness = computed(() => props.config.mappings.filter(mapping => mapping.protocolUnmapped));
+    const unmappedBusiness = computed(() => props.config.mappings.filter(mapping =>
+      mapping.protocolUnmapped && !configuredDatasetId(source.value.datasets, mapping)));
+    const datasetMappings = computed(() => props.config.mappings.filter(mapping => mapping.kind === "dataset"));
+    const datasetSample = ref(null), datasetReceived = ref(0), datasetBusy = ref(false), datasetError = ref("");
+    const datasetRows = computed(() => snapshotPointRows(datasetSample.value));
+    const datasetChoices = computed(() => [...datasetRows.value.values()].filter(row => row.kind === "dataset"));
+    const datasetId = mapping => configuredDatasetId(source.value.datasets, mapping);
+    const unusedDatasets = computed(() => {
+      const linked = new Set(datasetMappings.value.map(datasetId));
+      return datasetChoices.value.filter(row => !linked.has(row.id));
+    });
+    function addDataset(id) {
+      const row = unusedDatasets.value.find(candidate => candidate.id === id);
+      if (!row) return;
+      const used = new Set(props.config.mappings.map(mapping => mapping.id));
+      let suffix = 1;
+      let pointId = /^[\w.-]+$/.test(row.id) && !used.has(row.id) ? row.id : "dataset.1";
+      while (used.has(pointId)) pointId = "dataset." + ++suffix;
+      const mapping = snapshotPointMapping({
+        id: pointId, label: row.label || row.id, kind: "dataset", unit: "",
+        scale: 1, offset: 0, precision: 0,
+      }, row.id);
+      props.config.mappings.push({ ...mapping, protocolUnmapped: true });
+      selectDataset(mapping, row.id);
+    }
+    function changeDatasetUrl(value) {
+      const url = value.trim();
+      if (url === (source.value.datasets?.url || "")) return;
+      if (url) source.value.datasets = { url, bindings: {} };
+      else delete source.value.datasets;
+      datasetSample.value = null;
+      datasetError.value = "";
+    }
+    async function readDatasetSample() {
+      const settings = source.value.datasets;
+      if (!settings || datasetBusy.value) return;
+      datasetBusy.value = true;
+      datasetSample.value = null;
+      datasetError.value = "";
+      try {
+        const sample = await props.readDatasets(settings.url);
+        if (source.value.datasets !== settings) return;
+        datasetReceived.value = Date.now();
+        datasetSample.value = sample;
+      } catch (error) {
+        if (source.value.datasets === settings) datasetError.value = error.message;
+      } finally {
+        datasetBusy.value = false;
+      }
+    }
+    function selectDataset(mapping, id) {
+      const settings = source.value.datasets;
+      if (!settings || (id && datasetRows.value.get(id)?.kind !== "dataset")) return;
+      if (id) settings.bindings = { ...settings.bindings, [mapping.id]: id };
+      else delete settings.bindings[mapping.id];
+    }
+    function datasetReading(mapping) {
+      const id = datasetId(mapping);
+      if (!datasetSample.value || !id) return "";
+      const time = datasetReceived.value;
+      const reading = pointPreview(normalize(datasetSample.value,
+        snapshotPointMapping(mapping, id), time, source.value.maxAgeMs, time), mapping);
+      return [reading.value, reading.quality, reading.reason].filter(Boolean).join(" · ");
+    }
     const businessChoices = computed(() => unmappedBusiness.value.filter(mapping => mapping.kind === current.value?.kind));
     const isExisting = (mapping) => existingIds.value.has(mapping?.id);
     function sync() {
@@ -384,6 +449,8 @@ export const TagManager = {
       mapping,
       mappedPoints,
       unmappedBusiness,
+      datasetMappings, datasetSample, datasetBusy, datasetError, datasetChoices, datasetRows,
+      datasetId, changeDatasetUrl, readDatasetSample, selectDataset, datasetReading, unusedDatasets, addDataset,
       businessChoices,
       isExisting,
       linkBusiness,
@@ -506,6 +573,40 @@ export const TagManager = {
       />
     </label>
   </div>
+  <details class="tag-datasets">
+    <summary>历史与告警接口<span v-if="source.datasets"> · 已关联 {{Object.keys(source.datasets.bindings).length}} 项</span></summary>
+    <div class="tag-dataset-endpoint">
+      <label>只读 REST 地址<input type="url" aria-label="历史与告警 REST 地址"
+        :value="source.datasets?.url || ''" :disabled="busy || datasetBusy"
+        @input="changeDatasetUrl($event.target.value)" /></label>
+      <button type="button" :disabled="busy || datasetBusy || !source.datasets" @click="readDatasetSample">
+        {{datasetBusy ? '正在读取…' : '试读历史与告警'}}
+      </button>
+    </div>
+    <p v-if="datasetError" role="alert">{{datasetError}}</p>
+    <p v-else-if="datasetSample && !datasetChoices.length" role="status">样本没有可用的数据集。</p>
+    <div v-if="source.datasets" class="tag-dataset-mappings">
+      <label v-for="mapping in datasetMappings" :key="mapping.id">
+        {{mapping.label || mapping.id}}
+        <select :aria-label="'数据集来源 ' + mapping.id" :value="datasetId(mapping)"
+          :disabled="busy || datasetBusy || (!datasetSample && !datasetId(mapping))"
+          @change="selectDataset(mapping,$event.target.value)">
+          <option value="">未关联</option>
+          <option v-if="datasetId(mapping) && datasetRows.get(datasetId(mapping))?.kind !== 'dataset'"
+            :value="datasetId(mapping)">{{datasetId(mapping)}}</option>
+          <option v-for="row in datasetChoices" :key="row.id" :value="row.id">{{row.label && row.label !== row.id ? row.label + ' · ' + row.id : row.id}}</option>
+        </select>
+        <small v-if="datasetReading(mapping)">{{datasetReading(mapping)}}</small>
+      </label>
+      <label v-if="unusedDatasets.length">从样本新增数据集
+        <select aria-label="从样本新增数据集" :disabled="busy || datasetBusy"
+          @change="addDataset($event.target.value);$event.target.value=''">
+          <option value="">选择数据集</option>
+          <option v-for="row in unusedDatasets" :key="row.id" :value="row.id">{{row.label || row.id}}</option>
+        </select>
+      </label>
+    </div>
+  </details>
   <div
     class="tag-workspace"
     :class="{ 'modbus-tags': source.kind === 'modbus' }"
@@ -832,7 +933,7 @@ export const TagManager = {
     ><button
       class="primary"
       @click="$emit('finish')"
-      :disabled="busy || !points.length"
+      :disabled="busy || datasetBusy || !points.length"
     >
       完成并返回画布
     </button>

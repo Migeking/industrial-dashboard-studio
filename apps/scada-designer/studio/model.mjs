@@ -44,6 +44,11 @@ export function effectivePollMs(source) {
     : source.pollMs;
 }
 
+export function primarySourceSettings(source) {
+  const { datasets, ...primary } = source;
+  return primary;
+}
+
 export function engineeringProblem(mapping) {
   const rule = mapping.conversion;
   if (rule == null) return "";
@@ -109,6 +114,12 @@ export function snapshotPointRows(payload) {
   for (const [id, row] of rows) if (!row) rows.delete(id);
   return rows;
 }
+export function configuredDatasetId(source, mapping) {
+  const bindings = source?.bindings;
+  return mapping.kind === "dataset" && bindings && Object.hasOwn(bindings, mapping.id)
+    ? bindings[mapping.id] : "";
+}
+
 export function snapshotPointMapping(mapping, upstreamId) {
   const updated = { ...mapping, ...bridgePointLocation(upstreamId, "timestamp") };
   delete updated.protocolUnmapped;
@@ -187,7 +198,8 @@ export function protocolPointMapping(point, protocol, mapping) {
 export function syncProtocolMappings(points, protocol, previous, existing) {
   const kept = new Set(existing.map(mapping => mapping.id));
   const linked = new Map(previous
-    .filter(mapping => !mapping.protocolUnmapped && mapping.root === "points" && mapping.keyField === "id")
+    .filter(mapping => mapping.kind !== "dataset" && !mapping.protocolUnmapped &&
+      mapping.root === "points" && mapping.keyField === "id")
     .map(mapping => [mapping.keyValue, mapping]));
   const used = new Set(previous.map(mapping => mapping.id));
   const active = new Set();
@@ -204,7 +216,7 @@ export function syncProtocolMappings(points, protocol, previous, existing) {
     return mapping;
   });
   for (const mapping of previous)
-    if (kept.has(mapping.id) && !active.has(mapping.id))
+    if ((kept.has(mapping.id) || mapping.kind === "dataset") && !active.has(mapping.id))
       result.push({ ...mapping, protocolUnmapped: true });
   return result;
 }
@@ -500,6 +512,20 @@ export function validate(doc, publishing) {
     const problem = engineeringProblem(m) || datasetFilterProblem(m);
     if (problem) fail(m.id + " · " + problem);
     ids.add(m.id);
+  }
+  if (s.datasets !== undefined) {
+    const { url, bindings } = s.datasets ?? {};
+    if (!["opcua", "modbus"].includes(s.kind) || !bindings ||
+        typeof bindings !== "object" || Array.isArray(bindings))
+      fail("历史与告警接口配置无效");
+    let address;
+    try { address = new URL(url); } catch { fail("历史与告警只读 HTTP 地址无效"); }
+    if (!["http:", "https:"].includes(address.protocol) || address.username || address.password)
+      fail("历史与告警只读 HTTP 地址无效");
+    const datasets = new Set(doc.mappings.filter(m => m.kind === "dataset").map(m => m.id));
+    for (const [id, upstream] of Object.entries(bindings))
+      if (!datasets.has(id) || typeof upstream !== "string" || !upstream.trim())
+        fail(id + " · 历史与告警数据集绑定无效");
   }
   if (doc.schemaVersion === 2) return validateNative(doc, publishing);
   if (isScreen(doc)) return validateScreen(doc, publishing);

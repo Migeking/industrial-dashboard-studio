@@ -521,6 +521,37 @@ fieldset small {
   width: 92px;
   flex: none;
 }
+.tag-datasets {
+  flex: 0 0 auto;
+  max-height: 200px;
+  overflow: auto;
+  padding: 8px 14px;
+  border-bottom: 1px solid #bcc8d1;
+  background: #f4f7f9;
+}
+.tag-datasets summary {
+  cursor: pointer;
+  color: #28465b;
+}
+.tag-dataset-endpoint {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  margin-top: 8px;
+}
+.tag-dataset-endpoint label {
+  flex: 1;
+}
+.tag-dataset-mappings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.tag-dataset-mappings small {
+  display: block;
+  margin-top: 3px;
+}
 .tag-workspace {
   display: grid;
   grid-template-columns: 210px minmax(270px, 1fr) 250px;

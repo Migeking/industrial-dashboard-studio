@@ -47,6 +47,7 @@ def probe(page):
         const points = [...dialog.querySelectorAll('[data-monitor-point]')].map(row => ({
             id: row.dataset.monitorPoint,
             kind: row.dataset.monitorKind,
+            channel: row.dataset.monitorChannel || 'primary',
             quality: row.dataset.monitorQuality,
             reason: row.dataset.monitorReason || null,
             sampleAtMs: number(row.dataset.monitorSampleAt),
@@ -56,6 +57,7 @@ def probe(page):
         return {
             browserAtMs: Date.now(),
             link: badge.dataset.monitorLink,
+            datasetsLink: badge.dataset.monitorDatasetsLink || null,
             source: badge.dataset.monitorSource,
             maxAgeMs: number(badge.dataset.monitorMaxAge),
             nodes: document.querySelectorAll('.x6-node').length,
@@ -79,21 +81,28 @@ def observed_gap(previous, current):
     return max(current[0] - previous[0], current[1] - previous[1])
 
 
-def record_observation(summary, reading, source_timed_points, elapsed, observed_at):
-    windows = summary.setdefault("connectionWindows", [])
-    if not windows or windows[-1]["link"] != reading["link"]:
+def record_connection(windows, link, elapsed, observed_at):
+    if not windows or windows[-1]["link"] != link:
         if windows:
             prior = windows[-1]
             prior["transitionObservedAt"] = observed_at
-            if reading["link"] == "connected" and prior["link"] == "disconnected":
+            if link == "connected" and prior["link"] == "disconnected":
                 prior["recoveryObservedSeconds"] = round(elapsed - prior["firstElapsedSeconds"], 3)
-        windows.append({"link": reading["link"], "firstObservedAt": observed_at,
+        windows.append({"link": link, "firstObservedAt": observed_at,
                         "firstElapsedSeconds": elapsed, "observations": 0})
     window = windows[-1]
     window["lastObservedAt"] = observed_at
     window["lastElapsedSeconds"] = elapsed
     window["observations"] += 1
     window["observedSpanSeconds"] = round(elapsed - window["firstElapsedSeconds"], 3)
+
+
+def record_observation(summary, reading, source_timed_points, elapsed, observed_at):
+    record_connection(summary.setdefault("connectionWindows", []), reading["link"], elapsed, observed_at)
+    if reading.get("datasetsLink"):
+        link = reading["datasetsLink"]
+        record_connection(summary.setdefault("datasetConnectionWindows", []), link, elapsed, observed_at)
+        summary.setdefault("datasetLinkObservations", Counter())[link] += 1
 
     load = summary.setdefault("renderLoad", {})
     counts = {"nodes": reading["nodes"], "pipes": reading["pipes"],
@@ -107,7 +116,8 @@ def record_observation(summary, reading, source_timed_points, elapsed, observed_
     point_stats = summary.setdefault("pointStats", {})
     for point in reading["points"]:
         stats = point_stats.setdefault(point["id"], {
-            "kind": point["kind"], "timeBasis": "source" if point["id"] in source_timed_points else "receive",
+            "kind": point["kind"], "channel": point.get("channel", "primary"),
+            "timeBasis": "source" if point["id"] in source_timed_points else "receive",
             "qualityObservations": Counter(), "reasonObservations": Counter(),
         })
         stats["qualityObservations"][point["quality"]] += 1
@@ -178,6 +188,7 @@ def observe(page, args, emit, summary):
     only_bad.uncheck(timeout=5000)
     document = published.json()
     source_timed_points = {m["id"] for m in document["mappings"] if m.get("timePath")}
+    source_timed_points.update(document["source"].get("datasets", {}).get("bindings", {}))
     summary.update(documentSha256=document_hash, requestedPollMs=document["source"]["pollMs"])
     previous = first = None
     next_release_check = time.monotonic() + args.release_check_seconds

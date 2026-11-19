@@ -36,12 +36,17 @@ async function body(req, limit = 16 * 1024 * 1024) {
 const content = (p) => fs.readFile(path.resolve(here, files.get(p)), "utf8");
 
 const inline = (s) => s.replace(/<\/script/gi, "<\\/script");
-async function offline(doc, payload, receivedAt) {
+async function offline(doc, payload, receivedAt, datasetFrame) {
   const copy = structuredClone(doc);
   copy.snapshotTime = Date.now();
   copy.sampleReceivedAt = Number.isFinite(receivedAt)
     ? receivedAt
     : copy.snapshotTime;
+  if (copy.source.datasets) copy.datasetSnapshot = {
+    bindings: copy.source.datasets.bindings,
+    payload: datasetFrame?.payload ?? null,
+    receivedAt: Number.isFinite(datasetFrame?.receivedAt) ? datasetFrame.receivedAt : null,
+  };
   copy.source = {
     kind: "json",
     data: JSON.stringify(payload),
@@ -218,7 +223,7 @@ http
           if (data.payload == null) throw Error("请先取得数据样本");
           return send(
             200,
-            await offline(data.doc, data.payload, data.receivedAt),
+            await offline(data.doc, data.payload, data.receivedAt, data.datasetFrame),
             "text/html",
           );
         }

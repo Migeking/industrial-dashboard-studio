@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import threading
 import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
@@ -175,16 +176,18 @@ def verify_direct_business_links(page, base, port, registers):
         import { blankScreen, screenNode } from './packages/runtime/studio/screen-model.mjs';
         const doc = blankScreen();
         doc.title = '原位号与现场读数';
-        doc.source.data = JSON.stringify({lt:12000, ft:17.5, hist:[]});
+        doc.source.data = JSON.stringify({lt:12000, ft:17.5, hist:[], events:[]});
         doc.source.demo = true;
         doc.mappings = [
           {id:'ana.level',label:'厌氧池液位',kind:'number',unit:'m',path:'lt',
            conversion:{mode:'raw420',engineeringMin:0,engineeringMax:6}},
           {id:'influent.flow',label:'进水流量',kind:'number',unit:'m³/h',path:'ft',conversion:{mode:'identity'}},
           {id:'alarm.history',label:'预处理历史',kind:'dataset',unit:'',path:'hist'},
+          {id:'alarm.events',label:'预处理告警',kind:'dataset',unit:'',path:'events'},
         ].map(m => ({scale:1, offset:0, precision:2, ...m}));
         for (const [symbol,id,point,x,y] of [['readout','existing-level','ana.level',80,80],
-          ['readout','existing-flow','influent.flow',440,80], ['trend','existing-history','alarm.history',80,300]]) {
+          ['readout','existing-flow','influent.flow',440,80], ['trend','existing-history','alarm.history',80,300],
+          ['events','existing-events','alarm.events',820,300]]) {
           const n=screenNode(symbol,id,x,y); n.bindings.value=point; doc.nodes.push(n);
         }
         console.log(JSON.stringify(doc));
@@ -198,7 +201,7 @@ def verify_direct_business_links(page, base, port, registers):
     page.get_by_role("button", name="数据连接", exact=True).click()
     dialog = page.get_by_role("dialog", name="数据连接与点位")
     dialog.get_by_label("来源", exact=True).select_option("modbus")
-    expect(dialog).to_contain_text("未关联 3 个画面位号")
+    expect(dialog).to_contain_text("未关联 4 个画面位号")
     dialog.get_by_label("Modbus 主机", exact=True).fill("127.0.0.1")
     dialog.locator("label").filter(has_text="端口").locator("input").fill(str(port))
     dialog.get_by_role("button", name="新建点位", exact=True).click()
@@ -217,7 +220,7 @@ def verify_direct_business_links(page, base, port, registers):
     table = dialog.locator(".tag-selected")
     expect(table.get_by_role("row", name="现地液位 LT-101", exact=False)).to_contain_text("4.50 m", timeout=15000)
     expect(table.get_by_role("row", name="现地流量 FT-101", exact=False)).to_contain_text("18.25 m³/h")
-    expect(dialog).to_contain_text("未关联 1 个画面位号")
+    expect(dialog).to_contain_text("未关联 2 个画面位号")
     page.screenshot(path=str(OUT / "direct-business-link.png"))
     dialog.get_by_role("button", name="完成并返回画布", exact=True).click()
     expect(level).to_contain_text("4.50 m")
@@ -240,6 +243,151 @@ def verify_direct_business_links(page, base, port, registers):
     expect(flow).to_contain_text("18.25 m³/h")
     page.get_by_role("button", name="测点诊断", exact=True).click()
     expect(page.get_by_role("row").filter(has_text="alarm.history")).to_contain_text("未关联当前协议点位")
+    verify_dataset_connection(page, base, query, registers)
+
+
+def verify_dataset_connection(page, base, query, registers):
+    state = {"offline": False, "freeze_history": False, "event": "现场进水首条告警"}
+
+    class Datasets(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if state["offline"]:
+                self.send_response(503)
+                self.end_headers()
+                return
+            now = int(time.time() * 1000)
+            points = [
+                dict(id="plant.history", kind="dataset", quality="good",
+                     receivedAt=now-60000 if state["freeze_history"] else now,
+                     value=[dict(time=now-120000,value=4.5),dict(time=now-60000,value=3.7)]),
+                dict(id="plant.events", kind="dataset", quality="good", receivedAt=now,
+                     value=[dict(time=now-120000,title=state["event"],message=state["event"])]),
+                dict(id="other.level", kind="number", quality="good", receivedAt=now,value=999),
+                dict(id="plant.summary", kind="dataset", quality="good", receivedAt=now,
+                     value=[dict(name="进水流量",value=18.25)]),
+            ]
+            if state.get("duplicate"):
+                points.append(points[1])
+            data = json.dumps({"points": points},ensure_ascii=False).encode()
+            self.send_response(200)
+            self.send_header("Content-Type","application/json")
+            self.send_header("Content-Length",str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def log_message(self, *_):
+            pass
+
+    with ThreadingHTTPServer(("127.0.0.1",0),Datasets) as http:
+        thread = threading.Thread(target=http.serve_forever,daemon=True)
+        thread.start()
+        try:
+            endpoint = f"http://127.0.0.1:{http.server_port}/plant"
+            page.goto(base+"/editor"+query)
+            page.get_by_role("button",name="数据连接",exact=True).click()
+            dialog = page.get_by_role("dialog",name="数据连接与点位")
+            dialog.get_by_label("最大数据年龄（ms）",exact=True).fill("2500")
+            dialog.get_by_role("button",name="试读点位",exact=True).click()
+            device_reading = dialog.locator(".tag-selected").get_by_role("row",name="现地液位 LT-101",exact=False)
+            expect(device_reading).to_contain_text("4.50 m",timeout=15000)
+            dialog.get_by_text("历史与告警接口",exact=True).click()
+            dialog.get_by_label("历史与告警 REST 地址",exact=True).fill(endpoint)
+            dialog.get_by_role("button",name="试读历史与告警",exact=True).click()
+            history = dialog.get_by_label("数据集来源 alarm.history",exact=True)
+            events = dialog.get_by_label("数据集来源 alarm.events",exact=True)
+            history.select_option("plant.history")
+            events.select_option("plant.events")
+            assert set(history.locator("option").evaluate_all("(rows)=>rows.map(row=>row.value)")) == {
+                "", "plant.history", "plant.events", "plant.summary",
+            }
+            expect(dialog.get_by_text("2 行 · 有效",exact=True)).to_be_visible()
+            expect(dialog.get_by_text("1 行 · 有效",exact=True)).to_be_visible()
+            expect(dialog.get_by_text("历史与告警接口 · 已关联 2 项",exact=True)).to_be_visible()
+            expect(device_reading).to_contain_text("4.50 m")
+            dialog.get_by_label("从样本新增数据集",exact=True).select_option("plant.summary")
+            expect(dialog.get_by_label("数据集来源 plant.summary",exact=True)).to_have_value("plant.summary")
+            expect(dialog.get_by_text("历史与告警接口 · 已关联 3 项",exact=True)).to_be_visible()
+            page.screenshot(path=str(OUT/"dataset-link.png"))
+            dialog.get_by_role("button",name="完成并返回画布",exact=True).click()
+            publish(page)
+            expect(page.locator(".status-message")).to_contain_text("已发布")
+            after = page.request.get(base+"/api/published"+query).json()
+            assert after["source"]["kind"] == "modbus"
+            assert after["source"]["datasets"] == dict(url=endpoint, bindings={
+                "alarm.history":"plant.history", "alarm.events":"plant.events", "plant.summary":"plant.summary",
+            })
+            assert next(row for row in after["mappings"] if row["id"]=="plant.summary")["kind"] == "dataset"
+            page.goto(base+"/view"+query)
+            level = page.locator('[data-cell-id="existing-level"]')
+            expect(level).to_contain_text("4.50 m")
+            badge = page.locator(".screen-source-badge")
+            expect(badge).to_have_attribute("data-monitor-datasets-link","connected")
+            page.get_by_role("button",name="测点诊断",exact=True).click()
+            diagnostics = page.get_by_role("dialog",name="测点诊断")
+            history_row = diagnostics.locator('[data-monitor-point="alarm.history"]')
+            event_row = diagnostics.locator('[data-monitor-point="alarm.events"]')
+            level_row = diagnostics.locator('[data-monitor-point="ana.level"]')
+            expect(history_row).to_contain_text("工程值 2 行")
+            expect(event_row).to_contain_text("工程值 1 行")
+            expect(event_row).to_have_attribute("data-monitor-channel","datasets")
+            for row in (history_row,event_row,level_row):
+                expect(row).to_have_attribute("data-monitor-quality","good")
+            state["freeze_history"] = True
+            expect(history_row).to_have_attribute("data-monitor-quality","stale")
+            expect(event_row).to_have_attribute("data-monitor-quality","good")
+            expect(level_row).to_have_attribute("data-monitor-quality","good")
+            state["freeze_history"] = False
+            state["duplicate"] = True
+            expect(event_row).to_have_attribute("data-monitor-reason","missing-record")
+            expect(history_row).to_have_attribute("data-monitor-quality","good")
+            state["duplicate"] = False
+            state["offline"] = True
+            expect(badge).to_have_attribute("data-monitor-datasets-link","disconnected")
+            expect(badge).to_have_attribute("data-monitor-link","connected")
+            expect(history_row).to_have_attribute("data-monitor-quality","offline")
+            expect(event_row).to_have_attribute("data-monitor-quality","offline")
+            expect(level_row).to_have_attribute("data-monitor-quality","good")
+            page.screenshot(path=str(OUT/"datasets-offline.png"))
+            registers.setValues(0,[12000])
+            expect(level).to_contain_text("3.00 m")
+            state["offline"] = False
+            state["event"] = "现场进水恢复后告警"
+            expect(event_row).to_have_attribute("data-monitor-quality","good")
+            expect(history_row).to_have_attribute("data-monitor-quality","good")
+            registers.readable.clear()
+            try:
+                expect(level_row).not_to_have_attribute("data-monitor-quality","good",timeout=8500)
+                expect(history_row).to_have_attribute("data-monitor-quality","good")
+                expect(event_row).to_have_attribute("data-monitor-quality","good")
+                page.screenshot(path=str(OUT/"protocol-interrupted.png"))
+            finally:
+                registers.readable.set()
+            expect(level_row).to_have_attribute("data-monitor-quality","good",timeout=10000)
+            diagnostics.get_by_role("button",name="关闭",exact=True).click()
+            expect(page.locator('[data-cell-id="existing-events"]')).to_contain_text(state["event"])
+            page.goto(base+"/editor"+query)
+            expect(page.locator(".screen-source-badge")).to_contain_text("历史与告警 · 已连接")
+            expect(level).to_contain_text("3.00 m")
+            page.locator(".project-menu summary").click()
+            with page.expect_download() as download:
+                page.get_by_role("button",name="导出离线演示",exact=True).click()
+            snapshot = OUT/"protocol-and-datasets-offline.html"
+            download.value.save_as(snapshot)
+            assert endpoint not in snapshot.read_text(encoding="utf-8")
+            network = []
+            def record_request(request):
+                if request.url.startswith("http"):
+                    network.append(request.url)
+            page.on("request",record_request)
+            page.goto(snapshot.as_uri())
+            expect(level).to_contain_text("3.00 m")
+            expect(page.locator('[data-cell-id="existing-events"]')).to_contain_text(state["event"])
+            assert not network,network
+            page.remove_listener("request",record_request)
+        finally:
+            http.shutdown()
+            thread.join()
+            registers.setValues(0,[16000])
 
 
 def post(base, path, data, wait_for_sample=False):
@@ -365,7 +513,8 @@ def main():
         "outOfRange": 3999, "engineeredFlow": 18.25,
         "verified": ["commissioning", "batch preview/apply/undo", "invalid range rejection",
                      "binding", "publish", "live trend", "stalled acquisition and recovery",
-                     "normalized direct protocol association keeps existing bindings and unlinked history"],
+                     "normalized direct protocol association keeps existing bindings and unlinked history",
+                     "protocol current values with independent REST history and alarms, expiry, recovery and offline export"],
     }
     (OUT / "results.json").write_text(json.dumps(result, indent=2), "utf-8")
     print(json.dumps(result))
