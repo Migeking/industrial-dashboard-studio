@@ -162,6 +162,86 @@ def exercise(page, base, device_port, registers):
     assert not errors, errors
 
 
+def verify_direct_business_links(page, base, port, registers):
+    registers.setValues(0, [16000])
+    created = page.request.post(base + "/api/projects", data={
+        "action": "create", "name": "07 位号切换 · 本机台架", "purpose": "process",
+    })
+    assert created.ok
+    project = created.json()["id"]
+    query = "?project=" + project
+    draft_url = base + "/api/draft" + query
+    script = """
+        import { blankScreen, screenNode } from './packages/runtime/studio/screen-model.mjs';
+        const doc = blankScreen();
+        doc.title = '原位号与现场读数';
+        doc.source.data = JSON.stringify({lt:12000, ft:17.5, hist:[]});
+        doc.source.demo = true;
+        doc.mappings = [
+          {id:'ana.level',label:'厌氧池液位',kind:'number',unit:'m',path:'lt',
+           conversion:{mode:'raw420',engineeringMin:0,engineeringMax:6}},
+          {id:'influent.flow',label:'进水流量',kind:'number',unit:'m³/h',path:'ft',conversion:{mode:'identity'}},
+          {id:'alarm.history',label:'预处理历史',kind:'dataset',unit:'',path:'hist'},
+        ].map(m => ({scale:1, offset:0, precision:2, ...m}));
+        for (const [symbol,id,point,x,y] of [['readout','existing-level','ana.level',80,80],
+          ['readout','existing-flow','influent.flow',440,80], ['trend','existing-history','alarm.history',80,300]]) {
+          const n=screenNode(symbol,id,x,y); n.bindings.value=point; doc.nodes.push(n);
+        }
+        console.log(JSON.stringify(doc));
+    """
+    original = json.loads(subprocess.check_output(["node", "--input-type=module", "-e", script], cwd=ROOT))
+    assert page.request.post(draft_url, data=original).ok
+    page.goto(base + "/editor" + query)
+    level = page.locator('[data-cell-id="existing-level"]')
+    flow = page.locator('[data-cell-id="existing-flow"]')
+    expect(level).to_contain_text("3.00 m")
+    page.get_by_role("button", name="数据连接", exact=True).click()
+    dialog = page.get_by_role("dialog", name="数据连接与点位")
+    dialog.get_by_label("来源", exact=True).select_option("modbus")
+    expect(dialog).to_contain_text("未关联 3 个画面位号")
+    dialog.get_by_label("Modbus 主机", exact=True).fill("127.0.0.1")
+    dialog.locator("label").filter(has_text="端口").locator("input").fill(str(port))
+    dialog.get_by_role("button", name="新建点位", exact=True).click()
+    dialog.get_by_label("点位名称", exact=True).fill("现地液位 LT-101")
+    existing = dialog.get_by_label("关联画面业务位号", exact=True)
+    assert set(existing.locator("option").evaluate_all("(rows)=>rows.map(row=>row.value)")) == {
+        "", "ana.level", "influent.flow",
+    }
+    existing.select_option("ana.level")
+    dialog.get_by_role("button", name="新建点位", exact=True).click()
+    dialog.get_by_label("点位名称", exact=True).fill("现地流量 FT-101")
+    dialog.get_by_label("寄存器序号", exact=True).fill("2")
+    dialog.get_by_label("数据格式", exact=True).select_option("float32")
+    existing.select_option("influent.flow")
+    dialog.get_by_role("button", name="试读点位", exact=True).click()
+    table = dialog.locator(".tag-selected")
+    expect(table.get_by_role("row", name="现地液位 LT-101", exact=False)).to_contain_text("4.50 m", timeout=15000)
+    expect(table.get_by_role("row", name="现地流量 FT-101", exact=False)).to_contain_text("18.25 m³/h")
+    expect(dialog).to_contain_text("未关联 1 个画面位号")
+    page.screenshot(path=str(OUT / "direct-business-link.png"))
+    dialog.get_by_role("button", name="完成并返回画布", exact=True).click()
+    expect(level).to_contain_text("4.50 m")
+    expect(flow).to_contain_text("18.25 m³/h")
+    page.get_by_role("button", name="撤销", exact=True).click()
+    expect(level).to_contain_text("3.00 m")
+    page.get_by_role("button", name="重做", exact=True).click()
+    expect(level).to_contain_text("4.50 m")
+    publish(page)
+    expect(page.locator(".status-message")).to_contain_text("已发布")
+    published = page.request.get(base + "/api/published" + query).json()
+    assert published["nodes"] == original["nodes"]
+    assert {m["id"] for m in published["mappings"]} == {m["id"] for m in original["mappings"]}
+    mappings = {m["id"]: m for m in published["mappings"]}
+    assert mappings["ana.level"]["conversion"] == original["mappings"][0]["conversion"]
+    assert mappings["influent.flow"]["conversion"]["mode"] == "identity"
+    assert mappings["alarm.history"]["protocolUnmapped"] is True
+    page.goto(base + "/view" + query)
+    expect(level).to_contain_text("4.50 m")
+    expect(flow).to_contain_text("18.25 m³/h")
+    page.get_by_role("button", name="测点诊断", exact=True).click()
+    expect(page.get_by_role("row").filter(has_text="alarm.history")).to_contain_text("未关联当前协议点位")
+
+
 def post(base, path, data, wait_for_sample=False):
     request = Request(base + path, json.dumps(data).encode(),
                       {"Content-Type": "application/json"}, method="POST")
@@ -266,6 +346,7 @@ def main():
                     page = browser.new_page(viewport={"width": 1440, "height": 900})
                     try:
                         exercise(page, base, device.server_address[1], registers)
+                        verify_direct_business_links(page, base, device.server_address[1], registers)
                     except Exception:
                         page.screenshot(path=str(OUT / "failure.png"))
                         raise
@@ -283,7 +364,8 @@ def main():
         "levels": {"4000": 0, "12000": 3, "16000": 4.5, "20000": 6},
         "outOfRange": 3999, "engineeredFlow": 18.25,
         "verified": ["commissioning", "batch preview/apply/undo", "invalid range rejection",
-                     "binding", "publish", "live trend", "stalled acquisition and recovery"],
+                     "binding", "publish", "live trend", "stalled acquisition and recovery",
+                     "normalized direct protocol association keeps existing bindings and unlinked history"],
     }
     (OUT / "results.json").write_text(json.dumps(result, indent=2), "utf-8")
     print(json.dumps(result))

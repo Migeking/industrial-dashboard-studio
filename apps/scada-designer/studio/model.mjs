@@ -68,6 +68,7 @@ export function engineeringProblem(mapping) {
 export const pointReasonLabels = {
   "source-quality": "数据源报告无效",
   "missing-record": "样本缺少该测点记录",
+  "protocol-unmapped": "未关联当前协议点位",
   "missing-value": "样本无数值",
   "invalid-timestamp": "时间戳无效",
   "invalid-number": "输入不是有效数值",
@@ -109,7 +110,9 @@ export function snapshotPointRows(payload) {
   return rows;
 }
 export function snapshotPointMapping(mapping, upstreamId) {
-  return { ...mapping, ...bridgePointLocation(upstreamId, "timestamp") };
+  const updated = { ...mapping, ...bridgePointLocation(upstreamId, "timestamp") };
+  delete updated.protocolUnmapped;
+  return updated;
 }
 const snapshotCrosswalkColumns = ["画面业务位号", "现场点位或字段", "数据类型", "画面单位", "显示名称"];
 
@@ -170,6 +173,42 @@ export function protocolMappings(rows, protocol, previous) {
     ),
   }));
 }
+export function protocolPointMapping(point, protocol, mapping) {
+  const updated = {
+    ...protocolMappings([point], protocol, [])[0],
+    ...mapping,
+    ...bridgePointLocation(point.id, protocol === "opcua" ? "timestamp" : "receivedAt"),
+    kind: point.kind,
+  };
+  delete updated.protocolUnmapped;
+  return updated;
+}
+
+export function syncProtocolMappings(points, protocol, previous, existing) {
+  const kept = new Set(existing.map(mapping => mapping.id));
+  const linked = new Map(previous
+    .filter(mapping => !mapping.protocolUnmapped && mapping.root === "points" && mapping.keyField === "id")
+    .map(mapping => [mapping.keyValue, mapping]));
+  const used = new Set(previous.map(mapping => mapping.id));
+  const active = new Set();
+  const result = points.map(point => {
+    const prior = linked.get(point.id);
+    const match = prior?.kind === point.kind && !active.has(prior.id);
+    const mapping = protocolPointMapping(point, protocol, match ? prior : undefined);
+    if (!match) {
+      let suffix = 1;
+      while (used.has(mapping.id)) mapping.id = point.id + "." + ++suffix;
+    }
+    used.add(mapping.id);
+    active.add(mapping.id);
+    return mapping;
+  });
+  for (const mapping of previous)
+    if (kept.has(mapping.id) && !active.has(mapping.id))
+      result.push({ ...mapping, protocolUnmapped: true });
+  return result;
+}
+
 export function compatibleMappings(type, mappings) {
   const kinds = {
     kpi: ["number", "boolean", "text"],
@@ -724,14 +763,15 @@ function matchDatasetRow(row, { field, value }) {
 }
 
 export function normalize(payload, m, receivedAt, maxAgeMs, now = Date.now()) {
-  const root = at(payload, m.root);
+  const unmapped = m.protocolUnmapped === true && ["opcua", "modbus"].includes(payload?.protocol);
+  const root = unmapped ? undefined : at(payload, m.root);
   const record =
     m.keyField && Array.isArray(root)
       ? root.find((row) => String(at(row, m.keyField)) === String(m.keyValue))
       : root;
   let value = at(record, m.path);
   const rawValue = (m.rawPath ? at(record, m.rawPath) ?? value : value) ?? null;
-  const stamp = m.timePath
+  const stamp = unmapped ? null : m.timePath
     ? (at(record, m.timePath) ??
       (m.fallbackTimePath ? at(record, m.fallbackTimePath) : null))
     : receivedAt;
@@ -739,7 +779,8 @@ export function normalize(payload, m, receivedAt, maxAgeMs, now = Date.now()) {
   const q = m.qualityPath ? at(record, m.qualityPath) : "good";
   const sourceDetail = m.qualityReasonPath ? at(record, m.qualityReasonPath) : null;
   let reason = "", datasetInput;
-  if (record == null) reason = "missing-record";
+  if (unmapped) reason = "protocol-unmapped";
+  else if (record == null) reason = "missing-record";
   else if (q === "offline") reason = "disconnected";
   else if (q === "stale") reason = "too-old";
   else if (!["good", "GOOD", true, 1].includes(q))
@@ -800,7 +841,7 @@ export function normalize(payload, m, receivedAt, maxAgeMs, now = Date.now()) {
     quality,
     reason,
     timestamp,
-    receivedAt,
+    receivedAt: unmapped ? null : receivedAt,
     unit: m.unit,
   };
 }

@@ -71,6 +71,7 @@ def exercise(page, base, folder):
     page.get_by_role("button",name="保存草稿").click()
     assert page.request.get(base+"/api/published").json()["title"]!="第二版"
     publish(page)
+    expect(page.get_by_role("status")).to_contain_text("已发布")
     page.get_by_role("button",name="版本",exact=True).click()
     page.get_by_role("button",name="回退至此版").click()
     expect(page.locator(".dialog button:disabled")).to_have_count(1)
@@ -222,10 +223,7 @@ def template_workflow(page, base, folder):
     page.get_by_role("button",name="完成并返回画布",exact=True).click()
     expect(page.get_by_role("dialog")).to_have_count(0)
     expect(page.get_by_role('button',name='数据绑定',exact=True)).to_have_attribute('aria-current','step')
-    expect(page.locator('.navigator')).to_contain_text('1 / 7')
-    page.locator('.studio-header').get_by_role('button',name='预览发布',exact=True).click()
-    assert page.locator('.studio-header').get_by_role('button',name='发布',exact=True).is_disabled()
-    page.get_by_role('button',name='检查数据绑定',exact=True).click()
+    expect(page.locator('.navigator')).to_contain_text('7 / 7')
     for id in ['n0','n1','n2','n4','n3','n5']:
         page.locator('[data-layer="'+id+'"]').click()
         select=page.get_by_label('当前组件测点',exact=True)

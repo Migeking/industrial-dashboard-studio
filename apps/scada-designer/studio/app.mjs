@@ -14,6 +14,7 @@ import {
   pointReasonLabels,
   effectivePollMs,
   protocolMappings,
+  syncProtocolMappings,
   snapshotPointRows,
   snapshotPointMapping,
   exportSnapshotCrosswalk,
@@ -854,7 +855,7 @@ async function boot() {
           } else if (kind === "modbus") {
             source.connection = { protocol: kind, host: "", port: 502, unitId: 1, points: [] };
           }
-          const previousMappings = ["opcua", "modbus"].includes(current.kind) ? [] : clone(mappings);
+          const previousMappings = clone(["opcua", "modbus"].includes(current.kind) ? doc.value.mappings : mappings);
           connectionDrafts.set(kind, { source, mappings: previousMappings });
         }
         config.value = connectionDrafts.get(kind);
@@ -933,7 +934,6 @@ async function boot() {
               sample.value = value;
               sampleReceived.value = Date.now();
               sampleSource.value = JSON.stringify(source);
-              if (["opcua", "modbus"].includes(source.kind)) bridgeMappings();
               return;
             } catch (error) {
               if (!error.message.includes("协议连接建立中") || attempt === 39)
@@ -1056,8 +1056,8 @@ async function boot() {
             const currentSample = sample.value && sampleSource.value === JSON.stringify(config.value.source);
             if (requireSample && !currentSample)
               throw Error("请读取当前连接配置的样本，再应用数据配置");
-            if (currentSample) bridgeMappings();
-            else config.value.mappings = protocolMappings(config.value.source.connection.points, config.value.source.kind, config.value.mappings);
+            config.value.mappings = syncProtocolMappings(config.value.source.connection.points,
+              config.value.source.kind, config.value.mappings, doc.value.mappings);
           }
           const updated = { ...project.value, ...config.value };
           if (updated.source.kind !== "json") updated.source.demo = false;

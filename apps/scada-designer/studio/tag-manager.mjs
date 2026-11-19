@@ -1,7 +1,7 @@
 import {
   analogRawRange, effectivePollMs, engineeringProblem, engineeringUnits,
   importNorthbound, minimumProtocolPollMs, modbusBatchPoints,
-  normalize, pointReasonLabels, protocolMappings,
+  normalize, pointReasonLabels, protocolPointMapping, syncProtocolMappings,
 } from "./model.mjs";
 
 function formatPointValue(value, precision) {
@@ -107,6 +107,7 @@ export const TagManager = {
   components: { PointConversion },
   props: [
     "config",
+    "existingMappings",
     "sample",
     "sampleSource",
     "sampleReceived",
@@ -187,19 +188,33 @@ export const TagManager = {
       visit("i=85", [], 1);
       return list;
     });
-    const mapFor = (p) =>
-      props.config.mappings.find(
-        (m) => (m.keyField === "id" && m.keyValue === p.id) || m.id === p.id,
-      );
+    const existingIds = computed(() => new Set(props.existingMappings.map(mapping => mapping.id)));
+    const mappedPoints = computed(() => new Map(props.config.mappings
+      .filter(mapping => !mapping.protocolUnmapped && mapping.root === "points" && mapping.keyField === "id")
+      .map(mapping => [mapping.keyValue, mapping])));
+    const mapFor = (point) => mappedPoints.value.get(point.id);
+    const unmappedBusiness = computed(() => props.config.mappings.filter(mapping => mapping.protocolUnmapped));
+    const businessChoices = computed(() => unmappedBusiness.value.filter(mapping => mapping.kind === current.value?.kind));
+    const isExisting = (mapping) => existingIds.value.has(mapping?.id);
     function sync() {
-      props.config.mappings = protocolMappings(
-        points.value,
-        source.value.kind,
-        props.config.mappings,
-      );
+      props.config.mappings = syncProtocolMappings(points.value, source.value.kind,
+        props.config.mappings, props.existingMappings);
     }
     sync();
     const mapping = computed(() => current.value && mapFor(current.value));
+    function linkBusiness(id) {
+      const choice = businessChoices.value.find(candidate => candidate.id === id);
+      const prior = mapping.value;
+      if (!choice || !prior) return;
+      const updated = protocolPointMapping(current.value, source.value.kind, choice);
+      props.config.mappings = props.config.mappings.flatMap(candidate => {
+        if (candidate === choice) return [updated];
+        if (candidate !== prior) return [candidate];
+        return isExisting(prior) ? [{ ...prior, protocolUnmapped: true }] : [];
+      });
+      conversionBatchOpen.value = false;
+      conversionBatchUndo.value = [];
+    }
     function addItems() {
       for (const p of candidates.value.filter(
         (p) => p.kind && checked.value.includes(p.nodeId),
@@ -271,7 +286,7 @@ export const TagManager = {
       catch(e){localError.value=e.message;batchMessage.value="";}
     };
     function nameChanged() {
-      if (mapping.value) mapping.value.label = current.value.label;
+      if (mapping.value && !isExisting(mapping.value)) mapping.value.label = current.value.label;
     }
     function formatChanged() {
       current.value.kind = current.value.function <= 2 ? "boolean" : "number";
@@ -280,10 +295,9 @@ export const TagManager = {
       if (current.value.kind === "boolean") {
         delete current.value.rawMin;
         delete current.value.rawMax;
-        if (mapping.value?.unit === "原码") mapping.value.unit = "";
-        if (mapping.value) delete mapping.value.conversion;
+        delete current.value.unit;
       }
-      if (mapping.value) mapping.value.kind = current.value.kind;
+      sync();
     }
     const readings = computed(() => {
       if (!sampleMatches.value || !props.sample) return new Map();
@@ -368,6 +382,11 @@ export const TagManager = {
       points,
       current,
       mapping,
+      mappedPoints,
+      unmappedBusiness,
+      businessChoices,
+      isExisting,
+      linkBusiness,
       selected,
       candidates,
       folders,
@@ -679,7 +698,8 @@ export const TagManager = {
                     @click.stop
                   />
                 </td>
-                <td>{{ p.label }}</td>
+                <td>{{ p.label }}<small v-if="isExisting(mappedPoints.get(p.id))" class="tag-business-id">
+                  {{mappedPoints.get(p.id).id}}</small></td>
                 <td :title="address(p)">{{ address(p) }}</td>
                 <td :title="previews.get(p.id).raw">{{ previews.get(p.id).raw }}</td>
                 <td :title="previews.get(p.id).value">{{ previews.get(p.id).value }}</td>
@@ -756,8 +776,18 @@ export const TagManager = {
             </select></label
           ></template
         >
-        <template v-if="mapping"
-          ><label v-if="current.kind === 'number'"
+        <template v-if="mapping">
+          <label v-if="businessChoices.length || isExisting(mapping)">关联画面业务位号
+            <select aria-label="关联画面业务位号" :value="isExisting(mapping) ? mapping.id : ''"
+              @change="linkBusiness($event.target.value)" :disabled="busy">
+              <option v-if="isExisting(mapping)" :value="mapping.id">{{mapping.id}} · {{mapping.label}}</option>
+              <option v-else value="" disabled>选择已有位号</option>
+              <option v-for="candidate in businessChoices" :key="candidate.id" :value="candidate.id">
+                {{candidate.id}} · {{candidate.label}}
+              </option>
+            </select>
+          </label>
+          <label v-if="current.kind === 'number'"
             >单位<input aria-label="点位单位" v-model="mapping.unit"
           /></label>
           <point-conversion :mapping="mapping" :reading="currentReading"></point-conversion>
@@ -766,6 +796,7 @@ export const TagManager = {
             <label
               >点位编号<input
                 aria-label="业务编号"
+                :readonly="isExisting(mapping)"
                 v-model="mapping.id" /></label
             ><label v-if="!current.nodeId && current.function > 2"
               >字节顺序<select v-model="current.order">
@@ -786,6 +817,7 @@ export const TagManager = {
     </aside>
   </div>
   <footer class="tag-footer">
+    <small v-if="unmappedBusiness.length" class="tag-unlinked-summary">未关联 {{unmappedBusiness.length}} 个画面位号</small>
     <span role="status">{{
       localError ||
       notice ||

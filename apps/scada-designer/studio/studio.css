@@ -766,6 +766,16 @@ fieldset small {
   padding: 10px 14px;
   min-height: 54px;
 }
+.tag-business-id {
+  display: block;
+  overflow-wrap: anywhere;
+  color: #526976;
+}
+.tag-unlinked-summary {
+  flex: none;
+  color: #805207;
+  font-size: 12px;
+}
 .tag-footer span {
   flex: 1;
   color: #526976;

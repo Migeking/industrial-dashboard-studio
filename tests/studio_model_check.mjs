@@ -12,6 +12,8 @@ import {
   compatibleMappings,
   bindingProblem,
   protocolMappings,
+  protocolPointMapping,
+  syncProtocolMappings,
   snapshotPointRows,
   snapshotPointMapping,
   exportSnapshotCrosswalk,
@@ -147,6 +149,34 @@ const regenerated = protocolMappings(
 assert.equal(regenerated[0].id, "level");
 assert.equal(regenerated[0].scale, 0.001);
 assert.equal(regenerated[0].unit, "m");
+const business = { ...baseline, path: "localLevel" };
+const history = { ...dataset, id: "history" };
+const existing = [business, history];
+const levelTag = { id: "PLC1", label: "Register", unit: "原码", kind: "number" };
+const unlinked = syncProtocolMappings([levelTag], "modbus", existing, existing);
+assert.equal(unlinked.length, 3);
+assert.ok(unlinked.find(mapping => mapping.id === business.id).protocolUnmapped);
+assert.ok(unlinked.find(mapping => mapping.id === history.id).protocolUnmapped);
+const sampleValue = { id: levelTag.id, raw: 16000, value: 16000, receivedAt: time,
+  timestamp: time - 200, quality: "good" };
+const modbusPayload = { protocol: "modbus", localLevel: 12000, points: [sampleValue] };
+const pendingProtocolReading = normalize(modbusPayload, unlinked[1], time, 1000, time);
+assert.equal(pendingProtocolReading.reason, "protocol-unmapped");
+assert.equal(pendingProtocolReading.receivedAt, null);
+assert.ok(Number.isNaN(pendingProtocolReading.timestamp));
+const attached = protocolPointMapping(levelTag, "modbus", unlinked[1]);
+assert.equal(attached.id, business.id);
+assert.equal(attached.label, business.label);
+assert.deepEqual(attached.conversion, business.conversion);
+assert.equal(normalize(modbusPayload, attached, time, 1000, time).value, 4.5);
+assert.equal(attached.timePath, "receivedAt");
+assert.equal(protocolPointMapping(levelTag, "opcua", attached).timePath, "timestamp");
+const changed = syncProtocolMappings([{...levelTag,kind:"boolean"}], "modbus", [attached, unlinked[2]], existing);
+assert.equal(changed[0].kind, "boolean");
+assert.equal(changed.find(mapping => mapping.id === business.id).kind, "number");
+assert.ok(changed.find(mapping => mapping.id === business.id).protocolUnmapped);
+assert.equal(syncProtocolMappings([], "modbus", unlinked, existing).length, 2);
+assert.equal(snapshotPointMapping(unlinked[2], "bus-history").protocolUnmapped, undefined);
 assert.equal(bindingProblem(doc.nodes[0], doc.mappings), "");
 assert.equal(
   bindingProblem({ ...doc.nodes[0], binding: "missing" }, doc.mappings),
