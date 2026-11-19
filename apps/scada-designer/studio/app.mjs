@@ -1235,6 +1235,59 @@ async function boot() {
           ? { ...livePoints.value, ...Object.fromEntries(previewSamples.value) }
           : livePoints.value,
       );
+      const pointDiagnosticDialog = ref(null);
+      const diagnosticsOpen = ref(false), diagnosticsOnlyBad = ref(false);
+      const locatedItem = ref(null);
+      let locatedTimer;
+      const pointUsage = computed(() => {
+        const usage = new Map();
+        if (!viewer || !screen.value) return usage;
+        for (const item of screenItems.value) {
+          if (item.hidden) continue;
+          for (const id of new Set(Object.values(item.bindings || {}).filter(Boolean))) {
+            if (!usage.has(id)) usage.set(id, []);
+            usage.get(id).push({ id: item.id, title: screenLayerName(item) });
+          }
+        }
+        return usage;
+      });
+      const diagnosedMappings = computed(() => doc.value.mappings.filter((m) => pointUsage.value.has(m.id)));
+      const monitorIssues = computed(() => connection.value === "等待数据" ? 0 :
+        diagnosedMappings.value.filter((m) => livePoints.value[m.id]?.quality !== "good").length);
+      const monitorTime = (value) =>
+        Number.isFinite(value) && Number.isFinite(new Date(value).getTime()) && value > 0
+          ? new Date(value).toLocaleString("zh-CN", { hour12: false })
+          : "—";
+      const monitorRows = computed(() => {
+        const waiting = connection.value === "等待数据";
+        return diagnosedMappings.value.flatMap((mapping) => {
+          const point = livePoints.value[mapping.id];
+          if (diagnosticsOnlyBad.value && (waiting || point?.quality === "good")) return [];
+          const reading = waiting ? { raw: "—", value: "—", reason: "", quality: "等待数据" } :
+            pointPreview(point, mapping);
+          return [{
+            mapping, reading, objects: pointUsage.value.get(mapping.id),
+            sampleTime: monitorTime(point?.timestamp),
+            receiveTime: monitorTime(point?.receivedAt),
+          }];
+        });
+      });
+      function openPointDiagnostics() {
+        diagnosticsOnlyBad.value = monitorIssues.value > 0;
+        diagnosticsOpen.value = true;
+        nextTick(() => pointDiagnosticDialog.value?.showModal());
+      }
+      function locateDiagnosticItem(item) {
+        pointDiagnosticDialog.value?.close();
+        locatedItem.value = item;
+        clearTimeout(locatedTimer);
+        locatedTimer = setTimeout(() => (locatedItem.value = null), 6000);
+      }
+      watch(activePageId, () => {
+        pointDiagnosticDialog.value?.close();
+        locatedItem.value = null;
+        clearTimeout(locatedTimer);
+      });
       watch(() => JSON.stringify(doc.value.source), restart, {
         immediate: true,
       });
@@ -1302,6 +1355,7 @@ async function boot() {
         if (!viewer) document.removeEventListener("pointerdown", closeProjectMenuOutside, true);
         stop();
         clearInterval(clockId);
+        clearTimeout(locatedTimer);
         observer?.disconnect();
         drag?.unset();
       });
@@ -1394,6 +1448,15 @@ async function boot() {
         message,
         sel,
         points,
+        pointDiagnosticDialog,
+        diagnosticsOpen,
+        diagnosticsOnlyBad,
+        diagnosedMappings,
+        monitorIssues,
+        monitorRows,
+        locatedItem,
+        openPointDiagnostics,
+        locateDiagnosticItem,
         connection,
         clock,
         sequence,

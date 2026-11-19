@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import re
 import socket
 import subprocess
 import tempfile
@@ -24,6 +25,7 @@ class Snapshot(BaseHTTPRequestHandler):
     frozen_at = None
     new_alarm = False
     new_alarm_seen = threading.Event()
+    level_raw = 16000
 
     def log_message(self, *_):
         pass
@@ -52,7 +54,7 @@ class Snapshot(BaseHTTPRequestHandler):
             events.append({"occurredAt": "2026-11-19T06:12:00Z", "level": "高",
                            "state": "活动 · 待确认", "message": "新到告警 流量偏低"})
         points = [
-            {"id": "LT-101.PV", "value": 16000, "kind": "number", "label": "进水液位", "unit": "原码"},
+            {"id": "LT-101.PV", "value": self.level_raw, "kind": "number", "label": "进水液位", "unit": "原码"},
             {"id": "history", "value": historical, "kind": "dataset", "label": "进水历史", "unit": "m"},
             {"id": "events", "value": events, "kind": "dataset", "label": "上游告警"},
         ]
@@ -207,6 +209,36 @@ def exercise(browser, base, source):
     viewer.goto(base + "/view")
     runtime_ready()
     viewer.screenshot(path=str(OUT / "online.png"))
+    diagnostic_trigger = viewer.get_by_role("button", name="测点诊断", exact=True)
+    diagnostic = viewer.get_by_role("dialog", name="测点诊断", exact=True)
+    diagnostic_trigger.click()
+    expect(diagnostic).to_contain_text("3 个画面测点 · 0 个异常")
+    level_row = diagnostic.get_by_role("row", name="进水液位", exact=False)
+    expect(level_row).to_contain_text("4.50 m")
+    expect(level_row).to_contain_text("原值 16000")
+    expect(level_row).to_contain_text("接收")
+    viewer.keyboard.press("Escape")
+    expect(diagnostic).not_to_be_visible()
+    Snapshot.level_raw = 3999
+    try:
+        expect(diagnostic_trigger).to_have_text("1 个异常测点")
+        diagnostic_trigger.click()
+        expect(diagnostic.get_by_role("checkbox", name="仅显示异常")).to_be_checked()
+        expect(diagnostic.locator("tbody tr")).to_have_count(1)
+        expect(level_row).to_contain_text("原值 3999")
+        expect(level_row).to_contain_text("原值超出输入量程")
+        expect(level_row).not_to_contain_text("4.50 m")
+        viewer.screenshot(path=str(OUT / "point-diagnostics.png"))
+        level_row.get_by_role("button", name="定位 进水池", exact=True).click()
+        expect(diagnostic).not_to_be_visible()
+        expect(viewer.locator('[data-cell-id="level-tank"]')).to_have_class(
+            re.compile(r"\bscreen-diagnostic-target\b"),
+        )
+        expect(viewer.get_by_role("status")).to_contain_text("已标出 进水池")
+    finally:
+        Snapshot.level_raw = 16000
+    runtime_ready()
+    expect(diagnostic_trigger).to_have_text("测点诊断")
     events = viewer.locator('[data-cell-id="events"]')
     pager = events.get_by_role("navigation", name="告警分页")
     expect(pager).to_contain_text("第 1 / 2 页")
@@ -271,6 +303,12 @@ def exercise(browser, base, source):
         expect(pager).not_to_be_visible()
         detection_ms = round((time.monotonic() - disconnected_at) * 1000)
         viewer.screenshot(path=str(OUT / "disconnected.png"))
+        diagnostic_trigger.click()
+        expect(diagnostic).to_contain_text("3 个画面测点 · 3 个异常")
+        expect(level_row).to_contain_text("离线")
+        expect(level_row).to_contain_text("数据源连接中断")
+        expect(level_row).to_contain_text("原值 16000")
+        diagnostic.get_by_role("button", name="关闭", exact=True).click()
     finally:
         Snapshot.offline = False
     reconnect_at = time.monotonic()
@@ -355,6 +393,7 @@ def main():
     result = {"scope": "local read-only upstream fixture", **timings, "verified": [
         "sample field suggestions", "raw and engineering values", "history quality and order",
         "point crosswalk preserves canvas bindings and conversion with undo/redo",
+        "point diagnostics show raw out-of-range values, timestamps, device location and disconnect reason",
         "alarm pagination stays pinned during refresh, opens device and returns to live",
         "device trend custom fields and gaps", "stale values while transport stays connected",
         "missing source records in publish review", "alarm lifecycle readback",

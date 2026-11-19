@@ -282,8 +282,13 @@
               @pointerdown.self="ids = []"
             :style="{...screenView.style,background:screen?doc.canvas.background:undefined}"
           >
-            <screen-stage v-if="screen" :doc="assistantDoc" :points="points" :selected="ids" :editing="editing&&!assistantResult" :tool="screenTool" :proposal-ids="assistantResult?[...new Set(assistantResult.changes.map(c=>c.id))]:[]" :sequence="sequence" :source-version="sourceVersion" :blocked="!!dialog" @start="snapshot" @insert="screenInsert" @geometry="screenGeometry" @pipe="screenPipe" @library="screenLibraryPlace" @navigate="switchScreenPage" @select="screenSelect" @tool="setScreenTool" @command="screenCommand"></screen-stage>
+            <screen-stage v-if="screen" :doc="assistantDoc" :points="points" :selected="ids" :editing="editing&&!assistantResult" :tool="screenTool" :proposal-ids="assistantResult?[...new Set(assistantResult.changes.map(c=>c.id))]:[]" :sequence="sequence" :source-version="sourceVersion" :diagnostic-target="locatedItem?.id" :blocked="!!dialog" @start="snapshot" @insert="screenInsert" @geometry="screenGeometry" @pipe="screenPipe" @library="screenLibraryPlace" @navigate="switchScreenPage" @select="screenSelect" @tool="setScreenTool" @command="screenCommand"></screen-stage>
             <div v-if="screen" class="screen-source-badge" :class="{'screen-rehearsal-badge':previewSamples.size}">{{doc.title}} · {{sourceTitle}} · {{connection}}<span v-if="previewSamples.size"> · 工况演练</span></div>
+            <button v-if="diagnosedMappings.length" class="runtime-point-trigger" :class="{'has-issues':monitorIssues}"
+              type="button" aria-label="测点诊断" aria-haspopup="dialog" @click="openPointDiagnostics">
+              {{monitorIssues ? monitorIssues + ' 个异常测点' : '测点诊断'}}
+            </button>
+            <p v-if="locatedItem" class="runtime-point-location" role="status">已标出 {{locatedItem.title}}</p>
             <native-stage v-if="native" :key="doc.template+':'+sourceVersion" :doc="doc" :points="points" :selected="ids" :editing="editing" :sequence="sequence" :clock="clock" :connection="connection" @select="nativeSelect" @patch="nativePatch" @start="snapshot" @move="nativeMove" @geometry="nativeRects=$event"></native-stage>
             <div v-if="!native && !screen" class="board-title">
               <span>运行监视</span>
@@ -733,6 +738,34 @@
     <div v-if="!viewer && message && !dialog" role="status" class="status-message">
       <span>{{message}}</span><a v-if="published" :href="publishedUrl" target="_blank" rel="noopener">查看展示页面 ↗</a><button @click="message=''" aria-label="关闭提示">×</button>
     </div>
+    <dialog v-if="diagnosedMappings.length" ref="pointDiagnosticDialog" class="dialog runtime-point-dialog"
+      aria-labelledby="runtime-point-title" @close="diagnosticsOpen=false">
+      <template v-if="diagnosticsOpen">
+        <header><h2 id="runtime-point-title">测点诊断</h2><button autofocus @click="pointDiagnosticDialog.close()">关闭</button></header>
+        <p>{{doc.title}} · {{sourceTitle}} · {{connection}}</p>
+        <div class="runtime-point-filter">
+          <p aria-live="polite">{{diagnosedMappings.length}} 个画面测点 · {{monitorIssues}} 个异常</p>
+          <label><input type="checkbox" v-model="diagnosticsOnlyBad" />仅显示异常</label>
+        </div>
+        <div v-if="monitorRows.length" class="runtime-point-list" role="region" tabindex="0" aria-label="画面测点诊断表">
+          <table>
+            <thead><tr><th scope="col">测点</th><th scope="col">读数</th><th scope="col">质量</th><th scope="col">时间</th><th scope="col">画面对象</th></tr></thead>
+            <tbody>
+              <tr v-for="{mapping,reading,sampleTime,receiveTime,objects} in monitorRows" :key="mapping.id">
+                <th scope="row">{{mapping.label || mapping.id}}<small v-if="mapping.label && mapping.label !== mapping.id">{{mapping.id}}</small></th>
+                <td><b>工程值 {{reading.value}}</b><small>原值 {{reading.raw}}</small></td>
+                <td>{{reading.quality}}<small v-if="reading.reason">{{reading.reason}}</small></td>
+                <td><span>读数 {{sampleTime}}</span><small>接收 {{receiveTime}}</small></td>
+                <td class="runtime-point-objects">
+                  <button v-for="item in objects" :key="item.id" :aria-label="'定位 ' + item.title" @click="locateDiagnosticItem(item)">{{item.title}}</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p v-else>当前画面没有异常测点。</p>
+      </template>
+    </dialog>
     <div v-if="dialog" class="shade">
       <section
         class="dialog"

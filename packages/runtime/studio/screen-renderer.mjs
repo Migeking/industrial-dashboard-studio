@@ -1537,6 +1537,7 @@ export const ScreenStage = {
     "sourceVersion",
     "blocked",
     "proposalIds",
+    "diagnosticTarget",
   ],
   emits: [
     "start",
@@ -1727,6 +1728,13 @@ export const ScreenStage = {
         if (props.editing) faceplate.value = "";
       },
     );
+    watch(() => props.diagnosticTarget, (target, previous) => {
+      const graph = adapter?.graph;
+      for (const [id, active] of [[previous, false], [target, true]]) {
+        const cell = id && graph?.getCellById(id);
+        if (cell) graph.findViewByCell(cell)?.container.classList.toggle("screen-diagnostic-target", active);
+      }
+    }, { flush: "post" });
     watch(
       () => [runtimePoints.value, props.sequence, props.sourceVersion,windows.value],
       () => adapter?.project(),
