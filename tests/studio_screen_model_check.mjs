@@ -8,7 +8,7 @@ import {
   copyScreenSelection,
 } from "../packages/runtime/studio/screen-model.mjs";
 import { screenSymbols } from "../packages/components/studio/screen-symbols.mjs";
-import { makeScreenSymbol, screenSymbolChanges, validateScreenSymbol } from "../packages/runtime/studio/screen-library.mjs";
+import { makeScreenSymbol, placeScreenSymbol, planScreenSymbolUpgrade, screenSymbolChanges, validateScreenSymbol } from "../packages/runtime/studio/screen-library.mjs";
 
 const doc = blankScreen();
 assert.deepEqual(doc.nodes, []);
@@ -73,6 +73,66 @@ const changes = screenSymbolChanges(unit, portable);
 assert.equal(changes.length, 2);
 assert.match(changes.find((item) => item.key === "right").to, /位置 90%/);
 assert.match(changes.find((item) => item.key === "energy").to, /电耗 · 必绑/);
+{
+  const installed = blankScreen();
+  installed.mappings = structuredClone(doc.mappings);
+  let sequence = 0;
+  const placed = placeScreenSymbol(installed, unit, 400, 300, () => `placed-${++sequence}`);
+  const [placedPump, placedValve] = installed.nodes;
+  const [internalPipe] = installed.pipes;
+  placedPump.title = "P-101 · 现场回流泵";
+  placedPump.params.equipmentCode = "P-101";
+  placedPump.bindings = { run: "run", fault: "fault" };
+  placedValve.bindings = { open: "open" };
+  const outside = screenNode("tank", "outside", 1300, 300);
+  installed.nodes.push(outside);
+  installed.pipes.push({
+    ...structuredClone(doc.pipes[0]), id: "outside-pipe", title: "场站出水管",
+    source: { nodeId: placedValve.id, portId: "right" },
+    target: { nodeId: outside.id, portId: "left" },
+  });
+  const revised = structuredClone(unit);
+  revised.revision = 2;
+  const pumpDef = revised.nodes.find((item) => item.id === "p");
+  pumpDef.ports.find((port) => port.id === "right").x = 91;
+  pumpDef.dataSlots.push({ key: "energy", label: "电耗", role: "extra", kinds: ["number"], required: true });
+  const before = structuredClone(installed);
+  const plan = planScreenSymbolUpgrade(installed, [placed[0]], revised);
+  assert.deepEqual(installed, before);
+  assert.equal(plan.connected, 2);
+  assert.equal(plan.bindings, 3);
+  assert.deepEqual(plan.unbound, ["P-101 · 现场回流泵 · 电耗"]);
+  assert.equal(plan.nodes[0].libraryRef.revision, 2);
+  assert.equal(plan.nodes[0].title, placedPump.title);
+  assert.equal(plan.nodes[0].params.equipmentCode, "P-101");
+  assert.deepEqual(plan.nodes[0].bindings, placedPump.bindings);
+  assert.equal(plan.nodes[0].ports.find((port) => port.id === "right").x, 91);
+  assert.deepEqual({ ...plan.pipes[0], libraryRef: internalPipe.libraryRef }, internalPipe);
+  assert.equal(plan.pipes[1], installed.pipes[1]);
+  assert.throws(() => validate({ ...installed, nodes: plan.nodes, pipes: plan.pipes }, true), /电耗/);
+
+  const resaved = makeScreenSymbol(installed, placed, unit.name, unit.id);
+  assert.deepEqual(resaved.nodes.map((item) => item.id), unit.nodes.map((item) => item.id));
+  assert.deepEqual(resaved.pipes[0].source, unit.pipes[0].source);
+  assert.ok([...resaved.nodes, ...resaved.pipes].every((item) => !item.libraryRef));
+  const removed = structuredClone(revised);
+  removed.nodes[1].ports = removed.nodes[1].ports.filter((port) => port.id !== "right");
+  assert.throws(() => planScreenSymbolUpgrade(installed, placed, removed), /场站出水管.*移除了接口/);
+  const rebound = structuredClone(revised);
+  rebound.nodes[0].dataSlots = rebound.nodes[0].dataSlots.filter((slot) => slot.key !== "run");
+  assert.throws(() => planScreenSymbolUpgrade(installed, placed, rebound), /已绑定 run/);
+  const rewired = { ...revised, pipes: [] };
+  assert.throws(() => planScreenSymbolUpgrade(installed, placed, rewired), /内部管线数量/);
+  assert.throws(() => planScreenSymbolUpgrade(installed, placed, unit), /当前修订/);
+  assert.deepEqual(installed, before);
+
+  placedPump.title = unit.nodes[0].title;
+  for (const item of [placedPump, placedValve, internalPipe]) delete item.libraryRef;
+  const legacy = planScreenSymbolUpgrade(installed, placed, revised);
+  assert.equal(legacy.fromRevision, undefined);
+  assert.equal(legacy.pipes[0].libraryRef.itemId, unit.pipes[0].id);
+  assert.equal(legacy.connected, 2);
+}
 const bad = (change, pattern) => {
   const copy = structuredClone(doc);
   change(copy);

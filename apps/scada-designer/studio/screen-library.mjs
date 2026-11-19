@@ -1,5 +1,6 @@
 import {
   makeScreenSymbol,
+  planScreenSymbolUpgrade,
   screenSymbolChanges,
   validateScreenSymbol,
 } from "../../../packages/runtime/studio/screen-library.mjs";
@@ -49,6 +50,35 @@ export const ScreenLibrary = {
       error.value = "";
       notice.value = "";
       Vue.nextTick(() => review.value?.showModal());
+    }
+    function reviewUpgrade(symbol) {
+      const value = { instance: true, symbol, doc: props.doc, selected: [...props.selected] };
+      try {
+        Object.assign(value, planScreenSymbolUpgrade(props.doc, props.selected, symbol));
+      } catch (e) {
+        value.problem = e.message;
+      }
+      pending.value = value;
+      error.value = "";
+      notice.value = "";
+      Vue.nextTick(() => review.value?.showModal());
+    }
+    function acceptUpgrade() {
+      const { doc, selected, symbol } = pending.value;
+      try {
+        if (doc !== props.doc || !doc.symbols.includes(symbol) ||
+            selected.join() !== props.selected.join())
+          throw Error("选中的图元或库修订已变化，请重新预览");
+        const upgrade = planScreenSymbolUpgrade(doc, selected, symbol);
+        emit("start");
+        doc.nodes = upgrade.nodes;
+        doc.pipes = upgrade.pipes;
+        notice.value = `已升级到修订 ${symbol.revision || 1}` +
+          (upgrade.unbound.length ? `，发布前需补绑 ${upgrade.unbound.length} 个测点。` : "，可撤销本次升级。");
+        review.value.close();
+      } catch (e) {
+        pending.value = { ...pending.value, problem: e.message };
+      }
     }
     function acceptUpdate() {
       if (!pending.value) return;
@@ -108,6 +138,8 @@ export const ScreenLibrary = {
       pending,
       review,
       acceptUpdate,
+      reviewUpgrade,
+      acceptUpgrade,
     };
   },
   template: `
@@ -127,6 +159,7 @@ export const ScreenLibrary = {
         <button @click="exportFile(symbol)">导出图元</button>
         <button @click="save(symbol)" :disabled="!canSave">用选中内容更新</button>
         <label class="button">导入修订<input type="file" accept=".json" :aria-label="'导入 '+symbol.name+' 的修订文件'" @change="importFile($event.target.files[0],symbol);$event.target.value=''" /></label>
+        <button @click="reviewUpgrade(symbol)" aria-label="升级选中实例" :disabled="!canSave">升级实例</button>
         <button @click="remove(symbol)">移除图元</button>
       </div>
     </article>
@@ -134,11 +167,25 @@ export const ScreenLibrary = {
     <Teleport to="body">
       <dialog class="symbol-revision-dialog" ref="review" aria-labelledby="symbol-revision-title" @keydown.stop @close="pending=null">
         <template v-if="pending">
-          <h2 id="symbol-revision-title">图元更新预览</h2>
+          <h2 id="symbol-revision-title">{{pending.instance ? '实例升级预览' : '图元更新预览'}}</h2>
+          <template v-if="pending.instance">
+            <p><b>{{pending.symbol.name}}</b> · {{pending.fromRevision ? '修订 '+pending.fromRevision : '原实例'}} → 修订 {{pending.symbol.revision || 1}}</p>
+            <p v-if="pending.problem" class="definition-error" role="alert">{{pending.problem}}</p>
+            <template v-else>
+              <p>保留 {{pending.connected}} 条已接管线、{{pending.bindings}} 处测点绑定和画面位置。</p>
+              <p v-if="!pending.fromRevision">旧实例按唯一图元名称和内部接管关系匹配。</p>
+              <details v-if="pending.unbound.length" open>
+                <summary>发布前需补绑 {{pending.unbound.length}} 个测点</summary>
+                <ul><li v-for="(slot,i) in pending.unbound" :key="i">{{slot}}</li></ul>
+              </details>
+            </template>
+          </template>
+          <template v-else>
           <p><b>{{pending.previous.name}}</b> · 修订 {{pending.previous.revision || 1}} → {{pending.next.revision}}</p>
           <p>{{pending.previous.nodes.length === pending.next.nodes.length ? pending.next.nodes.length : pending.previous.nodes.length+' → '+pending.next.nodes.length}} 个元素，
             {{pending.previous.pipes.length === pending.next.pipes.length ? pending.next.pipes.length : pending.previous.pipes.length+' → '+pending.next.pipes.length}} 条内部管道。确认后，新放置的实例使用新版。</p>
-          <div v-if="pending.changes.length" class="symbol-revision-list" tabindex="0" role="region" aria-label="接口和测点变化">
+          </template>
+          <div v-if="!pending.problem && pending.changes.length" class="symbol-revision-list" tabindex="0" role="region" aria-label="接口和测点变化">
             <table>
               <thead><tr><th scope="col">图元 / 项目</th><th scope="col">当前定义</th><th scope="col">更新后</th></tr></thead>
               <tbody>
@@ -150,10 +197,11 @@ export const ScreenLibrary = {
               </tbody>
             </table>
           </div>
-          <p v-else>接口和测点槽位定义一致。</p>
+          <p v-else-if="!pending.problem">接口和测点槽位定义一致。</p>
           <footer>
             <button autofocus @click="review.close()">取消</button>
-            <button class="primary" @click="acceptUpdate">确认更新图元库</button>
+            <button v-if="pending.instance" class="primary" :disabled="!!pending.problem" @click="acceptUpgrade">确认升级实例</button>
+            <button v-else class="primary" @click="acceptUpdate">确认更新图元库</button>
           </footer>
         </template>
       </dialog>

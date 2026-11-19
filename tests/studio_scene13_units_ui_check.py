@@ -65,7 +65,7 @@ def verify_unit_revision(page, unit, original, url):
     port = next(p for p in clarifier["ports"] if p["id"] == "pacIn")
     port["x"] = round(port["x"] + 3, 2)
     clarifier["dataSlots"].append({
-        "key": "outletTurbidity", "label": "出水浊度", "role": "extra",
+        "key": "outletTurbidity", "label": "出水复核浊度", "role": "extra",
         "kinds": ["number"], "required": True,
     })
     card.get_by_label("导入 " + unit["name"] + " 的修订文件", exact=True).set_input_files({
@@ -74,7 +74,7 @@ def verify_unit_revision(page, unit, original, url):
     })
     expect(review).to_contain_text("修订 1 → 2")
     expect(review.get_by_role("row", name="接口 · pacIn", exact=False)).to_contain_text(f"位置 {port['x']}%")
-    expect(review.get_by_role("row", name="测点槽位 · outletTurbidity", exact=False)).to_contain_text("出水浊度 · 必绑")
+    expect(review.get_by_role("row", name="测点槽位 · outletTurbidity", exact=False)).to_contain_text("出水复核浊度 · 必绑")
     page.screenshot(path=str(OUT / "unit-revision-review.png"))
     review.get_by_role("button", name="确认更新图元库", exact=True).click()
     expect(review).not_to_be_visible()
@@ -94,13 +94,93 @@ def verify_unit_revision(page, unit, original, url):
     assert updated["nodes"] == original["nodes"] and updated["pipes"] == original["pipes"]
     assert updated["symbols"][0]["id"] == original["symbols"][0]["id"]
     assert updated["symbols"][0]["revision"] == 2
+    clarifier_before = next(node for node in original["nodes"] if node["symbol"] == "highRateClarifier")
+
+    def select_original():
+        page.get_by_role("tab", name="图层", exact=False).click()
+        page.locator(f'[data-layer="{clarifier_before["id"]}"]').click()
+        page.get_by_role("tab", name="我的图元", exact=True).click()
+
+    select_original()
+    upgrade = card.get_by_role("button", name="升级选中实例", exact=True)
+    upgrade.click()
+    instance = page.get_by_role("dialog", name="实例升级预览")
+    expect(instance).to_contain_text("修订 1 → 修订 2")
+    expect(instance).to_contain_text(f'保留 {len(original["pipes"])} 条已接管线、36 处测点绑定')
+    expect(instance).to_contain_text("发布前需补绑 1 个测点")
+    expect(instance).to_contain_text("出水复核浊度")
+    expect(instance.get_by_role("row", name="接口 · pacIn", exact=False)).to_contain_text(f"位置 {port['x']}%")
+    page.screenshot(path=str(OUT / "existing-unit-upgrade-preview.png"))
+    instance.get_by_role("button", name="取消", exact=True).click()
+    assert save() == updated
+    upgrade.click()
+    instance.get_by_role("button", name="确认升级实例", exact=True).click()
+    expect(instance).not_to_be_visible()
+    upgraded = save()
+    for old, new in zip(original["nodes"], upgraded["nodes"]):
+        assert new["libraryRef"]["revision"] == 2
+        assert new["libraryRef"]["itemId"] == old["libraryRef"]["itemId"]
+        assert {k: v for k, v in new.items() if k not in ("libraryRef", "ports", "dataSlots")} == {
+            k: v for k, v in old.items() if k not in ("libraryRef", "ports", "dataSlots")}
+    assert len(upgraded["pipes"]) == len(original["pipes"])
+    for old, new in zip(original["pipes"], upgraded["pipes"]):
+        assert new["libraryRef"] == {**old["libraryRef"], "revision": 2}
+        assert {k: v for k, v in new.items() if k not in ("libraryRef", "dataSlots")} == {
+            k: v for k, v in old.items() if k not in ("libraryRef", "dataSlots")}
+    upgraded_clarifier = next(node for node in upgraded["nodes"] if node["id"] == clarifier_before["id"])
+    assert next(p for p in upgraded_clarifier["ports"] if p["id"] == "pacIn")["x"] == port["x"]
+
+    page.get_by_role("button", name="撤销", exact=True).click()
+    assert save() == updated
+    page.get_by_role("button", name="重做", exact=True).click()
+    assert save() == upgraded
+    page.locator('.studio-header').get_by_role("button", name="预览发布", exact=True).click()
+    expect(page.locator(".screen-review-issue")).to_contain_text("出水复核浊度")
+    page.get_by_role("button", name="返回编辑", exact=True).click()
+    page.get_by_role("tab", name="图层", exact=False).click()
+    page.locator(f'[data-layer="{clarifier_before["id"]}"]').click(modifiers=["Alt"])
+    page.get_by_role("tab", name="动态与测点", exact=True).click()
+    page.get_by_label("出水复核浊度 · 绑定测点", exact=True).select_option("bench.outletTurbidity")
+    publish(page)
+    expect(page.locator(".status-message")).to_contain_text("已发布")
+    published = page.request.get(url.replace("/api/draft?", "/api/published?")).json()
+    assert published["pipes"] == upgraded["pipes"]
+    assert sum(len(node["bindings"]) for node in published["nodes"]) == 37
+    page.goto(url.replace("/api/draft?", "/view?"))
+    expect(page.locator(".x6-edge")).to_have_count(len(original["pipes"]))
+    pac = next(pipe for pipe in published["pipes"] if pipe["target"] == {
+        "nodeId": clarifier_before["id"], "portId": "pacIn"})
+    anchor_error = page.evaluate("""({pipe, device, x, y}) => {
+        const cell = document.querySelector(`[data-cell-id="${device}"]`);
+        const group = document.querySelector(`[data-cell-id="${pipe}"]`);
+        const edge = group.querySelector('[data-selector="line"]') ||
+            [...group.querySelectorAll('path')].find(el => el.getAttribute('d'));
+        const expected = new DOMPoint(x, y).matrixTransform(cell.getScreenCTM());
+        const endpoint = edge.getPointAtLength(edge.getTotalLength()).matrixTransform(edge.getScreenCTM());
+        return Math.hypot(endpoint.x - expected.x, endpoint.y - expected.y);
+    }""", {
+        "pipe": pac["id"], "device": clarifier_before["id"],
+        "x": port["x"] * clarifier_before["w"] / 100,
+        "y": port["y"] * clarifier_before["h"] / 100,
+    })
+    assert anchor_error < 2, anchor_error
+    page.locator(f'.x6-node[data-cell-id="{clarifier_before["id"]}"]').click()
+    details = page.get_by_role("dialog", name=clarifier_before["title"] + " 设备详情")
+    expect(details).to_contain_text("出水复核浊度")
+    expect(details).to_contain_text("1.7 NTU")
+    page.screenshot(path=str(OUT / "existing-unit-upgrade-published.png"))
+    details.get_by_role("button", name="关闭详情", exact=True).click()
+    page.get_by_role("button", name="测点诊断", exact=True).click()
+    expect(page.get_by_role("dialog", name="测点诊断")).to_contain_text("37 个画面测点 · 0 个异常")
+    page.goto(url.replace("/api/draft?", "/editor?"))
+    page.get_by_role("tab", name="我的图元", exact=True).click()
     page.get_by_role("button", name="放置 " + unit["name"], exact=True).click()
     bounds = page.locator(".board").bounding_box()
     page.mouse.click(bounds["x"] + 110, bounds["y"] + 100)
     expect(page.locator(".x6-node")).to_have_count(2 * len(unit["nodes"]))
     placed = save()
-    assert placed["nodes"][:len(original["nodes"])] == original["nodes"]
-    assert placed["pipes"][:len(original["pipes"])] == original["pipes"]
+    assert placed["nodes"][:len(original["nodes"])] == published["nodes"]
+    assert placed["pipes"][:len(original["pipes"])] == published["pipes"]
     assert len(placed["pipes"]) == 2 * len(original["pipes"])
     new = next(n for n in placed["nodes"][len(original["nodes"]):] if n["symbol"] == "highRateClarifier")
     assert next(p for p in new["ports"] if p["id"] == "pacIn")["x"] == port["x"]
@@ -123,6 +203,8 @@ def configure_reused_points(page, unit, fixture):
     rows = [{**row, "id": "bench." + row["id"], "receivedAt": stamp}
             for row in source_rows if row["id"] in wanted]
     assert len(rows) == len(wanted) == 36
+    rows.append({"id": "bench.outletTurbidity", "label": "试验出水复核浊度", "kind": "number",
+                 "value": 1.7, "unit": "NTU", "quality": "good", "receivedAt": stamp})
     page.get_by_role("button", name="数据连接", exact=True).click()
     source = page.get_by_role("dialog", name="数据连接与点位")
     source.get_by_label("样本内容").fill(json.dumps({"points": rows}, ensure_ascii=False))

@@ -223,6 +223,11 @@ export function validateScreen(doc, publishing, project = doc) {
     )
       throw Error("画面对象编号或名称无效");
     ids.add(n.id);
+    if (n.libraryRef !== undefined && (!n.libraryRef ||
+      typeof n.libraryRef.symbolId !== "string" || !n.libraryRef.symbolId ||
+      typeof n.libraryRef.itemId !== "string" || !n.libraryRef.itemId ||
+      !Number.isSafeInteger(n.libraryRef.revision) || n.libraryRef.revision < 1))
+      throw Error(n.title + " 的图元库引用无效");
     if (
       !n.bindings ||
       typeof n.bindings !== "object" ||
@@ -674,7 +679,7 @@ export function screenEndpointPosition(doc, end) {
 }
 // An active-page view shares root metadata, including pages. Validate edited
 // geometry in isolation so its own child page is not counted a second time.
-function screenEditingPage(doc) {
+export function screenEditingPage(doc) {
   return {
     format: doc.format,
     version: doc.version,
