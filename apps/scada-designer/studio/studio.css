@@ -1386,6 +1386,25 @@ fieldset small {
   width: 100%;
   text-align: left;
 }
+.publication-item {
+  padding: 12px 0;
+}
+.publication-item p {
+  margin: 0 0 8px;
+}
+.editor-shell .publication-item button {
+  width: auto;
+  margin-top: 4px;
+  color: #294659;
+  background: #fff;
+  border-color: #a2b7c4;
+}
+.editor-shell .publication-item button:disabled {
+  color: #22564c;
+  background: #e7f3ee;
+  border-color: #9dbfb1;
+  opacity: 1;
+}
 .publish-success {
   background: #eaf6f0;
   padding: 12px;

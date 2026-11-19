@@ -1041,7 +1041,7 @@
         >
         <template v-else
           ><p v-if="!versionInfo.versions.length">尚无发布版本</p>
-          <div v-for="v in versionInfo.versions" :key="v.id" class="review-item">
+          <div v-for="v in versionInfo.versions" :key="v.id" class="review-item publication-item">
             <p>
             {{ new Date(v.time).toLocaleString() }} · {{ v.title }}
             <small :id="'publication-' + v.id" :title="v.id">{{ versionSourceTitle(v) }} · <code>{{ v.id.slice(0, 8) }}</code></small>
