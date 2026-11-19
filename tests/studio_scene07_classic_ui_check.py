@@ -159,7 +159,7 @@ def exercise(page, base):
     caption('scope',1570,12,331,32,'工艺监视 · 只读',16,'600','#355b70')
     caption('stages',25,60,1430,32,'生化车间    /    厌氧释磷    ›    缺氧反硝化    ›    好氧硝化    ›    二沉分离',16,'600')
     caption('diagram',35,129,430,35,'工艺总览  /  生化反应池',19,'700')
-    caption('in',43,407,138,28,'进水总管',15,'600')
+    readout('in',43,213,230,28,'进水总管','in.flow',0,MUD)
     caption('out',1380,407,135,28,'出水排放',15,'600',WATER)
     readout('return1',640,147,338,30,'内回流 / 硝化液','internal.ratio',0,MUD)
     readout('return2',520,719,255,27,'外回流 / 活性污泥','external.ratio',0,MUD)
@@ -289,7 +289,10 @@ def exercise(page, base):
 
     authored = save()
     assert len(authored['pipes']) == 11
-    assert sum(len(n['bindings']) for n in authored['nodes']+authored['pipes']) == 44
+    assert sum(len(n['bindings']) for n in authored['nodes']+authored['pipes']) == 45
+    assert {point for item in authored['nodes']+authored['pipes'] for point in item['bindings'].values()} == {
+        mapping['id'] for mapping in authored['mappings']
+    }
     index = {p['title']:p for p in authored['pipes']}
     assert index['空气总管']['source']=={'nodeId':ids['air'],'portId':'left'}
     assert index['空气总管']['target']=={'nodeId':ids['aer'],'portId':'bottom'}
@@ -332,8 +335,8 @@ def exercise(page, base):
         return path.evaluate("""p=>{const n=p.getTotalLength();return Array.from({length:Math.ceil(n)},(_,i)=>p.getPointAtLength(i)).some(a=>Math.abs(a.y-682.5)<2&&Math.abs(a.x-864)>3&&Math.abs(a.x-864)<12)}""")
     assert assert_bridge(), 'aeration crossing did not receive a bridge'
     labels = {key:page.locator(f'[data-cell-id="{ids[key]}"] text:visible')
-              for key in ('return1','return2','air-label')}
-    for key, value in [('return1','205 %'),('return2','75 %'),('air-label','43.8 Hz')]:
+              for key in ('in','return1','return2','air-label')}
+    for key, value in [('in','540 m³/h'),('return1','205 %'),('return2','75 %'),('air-label','43.8 Hz')]:
         expect(labels[key]).to_be_visible()
         expect(labels[key]).to_contain_text(value)
     page.screenshot(path=str(OUT/'published-1920.png'))
@@ -355,7 +358,7 @@ def exercise(page, base):
     page.goto(file.as_uri())
     expect(page.locator('.x6-edge')).to_have_count(11)
     assert assert_bridge()
-    for key, value in [('return1','205 %'),('return2','75 %'),('air-label','43.8 Hz')]:
+    for key, value in [('in','540 m³/h'),('return1','205 %'),('return2','75 %'),('air-label','43.8 Hz')]:
         expect(labels[key]).to_contain_text(value)
     assert not requests
     backup = page.request.get(base+'/api/project-backup')
@@ -368,7 +371,7 @@ def exercise(page, base):
 def verify_live_labels(page, base, authored, labels):
     rows = json.loads(authored['source']['data'])['points']
     readings = {row['id']: row for row in rows}
-    for point,value in [('internal.ratio',188),('external.ratio',62),('air.hz',38.4)]:
+    for point,value in [('in.flow',486),('internal.ratio',188),('external.ratio',62),('air.hz',38.4)]:
         readings[point]['value'] = value
     response = (200, json.dumps({'points':rows},ensure_ascii=False).encode())
 
@@ -410,7 +413,7 @@ def verify_live_labels(page, base, authored, labels):
             page.get_by_role('button',name='发布',exact=True).click()
             expect(page.locator('.status-message')).to_contain_text('已发布')
             page.goto(base+'/view'+query)
-            for key,value in [('return1','188 %'),('return2','62 %'),('air-label','38.4 Hz')]:
+            for key,value in [('in','486 m³/h'),('return1','188 %'),('return2','62 %'),('air-label','38.4 Hz')]:
                 expect(labels[key]).to_contain_text(value)
             page.screenshot(path=str(OUT/'rest-good.png'))
             readings['internal.ratio']['value'] = 0
@@ -425,8 +428,9 @@ def verify_live_labels(page, base, authored, labels):
             page.screenshot(path=str(OUT/'rest-offline.png'))
             readings['external.ratio']['quality'] = 'good'
             readings['air.hz']['value'] = 40.2
+            readings['in.flow']['value'] = 502
             response = (200, json.dumps({'points':rows},ensure_ascii=False).encode())
-            for key,value in [('return1','0 %'),('return2','62 %'),('air-label','40.2 Hz')]:
+            for key,value in [('in','502 m³/h'),('return1','0 %'),('return2','62 %'),('air-label','40.2 Hz')]:
                 expect(labels[key]).to_contain_text(value)
         finally:
             server.shutdown()
@@ -459,6 +463,7 @@ def main():
                 assert not errors,errors
                 result=dict(scene=7,nodes=len(doc['nodes']),pipes=len(doc['pipes']),
                     bindings=sum(len(n['bindings']) for n in doc['nodes']+doc['pipes']),
+                    points=len(doc['mappings']),
                     inline_readouts=['sample','rest','zero','unbound','bad_quality','missing','offline','recovery'],
                     errors=errors)
                 (OUT/'project.json').write_text(json.dumps(doc,ensure_ascii=False,indent=2),encoding='utf-8')
