@@ -27,6 +27,8 @@
 .screen-faceplate>strong{display:block;margin:12px 0;font-size:18px}
 .screen-faceplate>strong[data-state="运行"],.screen-faceplate>strong[data-state="开启"]{color:#167357}
 .screen-faceplate>strong[data-state="故障"]{color:#a42b32}
+.faceplate-part h3{font-size:17px;margin:15px 0 5px;color:#385e73}
+.faceplate-part h3+dl{margin-top:0}
 .screen-faceplate dl{margin:12px 0 0;font-size:18px}
 .screen-faceplate dl div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:10px;padding:9px 0;border-top:1px solid #dde6ec;overflow-wrap:anywhere}
 .screen-faceplate dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
@@ -37,6 +39,7 @@
 .screen-faceplate.is-dark dl div{border-color:#254353}
 .screen-faceplate.is-dark>strong[data-state="运行"],.screen-faceplate.is-dark>strong[data-state="开启"]{color:#62dea8}
 .screen-faceplate.is-dark>strong[data-state="故障"]{color:#ff9a9d}
+.screen-faceplate.is-dark .faceplate-part h3{color:#9fbed2}
 .screen-library-tabs{display:flex;border-bottom:1px solid #d6dfe5;padding-bottom:10px;gap:6px}.editor-shell .screen-library-tabs button{flex:1;font-size:12px}.editor-shell .screen-library-tabs button[aria-selected=true],.editor-shell .screen-tools button.active,.editor-shell .screen-symbols button.active{background:#e5f3f2;color:#08737b;border-color:#71a8ac}
 .screen-source-summary{margin-top:22px;padding:14px 12px;border:1px solid #dbe4ea;background:#f7fafb;display:flex;flex-direction:column;gap:7px;font-size:12px}.screen-source-summary span{overflow-wrap:anywhere}.screen-source-summary small{color:#718895}.screen-inspector .point-readback{display:block;margin-top:7px;color:#57798a}.required-mark{color:#b6563e}.screen-inspector .screen-check{display:flex;gap:8px;align-items:center}.screen-inspector .screen-check input{width:auto;min-height:0;margin:0}.screen-inspector .tools button{font-size:12px}
 .screen-pipe-flow{animation:screen-pipe-flow 1s linear infinite}@keyframes screen-pipe-flow{to{stroke-dashoffset:-40}}
@@ -705,20 +708,20 @@ fieldset small {
   margin: 0 0 12px;
   font-size: 12px;
 }
-.point-readback {
+.tag-point-readback {
   padding: 8px 10px;
   margin: 10px 0;
   background: #eaf1f5;
   color: #263b49;
   font-size: 12px;
 }
-.point-readback div {
+.tag-point-readback div {
   display: grid;
   grid-template-columns: 5em minmax(0, 1fr);
   gap: 8px;
   padding: 3px 0;
 }
-.point-readback dd {
+.tag-point-readback dd {
   margin: 0;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;

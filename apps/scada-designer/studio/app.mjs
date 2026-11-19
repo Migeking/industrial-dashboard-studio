@@ -19,7 +19,7 @@ import { Widget } from "./widgets.mjs";
 import { PointConversion, TagManager } from "./tag-manager.mjs";
 import { isNative, nativeTypes, nativeSlots, nativeSlotMappings, nativeBranch, cloneNativeBranch, nativeRecipes, nativeRecipe, nativeBlank } from "../../../packages/runtime/studio/native-model.mjs";
 import { NativeStage } from "../../../packages/runtime/studio/native-renderer.mjs";
-import { isScreen, blankScreen, copyScreenSelection,validateScreenAsset,screenAssetProblem } from "../../../packages/runtime/studio/screen-model.mjs";
+import { isScreen, blankScreen, copyScreenSelection,validateScreenAsset,screenAssetProblem,screenMediumPipeStyle } from "../../../packages/runtime/studio/screen-model.mjs";
 import { screenDepthArtwork } from "../../../packages/components/studio/screen-artwork.mjs";
 import { waterArtwork } from '../../../packages/components/studio/water-artwork.mjs';
 import { waterEquipment, waterEquipmentGroups } from '../../../packages/components/studio/water-equipment.mjs';
@@ -226,6 +226,7 @@ async function boot() {
           pipe.style = { ...pipe.style, color: "#224253", width: 8, appearance: "detailed" };
         if(doc.value.canvas.appearance) pipe.style.appearance=doc.value.canvas.appearance;
         if([pipe.source,pipe.target].some(e=>doc.value.nodes.find(n=>n.id===e.nodeId)?.params.appearance==="depth"))pipe.style={...pipe.style,appearance:"depth",width:5};
+        Object.assign(pipe.style, screenMediumPipeStyle(doc.value, pipe));
         doc.value.pipes.push(pipe);
       }
       function setScreenTool(tool) {screenView.panTool=false;screenTool.value=tool;if(tool==="pipe")ids.value=[];}

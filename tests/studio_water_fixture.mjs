@@ -5,7 +5,7 @@ const primaryReadings={gravityThickener:[2.6,"m"],screwPump:[35,"Hz"],decanterCe
   submersiblePump:[35,'Hz'],verticalMixer:[28,'Hz'],chemicalTank:[2.8,'m'],pressureFilter:[.32,'MPa'],
   screenRake:[25,'Hz'],screwPress:[18,'Hz'],lamellaClarifier:[.85,'NTU'],circularClarifier:[1.65,'m'],
   aerationTank:[2.4,'mg/L'],mbrModule:[18.6,'kPa'],dosingSkid:[2.6,'m'],filterTrain:[.12,'NTU'],
-  roSkid:[12.5,'μS/cm'],uvChannel:[42,'mJ/cm²'],
+  roSkid:[12.5,'μS/cm'],uvChannel:[42,'mJ/cm²'],highRateClarifier:[.85,'NTU'],dualChemicalDosing:[2.6,'m'],
 };
 const extraReadings={solids:[3.2,"%"],torque:[62,"%"],moisture:[78.6,"%"],sludgeLevel:[1.7,'m'],level:[3.1,'m'],recycleFlow:[42,'m³/h'],flow:[580,'m³/h'],
   permeateFlow:[560,'m³/h'],doseFlow:[24,'L/h'],frequency:[32,'Hz'],pacRate:[26,'mg/L'],pamRate:[1.2,'mg/L'],

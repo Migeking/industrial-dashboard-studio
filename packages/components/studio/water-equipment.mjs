@@ -41,7 +41,7 @@ export const waterEquipment = {
   liftStation:waterUnit('一体化提升泵站','LS','提升 污水 泵站 wet well',waterProcessSlots('集水井液位',[['flow','出水流量'],['pressure','出口压力']]),waterPorts(['污水进口','压力出水','检修接口','放空口'],{left:{anchor:[29,41]},right:{anchor:[70,15]},top:{anchor:[50,5]},bottom:{anchor:[50,65]}}),'双泵提升单元；整机状态使用独立整机点，内部结构为静态示意。'),
   submersiblePump: waterDevice('潜污泵','SP','潜水 排污 提升 泵房 pump',waterRunSlots(),[
     {id:'bottom',label:'吸入口',x:44,y:68,direction:'in',anchor:[44,61]},
-    {id:'right',label:'排出口',x:100,y:52,direction:'out',anchor:[83,52]},
+    {id:'right',label:'排出口',x:100,y:48.5,direction:'out',anchor:[82,48.5]},
   ],'潜水排污泵；运行、故障和频率独立绑定。'),
   verticalMixer: waterDevice('立式搅拌机','MX','混合 絮凝 搅拌 桨 mixer',waterRunSlots(),[],
     '立式减速电机、搅拌轴与桨叶；作为机械设备放入池体附近，无工艺管接口。'),
@@ -74,6 +74,55 @@ export const waterEquipment = {
       left:{y:31,anchor:[5,31]},right:{y:31,anchor:[95,31]},top:{x:56,anchor:[56,19]},bottom:{y:70,anchor:[75,59]},
     }),
     '混合、絮凝与斜管沉淀一体单元；两台搅拌机反馈独立，整机运行 / 故障使用已有整机点，不自动合并。'),
+  highRateClarifier: {
+    ...waterUnit('高密度絮凝沉淀单元','HRC','高效沉淀 Densadeg 13 快混 PAC PAM 回流污泥',
+      [
+        ...waterProcessSlots('出水浊度', [
+          ['sludgeLevel','泥位'], ['recycleFlow','回流流量'], ['pacRate','PAC 投加量'], ['pamRate','PAM 投加量'],
+        ]),
+        waterSlot('rapidRun','快速搅拌运行','boolean'),
+        waterSlot('rapidFault','快速搅拌故障','boolean'),
+        waterSlot('rapidHz','快速搅拌频率'),
+        waterSlot('flocRun','絮凝搅拌运行','boolean'),
+        waterSlot('flocFault','絮凝搅拌故障','boolean'),
+        waterSlot('flocHz','絮凝搅拌频率'),
+      ], [
+        {id:'left',label:'原水进口',anchor:[2.3,32],x:2.3,y:32,direction:'in',medium:'water'},
+        {id:'right',label:'清水出口',anchor:[98,32],x:98,y:32,direction:'out',medium:'water'},
+        {id:'pacIn',label:'快混 PAC 进口',anchor:[23.1,13.9],x:23.1,y:13.9,direction:'in',routingSide:'top',medium:'pac'},
+        {id:'pamIn',label:'絮凝 PAM 进口',anchor:[45.1,13.9],x:45.1,y:13.9,direction:'in',routingSide:'top',medium:'pam'},
+        {id:'bottom',label:'排泥接口',anchor:[68.4,61.2],x:68.4,y:61.2,direction:'out',medium:'sludge'},
+      ], '快混、絮凝、斜管澄清和排泥；PAC 与 PAM 各接独立进口，搅拌机与回流反馈各读其自身测点。'),
+    contractVersion: 1,
+    sections: [
+      {id:'monitor',label:'沉淀运行',slots:['run','fault','value']},
+      {id:'rapidMix',label:'快混与 PAC 投加',slots:['rapidRun','rapidFault','rapidHz','pacRate']},
+      {id:'flocculation',label:'絮凝与 PAM 投加',slots:['flocRun','flocFault','flocHz','pamRate']},
+      {id:'sludge',label:'回流排泥',slots:['sludgeLevel','recycleFlow']},
+    ],
+  },
+  dualChemicalDosing: {
+    ...waterUnit('PAC／PAM 双加药装置','DCD','双加药 PAC PAM 投加 三槽 熟化 计量 skid',
+      [
+        ...waterProcessSlots('PAC 箱液位', [
+          ['tankBLevel','PAM 箱液位'], ['doseFlowA','PAC 投加流量'], ['doseFlowB','PAM 投加流量'],
+          ['frequencyA','PAC 泵频率'], ['frequencyB','PAM 泵频率'],
+        ]),
+        waterSlot('pumpARun','PAC 泵运行','boolean'),
+        waterSlot('pumpAFault','PAC 泵故障','boolean'),
+        waterSlot('pumpBRun','PAM 泵运行','boolean'),
+        waterSlot('pumpBFault','PAM 泵故障','boolean'),
+      ], [
+        {id:'pacOut',label:'PAC 投加出口',anchor:[14.5,56],x:14.5,y:56,direction:'out',routingSide:'left',medium:'pac'},
+        {id:'pamOut',label:'PAM 投加出口',anchor:[88,53],x:88,y:53,direction:'out',routingSide:'right',medium:'pam'},
+      ], 'PAC 日用储罐与 PAM 三槽制备采用独立计量泵和输出法兰。两路加药独立绑点。'),
+    contractVersion: 1,
+    sections: [
+      {id:'monitor',label:'装置运行',slots:['run','fault']},
+      {id:'pac',label:'PAC 储药与计量',slots:['value','pumpARun','pumpAFault','doseFlowA','frequencyA']},
+      {id:'pam',label:'PAM 制备与计量',slots:['tankBLevel','pumpBRun','pumpBFault','doseFlowB','frequencyB']},
+    ],
+  },
   circularClarifier: waterUnit('二沉池','SC','辐流 沉淀 刮吸泥 澄清 clarifier',
     waterProcessSlots('泥位', [['turbidity','出水浊度'],['recycleFlow','回流流量']]),
     waterPorts(['混合液进口','澄清水出口','辅助进口','回流 / 剩余污泥口'],{

@@ -1,0 +1,1629 @@
+{
+  "id": "scene05-pump-loop",
+  "name": "05 回流泵阀组",
+  "version": 1,
+  "w": 1182,
+  "h": 516,
+  "nodes": [
+    {
+      "id": "09adefd8-19ac-445f-9ca3-11089f5e8312",
+      "type": "screen-node",
+      "symbol": "tank",
+      "title": "二沉池集泥井",
+      "x": 0,
+      "y": 0,
+      "w": 252,
+      "h": 516,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "waterColor": "#3887a6",
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 76,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": [
+        {
+          "key": "value",
+          "label": "液位",
+          "kinds": [
+            "number"
+          ],
+          "required": true,
+          "role": "value"
+        }
+      ]
+    },
+    {
+      "id": "4c2aff43-bcfd-45fa-8940-6ef6b8dc5946",
+      "type": "screen-node",
+      "symbol": "readout",
+      "title": "FT-101",
+      "x": 948,
+      "y": 189,
+      "w": 136,
+      "h": 114,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 44,
+        "fontFamily": "Consolas"
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "monitor"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "port-acbb47cc-582d-452f-8c7f-0964460fa5a1",
+          "label": "流量计入口",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "port-5522ab12-8829-497a-8105-bce26d104ec9",
+          "label": "流量计出口",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": [
+        {
+          "key": "value",
+          "label": "显示数值",
+          "kinds": [
+            "number"
+          ],
+          "required": true,
+          "role": "value"
+        }
+      ]
+    },
+    {
+      "id": "841941ca-33b2-4e51-8c4e-3ebee5d6c24d",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "吸水分支 1",
+      "x": 300,
+      "y": 89,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "top",
+          "label": "顶部",
+          "x": 50,
+          "y": 0,
+          "direction": "both"
+        },
+        {
+          "id": "bottom",
+          "label": "底部",
+          "x": 50,
+          "y": 100,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "16f6ebef-4197-439e-bdeb-afbb394a57ba",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "汇流分支 1",
+      "x": 812,
+      "y": 89,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "top",
+          "label": "顶部",
+          "x": 50,
+          "y": 0,
+          "direction": "both"
+        },
+        {
+          "id": "bottom",
+          "label": "底部",
+          "x": 50,
+          "y": 100,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "6ea5a703-a9fa-49d2-bdff-6a986defaf56",
+      "type": "screen-node",
+      "symbol": "pump",
+      "title": "P-01",
+      "x": 513,
+      "y": 41,
+      "w": 128,
+      "h": 116,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 1,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "dataSlots": [
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": true,
+          "role": "run"
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": false,
+          "role": "fault"
+        },
+        {
+          "key": "value",
+          "label": "运行数值",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "value"
+        },
+        {
+          "key": "data_1",
+          "label": "工作模式",
+          "kinds": [
+            "text"
+          ],
+          "required": false,
+          "role": "text"
+        },
+        {
+          "key": "data_2",
+          "label": "电机电流",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "extra"
+        },
+        {
+          "key": "data_3",
+          "label": "保护联锁",
+          "kinds": [
+            "boolean"
+          ],
+          "required": false,
+          "role": "extra"
+        }
+      ],
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        }
+      ]
+    },
+    {
+      "id": "25de0077-30d5-4789-ada1-858fbc4276d0",
+      "type": "screen-node",
+      "symbol": "checkValve",
+      "title": "CV-01 · 止回阀",
+      "x": 668,
+      "y": 77,
+      "w": 52,
+      "h": 44,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADSCAYAAADwkv2oAAAec0lEQVR42u3de5RV1Z0n8O9vn3PuPee+qiACPhIfOBIVBIVSfGEkY0RRRkOs6qUGxx4VYtaYTGfsTkc769Z1qd09E0yM3RKwtbPaqEOVIaCiZrURFAUFwUciRhyRmLGVV73u+57Hnj9uXawnj7IeF+r7WcvlEv3Dtc853/M7++7f3gARERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERER0dAQDsFhdK20Rn1zsxrTOlEBmzkiX8gMtI7ZHjTX1wcQAQDNMSH6wrTUNzUZHIehVR5jzRc4KywaqGRSq1RKgso/3/bstkTLR38414nWnpfPpAOBVhylAbwCIIETi6t8tm3D2JOmvPbA3Ekd/Y05MbDoEFx//6MJpWLnGbbzA2h9jue5tU68BkEQ8OINOLAApRTy6XaYptUGkY1+IX9fEGQ2PPb9BR0cIQYWHezDpLU0NjZKKpUKbnzo2Xlaq4cD3x1nhmx4xTy01tBau7x0g1BniVgiAjPswCsVoAxrt0hw0y9vmft0MplUjY2NWkQ4t8XAor4/AZMKANYC6vijz15hWqF5vldC4HkakAACxes26MUWoBEAWinTFMMMwXNLT3/82ab5FwMBAKRSKX4iVgnOgVRZWG3dulWOP7puZTgSm+cW8r7veRoiAoHRGVQMq8F9YZfHVkR8z9NuIe+HI7F5xx9dt3Lr1q3S9doQKywqfwcKRHR9fZNhf91ZFYrErih0tLuixOrzPw/4wh+Um1/1nUM60K6dqLFKuczqwov5q5qbG/zKNeKoMbBGfVgl1641PvxzKYxMcbkdTVyR72jrHVbluSso04QVCqO8dojPz4Bve63hlooIPA8i0jme3UPLSdRahWzHasTCf3HyV0LF1MUX+wytkWVyCEbWwmXLzNSiRe51P19xZ/yoCVdkWnYXRUm4x0Q8lGEgFAoj296KDzZtQOD7fN18gZkrZRg4Yco0RGvGlIPL98vBta/6EiufbivGxo67Ir1n5+2pG+akFi5dai0DXA4gKyyM1sWKzQ0NwYIHV/5nw7J/47luGIFvdn1ytNYwQyEUs1lsf/sN7HhnC7JtbZ3VFS/fwOfaBdHaWpw4dTomTqtD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Fi5dai1btMi97ucrkvGjJjRmWnYXRSTc69BUw4AVCiPb3oo//eFtBL7Pq/cF8koZBk6YMg3RmjFwS0UEvt9r3kprXYyNHRdO79nZ+Pj35qcq14oDyMAazbsuSHLtWuPDP5fCyBSX29HEFfmONleUWH3tf6VME1Yo3DmXxS+TAd/2WpeDqrLWrWdYBdp1ErVWIduxGrHwX5z8lVAxdfHFPj8HGViktUBE19c3GfbXnVWhSOyKQkd779Dqsk6Lhu4gCh1o107UWKVcZnXhxfxVzc0NfuUacdQYWAQgmUwqANi6davYX79hVTgSv6KQbvc1tBIuxhqurZO1QAI7XmMUc+nVhRf/7arTTz9dA0AqleJbgoFFfYXWWkAdf/TZK0wrNM/3Sgg8TwMSQPb9qsvrNoibj0IjALRSpimGGYLnlp7++LNN8y8GAoYVA4v2/5aXxsZGSaVSwY0PPTtPa/Vw4LvjzJANr5iv7OPu8tINwppdEUtEYIYdeKUClGHtFglu+uUtc59OJpOqsbFRCz8DGVh08K6//9GEUrHzDNv5AbQ+x/PcWidegyAIePG+QFmllEI+3Q7TtNogstEv5O8LgsyGx76/oIMjxMCiAX0iapVKyb7Pkdue3ZZo+egP5zrR2vPymXQg0Fz4O7DaKnBicZXPtm0Ye9KU1x6YO6mjvzEnokN7vKS+qcngOAyt8hhrvsBZYdGgXSutUd/crMa0TlTAZo7IFzIDrWO2B8319UHnGizOVREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREQ2+/w9uwzAnYtm7JQAAAABJRU5ErkJggg==",
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "80925bbd-220a-4482-871e-dbe84f74bc56",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "吸水分支 2",
+      "x": 300,
+      "y": 187,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "top",
+          "label": "顶部",
+          "x": 50,
+          "y": 0,
+          "direction": "both"
+        },
+        {
+          "id": "bottom",
+          "label": "底部",
+          "x": 50,
+          "y": 100,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "a0062680-cb4b-45e5-ae7a-9379f4eadda9",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "汇流分支 2",
+      "x": 812,
+      "y": 187,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "top",
+          "label": "顶部",
+          "x": 50,
+          "y": 0,
+          "direction": "both"
+        },
+        {
+          "id": "bottom",
+          "label": "底部",
+          "x": 50,
+          "y": 100,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "57eaccfa-eb10-47c4-ad49-98feecc2fdc8",
+      "type": "screen-node",
+      "symbol": "pump",
+      "title": "P-02",
+      "x": 513,
+      "y": 139,
+      "w": 128,
+      "h": 116,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 1,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "dataSlots": [
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": true,
+          "role": "run"
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": false,
+          "role": "fault"
+        },
+        {
+          "key": "value",
+          "label": "运行数值",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "value"
+        },
+        {
+          "key": "data_1",
+          "label": "工作模式",
+          "kinds": [
+            "text"
+          ],
+          "required": false,
+          "role": "text"
+        },
+        {
+          "key": "data_2",
+          "label": "电机电流",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "extra"
+        }
+      ],
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        }
+      ]
+    },
+    {
+      "id": "bb845d9a-3e9b-4d89-8ec3-cebb19508816",
+      "type": "screen-node",
+      "symbol": "checkValve",
+      "title": "CV-02 · 止回阀",
+      "x": 668,
+      "y": 175,
+      "w": 52,
+      "h": 44,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADSCAYAAADwkv2oAAAec0lEQVR42u3de5RV1Z0n8O9vn3PuPee+qiACPhIfOBIVBIVSfGEkY0RRRkOs6qUGxx4VYtaYTGfsTkc769Z1qd09E0yM3RKwtbPaqEOVIaCiZrURFAUFwUciRhyRmLGVV73u+57Hnj9uXawnj7IeF+r7WcvlEv3Dtc853/M7++7f3gARERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERER0dAQDsFhdK20Rn1zsxrTOlEBmzkiX8gMtI7ZHjTX1wcQAQDNMSH6wrTUNzUZHIehVR5jzRc4KywaqGRSq1RKgso/3/bstkTLR38414nWnpfPpAOBVhylAbwCIIETi6t8tm3D2JOmvPbA3Ekd/Y05MbDoEFx//6MJpWLnGbbzA2h9jue5tU68BkEQ8OINOLAApRTy6XaYptUGkY1+IX9fEGQ2PPb9BR0cIQYWHezDpLU0NjZKKpUKbnzo2Xlaq4cD3x1nhmx4xTy01tBau7x0g1BniVgiAjPswCsVoAxrt0hw0y9vmft0MplUjY2NWkQ4t8XAor4/AZMKANYC6vijz15hWqF5vldC4HkakAACxes26MUWoBEAWinTFMMMwXNLT3/82ab5FwMBAKRSKX4iVgnOgVRZWG3dulWOP7puZTgSm+cW8r7veRoiAoHRGVQMq8F9YZfHVkR8z9NuIe+HI7F5xx9dt3Lr1q3S9doQKywqfwcKRHR9fZNhf91ZFYrErih0tLuixOrzPw/4wh+Um1/1nUM60K6dqLFKuczqwov5q5qbG/zKNeKoMbBGfVgl1641PvxzKYxMcbkdTVyR72jrHVbluSso04QVCqO8dojPz4Bve63hlooIPA8i0jme3UPLSdRahWzHasTCf3HyV0LF1MUX+wytkWVyCEbWwmXLzNSiRe51P19xZ/yoCVdkWnYXRUm4x0Q8lGEgFAoj296KDzZtQOD7fN18gZkrZRg4Yco0RGvGlIPL98vBta/6EiufbivGxo67Ir1n5+2pG+akFi5dai0DXA4gKyyM1sWKzQ0NwYIHV/5nw7J/47luGIFvdn1ytNYwQyEUs1lsf/sN7HhnC7JtbZ3VFS/fwOfaBdHaWpw4dTomTqtD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Fi5dai1btMi97ucrkvGjJjRmWnYXRSTc69BUw4AVCiPb3oo//eFtBL7Pq/cF8koZBk6YMg3RmjFwS0UEvt9r3kprXYyNHRdO79nZ+Pj35qcq14oDyMAazbsuSHLtWuPDP5fCyBSX29HEFfmONleUWH3tf6VME1Yo3DmXxS+TAd/2WpeDqrLWrWdYBdp1ErVWIduxGrHwX5z8lVAxdfHFPj8HGViktUBE19c3GfbXnVWhSOyKQkd779Dqsk6Lhu4gCh1o107UWKVcZnXhxfxVzc0NfuUacdQYWAQgmUwqANi6davYX79hVTgSv6KQbvc1tBIuxhqurZO1QAI7XmMUc+nVhRf/7arTTz9dA0AqleJbgoFFfYXWWkAdf/TZK0wrNM/3Sgg8TwMSQPb9qsvrNoibj0IjALRSpimGGYLnlp7++LNN8y8GAoYVA4v2/5aXxsZGSaVSwY0PPTtPa/Vw4LvjzJANr5iv7OPu8tINwppdEUtEYIYdeKUClGHtFglu+uUtc59OJpOqsbFRCz8DGVh08K6//9GEUrHzDNv5AbQ+x/PcWidegyAIePG+QFmllEI+3Q7TtNogstEv5O8LgsyGx76/oIMjxMCiAX0iapVKyb7Pkdue3ZZo+egP5zrR2vPymXQg0Fz4O7DaKnBicZXPtm0Ye9KU1x6YO6mjvzEnokN7vKS+qcngOAyt8hhrvsBZYdGgXSutUd/crMa0TlTAZo7IFzIDrWO2B8319UHnGizOVREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREQ2+/w9uwzAnYtm7JQAAAABJRU5ErkJggg==",
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "ab5c8eab-c4b2-4983-b3d4-91f1894269f4",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "吸水分支 3",
+      "x": 300,
+      "y": 284,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "top",
+          "label": "顶部",
+          "x": 50,
+          "y": 0,
+          "direction": "both"
+        },
+        {
+          "id": "bottom",
+          "label": "底部",
+          "x": 50,
+          "y": 100,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "1b95e3ea-dc3c-4ebf-8af2-99adf051eefc",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "汇流分支 3",
+      "x": 812,
+      "y": 284,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "top",
+          "label": "顶部",
+          "x": 50,
+          "y": 0,
+          "direction": "both"
+        },
+        {
+          "id": "bottom",
+          "label": "底部",
+          "x": 50,
+          "y": 100,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "2cd9d008-1458-4926-b61a-5308cf6004c7",
+      "type": "screen-node",
+      "symbol": "pump",
+      "title": "P-03",
+      "x": 513,
+      "y": 236,
+      "w": 128,
+      "h": 116,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 1,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "dataSlots": [
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": true,
+          "role": "run"
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": false,
+          "role": "fault"
+        },
+        {
+          "key": "value",
+          "label": "运行数值",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "value"
+        },
+        {
+          "key": "data_1",
+          "label": "工作模式",
+          "kinds": [
+            "text"
+          ],
+          "required": false,
+          "role": "text"
+        },
+        {
+          "key": "data_2",
+          "label": "电机电流",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "extra"
+        }
+      ],
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        }
+      ]
+    },
+    {
+      "id": "fb59c1ca-9b55-4240-b5b7-6b6f84c1305e",
+      "type": "screen-node",
+      "symbol": "checkValve",
+      "title": "CV-03 · 止回阀",
+      "x": 668,
+      "y": 272,
+      "w": 52,
+      "h": 44,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADSCAYAAADwkv2oAAAec0lEQVR42u3de5RV1Z0n8O9vn3PuPee+qiACPhIfOBIVBIVSfGEkY0RRRkOs6qUGxx4VYtaYTGfsTkc769Z1qd09E0yM3RKwtbPaqEOVIaCiZrURFAUFwUciRhyRmLGVV73u+57Hnj9uXawnj7IeF+r7WcvlEv3Dtc853/M7++7f3gARERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERER0dAQDsFhdK20Rn1zsxrTOlEBmzkiX8gMtI7ZHjTX1wcQAQDNMSH6wrTUNzUZHIehVR5jzRc4KywaqGRSq1RKgso/3/bstkTLR38414nWnpfPpAOBVhylAbwCIIETi6t8tm3D2JOmvPbA3Ekd/Y05MbDoEFx//6MJpWLnGbbzA2h9jue5tU68BkEQ8OINOLAApRTy6XaYptUGkY1+IX9fEGQ2PPb9BR0cIQYWHezDpLU0NjZKKpUKbnzo2Xlaq4cD3x1nhmx4xTy01tBau7x0g1BniVgiAjPswCsVoAxrt0hw0y9vmft0MplUjY2NWkQ4t8XAor4/AZMKANYC6vijz15hWqF5vldC4HkakAACxes26MUWoBEAWinTFMMMwXNLT3/82ab5FwMBAKRSKX4iVgnOgVRZWG3dulWOP7puZTgSm+cW8r7veRoiAoHRGVQMq8F9YZfHVkR8z9NuIe+HI7F5xx9dt3Lr1q3S9doQKywqfwcKRHR9fZNhf91ZFYrErih0tLuixOrzPw/4wh+Um1/1nUM60K6dqLFKuczqwov5q5qbG/zKNeKoMbBGfVgl1641PvxzKYxMcbkdTVyR72jrHVbluSso04QVCqO8dojPz4Bve63hlooIPA8i0jme3UPLSdRahWzHasTCf3HyV0LF1MUX+wytkWVyCEbWwmXLzNSiRe51P19xZ/yoCVdkWnYXRUm4x0Q8lGEgFAoj296KDzZtQOD7fN18gZkrZRg4Yco0RGvGlIPL98vBta/6EiufbivGxo67Ir1n5+2pG+akFi5dai0DXA4gKyyM1sWKzQ0NwYIHV/5nw7J/47luGIFvdn1ytNYwQyEUs1lsf/sN7HhnC7JtbZ3VFS/fwOfaBdHaWpw4dTomTqtD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Fi5dai1btMi97ucrkvGjJjRmWnYXRSTc69BUw4AVCiPb3oo//eFtBL7Pq/cF8koZBk6YMg3RmjFwS0UEvt9r3kprXYyNHRdO79nZ+Pj35qcq14oDyMAazbsuSHLtWuPDP5fCyBSX29HEFfmONleUWH3tf6VME1Yo3DmXxS+TAd/2WpeDqrLWrWdYBdp1ErVWIduxGrHwX5z8lVAxdfHFPj8HGViktUBE19c3GfbXnVWhSOyKQkd779Dqsk6Lhu4gCh1o107UWKVcZnXhxfxVzc0NfuUacdQYWAQgmUwqANi6davYX79hVTgSv6KQbvc1tBIuxhqurZO1QAI7XmMUc+nVhRf/7arTTz9dA0AqleJbgoFFfYXWWkAdf/TZK0wrNM/3Sgg8TwMSQPb9qsvrNoibj0IjALRSpimGGYLnlp7++LNN8y8GAoYVA4v2/5aXxsZGSaVSwY0PPTtPa/Vw4LvjzJANr5iv7OPu8tINwppdEUtEYIYdeKUClGHtFglu+uUtc59OJpOqsbFRCz8DGVh08K6//9GEUrHzDNv5AbQ+x/PcWidegyAIePG+QFmllEI+3Q7TtNogstEv5O8LgsyGx76/oIMjxMCiAX0iapVKyb7Pkdue3ZZo+egP5zrR2vPymXQg0Fz4O7DaKnBicZXPtm0Ye9KU1x6YO6mjvzEnokN7vKS+qcngOAyt8hhrvsBZYdGgXSutUd/crMa0TlTAZo7IFzIDrWO2B8319UHnGizOVREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREQ2+/w9uwzAnYtm7JQAAAABJRU5ErkJggg==",
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "1819ed10-7fd0-4402-b5d9-33ea4b163a08",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "吸水分支 4",
+      "x": 300,
+      "y": 382,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "top",
+          "label": "顶部",
+          "x": 50,
+          "y": 0,
+          "direction": "both"
+        },
+        {
+          "id": "bottom",
+          "label": "底部",
+          "x": 50,
+          "y": 100,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "7e4803e7-0e29-470a-a37f-315c74d51932",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "汇流分支 4",
+      "x": 812,
+      "y": 382,
+      "w": 20,
+      "h": 20,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#173141",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "cockpit-dark",
+        "cardPadding": 14,
+        "appearance": "detailed"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "top",
+          "label": "顶部",
+          "x": 50,
+          "y": 0,
+          "direction": "both"
+        },
+        {
+          "id": "bottom",
+          "label": "底部",
+          "x": 50,
+          "y": 100,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "cbca6647-b261-42ad-a83a-c23fbb50afe4",
+      "type": "screen-node",
+      "symbol": "pump",
+      "title": "P-04",
+      "x": 513,
+      "y": 334,
+      "w": 128,
+      "h": 116,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 1,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "dataSlots": [
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": true,
+          "role": "run"
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "required": false,
+          "role": "fault"
+        },
+        {
+          "key": "value",
+          "label": "运行数值",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "value"
+        },
+        {
+          "key": "data_1",
+          "label": "工作模式",
+          "kinds": [
+            "text"
+          ],
+          "required": false,
+          "role": "text"
+        },
+        {
+          "key": "data_2",
+          "label": "电机电流",
+          "kinds": [
+            "number"
+          ],
+          "required": false,
+          "role": "extra"
+        }
+      ],
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        }
+      ]
+    },
+    {
+      "id": "a989c083-40f5-49a3-917c-d84e5390081a",
+      "type": "screen-node",
+      "symbol": "checkValve",
+      "title": "CV-04 · 止回阀",
+      "x": 668,
+      "y": 370,
+      "w": 52,
+      "h": 44,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#102d42",
+        "stroke": "#426a83",
+        "color": "#d5e9f4",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "cockpit-dark",
+        "cardPadding": 14
+      },
+      "bindings": {},
+      "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADSCAYAAADwkv2oAAAec0lEQVR42u3de5RV1Z0n8O9vn3PuPee+qiACPhIfOBIVBIVSfGEkY0RRRkOs6qUGxx4VYtaYTGfsTkc769Z1qd09E0yM3RKwtbPaqEOVIaCiZrURFAUFwUciRhyRmLGVV73u+57Hnj9uXawnj7IeF+r7WcvlEv3Dtc853/M7++7f3gARERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERERER0dAQDsFhdK20Rn1zsxrTOlEBmzkiX8gMtI7ZHjTX1wcQAQDNMSH6wrTUNzUZHIehVR5jzRc4KywaqGRSq1RKgso/3/bstkTLR38414nWnpfPpAOBVhylAbwCIIETi6t8tm3D2JOmvPbA3Ekd/Y05MbDoEFx//6MJpWLnGbbzA2h9jue5tU68BkEQ8OINOLAApRTy6XaYptUGkY1+IX9fEGQ2PPb9BR0cIQYWHezDpLU0NjZKKpUKbnzo2Xlaq4cD3x1nhmx4xTy01tBau7x0g1BniVgiAjPswCsVoAxrt0hw0y9vmft0MplUjY2NWkQ4t8XAor4/AZMKANYC6vijz15hWqF5vldC4HkakAACxes26MUWoBEAWinTFMMMwXNLT3/82ab5FwMBAKRSKX4iVgnOgVRZWG3dulWOP7puZTgSm+cW8r7veRoiAoHRGVQMq8F9YZfHVkR8z9NuIe+HI7F5xx9dt3Lr1q3S9doQKywqfwcKRHR9fZNhf91ZFYrErih0tLuixOrzPw/4wh+Um1/1nUM60K6dqLFKuczqwov5q5qbG/zKNeKoMbBGfVgl1641PvxzKYxMcbkdTVyR72jrHVbluSso04QVCqO8dojPz4Bve63hlooIPA8i0jme3UPLSdRahWzHasTCf3HyV0LF1MUX+wytkWVyCEbWwmXLzNSiRe51P19xZ/yoCVdkWnYXRUm4x0Q8lGEgFAoj296KDzZtQOD7fN18gZkrZRg4Yco0RGvGlIPL98vBta/6EiufbivGxo67Ir1n5+2pG+akFi5dai0DXA4gKyyM1sWKzQ0NwYIHV/5nw7J/47luGIFvdn1ytNYwQyEUs1lsf/sN7HhnC7JtbZ3VFS/fwOfaBdHaWpw4dTomTqtD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Fi5dai1btMi97ucrkvGjJjRmWnYXRSTc69BUw4AVCiPb3oo//eFtBL7Pq/cF8koZBk6YMg3RmjFwS0UEvt9r3kprXYyNHRdO79nZ+Pj35qcq14oDyMAazbsuSHLtWuPDP5fCyBSX29HEFfmONleUWH3tf6VME1Yo3DmXxS+TAd/2WpeDqrLWrWdYBdp1ErVWIduxGrHwX5z8lVAxdfHFPj8HGViktUBE19c3GfbXnVWhSOyKQkd779Dqsk6Lhu4gCh1o107UWKVcZnXhxfxVzc0NfuUacdQYWAQgmUwqANi6davYX79hVTgSv6KQbvc1tBIuxhqurZO1QAI7XmMUc+nVhRf/7arTTz9dA0AqleJbgoFFfYXWWkAdf/TZK0wrNM/3Sgg8TwMSQPb9qsvrNoibj0IjALRSpimGGYLnlp7++LNN8y8GAoYVA4v2/5aXxsZGSaVSwY0PPTtPa/Vw4LvjzJANr5iv7OPu8tINwppdEUtEYIYdeKUClGHtFglu+uUtc59OJpOqsbFRCz8DGVh08K6//9GEUrHzDNv5AbQ+x/PcWidegyAIePG+QFmllEI+3Q7TtNogstEv5O8LgsyGx76/oIMjxMCiAX0iapVKyb7Pkdue3ZZo+egP5zrR2vPymXQg0Fz4O7DaKnBicZXPtm0Ye9KU1x6YO6mjvzEnokN7vKS+qcngOAyt8hhrvsBZYdGgXSutUd/crMa0TlTAZo7IFzIDrWO2B8319UHnGizOVREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREQ2+/w9uwzAnYtm7JQAAAABJRU5ErkJggg==",
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    }
+  ],
+  "pipes": [
+    {
+      "id": "fd24ecc3-6879-4f11-b1a6-19a3d67328a6",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "09adefd8-19ac-445f-9ca3-11089f5e8312",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "1819ed10-7fd0-4402-b5d9-33ea4b163a08",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "c0499544-deac-4c40-873e-e001bd0dd989",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "80925bbd-220a-4482-871e-dbe84f74bc56",
+        "portId": "top"
+      },
+      "target": {
+        "nodeId": "841941ca-33b2-4e51-8c4e-3ebee5d6c24d",
+        "portId": "bottom"
+      },
+      "vertices": []
+    },
+    {
+      "id": "1b7a5bd3-eadf-41c1-a8a7-792d113ebfed",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "16f6ebef-4197-439e-bdeb-afbb394a57ba",
+        "portId": "bottom"
+      },
+      "target": {
+        "nodeId": "a0062680-cb4b-45e5-ae7a-9379f4eadda9",
+        "portId": "top"
+      },
+      "vertices": []
+    },
+    {
+      "id": "072d4a6d-6511-4ad0-b4d4-909dff4fff18",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "ab5c8eab-c4b2-4983-b3d4-91f1894269f4",
+        "portId": "top"
+      },
+      "target": {
+        "nodeId": "80925bbd-220a-4482-871e-dbe84f74bc56",
+        "portId": "bottom"
+      },
+      "vertices": []
+    },
+    {
+      "id": "33375455-e6cc-4a56-84c2-c8c013856ced",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "a0062680-cb4b-45e5-ae7a-9379f4eadda9",
+        "portId": "bottom"
+      },
+      "target": {
+        "nodeId": "1b95e3ea-dc3c-4ebf-8af2-99adf051eefc",
+        "portId": "top"
+      },
+      "vertices": []
+    },
+    {
+      "id": "cbce0cba-5287-4238-8156-e8703a15b3e8",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "1819ed10-7fd0-4402-b5d9-33ea4b163a08",
+        "portId": "top"
+      },
+      "target": {
+        "nodeId": "ab5c8eab-c4b2-4983-b3d4-91f1894269f4",
+        "portId": "bottom"
+      },
+      "vertices": []
+    },
+    {
+      "id": "35d6763d-138b-44f8-92c9-df8a16dc109a",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "1b95e3ea-dc3c-4ebf-8af2-99adf051eefc",
+        "portId": "bottom"
+      },
+      "target": {
+        "nodeId": "7e4803e7-0e29-470a-a37f-315c74d51932",
+        "portId": "top"
+      },
+      "vertices": []
+    },
+    {
+      "id": "ebc7af85-e3fe-437c-b7c6-2245b377181d",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "841941ca-33b2-4e51-8c4e-3ebee5d6c24d",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "6ea5a703-a9fa-49d2-bdff-6a986defaf56",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "be23b7a4-1ecb-45a8-924b-d2c1197daae0",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "6ea5a703-a9fa-49d2-bdff-6a986defaf56",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "25de0077-30d5-4789-ada1-858fbc4276d0",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "b647fe81-ab13-46ad-ba1d-29099822709b",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "25de0077-30d5-4789-ada1-858fbc4276d0",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "16f6ebef-4197-439e-bdeb-afbb394a57ba",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "c75f9e12-9c51-4377-84c4-47e4fd25a136",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "80925bbd-220a-4482-871e-dbe84f74bc56",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "57eaccfa-eb10-47c4-ad49-98feecc2fdc8",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "592a4921-8e87-4f46-a285-78b3dfcfe14b",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "57eaccfa-eb10-47c4-ad49-98feecc2fdc8",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "bb845d9a-3e9b-4d89-8ec3-cebb19508816",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "143e8622-6cfc-4091-8a63-d68e9eebab66",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "bb845d9a-3e9b-4d89-8ec3-cebb19508816",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "a0062680-cb4b-45e5-ae7a-9379f4eadda9",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "fc9efa1b-9b68-43ec-abb3-d61fd5745d1d",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "ab5c8eab-c4b2-4983-b3d4-91f1894269f4",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "2cd9d008-1458-4926-b61a-5308cf6004c7",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "66e0480e-e302-4556-b7a3-f40644bd5fd1",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "2cd9d008-1458-4926-b61a-5308cf6004c7",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "fb59c1ca-9b55-4240-b5b7-6b6f84c1305e",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "38e03d95-1c20-4636-9da1-4fd22934badd",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "fb59c1ca-9b55-4240-b5b7-6b6f84c1305e",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "1b95e3ea-dc3c-4ebf-8af2-99adf051eefc",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "897c34c8-eabb-428e-aee6-bce13da3afad",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "1819ed10-7fd0-4402-b5d9-33ea4b163a08",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "cbca6647-b261-42ad-a83a-c23fbb50afe4",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "00e7d990-fb4a-4c14-8d33-7267663479ee",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "cbca6647-b261-42ad-a83a-c23fbb50afe4",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "a989c083-40f5-49a3-917c-d84e5390081a",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "b0a8e631-8a63-4119-b363-dd4917f5e39d",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "a989c083-40f5-49a3-917c-d84e5390081a",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "7e4803e7-0e29-470a-a37f-315c74d51932",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "fd38e58d-08df-4472-8efb-f4073f07c20a",
+      "type": "pipe",
+      "title": "回流母管至 FT-101",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "7e4803e7-0e29-470a-a37f-315c74d51932",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "4c2aff43-bcfd-45fa-8940-6ef6b8dc5946",
+        "portId": "port-acbb47cc-582d-452f-8c7f-0964460fa5a1"
+      },
+      "vertices": [
+        {
+          "x": 942,
+          "y": 392
+        },
+        {
+          "x": 942,
+          "y": 246
+        }
+      ]
+    },
+    {
+      "id": "708e5514-d9be-404a-a062-b320a9d10ad7",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#224253",
+        "width": 8,
+        "appearance": "depth",
+        "arrow": "forward"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "4c2aff43-bcfd-45fa-8940-6ef6b8dc5946",
+        "portId": "port-5522ab12-8829-497a-8105-bce26d104ec9"
+      },
+      "target": {
+        "x": 1182,
+        "y": 246
+      },
+      "vertices": []
+    }
+  ]
+}

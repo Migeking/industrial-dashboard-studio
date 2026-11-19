@@ -1,4 +1,4 @@
-import { screenNode, validateScreen } from "./screen-model.mjs";
+import { screenMediumPipeStyle, screenNode, validateScreen } from "./screen-model.mjs";
 import { screenPageView, screenPages } from "./screen-pages.mjs";
 import { screenSymbols, screenPorts, screenSlots, screenAppearanceOptions } from "../../components/studio/screen-symbols.mjs";
 import { applyScreenNodeDefaults } from "./screen-themes.mjs";
@@ -71,6 +71,7 @@ export function executeScreenCommands(project, proposal, allowedPoints=[], makeI
         if(JSON.stringify(endpoints.source)===JSON.stringify(endpoints.target))throw Error("不能连接同一个接口");
         if(doc.pipes.some(p=>JSON.stringify(p.source)===JSON.stringify(endpoints.source)&&JSON.stringify(p.target)===JSON.stringify(endpoints.target)))throw Error("管道已经存在");
         n={id:fresh(op.tempId),type:"pipe",title:op.title||"工艺管道",...endpoints,vertices:op.vertices||[],style:{color:"#557f96",width:8,appearance:doc.canvas.appearance||"classic"},bindings:{}};
+        Object.assign(n.style, screenMediumPipeStyle(doc, endpoints));
         doc.pipes.push(n);break;
       }
       case "bindSlot": {

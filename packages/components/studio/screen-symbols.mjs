@@ -204,6 +204,18 @@ export const screenPortSides = {
   bottom: "底部",
   custom: "自定位置",
 };
+export const screenMedia = {
+  water: { label: "水", color: "#3c8095" },
+  sludge: { label: "污泥", color: "#956a4c" },
+  pac: { label: "PAC", color: "#a27328" },
+  pam: { label: "PAM", color: "#776595" },
+};
+
+export function screenPortMediaProblem(source, target) {
+  if (!source?.medium || !target?.medium || source.medium === target.medium) return "";
+  return "接口介质不匹配（" + (screenMedia[source.medium]?.label || source.medium) +
+    " → " + (screenMedia[target.medium]?.label || target.medium) + "）";
+}
 export const screenSlotRoles = {
   extra: "附加测点",
   run: "运行反馈",
@@ -269,7 +281,10 @@ export function screenGraphPorts(n) {
       id: p.id,
       group: "custom",
       args: { x: p.x + "%", y: p.y + "%" },
-      attrs: { circle: { "data-port-label": p.label, "aria-label": p.label } },
+      attrs: { circle: {
+        "data-port-label": p.label, "aria-label": p.label,
+        ...(p.medium ? { "data-medium": p.medium, stroke: screenMedia[p.medium]?.color } : {}),
+      } },
       tooltip: p.label,
     })),
   };

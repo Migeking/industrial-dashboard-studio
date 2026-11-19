@@ -286,7 +286,10 @@ export const ScreenInspector = {
   },
   template: `<div class="screen-inspector">
     <div class="inspector-heading"><small>{{kind}}<span v-if="count>1"> · 已选 {{count}} 个对象</span></small><b>{{item.title}}</b></div>
-    <p v-if="waterEquipment[item.symbol]" class="equipment-contract-note">{{waterEquipment[item.symbol].description}}<br><small>{{slots.length}} 个独立测点槽位；图稿不包含实时状态。</small></p>
+    <p v-if="waterEquipment[item.symbol]" class="equipment-contract-note">
+      {{waterEquipment[item.symbol].description}}<br>
+      <small>{{slots.length}} 个测点槽位<span v-if="item.equipmentVersion"> · 组件 v{{item.equipmentVersion}}</span></small>
+    </p>
     <div class="inspector-tabs" role="tablist" aria-label="图元设置"><button role="tab" :aria-selected="tab==='appearance'" @click="$emit('tab','appearance')">外观</button><button role="tab" :aria-selected="tab==='binding'" @click="$emit('tab','binding')">动态与测点</button><button role="tab" :aria-selected="tab==='definition'" @click="$emit('tab','definition')">元素定义</button><button v-if="item.type!=='pipe'" role="tab" :aria-selected="tab==='action'" @click="$emit('tab','action')">交互</button></div>
     <screen-definitions v-if="tab==='definition'" :item="item" :doc="doc" @start="$emit('start')" @tool="$emit('tab',$event)"></screen-definitions>
     <p v-else-if="tab==='action'&&screenControlKinds.has(item.symbol)" class="muted">本组件的运行交互在“外观 → 运行交互设置”中配置。</p><p class="muted" v-else-if="tab==='action'&&screenControlKinds.has(item.symbol)">本组件的运行交互在“外观 → 运行交互设置”中配置。</p><screen-actions v-else-if="tab==='action'&&item.type!=='pipe'" :item="item" :project="project" @start="$emit('start')"></screen-actions><template v-else-if="tab==='binding'">

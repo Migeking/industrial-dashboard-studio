@@ -8,6 +8,7 @@ import { browseNodes, protocolSample } from "./protocol.mjs";
 import { modelAssistant } from "./model-assistant.mjs";
 import { projectStore } from "./project-store.mjs";
 import { createCaseLibrary } from "./case-library.mjs";
+import { waterArtwork } from "../../packages/components/studio/water-artwork.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url)),
   root = path.resolve(here, "../..");
@@ -94,6 +95,12 @@ async function offline(doc, payload, receivedAt) {
     maxAgeMs: doc.source.maxAgeMs,
     demo: doc.source.demo === true,
   };
+  const usedSymbols = new Set([doc, ...(doc.pages || [])].flatMap(page =>
+    (page.nodes || []).filter(n => n.params?.appearance !== "picture").map(n => n.symbol)
+  ));
+  const embeddedArtwork = Object.fromEntries(
+    Object.entries(waterArtwork).filter(([symbol]) => usedSymbols.has(symbol))
+  );
   let html = await content("/editor");
   const windowlessCss = await content("/studio.css");
   html = html.replace(
@@ -115,7 +122,11 @@ async function offline(doc, payload, receivedAt) {
     );
   }
   const modules = await Promise.all(
-    ["/packages/components/studio/water-equipment.mjs", "/packages/components/studio/water-artwork.mjs", "/packages/components/studio/native-data.mjs", "/packages/runtime/studio/native-model.mjs", "/packages/components/studio/screen-symbols.mjs", "/packages/components/studio/screen-artwork.mjs", "/packages/runtime/studio/screen-dynamics.mjs", "/packages/runtime/studio/screen-widgets.mjs", "/packages/runtime/studio/screen-themes.mjs", "/packages/runtime/studio/screen-controls.mjs", "/packages/runtime/studio/screen-model.mjs", "/packages/runtime/studio/screen-library.mjs", "/packages/runtime/studio/screen-pages.mjs", "/model.mjs", "/widgets.mjs", "/tag-manager.mjs", "/packages/runtime/studio/native-renderer.mjs", "/packages/runtime/studio/screen-trend-panel.mjs", "/packages/runtime/studio/equipment-display.mjs", "/packages/runtime/studio/screen-routing.mjs", "/packages/runtime/studio/screen-renderer.mjs", "/screen-definitions.mjs", "/screen-rules.mjs", "/screen-actions.mjs", "/screen-widget-settings.mjs", "/packages/runtime/studio/screen-commands.mjs", "/screen-assistant.mjs", "/screen-control-settings.mjs", "/screen-inspector.mjs", "/screen-library.mjs", "/screen-viewport.mjs", "/screen-pages.mjs", "/app.mjs"].map(content),
+    ["/packages/components/studio/water-equipment.mjs", "/packages/components/studio/water-artwork.mjs", "/packages/components/studio/native-data.mjs", "/packages/runtime/studio/native-model.mjs", "/packages/components/studio/screen-symbols.mjs", "/packages/components/studio/screen-artwork.mjs", "/packages/runtime/studio/screen-dynamics.mjs", "/packages/runtime/studio/screen-widgets.mjs", "/packages/runtime/studio/screen-themes.mjs", "/packages/runtime/studio/screen-controls.mjs", "/packages/runtime/studio/screen-model.mjs", "/packages/runtime/studio/screen-library.mjs", "/packages/runtime/studio/screen-pages.mjs", "/model.mjs", "/widgets.mjs", "/tag-manager.mjs", "/packages/runtime/studio/native-renderer.mjs", "/packages/runtime/studio/screen-trend-panel.mjs", "/packages/runtime/studio/equipment-display.mjs", "/packages/runtime/studio/screen-routing.mjs", "/packages/runtime/studio/screen-renderer.mjs", "/screen-definitions.mjs", "/screen-rules.mjs", "/screen-actions.mjs", "/screen-widget-settings.mjs", "/packages/runtime/studio/screen-commands.mjs", "/screen-assistant.mjs", "/screen-control-settings.mjs", "/screen-inspector.mjs", "/screen-library.mjs", "/screen-viewport.mjs", "/screen-pages.mjs", "/app.mjs"].map(p =>
+      p === "/packages/components/studio/water-artwork.mjs"
+        ? "const waterArtwork = " + JSON.stringify(embeddedArtwork) + ";"
+        : content(p)
+    ),
   );
   const code = modules
     .map((m) =>

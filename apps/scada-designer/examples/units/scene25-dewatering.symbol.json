@@ -1,0 +1,1655 @@
+{
+  "id": "scene25-dewatering",
+  "name": "25 双线污泥脱水段",
+  "version": 1,
+  "w": 1240,
+  "h": 346,
+  "nodes": [
+    {
+      "id": "a5238e10-3450-4a16-899c-a4bbdfc91748",
+      "type": "screen-node",
+      "symbol": "gravityThickener",
+      "title": "1# 浓缩池",
+      "x": 0,
+      "y": 0,
+      "w": 205,
+      "h": 195,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#243e3c",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "process-gray",
+        "cardPadding": 16,
+        "compact": true
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "进泥口",
+          "x": 25.787139689578712,
+          "y": 30,
+          "direction": "in",
+          "anchor": [
+            15,
+            30
+          ]
+        },
+        {
+          "id": "right",
+          "label": "出泥口",
+          "x": 74.21286031042129,
+          "y": 44,
+          "direction": "out",
+          "anchor": [
+            85,
+            44
+          ]
+        },
+        {
+          "id": "top",
+          "label": "上清液口",
+          "x": 25.787139689578712,
+          "y": 28,
+          "direction": "out",
+          "anchor": [
+            15,
+            28
+          ],
+          "routingSide": "left"
+        },
+        {
+          "id": "bottom",
+          "label": "排空口",
+          "x": 67.29490022172949,
+          "y": 58,
+          "direction": "out",
+          "anchor": [
+            75,
+            58
+          ]
+        }
+      ],
+      "dataSlots": [
+        {
+          "key": "value",
+          "label": "液位",
+          "kinds": [
+            "number"
+          ],
+          "role": "value",
+          "required": true
+        },
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "run",
+          "required": false
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "fault",
+          "required": false
+        },
+        {
+          "key": "solids",
+          "label": "出泥含固率",
+          "kinds": [
+            "number"
+          ],
+          "role": "extra",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "6d4b3998-0d2e-43da-bd49-4a1cbd97c50d",
+      "type": "screen-node",
+      "symbol": "gravityThickener",
+      "title": "2# 浓缩池",
+      "x": 0,
+      "y": 125,
+      "w": 205,
+      "h": 195,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#243e3c",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "process-gray",
+        "cardPadding": 16,
+        "compact": true
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "进泥口",
+          "x": 25.787139689578712,
+          "y": 30,
+          "direction": "in",
+          "anchor": [
+            15,
+            30
+          ]
+        },
+        {
+          "id": "right",
+          "label": "出泥口",
+          "x": 74.21286031042129,
+          "y": 44,
+          "direction": "out",
+          "anchor": [
+            85,
+            44
+          ]
+        },
+        {
+          "id": "top",
+          "label": "上清液口",
+          "x": 25.787139689578712,
+          "y": 28,
+          "direction": "out",
+          "anchor": [
+            15,
+            28
+          ],
+          "routingSide": "left"
+        },
+        {
+          "id": "bottom",
+          "label": "排空口",
+          "x": 67.29490022172949,
+          "y": 58,
+          "direction": "out",
+          "anchor": [
+            75,
+            58
+          ]
+        }
+      ],
+      "dataSlots": [
+        {
+          "key": "value",
+          "label": "液位",
+          "kinds": [
+            "number"
+          ],
+          "role": "value",
+          "required": true
+        },
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "run",
+          "required": false
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "fault",
+          "required": false
+        },
+        {
+          "key": "solids",
+          "label": "出泥含固率",
+          "kinds": [
+            "number"
+          ],
+          "role": "extra",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "2ef20e00-e813-412a-a615-a6ef5c1576cc",
+      "type": "screen-node",
+      "symbol": "screwPump",
+      "title": "1# 螺杆泵",
+      "x": 248,
+      "y": 32,
+      "w": 155,
+      "h": 109,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#243e3c",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "process-gray",
+        "cardPadding": 16,
+        "compact": true
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "吸入口",
+          "x": 3,
+          "y": 41.96024464831804,
+          "direction": "in",
+          "anchor": [
+            3,
+            42
+          ]
+        },
+        {
+          "id": "right",
+          "label": "排出口",
+          "x": 56,
+          "y": 22.051987767584098,
+          "direction": "out",
+          "anchor": [
+            56,
+            22
+          ],
+          "routingSide": "top"
+        },
+        {
+          "id": "top",
+          "label": "冲洗口",
+          "x": 35,
+          "y": 12.097859327217126,
+          "direction": "in",
+          "anchor": [
+            35,
+            12
+          ]
+        },
+        {
+          "id": "bottom",
+          "label": "排空口",
+          "x": 75,
+          "y": 57.8868501529052,
+          "direction": "out",
+          "anchor": [
+            75,
+            58
+          ]
+        }
+      ],
+      "dataSlots": [
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "run",
+          "required": true
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "fault",
+          "required": false
+        },
+        {
+          "key": "value",
+          "label": "运行频率",
+          "kinds": [
+            "number"
+          ],
+          "role": "value",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "497633da-b8a7-47b5-850e-9a45c00afdfa",
+      "type": "screen-node",
+      "symbol": "screwPump",
+      "title": "2# 螺杆泵",
+      "x": 248,
+      "y": 143,
+      "w": 155,
+      "h": 109,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#243e3c",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "process-gray",
+        "cardPadding": 16,
+        "compact": true
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "吸入口",
+          "x": 3,
+          "y": 41.96024464831804,
+          "direction": "in",
+          "anchor": [
+            3,
+            42
+          ]
+        },
+        {
+          "id": "right",
+          "label": "排出口",
+          "x": 56,
+          "y": 22.051987767584098,
+          "direction": "out",
+          "anchor": [
+            56,
+            22
+          ],
+          "routingSide": "top"
+        },
+        {
+          "id": "top",
+          "label": "冲洗口",
+          "x": 35,
+          "y": 12.097859327217126,
+          "direction": "in",
+          "anchor": [
+            35,
+            12
+          ]
+        },
+        {
+          "id": "bottom",
+          "label": "排空口",
+          "x": 75,
+          "y": 57.8868501529052,
+          "direction": "out",
+          "anchor": [
+            75,
+            58
+          ]
+        }
+      ],
+      "dataSlots": [
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "run",
+          "required": true
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "fault",
+          "required": false
+        },
+        {
+          "key": "value",
+          "label": "运行频率",
+          "kinds": [
+            "number"
+          ],
+          "role": "value",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "3cf41b80-8eeb-4b6c-91f0-cf301ead14e0",
+      "type": "screen-node",
+      "symbol": "staticMixer",
+      "title": "静态混合器",
+      "x": 492,
+      "y": 76,
+      "w": 78,
+      "h": 72,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#243e3c",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "process-gray",
+        "cardPadding": 16,
+        "compact": true
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "进泥口",
+          "x": 5,
+          "y": 18.03611111111111,
+          "direction": "in",
+          "anchor": [
+            5,
+            18
+          ]
+        },
+        {
+          "id": "right",
+          "label": "调理泥出口",
+          "x": 95,
+          "y": 18.03611111111111,
+          "direction": "out",
+          "anchor": [
+            95,
+            18
+          ]
+        },
+        {
+          "id": "top",
+          "label": "药液进口",
+          "x": 50,
+          "y": 5.361111111111111,
+          "direction": "in",
+          "anchor": [
+            50,
+            5
+          ]
+        },
+        {
+          "id": "bottom",
+          "label": "排空口",
+          "x": 75,
+          "y": 57.03611111111111,
+          "direction": "out",
+          "anchor": [
+            75,
+            58
+          ]
+        }
+      ],
+      "dataSlots": [
+        {
+          "key": "value",
+          "label": "过泥流量",
+          "kinds": [
+            "number"
+          ],
+          "role": "value",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "163f7c76-d471-48b5-a803-38e110d78fbe",
+      "type": "screen-node",
+      "symbol": "polymerPreparation",
+      "title": "PAM 三槽制备",
+      "x": 437,
+      "y": 196,
+      "w": 204,
+      "h": 150,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#243e3c",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "process-gray",
+        "cardPadding": 16,
+        "compact": true
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "配水进口",
+          "x": 14,
+          "y": 34.99757575757576,
+          "direction": "in",
+          "anchor": [
+            14,
+            35
+          ]
+        },
+        {
+          "id": "right",
+          "label": "药液出口",
+          "x": 86,
+          "y": 34.99757575757576,
+          "direction": "out",
+          "anchor": [
+            86,
+            35
+          ]
+        },
+        {
+          "id": "top",
+          "label": "干粉入口",
+          "x": 35,
+          "y": 12.058909090909086,
+          "direction": "in",
+          "anchor": [
+            35,
+            12
+          ]
+        },
+        {
+          "id": "bottom",
+          "label": "放空口",
+          "x": 75,
+          "y": 57.93624242424242,
+          "direction": "out",
+          "anchor": [
+            75,
+            58
+          ]
+        }
+      ],
+      "dataSlots": [
+        {
+          "key": "value",
+          "label": "投加配比",
+          "kinds": [
+            "number"
+          ],
+          "role": "value",
+          "required": true
+        },
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "run",
+          "required": false
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "fault",
+          "required": false
+        },
+        {
+          "key": "level",
+          "label": "储液液位",
+          "kinds": [
+            "number"
+          ],
+          "role": "extra",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "752704ff-c0ac-4615-a8f5-cb7eeaa016ad",
+      "type": "screen-node",
+      "symbol": "decanterCentrifuge",
+      "title": "1# 离心脱水机",
+      "x": 715,
+      "y": 11,
+      "w": 270,
+      "h": 203,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#243e3c",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "process-gray",
+        "cardPadding": 16,
+        "compact": true
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "进泥口",
+          "x": 6,
+          "y": 23.002360426929393,
+          "direction": "in",
+          "anchor": [
+            6,
+            23
+          ]
+        },
+        {
+          "id": "right",
+          "label": "泥饼出口",
+          "x": 92,
+          "y": 28.98758210180624,
+          "direction": "out",
+          "anchor": [
+            92,
+            29
+          ]
+        },
+        {
+          "id": "top",
+          "label": "药液接口",
+          "x": 35,
+          "y": 12.029454022988507,
+          "direction": "in",
+          "anchor": [
+            35,
+            12
+          ]
+        },
+        {
+          "id": "bottom",
+          "label": "分离液出口",
+          "x": 35,
+          "y": 37.965414614121514,
+          "direction": "out",
+          "anchor": [
+            35,
+            38
+          ]
+        }
+      ],
+      "dataSlots": [
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "run",
+          "required": true
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "fault",
+          "required": false
+        },
+        {
+          "key": "value",
+          "label": "转速",
+          "kinds": [
+            "number"
+          ],
+          "role": "value",
+          "required": false
+        },
+        {
+          "key": "torque",
+          "label": "扭矩",
+          "kinds": [
+            "number"
+          ],
+          "role": "extra",
+          "required": false
+        },
+        {
+          "key": "moisture",
+          "label": "泥饼含水率",
+          "kinds": [
+            "number"
+          ],
+          "role": "extra",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "88f26ff4-692f-497e-8fcc-27d73c404070",
+      "type": "screen-node",
+      "symbol": "decanterCentrifuge",
+      "title": "2# 离心脱水机",
+      "x": 715,
+      "y": 137,
+      "w": 270,
+      "h": 203,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#243e3c",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "process-gray",
+        "cardPadding": 16,
+        "compact": true
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "进泥口",
+          "x": 6,
+          "y": 23.002360426929393,
+          "direction": "in",
+          "anchor": [
+            6,
+            23
+          ]
+        },
+        {
+          "id": "right",
+          "label": "泥饼出口",
+          "x": 92,
+          "y": 28.98758210180624,
+          "direction": "out",
+          "anchor": [
+            92,
+            29
+          ]
+        },
+        {
+          "id": "top",
+          "label": "药液接口",
+          "x": 35,
+          "y": 12.029454022988507,
+          "direction": "in",
+          "anchor": [
+            35,
+            12
+          ]
+        },
+        {
+          "id": "bottom",
+          "label": "分离液出口",
+          "x": 35,
+          "y": 37.965414614121514,
+          "direction": "out",
+          "anchor": [
+            35,
+            38
+          ]
+        }
+      ],
+      "dataSlots": [
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "run",
+          "required": true
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "fault",
+          "required": false
+        },
+        {
+          "key": "value",
+          "label": "转速",
+          "kinds": [
+            "number"
+          ],
+          "role": "value",
+          "required": false
+        },
+        {
+          "key": "torque",
+          "label": "扭矩",
+          "kinds": [
+            "number"
+          ],
+          "role": "extra",
+          "required": false
+        },
+        {
+          "key": "moisture",
+          "label": "泥饼含水率",
+          "kinds": [
+            "number"
+          ],
+          "role": "extra",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "cef3cf21-fc44-4714-b51f-4399598337ee",
+      "type": "screen-node",
+      "symbol": "cakeSilo",
+      "title": "泥饼输送 / 料仓",
+      "x": 1060,
+      "y": 7,
+      "w": 180,
+      "h": 248,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#e5edf2",
+        "stroke": "#547185",
+        "color": "#243e3c",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "appearance": "depth",
+        "theme": "process-gray",
+        "cardPadding": 16,
+        "compact": true
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "泥饼进口",
+          "x": 8,
+          "y": 30.006720430107528,
+          "direction": "in",
+          "anchor": [
+            8,
+            30
+          ]
+        },
+        {
+          "id": "right",
+          "label": "出料口",
+          "x": 60,
+          "y": 57.950268817204304,
+          "direction": "out",
+          "anchor": [
+            60,
+            58
+          ]
+        },
+        {
+          "id": "top",
+          "label": "检修口",
+          "x": 35,
+          "y": 12.043010752688172,
+          "direction": "in",
+          "anchor": [
+            35,
+            12
+          ]
+        },
+        {
+          "id": "bottom",
+          "label": "放空口",
+          "x": 75,
+          "y": 57.950268817204304,
+          "direction": "out",
+          "anchor": [
+            75,
+            58
+          ]
+        }
+      ],
+      "dataSlots": [
+        {
+          "key": "value",
+          "label": "料仓料位",
+          "kinds": [
+            "number"
+          ],
+          "role": "value",
+          "required": true
+        },
+        {
+          "key": "run",
+          "label": "运行反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "run",
+          "required": false
+        },
+        {
+          "key": "fault",
+          "label": "故障反馈",
+          "kinds": [
+            "boolean"
+          ],
+          "role": "fault",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "ae41a194-0d18-4236-a7fb-779fd1a2d783",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "进泥汇合",
+      "x": 437,
+      "y": 107,
+      "w": 16,
+      "h": 16,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#6b8f7a",
+        "stroke": "#6b8f7a",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "process-gray",
+        "cardPadding": 16,
+        "appearance": "process"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "top",
+          "label": "顶部",
+          "x": 50,
+          "y": 0,
+          "direction": "both"
+        },
+        {
+          "id": "bottom",
+          "label": "底部",
+          "x": 50,
+          "y": 100,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "c6781533-d5df-49a7-893a-728c34477a46",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "双线分配",
+      "x": 686,
+      "y": 107,
+      "w": 16,
+      "h": 16,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#6b8f7a",
+        "stroke": "#6b8f7a",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "process-gray",
+        "cardPadding": 16,
+        "appearance": "process"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "top",
+          "label": "顶部",
+          "x": 50,
+          "y": 0,
+          "direction": "both"
+        },
+        {
+          "id": "bottom",
+          "label": "底部",
+          "x": 50,
+          "y": 100,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "8dcc708d-4fb4-431f-aed1-4dccd14eb46d",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "分离液回流",
+      "x": 705,
+      "y": 326,
+      "w": 16,
+      "h": 16,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#6b8f7a",
+        "stroke": "#6b8f7a",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "process-gray",
+        "cardPadding": 16,
+        "appearance": "process"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "top",
+          "label": "顶部",
+          "x": 50,
+          "y": 0,
+          "direction": "both"
+        },
+        {
+          "id": "bottom",
+          "label": "底部",
+          "x": 50,
+          "y": 100,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    },
+    {
+      "id": "4e3c2575-ea48-4df9-b4b0-3c0a2c37045a",
+      "type": "screen-node",
+      "symbol": "junction",
+      "title": "上清液汇入",
+      "x": 1,
+      "y": 326,
+      "w": 16,
+      "h": 16,
+      "angle": 0,
+      "z": 10,
+      "locked": false,
+      "hidden": false,
+      "style": {
+        "fill": "#a8b8be",
+        "stroke": "#a8b8be",
+        "color": "#304c5d",
+        "fontSize": 20
+      },
+      "params": {
+        "min": 0,
+        "max": 6,
+        "unit": "",
+        "precision": 2,
+        "windowSeconds": 120,
+        "theme": "process-gray",
+        "cardPadding": 16,
+        "appearance": "process"
+      },
+      "bindings": {},
+      "ports": [
+        {
+          "id": "left",
+          "label": "左侧",
+          "x": 0,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "right",
+          "label": "右侧",
+          "x": 100,
+          "y": 50,
+          "direction": "both"
+        },
+        {
+          "id": "top",
+          "label": "顶部",
+          "x": 50,
+          "y": 0,
+          "direction": "both"
+        },
+        {
+          "id": "bottom",
+          "label": "底部",
+          "x": 50,
+          "y": 100,
+          "direction": "both"
+        }
+      ],
+      "dataSlots": []
+    }
+  ],
+  "pipes": [
+    {
+      "id": "01e6a53a-0fe4-4028-9792-1ad39758cef4",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#6e907b",
+        "width": 5,
+        "appearance": "process",
+        "flowColor": "#d2e0d5",
+        "arrow": "forward"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "a5238e10-3450-4a16-899c-a4bbdfc91748",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "2ef20e00-e813-412a-a615-a6ef5c1576cc",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "769d63c8-8b5f-46b7-b730-dfea8f7791a6",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#6e907b",
+        "width": 5,
+        "appearance": "process",
+        "flowColor": "#d2e0d5",
+        "arrow": "forward"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "6d4b3998-0d2e-43da-bd49-4a1cbd97c50d",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "497633da-b8a7-47b5-850e-9a45c00afdfa",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "cd401214-db7e-4462-b5a9-2af3180e51d6",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#6e907b",
+        "width": 5,
+        "appearance": "process",
+        "flowColor": "#d2e0d5",
+        "arrow": "forward"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "2ef20e00-e813-412a-a615-a6ef5c1576cc",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "ae41a194-0d18-4236-a7fb-779fd1a2d783",
+        "portId": "top"
+      },
+      "vertices": [
+        {
+          "x": 335,
+          "y": 40
+        },
+        {
+          "x": 425,
+          "y": 40
+        },
+        {
+          "x": 425,
+          "y": 107
+        }
+      ]
+    },
+    {
+      "id": "e00bee16-6c75-4e43-b2d3-873c8ad74d97",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#6e907b",
+        "width": 5,
+        "appearance": "process",
+        "flowColor": "#d2e0d5",
+        "arrow": "forward"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "497633da-b8a7-47b5-850e-9a45c00afdfa",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "ae41a194-0d18-4236-a7fb-779fd1a2d783",
+        "portId": "bottom"
+      },
+      "vertices": [
+        {
+          "x": 335,
+          "y": 150
+        },
+        {
+          "x": 425,
+          "y": 150
+        },
+        {
+          "x": 425,
+          "y": 123
+        }
+      ]
+    },
+    {
+      "id": "763370f3-3caf-4367-89d3-49b000db7538",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#6e907b",
+        "width": 5,
+        "appearance": "process",
+        "flowColor": "#d2e0d5",
+        "arrow": "forward"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "ae41a194-0d18-4236-a7fb-779fd1a2d783",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "3cf41b80-8eeb-4b6c-91f0-cf301ead14e0",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "53836841-7361-4cef-b368-e00ac2de0dc7",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#6e907b",
+        "width": 5,
+        "appearance": "process",
+        "flowColor": "#d2e0d5",
+        "arrow": "forward"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "3cf41b80-8eeb-4b6c-91f0-cf301ead14e0",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "c6781533-d5df-49a7-893a-728c34477a46",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "6d3da667-9886-40f6-ba21-cf0bac72d6f2",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#6e907b",
+        "width": 5,
+        "appearance": "process",
+        "flowColor": "#d2e0d5",
+        "arrow": "forward"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "c6781533-d5df-49a7-893a-728c34477a46",
+        "portId": "top"
+      },
+      "target": {
+        "nodeId": "752704ff-c0ac-4615-a8f5-cb7eeaa016ad",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "7011347b-c998-4030-b6a5-7a012103f01d",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#6e907b",
+        "width": 5,
+        "appearance": "process",
+        "flowColor": "#d2e0d5",
+        "arrow": "forward"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "c6781533-d5df-49a7-893a-728c34477a46",
+        "portId": "bottom"
+      },
+      "target": {
+        "nodeId": "88f26ff4-692f-497e-8fcc-27d73c404070",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "38f7af9a-b58f-4a4b-9653-0ecec3a2bfcc",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#9cac9c",
+        "width": 5,
+        "appearance": "process",
+        "flowColor": "#d2e0d5",
+        "arrow": "forward"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "752704ff-c0ac-4615-a8f5-cb7eeaa016ad",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "cef3cf21-fc44-4714-b51f-4399598337ee",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "2678aaf3-919b-4b6c-927d-50929d316e3e",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#9cac9c",
+        "width": 5,
+        "appearance": "process",
+        "flowColor": "#d2e0d5",
+        "arrow": "forward"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "88f26ff4-692f-497e-8fcc-27d73c404070",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "cef3cf21-fc44-4714-b51f-4399598337ee",
+        "portId": "left"
+      },
+      "vertices": []
+    },
+    {
+      "id": "049f2ea5-0251-4bc0-a0ea-b2b2f760a133",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#b79d69",
+        "width": 2.5,
+        "appearance": "process",
+        "flowColor": "#d2e0d5",
+        "animateFlow": false,
+        "arrow": "forward"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "163f7c76-d471-48b5-a803-38e110d78fbe",
+        "portId": "right"
+      },
+      "target": {
+        "nodeId": "3cf41b80-8eeb-4b6c-91f0-cf301ead14e0",
+        "portId": "top"
+      },
+      "vertices": []
+    },
+    {
+      "id": "2613a9e3-b06a-4ab4-b9ef-f542ce7e2dc8",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#a3b6bd",
+        "width": 2.5,
+        "appearance": "process",
+        "flowColor": "#a3b6bd",
+        "animateFlow": false,
+        "arrow": "none"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "752704ff-c0ac-4615-a8f5-cb7eeaa016ad",
+        "portId": "bottom"
+      },
+      "target": {
+        "nodeId": "8dcc708d-4fb4-431f-aed1-4dccd14eb46d",
+        "portId": "top"
+      },
+      "vertices": []
+    },
+    {
+      "id": "d9f6c5d3-97bd-4899-8cb1-2127209cc9e7",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#a3b6bd",
+        "width": 2.5,
+        "appearance": "process",
+        "flowColor": "#a3b6bd",
+        "animateFlow": false,
+        "arrow": "none"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "88f26ff4-692f-497e-8fcc-27d73c404070",
+        "portId": "bottom"
+      },
+      "target": {
+        "nodeId": "8dcc708d-4fb4-431f-aed1-4dccd14eb46d",
+        "portId": "right"
+      },
+      "vertices": []
+    },
+    {
+      "id": "82b32c20-8c41-4594-a938-db9414585d15",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#a3b6bd",
+        "width": 2.5,
+        "flowColor": "#a3b6bd",
+        "appearance": "process",
+        "animateFlow": false,
+        "arrow": "none"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "8dcc708d-4fb4-431f-aed1-4dccd14eb46d",
+        "portId": "left"
+      },
+      "target": {
+        "nodeId": "4e3c2575-ea48-4df9-b4b0-3c0a2c37045a",
+        "portId": "right"
+      },
+      "vertices": []
+    },
+    {
+      "id": "234a01bd-edeb-4bf2-9488-c4208fd23910",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#a3b6bd",
+        "width": 2.5,
+        "appearance": "process",
+        "flowColor": "#a3b6bd",
+        "animateFlow": false,
+        "arrow": "none"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "a5238e10-3450-4a16-899c-a4bbdfc91748",
+        "portId": "top"
+      },
+      "target": {
+        "nodeId": "4e3c2575-ea48-4df9-b4b0-3c0a2c37045a",
+        "portId": "top"
+      },
+      "vertices": []
+    },
+    {
+      "id": "3a378943-2197-4a4c-899a-1afd56d8d23e",
+      "type": "pipe",
+      "title": "工艺管道",
+      "style": {
+        "color": "#a3b6bd",
+        "width": 2.5,
+        "appearance": "process",
+        "flowColor": "#a3b6bd",
+        "animateFlow": false,
+        "arrow": "none"
+      },
+      "bindings": {},
+      "source": {
+        "nodeId": "6d4b3998-0d2e-43da-bd49-4a1cbd97c50d",
+        "portId": "top"
+      },
+      "target": {
+        "nodeId": "4e3c2575-ea48-4df9-b4b0-3c0a2c37045a",
+        "portId": "top"
+      },
+      "vertices": []
+    }
+  ]
+}

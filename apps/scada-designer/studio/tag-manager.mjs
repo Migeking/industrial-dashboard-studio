@@ -92,7 +92,7 @@ export const PointConversion = {
         <label>小数位<input type="number" min="0" max="10" v-model.number="mapping.precision" /></label>
         <p v-if="issue" class="quality-note" role="alert">{{ issue }}</p>
       </template>
-      <dl v-if="reading" class="point-readback" aria-label="点位试读结果">
+      <dl v-if="reading" class="tag-point-readback" aria-label="点位试读结果">
         <div><dt>原值</dt><dd>{{ display.raw }}</dd></div>
         <div><dt>工程值</dt><dd>{{ display.value }}</dd></div>
         <div><dt>质量</dt><dd>{{ display.quality }}<small v-if="display.reason"> · {{ display.reason }}</small></dd></div>

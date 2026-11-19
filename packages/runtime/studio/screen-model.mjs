@@ -6,10 +6,13 @@ import {
   screenPoint,
   screenRoleSlot,
   screenAppearanceOptions,
+  screenMedia,
+  screenPortMediaProblem,
 } from "../../components/studio/screen-symbols.mjs";
 import { validateScreenRules } from "./screen-dynamics.mjs";
 import { validateScreenWidget } from "./screen-widgets.mjs";
 import { screenPurposes } from "./screen-themes.mjs";
+import { waterArtwork } from "../../components/studio/water-artwork.mjs";
 
 export const isScreen = (doc) =>
   doc?.format === "screen-document" && doc?.version === 1;
@@ -53,6 +56,7 @@ export function screenNode(symbol, id, x, y, siblings = []) {
     z: symbol === "rect" ? -10 : symbol === "pidBasin" ? 2 : symbol === "pidInstrument" ? 20 : 10,
     locked: false,
     hidden: false,
+    ...(def.contractVersion ? { equipmentVersion: def.contractVersion } : {}),
     style: {
       fill:
         symbol === "text"
@@ -128,9 +132,19 @@ export function screenProblem(n, mappings) {
   return "";
 }
 export function screenAssetProblem(n) {
-  return n.params?.appearance === "picture" && !n.image
-    ? "尚未载入设备图片"
-    : "";
+  if (n.params?.appearance === "picture") return n.image ? "" : "尚未载入设备图片";
+  if (screenSymbols[n.symbol]?.contractVersion && !Object.hasOwn(waterArtwork, n.symbol))
+    return "成套设备图稿缺失";
+  return "";
+}
+export function screenMediumPipeStyle(doc, { source, target }) {
+  for (const end of [source, target]) {
+    if (!end.nodeId) continue;
+    const port = screenPorts(doc.nodes.find(n => n.id === end.nodeId)).find(p => p.id === end.portId);
+    const medium = Object.hasOwn(screenMedia, port?.medium) ? screenMedia[port.medium] : null;
+    if (medium) return { color: medium.color, appearance: "process", width: 5 };
+  }
+  return {};
 }
 export function validateScreen(doc, publishing, project = doc) {
   if (
@@ -223,6 +237,8 @@ export function validateScreen(doc, publishing, project = doc) {
       )
         throw Error("图元绑定槽位无效");
     if (n.type === "screen-node") {
+      if (n.equipmentVersion !== undefined && n.equipmentVersion !== screenSymbols[n.symbol]?.contractVersion)
+        throw Error(n.title + " 的成套设备版本无效");
       const ports = screenPorts(n),
         portIds = new Set();
       if (!Array.isArray(ports)) throw Error("连接点定义无效");
@@ -237,7 +253,8 @@ export function validateScreen(doc, publishing, project = doc) {
           ![port.x, port.y].every(
             (v) => Number.isFinite(v) && v >= 0 && v <= 100,
           ) ||
-          !["both", "in", "out"].includes(port.direction)
+          !["both", "in", "out"].includes(port.direction) ||
+          (port.medium !== undefined && !Object.hasOwn(screenMedia, port.medium))
         )
           throw Error(n.title + " 的连接点定义无效");
         portIds.add(port.id);
@@ -395,6 +412,8 @@ export function validateScreen(doc, publishing, project = doc) {
         );
       if (sourcePort?.direction === "in" || targetPort?.direction === "out")
         throw Error(n.title + " 的连接点方向不匹配");
+      const mediumProblem = screenPortMediaProblem(sourcePort, targetPort);
+      if (mediumProblem) throw Error(n.title + " · " + mediumProblem);
       if (
         !n.style ||
         !/^#[\da-f]{6}$/i.test(n.style.color) ||

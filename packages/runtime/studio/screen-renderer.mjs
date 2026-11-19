@@ -10,6 +10,7 @@ import {
   screenRoleSlot,
   screenDefaultAction,
   screenAppearanceOptions,
+  screenPortMediaProblem,
 } from "../../components/studio/screen-symbols.mjs";
 import { screenNode, screenState, screenDisplay, screenEndpointPosition } from "./screen-model.mjs";
 import { screenRuleProjection } from "./screen-dynamics.mjs";
@@ -235,7 +236,8 @@ class ScreenGraph {
             ).find((p) => p.id === targetPort);
           return (
             (!sourceCell || (!!source && source.direction !== "in")) &&
-            (!targetCell || (!!target && target.direction !== "out"))
+            (!targetCell || (!!target && target.direction !== "out")) &&
+            !screenPortMediaProblem(source, target)
           );
         },
         createEdge: () =>
@@ -1523,6 +1525,7 @@ export const ScreenStage = {
                 (m) => m.id === object.value.bindings[slot.key],
               );
             return {
+              key: slot.key,
               label: slot.label,
               value:
                 point?.quality === "good"
@@ -1540,6 +1543,21 @@ export const ScreenStage = {
           })
         : [],
     );
+    const fieldSections = computed(() => {
+      const parts = waterEquipment[object.value?.symbol]?.sections;
+      if (!parts) return [{ id: "readings", fields: fields.value }];
+      const byKey = new Map(fields.value.map(field => [field.key, field]));
+      const sections = parts.map(part => {
+        const rows = part.slots.map(key => {
+          const field = byKey.get(key);
+          byKey.delete(key);
+          return field;
+        }).filter(Boolean);
+        return { ...part, fields: rows };
+      }).filter(part => part.fields.length);
+      if (byKey.size) sections.push({ id: "extras", label: "其他测点", fields: [...byKey.values()] });
+      return sections;
+    });
     const dispatch = (event, data) => {
       if(event==='control'){
         try{const result=screenControlTransition(props.doc,runtimePoints.value,data);
@@ -1623,7 +1641,7 @@ export const ScreenStage = {
       object,
       faceplateType,
       status,
-      fields,
+      fieldSections,
       faceplate,
       pointObject,
       startPoint,
@@ -1631,5 +1649,5 @@ export const ScreenStage = {
       trendMode,
     };
   },
-  template: `<div class="screen-stage" :class="{'is-design':editing,'is-connecting':editing&&(tool==='pipe'||selectedPipe)}"><div ref="host" class="screen-graph"></div><svg v-if="pointObject" class="screen-point-overlay" width="1920" height="1080"><g :transform="'translate('+pointObject.x+' '+pointObject.y+') rotate('+pointObject.angle+' '+pointObject.w/2+' '+pointObject.h/2+')'"><circle v-for="(point,i) in pointObject.points" :key="i" :cx="point.x*pointObject.w/100" :cy="point.y*pointObject.h/100" r="6" :data-shape-point="i" :aria-label="'图形顶点 '+(i+1)" @mousedown="startPoint($event,i)" /></g></svg><div v-if="!doc.nodes.length&&!doc.pipes.length&&editing" class="screen-empty"><b>从空白画布开始设计</b><span v-if="doc.canvas.purpose==='cockpit'">从左侧放入指标、图表或状态组件，再到右侧绑定测点。</span><span v-else>拖入设备或成套工艺单元，再连接接口并绑定测点。</span></div><section v-if="object&&!editing" class="screen-faceplate" :class="{'is-dark':doc.canvas.theme==='cockpit-dark'}" role="dialog" :aria-label="object.title+' 设备详情'"><header><div><small>{{faceplateType}} · 只读监视</small><b>{{object.title}}</b></div><button @click="faceplate=''">关闭详情</button></header><strong v-if="status" :data-state="status">{{status}}</strong><screen-runtime-trend v-if="trendMode" :key="object.id+':'+sourceVersion" :item="object" :doc="doc" :points="runtimePoints" :sequence="sequence"></screen-runtime-trend><dl><div v-for="field in fields"><dt>{{field.label}}</dt><dd>{{field.value}} <small>{{field.quality}}</small></dd></div></dl></section></div>`,
+  template: `<div class="screen-stage" :class="{'is-design':editing,'is-connecting':editing&&(tool==='pipe'||selectedPipe)}"><div ref="host" class="screen-graph"></div><svg v-if="pointObject" class="screen-point-overlay" width="1920" height="1080"><g :transform="'translate('+pointObject.x+' '+pointObject.y+') rotate('+pointObject.angle+' '+pointObject.w/2+' '+pointObject.h/2+')'"><circle v-for="(point,i) in pointObject.points" :key="i" :cx="point.x*pointObject.w/100" :cy="point.y*pointObject.h/100" r="6" :data-shape-point="i" :aria-label="'图形顶点 '+(i+1)" @mousedown="startPoint($event,i)" /></g></svg><div v-if="!doc.nodes.length&&!doc.pipes.length&&editing" class="screen-empty"><b>从空白画布开始设计</b><span v-if="doc.canvas.purpose==='cockpit'">从左侧放入指标、图表或状态组件，再到右侧绑定测点。</span><span v-else>拖入设备或成套工艺单元，再连接接口并绑定测点。</span></div><section v-if="object&&!editing" class="screen-faceplate" :class="{'is-dark':doc.canvas.theme==='cockpit-dark'}" role="dialog" :aria-label="object.title+' 设备详情'"><header><div><small>{{faceplateType}} · 只读监视</small><b>{{object.title}}</b></div><button @click="faceplate=''">关闭详情</button></header><strong v-if="status" :data-state="status">{{status}}</strong><screen-runtime-trend v-if="trendMode" :key="object.id+':'+sourceVersion" :item="object" :doc="doc" :points="runtimePoints" :sequence="sequence"></screen-runtime-trend><section v-for="part in fieldSections" :key="part.id" class="faceplate-part"><h3 v-if="part.label">{{part.label}}</h3><dl><div v-for="field in part.fields" :key="field.key"><dt>{{field.label}}</dt><dd>{{field.value}} <small>{{field.quality}}</small></dd></div></dl></section></section></div>`,
 };

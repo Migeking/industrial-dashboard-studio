@@ -310,6 +310,34 @@
       "sha256": "f97f92dcc57cb4f87c290ebe49274141e4dfcabb8723fb540514257853c51179",
       "prompt": "One production SCADA 2.5D equipment cutout, transparent background, clean orthographic front-left view looking down 20 degrees, no text no logos no labels no arrows no surroundings. Satin off-white structures, restrained dark sage-green motors and stainless metal, subtle turquoise liquid where relevant, clean precise industrial engineering product illustration. Entire equipment within frame with padding. One short inline static mixing device for sludge conditioning, stainless rectangular tubular housing with front cutaway revealing three staggered fixed helical baffles, matching flanged inlet left and outlet right, no motor no moving parts. Wide landscape isolated component.",
       "edits": []
+    },
+    {
+      "id": "highRateClarifier",
+      "file": "highRateClarifier.webp",
+      "size": [
+        1024,
+        512
+      ],
+      "bytes": 128782,
+      "sha256": "4075df39c517b06771fdf5db7121635e28c74702550fb3c9378de58b7cf18f2c",
+      "prompt": "Use case: stylized-concept. Generate one physically credible isolated high-rate ballasted flocculation and lamella clarification process unit for a professional Chinese water-treatment SCADA library. The artwork is a transparent 2.5D process cutaway with wide 2:1 canvas, seen straight-on from slightly above and front-left, near-orthographic with minimal left-right perspective, smaller gray stainless details, ivory concrete shell, navy drive motors and subtly turquoise water. Single integrated machinery from left to right: a NARROW enclosed rapid-mix cell with vertical shaft/turbine impeller, a MEDIUM flocculation cell with slow paddle in a guide cylinder, a WIDE settling cell with clean inclined parallel plate pack above the submerged cone-bottom sludge hopper. Above the FIRST two distinct chambers near x=22 percent and x=40 percent of the image, one tiny clearly exposed vertical dosing pipe stub goes inside EACH respective chamber, NOT on the settling chamber. Put the rapid mix PAC connection within the left chamber and the flocculation PAM connection within the middle chamber, each above it and separated from the motor. Low safety railings outside rim, with no rails crossing the dose spigots. One large water feed flange x=7%, y=44% on extreme left; one clear-water discharge flange x=93%, y=43% on extreme right; one visible sludge flange at base of hopper near x=75%, y=84%. No extra ports. Legible construction boundaries and coherent process flow. True alpha background everywhere outside equipment, no floor or ground shadow, no scene, no overlays, no arrows, no text or labels, no logo. All parts in frame with 5% generous padding except flange openings near intended edges. High fidelity matte materials, restrained clean studio lighting.",
+      "edits": [],
+      "version": 1
+    },
+    {
+      "id": "dualChemicalDosing",
+      "file": "dualChemicalDosing.webp",
+      "size": [
+        1024,
+        512
+      ],
+      "bytes": 85680,
+      "sha256": "a136e2ba1a61d07e706772d7112be734e8e89f1f1e5d5ea91b5f3d20f94a06a5",
+      "prompt": "Use case: stylized-concept. One isolated modular PAC/PAM dual chemical dosing assembly for an engineering SCADA water-treatment library, a static transparent cutout. Wide 2:1 landscape object centered with 8% padding. Consistent premium realistic orthographic 2.5D front-left three-quarter engineering product view, looking down 25 degrees, satin ivory and light industrial gray, stainless details, desaturated dark blue drives, soft neutral lighting. On the left side of one shared low stainless skid is one cylindrical ivory PAC solution day tank with a bolted lid, and a single metering pump in front. On right side is a clearly distinct narrow three-compartment rectangular ivory PAM polymer preparation and maturation unit, with one small tapered dry polymer hopper and two low-speed agitator drive units above, and one separate metering pump in front. Two independent orderly dosing lines, with the PAC discharge ending in one obvious horizontal flange at the front-left edge and PAM discharge in a second obvious horizontal flange at the front-right edge. Keep both outlets visible and completely separate, neither is shared. Show exactly one small common control cabinet behind the center divider, no screens or readable markings, realistic details simplified for reading at 250 pixels. Entire assembly occupies the center with consistent uncluttered silhouette. TRUE TRANSPARENT background with alpha, no floor, no extra objects, no scene background, no decoration, no text, no numbers, no arrows, no labels, no watermark, no pipes outside the equipment footprint except clearly visible short flange stubs.",
+      "edits": [
+        "Use case: precise-object-edit. Edit the pictured industrial PAC/PAM modular dosing skid. Keep the entire object, composition, 2:1 aspect, true alpha transparency, geometry, all right-hand PAM details, colors, lighting, and recognizable mechanical realism. Precisely correct only the piping around the left-front metering pump. The PAC process line must go from the lower outlet of the round PAC storage tank to the pump suction port, through the pump, then from a visibly separate pump discharge port to the existing horizontal front-left flange. Remove the tee at the round PAC tank drop line: the short pipe between the tank and pump ends at the pump suction and does not reach the discharge or flange. Attach the front-left discharge pipe visibly to the opposite side of the pump, beginning at a distinct fitting on the pump body, then passing through the existing valve to the same flange. Keep the PAC flange centered at roughly x=15% of image width and y=82% of image height, and the existing right PAM flange at x=88%, y=78%. Do not add text or label marks, external pipework, or a background. Preserve true alpha. This engineering illustration is for a SCADA component library, and two no-bypass paths through pumps must be physically clear."
+      ],
+      "version": 1
     }
   ]
 }

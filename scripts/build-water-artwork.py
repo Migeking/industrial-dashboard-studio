@@ -37,8 +37,11 @@ def main():
             selected.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,selected)
             im.thumbnail((1024,768),Image.Resampling.LANCZOS)
             target=ASSETS/f'{key}.webp';im.save(target,'WEBP',quality=92,method=6,exact=True)
-            provenance.append({'id':key,'file':target.name,'size':list(im.size),'bytes':target.stat().st_size,
-                'sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'prompt':asset['prompt'],'edits':asset.get('edits',[])})
+            record={'id':key,'file':target.name,'size':list(im.size),'bytes':target.stat().st_size,
+                'sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'prompt':asset['prompt'],'edits':asset.get('edits',[])}
+            if 'version' in asset:
+                record['version']=asset['version']
+            provenance.append(record)
         (ASSETS/'provenance.json').write_text(json.dumps({'tool':'built-in image_gen','assets':provenance},ensure_ascii=False,indent=2)+'\n','utf-8')
     artwork={}
     for key in ids:
