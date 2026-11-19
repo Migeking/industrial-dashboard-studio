@@ -10,10 +10,12 @@ import tempfile
 import threading
 import time
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from types import SimpleNamespace
-from urllib.request import urlopen
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
 
 from playwright.sync_api import expect, sync_playwright
 from studio_monitor_soak import observe
@@ -30,11 +32,19 @@ class Snapshot(BaseHTTPRequestHandler):
     new_alarm = False
     new_alarm_seen = threading.Event()
     level_raw = 16000
+    reads = 0
+    read_lock = threading.Lock()
+    read_delay = 0
 
     def log_message(self, *_):
         pass
 
     def do_GET(self):
+        with self.read_lock:
+            Snapshot.reads += 1
+            sequence = Snapshot.reads
+        if self.read_delay:
+            time.sleep(self.read_delay)
         if self.offline:
             self.send_response(503)
             self.end_headers()
@@ -74,7 +84,7 @@ class Snapshot(BaseHTTPRequestHandler):
             points = [point for point in points if point["id"] != "events"]
         for point in points:
             point.update(quality="good", receivedAt=stamp)
-        data = json.dumps({"points": points}, ensure_ascii=False).encode()
+        data = json.dumps({"points": points, "sequence": sequence}, ensure_ascii=False).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
@@ -82,6 +92,57 @@ class Snapshot(BaseHTTPRequestHandler):
         self.wfile.write(data)
         if new_alarm:
             self.new_alarm_seen.set()
+
+
+def verify_shared_reads(base, source):
+    def read(reuse=None, url=source):
+        payload = {"url": url}
+        if reuse is not None:
+            payload["reuseMs"] = reuse
+        request = Request(base + "/api/sample", json.dumps(payload).encode(),
+                          {"Content-Type": "application/json"})
+        try:
+            response = urlopen(request, timeout=8)
+        except HTTPError as error:
+            response = error
+        with response:
+            return response.code, response.headers.get("X-Studio-Received-At"), json.load(response)
+
+    Snapshot.read_delay = .2
+    gate = threading.Barrier(4)
+
+    def simultaneous(_):
+        gate.wait(timeout=5)
+        return read()
+
+    before = Snapshot.reads
+    try:
+        with ThreadPoolExecutor(4) as threads:
+            results = list(threads.map(simultaneous, range(4)))
+    finally:
+        Snapshot.read_delay = 0
+    assert Snapshot.reads - before == 1
+    assert all(frame == results[0] for frame in results)
+    assert results[0][0] == 200 and int(results[0][1]) > 0
+    first = read(3000)
+    assert read(3000) == first
+    other = read(3000, source + "?other=1")
+    assert other[2]["sequence"] == first[2]["sequence"] + 1
+    assert read(3000) == first
+    manual = read()
+    assert manual[0] == 200 and manual[2]["sequence"] == other[2]["sequence"] + 1
+    short = read(80)
+    time.sleep(.12)
+    Snapshot.offline = True
+    try:
+        failed = read(3000)
+        count = Snapshot.reads
+        assert failed[0] == 400 and failed[2]["error"] == "上游 HTTP 503"
+        assert read(3000) == failed and Snapshot.reads == count
+    finally:
+        Snapshot.offline = False
+    recovered = read()
+    assert recovered[0] == 200 and recovered[2]["sequence"] == short[2]["sequence"] + 2
 
 
 def make_doc():
@@ -524,6 +585,7 @@ def main():
                         break
                     except OSError:
                         time.sleep(.1)
+                verify_shared_reads(base, source)
                 with sync_playwright() as playwright:
                     browser = playwright.chromium.launch()
                     try:
@@ -537,6 +599,7 @@ def main():
         fixture.shutdown()
         fixture.server_close()
     result = {"scope": "local read-only upstream fixture", **timings, "verified": [
+        "shared concurrent REST reads, original arrival time, manual fresh reads and error recovery",
         "sample field suggestions", "raw and engineering values", "history quality and order",
         "dataset filter preview and copy, shared device history and alarm filtering through publish and offline export",
         "point crosswalk preserves canvas bindings and conversion with undo/redo",

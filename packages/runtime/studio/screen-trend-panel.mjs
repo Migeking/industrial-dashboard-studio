@@ -1,5 +1,5 @@
 import { screenRoleSlot } from "../../components/studio/screen-symbols.mjs";
-import { screenHistoryRows } from "./screen-widgets.mjs";
+import { screenHistoryRows, screenTrendSampleKey } from "./screen-widgets.mjs";
 
 export const ScreenRuntimeTrend = {
   props: ["item", "doc", "points", "sequence"],
@@ -35,11 +35,11 @@ export const ScreenRuntimeTrend = {
               }).map(({ x, y }) => [x, y])
             : [];
       else {
-        const key = JSON.stringify([props.sequence, point?.quality, binding]);
+        const key = screenTrendSampleKey(point, props.sequence, binding);
         if (key !== last) {
           last = key;
           samples.push([
-            point?.timestamp || now,
+            point?.quality === "good" ? point.timestamp || now : now,
             point?.quality === "good" ? point.value : null,
           ]);
         }

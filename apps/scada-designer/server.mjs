@@ -35,6 +35,52 @@ async function body(req, limit = 16 * 1024 * 1024) {
 }
 const content = (p) => fs.readFile(path.resolve(here, files.get(p)), "utf8");
 
+const restFrames = new Map();
+function sharedRestFrame(url, requestedReuse) {
+  const reuseMs = Number.isFinite(requestedReuse) && requestedReuse > 0
+    ? Math.min(requestedReuse, 30000) : 0;
+  url.hash = "";
+  const key = url.href;
+  const previous = restFrames.get(key);
+  if (previous?.pending) {
+    previous.reuseMs = Math.max(previous.reuseMs, reuseMs);
+    return previous.pending;
+  }
+  if (previous && performance.now() - previous.completed < Math.min(reuseMs, previous.reuseMs))
+    return previous.frame;
+  clearTimeout(previous?.expiry);
+  const entry = { reuseMs };
+  entry.pending = (async () => {
+    try {
+      const headers = {};
+      if (url.origin === process.env.STUDIO_API_ORIGIN && process.env.STUDIO_API_TOKEN)
+        headers.Authorization = "Bearer " + process.env.STUDIO_API_TOKEN;
+      const response = await fetch(url, {
+        headers,
+        redirect: "error",
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!response.ok) throw Error("上游 HTTP " + response.status);
+      const payload = await response.json();
+      return { payload, receivedAt: Date.now() };
+    } catch (error) {
+      return { error: error?.message || "读取上游失败" };
+    }
+  })().then(frame => {
+    entry.pending = null;
+    entry.completed = performance.now();
+    entry.frame = frame;
+    if (entry.reuseMs)
+      entry.expiry = setTimeout(() => {
+        if (restFrames.get(key) === entry) restFrames.delete(key);
+      }, entry.reuseMs).unref();
+    else restFrames.delete(key);
+    return frame;
+  });
+  restFrames.set(key, entry);
+  return entry.pending;
+}
+
 const inline = (s) => s.replace(/<\/script/gi, "<\\/script");
 async function offline(doc, payload, receivedAt, datasetFrame) {
   const copy = structuredClone(doc);
@@ -107,10 +153,11 @@ async function offline(doc, payload, receivedAt, datasetFrame) {
 }
 http
   .createServer(async (req, res) => {
-    const send = (status, value, type = "application/json") => {
+    const send = (status, value, type = "application/json", headers = {}) => {
       res.writeHead(status, {
         "Content-Type": type + "; charset=utf-8",
         "Cache-Control": "no-store",
+        ...headers,
       });
       res.end(type === "application/json" && !Buffer.isBuffer(value) ? JSON.stringify(value) : value);
     };
@@ -207,19 +254,11 @@ http
             url.password
           )
             throw Error("请输入只读 HTTP 接口地址");
-          const headers = {};
-          if (
-            url.origin === process.env.STUDIO_API_ORIGIN &&
-            process.env.STUDIO_API_TOKEN
-          )
-            headers.Authorization = "Bearer " + process.env.STUDIO_API_TOKEN;
-          const r = await fetch(url, {
-            headers,
-            redirect: "error",
-            signal: AbortSignal.timeout(5000),
+          const frame = await sharedRestFrame(url, data.reuseMs);
+          if (frame.error) throw Error(frame.error);
+          return send(200, frame.payload, "application/json", {
+            "X-Studio-Received-At": String(frame.receivedAt),
           });
-          if (!r.ok) throw Error("上游 HTTP " + r.status);
-          return send(200, await r.json());
         }
         if (p === "/api/export") {
           validate(data.doc, true);

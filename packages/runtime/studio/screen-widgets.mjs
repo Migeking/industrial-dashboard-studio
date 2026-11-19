@@ -11,6 +11,10 @@ export const screenChartKinds = new Set([
   "gauge",
 ]);
 export const screenTableKinds = new Set(["table", "events"]);
+export function screenTrendSampleKey(point, sequence, binding) {
+  const capturedAt = [point?.receivedAt, point?.timestamp].find(Number.isFinite);
+  return JSON.stringify([binding, capturedAt ?? sequence, point?.timestamp, point?.quality, point?.value]);
+}
 export function screenField(row, path) {
   if (row === null || row === undefined || !path) return undefined;
   if (Object.hasOwn(Object(row), path)) return row[path];
@@ -240,7 +244,7 @@ export function screenChartResult(
         h = { binding: map.id, key: "", rows: [] };
         entry.histories.set(s.id, h);
       }
-      const sampleKey = JSON.stringify([sequence, point?.quality, point?.value, map]);
+      const sampleKey = screenTrendSampleKey(point, sequence, map);
       if (h.key !== sampleKey) {
         h.key = sampleKey;
         h.rows.push([

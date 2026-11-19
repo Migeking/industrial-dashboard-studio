@@ -124,6 +124,14 @@ let plotted = screenChartResult(
   now,
 );
 assert.equal(plotted.option.series[0].data[0][1], 0);
+const freshNumeric = { instant: { value: 12, quality: "good", timestamp: now + 300, receivedAt: now + 302 } };
+const firstFresh = screenChartResult(numeric, freshNumeric, doc.mappings, history, 2, 1, now + 302);
+const repeatedFrame = screenChartResult(numeric, freshNumeric, doc.mappings, history, 3, 1, now + 502);
+assert.equal(firstFresh.option.series[0].data.length, 2);
+assert.deepEqual(repeatedFrame.option.series[0].data, firstFresh.option.series[0].data);
+const laterFrame = { instant: { ...freshNumeric.instant, receivedAt: now + 520 } };
+assert.equal(screenChartResult(numeric, laterFrame, doc.mappings, history, 4, 1, now + 520)
+  .option.series[0].data.length, 3);
 plotted = screenChartResult(
   numeric,
   { instant: { value: 0, quality: "bad", timestamp: now + 1000 } },

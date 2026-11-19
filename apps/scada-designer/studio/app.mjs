@@ -63,7 +63,7 @@ const kindNames = {
 };
 const projectKey = new URLSearchParams(location.search).get("project");
 const projectScopedApis = new Set(["/api/draft", "/api/published", "/api/publish", "/api/versions", "/api/rollback"]);
-async function api(url, data) {
+async function api(url, data, decode) {
   if (projectKey && projectScopedApis.has(url)) url += "?project=" + encodeURIComponent(projectKey);
   const r = await fetch(
     url,
@@ -76,6 +76,7 @@ async function api(url, data) {
         },
   );
   if (!r.ok) throw Error((await r.json()).error || r.statusText);
+  if (decode) return decode(r);
   return r.headers.get("Content-Type").startsWith("text/html")
     ? r.text()
     : r.json();
@@ -931,10 +932,18 @@ async function boot() {
           };
         });
       }
-      async function readDatasets(url) {
-        const payload = await once({ kind: "rest", url });
+      function readRestFrame(url, reuseMs) {
+        return api("/api/sample", { url, reuseMs }, async response => {
+          const stamp = Number(response.headers.get("X-Studio-Received-At"));
+          return { payload: await response.json(), receivedAt: Number.isSafeInteger(stamp) && stamp > 0 ? stamp : Date.now() };
+        });
+      }
+      function datasetPayload(payload) {
         if (!Array.isArray(payload?.points)) throw Error("历史与告警接口需要返回 points 数据集列表");
         return { points: [...snapshotPointRows(payload).values()].filter(point => point.kind === "dataset") };
+      }
+      async function readDatasets(url) {
+        return datasetPayload(await once({ kind: "rest", url }));
       }
       async function readSample() {
         if (protocolBusy.value) return;
@@ -1240,6 +1249,8 @@ async function boot() {
           ws,
           delay = 1000;
         const s = clone(doc.value.source);
+        const pollMs = effectivePollMs(s);
+        const reuseMs = Math.min(pollMs, s.maxAgeMs);
         raw.value = null;
         datasetFrame.value = offline?.datasetSnapshot ? {
           payload: offline.datasetSnapshot.payload,
@@ -1249,10 +1260,10 @@ async function boot() {
         connected.value = false;
         connection.value = "等待数据";
         sequence.value++;
-        const accept = (v) => {
+        const accept = (v, receivedAt = Date.now()) => {
           if (closed) return;
-          received.value = offline?.sampleReceivedAt ?? Date.now();
-          clock.value = received.value;
+          received.value = offline?.sampleReceivedAt ?? receivedAt;
+          clock.value = Date.now();
           raw.value = v;
           connected.value = true;
           sequence.value++;
@@ -1273,24 +1284,31 @@ async function boot() {
         };
         async function poll() {
           try {
-            accept(await once(s));
+            if (s.kind === "rest") {
+              const frame = await readRestFrame(s.url, reuseMs);
+              accept(frame.payload, frame.receivedAt);
+            } else {
+              const payload = await once(s);
+              const capturedAt = ["opcua", "modbus"].includes(s.kind) ? Date.parse(payload?.receivedAt) : NaN;
+              accept(payload, Number.isFinite(capturedAt) ? capturedAt : undefined);
+            }
           } catch (e) {
             fail(e);
           }
           if (!closed && ["rest", "opcua", "modbus"].includes(s.kind))
-            timer = setTimeout(poll, effectivePollMs(s));
+            timer = setTimeout(poll, pollMs);
         }
         async function pollDatasets(settings) {
           try {
-            const payload = await readDatasets(settings.url);
+            const frame = await readRestFrame(settings.url, reuseMs);
             if (closed) return;
-            datasetFrame.value = { payload, receivedAt: Date.now(), link: "connected" };
+            datasetFrame.value = { ...frame, payload: datasetPayload(frame.payload), link: "connected" };
           } catch {
             if (closed) return;
             datasetFrame.value = { ...datasetFrame.value, link: "disconnected" };
           }
           sequence.value++;
-          datasetTimer = setTimeout(() => pollDatasets(settings), effectivePollMs(s));
+          datasetTimer = setTimeout(() => pollDatasets(settings), pollMs);
         }
         function connect() {
           if (closed) return;
