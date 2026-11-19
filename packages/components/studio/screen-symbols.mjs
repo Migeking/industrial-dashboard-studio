@@ -171,6 +171,7 @@ export function screenAppearanceOptions(symbol) {
     return {};
   const options = { classic: "经典平面", detailed: "精细平面" };
   if (["pump", "fan", "readout"].includes(symbol)) options.monitor = "监控铭牌";
+  if (symbol === "readout") options.inline = "行内数值";
   if (symbol === "tank") options.monitor = "监控液位";
   if (["pump", "fan", "valve", "checkValve", "tank", "readout", "junction"].includes(symbol)) options.depth = "2.5D 设备外观";
   if(symbol==='junction') options.process='管线接头';

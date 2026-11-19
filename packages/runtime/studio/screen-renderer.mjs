@@ -1031,12 +1031,20 @@ class ScreenGraph {
         } else if (n.symbol === "readout") {
           const reading = screenDisplay(n, p.points, p.doc.mappings);
           const monitor = n.params.appearance === "monitor";
-          const separate=!!n.params.separateUnit&&!monitor,numeric=reading.value===null?'—':reading.value.toFixed(n.params.precision);
-          const sx=n.w/300,k=Math.min(sx,n.h/150),ux=20+(numeric.length*n.style.fontSize*.57*k+8)/sx;
+          const inline = n.params.appearance === "inline";
+          const title = (n.params.icon ? n.params.icon + " " : "") + n.title;
+          const separate = !!n.params.separateUnit && !monitor && !inline;
+          const numeric = reading.value === null ? "—" : reading.value.toFixed(n.params.precision);
+          const sx = n.w / 300, k = Math.min(sx, n.h / 150);
+          const ux = 20 + (numeric.length * n.style.fontSize * .57 * k + 8) / sx;
+          const valueX = inline ? 2 / sx : monitor ? 150 : 20;
+          const valueY = inline ? 75 : monitor ? 142 : 93;
+          const quality = screenQualityLabels[reading.quality] || "未绑定";
+          const valueText = reading.quality === "good" ? reading.text : "— · " + quality;
           attrs = {
             body: {
-              fill: n.style.fill,
-              stroke: monitor ? "#49b9e5" : n.style.stroke,
+              fill: inline ? "transparent" : n.style.fill,
+              stroke: inline ? "none" : monitor ? "#49b9e5" : n.style.stroke,
               x: monitor ? 103 : 0,
               y: monitor ? 40 : 0,
               width: monitor ? 94 : 300,
@@ -1048,7 +1056,8 @@ class ScreenGraph {
               visibility: monitor ? "visible" : "hidden",
             },
             caption: {
-              text: (n.params.icon ? n.params.icon + " " : "") + n.title,
+              text: title,
+              visibility: inline ? "hidden" : "visible",
               x: monitor ? 150 : 20,
               y: monitor ? 83 : 32,
               textAnchor: monitor ? "middle" : "start",
@@ -1056,17 +1065,18 @@ class ScreenGraph {
               transform: monitor ? screenArtworkAt(n, 150, 75) : screenArtworkAt(n,20,32),
             },
             value: {
-              text: separate?numeric:reading.text,
+              text: inline ? title + " · " + valueText : separate ? numeric : reading.text,
               fill: n.style.color,
-              fontSize: n.style.fontSize,
-              x: monitor ? 150 : 20,
-              y: monitor ? 142 : 93,
+              fontSize: inline ? n.style.fontSize / k : n.style.fontSize,
+              x: valueX,
+              y: valueY,
               textAnchor: monitor ? "middle" : "start",
-              transform: monitor ? screenArtworkAt(n, 150, 142) : screenArtworkAt(n,20,93),
+              dominantBaseline: inline ? "central" : "auto",
+              transform: screenArtworkAt(n, valueX, valueY),
             },
             quality: {
-              text: screenQualityLabels[reading.quality],
-              visibility: monitor || n.params.compact&&reading.quality==='good' ? "hidden" : "visible",
+              text: quality,
+              visibility: inline || monitor || (n.params.compact && reading.quality === "good") ? "hidden" : "visible",
             },
             unit:{text:' '+reading.unit,visibility:separate?'visible':'hidden',x:ux,y:93,fontSize:13/k,fill:n.style.color,transform:screenArtworkAt(n,ux,93)},
           };
@@ -1147,7 +1157,8 @@ class ScreenGraph {
               : n.symbol === "readout" || n.symbol === "tank"
                 ? "value"
                 : "state";
-          if (dynamic.text !== undefined && !guarded && attrs[textSelector])
+          const inlineReadout = n.symbol === "readout" && n.params.appearance === "inline";
+          if (dynamic.text !== undefined && !guarded && !inlineReadout && attrs[textSelector])
             attrs[textSelector].text = dynamic.text;
           if (dynamic.color) {
             for (const key of ["label", "caption", "value", "state"])

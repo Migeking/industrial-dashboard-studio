@@ -5,7 +5,9 @@ import os
 import socket
 import subprocess
 import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Thread
 from urllib.request import urlopen
 
 from playwright.sync_api import expect, sync_playwright
@@ -139,6 +141,14 @@ def exercise(page, base):
         page.get_by_label('字重',exact=True).select_option(weight)
         page.get_by_label('文字对齐',exact=True).select_option('left')
 
+    def readout(key,x,y,w,h,title,point,precision,color):
+        place(key,'readout',x,y,w,h,title,size=15)
+        page.get_by_label('外观预设',exact=True).select_option('inline')
+        field('小数位',precision)
+        field('文字颜色',color)
+        page.get_by_label('字重',exact=True).select_option('600')
+        bind(key,{'显示数值':point})
+
     rect('页眉',0,0,1920,54,'#dce5ea',STEEL)
     rect('阶段栏',0,54,1920,48,'#d0dce2')
     rect('工艺底板',16,114,1519,727,'#edf2f4','#a4b7bf')
@@ -146,14 +156,14 @@ def exercise(page, base):
     rect('报警底板',16,855,930,193,'#f7f9fa','#a4b7bf')
     rect('趋势底板',960,855,944,193,'#f7f9fa','#a4b7bf')
     caption('head',24,9,1170,34,'城东污水处理厂   /   A²/O 生化脱氮除磷 · 上位监控',23,'700')
-    caption('scope',1570,12,331,32,'本地模拟  ·  只读监视',16,'600','#355b70')
+    caption('scope',1570,12,331,32,'工艺监视 · 只读',16,'600','#355b70')
     caption('stages',25,60,1430,32,'生化车间    /    厌氧释磷    ›    缺氧反硝化    ›    好氧硝化    ›    二沉分离',16,'600')
     caption('diagram',35,129,430,35,'工艺总览  /  生化反应池',19,'700')
     caption('in',43,407,138,28,'进水总管',15,'600')
     caption('out',1380,407,135,28,'出水排放',15,'600',WATER)
-    caption('return1',640,147,338,30,'内回流  /  硝化液 205%',15,'600',MUD)
-    caption('return2',520,719,255,27,'外回流  /  活性污泥 75%',15,'600',MUD)
-    caption('air-label',970,743,245,29,'空气总管 · 43.8 Hz',15,'600',AIR)
+    readout('return1',640,147,338,30,'内回流 / 硝化液','internal.ratio',0,MUD)
+    readout('return2',520,719,255,27,'外回流 / 活性污泥','external.ratio',0,MUD)
+    readout('air-label',998,743,245,29,'空气总管','air.hz',1,'#805c12')
     caption('legend',35,793,1430,33,'工艺管线   ━  混合液 / 污泥      ━  出水      ━  曝气      ┄  加药     ·     弧形跨线表示不连通',15,'400','#526c7a')
     caption('eff-title',1567,132,320,31,'出水水质  /  监测快照',18,'700')
     caption('energy-title',1567,379,320,31,'曝气能耗  /  运行参数',18,'700')
@@ -279,6 +289,7 @@ def exercise(page, base):
 
     authored = save()
     assert len(authored['pipes']) == 11
+    assert sum(len(n['bindings']) for n in authored['nodes']+authored['pipes']) == 44
     index = {p['title']:p for p in authored['pipes']}
     assert index['空气总管']['source']=={'nodeId':ids['air'],'portId':'left'}
     assert index['空气总管']['target']=={'nodeId':ids['aer'],'portId':'bottom'}
@@ -320,6 +331,11 @@ def exercise(page, base):
         # The arc over the sludge return adds a cubic contour away from the known elbows.
         return path.evaluate("""p=>{const n=p.getTotalLength();return Array.from({length:Math.ceil(n)},(_,i)=>p.getPointAtLength(i)).some(a=>Math.abs(a.y-682.5)<2&&Math.abs(a.x-864)>3&&Math.abs(a.x-864)<12)}""")
     assert assert_bridge(), 'aeration crossing did not receive a bridge'
+    labels = {key:page.locator(f'[data-cell-id="{ids[key]}"] text:visible')
+              for key in ('return1','return2','air-label')}
+    for key, value in [('return1','205 %'),('return2','75 %'),('air-label','43.8 Hz')]:
+        expect(labels[key]).to_be_visible()
+        expect(labels[key]).to_contain_text(value)
     page.screenshot(path=str(OUT/'published-1920.png'))
     page.locator(f'[data-cell-id="{ids["t4"]}"]').click()
     details=page.get_by_role('dialog')
@@ -338,8 +354,83 @@ def exercise(page, base):
     page.on('request',lambda r:requests.append(r.url) if r.url.startswith('http') else None)
     page.goto(file.as_uri())
     expect(page.locator('.x6-edge')).to_have_count(11)
-    assert assert_bridge() and not requests
+    assert assert_bridge()
+    for key, value in [('return1','205 %'),('return2','75 %'),('air-label','43.8 Hz')]:
+        expect(labels[key]).to_contain_text(value)
+    assert not requests
+    backup = page.request.get(base+'/api/project-backup')
+    assert backup.ok
+    (OUT/'scene07-monitor-backup.json').write_text(backup.text(),encoding='utf-8')
+    verify_live_labels(page,base,authored,labels)
     return authored
+
+
+def verify_live_labels(page, base, authored, labels):
+    rows = json.loads(authored['source']['data'])['points']
+    readings = {row['id']: row for row in rows}
+    for point,value in [('internal.ratio',188),('external.ratio',62),('air.hz',38.4)]:
+        readings[point]['value'] = value
+    response = (200, json.dumps({'points':rows},ensure_ascii=False).encode())
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            code, payload = response
+            self.send_response(code)
+            self.send_header('Content-Type','application/json')
+            self.send_header('Access-Control-Allow-Origin','*')
+            self.send_header('Content-Length',str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def log_message(self, *args):
+            pass
+
+    with ThreadingHTTPServer(('127.0.0.1',0),Handler) as server:
+        thread = Thread(target=server.serve_forever,daemon=True)
+        thread.start()
+        try:
+            doc = copy.deepcopy(authored)
+            doc['source'] = dict(kind='rest',url=f'http://127.0.0.1:{server.server_port}',
+                                 demo=False,pollMs=500,maxAgeMs=3000)
+            created = page.request.post(base+'/api/projects',data={
+                'action':'create','name':'07 行内读数 · 本机只读台架','purpose':'process',
+            })
+            assert created.ok, created.text()
+            query = '?project='+created.json()['id']
+            draft_url = base+'/api/draft'+query
+            unbound_doc = copy.deepcopy(doc)
+            air_label = next(n for n in unbound_doc['nodes'] if n['title']=='空气总管')
+            air_label['bindings'].pop('value')
+            assert page.request.post(draft_url,data=unbound_doc).ok
+            page.goto(base+'/editor'+query)
+            expect(labels['air-label']).to_have_text('空气总管 · — · 未绑定')
+            assert page.request.post(draft_url,data=doc).ok
+            page.reload()
+            page.get_by_role('button',name='预览发布',exact=True).click()
+            page.get_by_role('button',name='发布',exact=True).click()
+            expect(page.locator('.status-message')).to_contain_text('已发布')
+            page.goto(base+'/view'+query)
+            for key,value in [('return1','188 %'),('return2','62 %'),('air-label','38.4 Hz')]:
+                expect(labels[key]).to_contain_text(value)
+            page.screenshot(path=str(OUT/'rest-good.png'))
+            readings['internal.ratio']['value'] = 0
+            readings['external.ratio']['quality'] = 'bad'
+            response = (200, json.dumps({'points':[r for r in rows if r['id']!='air.hz']},ensure_ascii=False).encode())
+            expect(labels['return1']).to_have_text('内回流 / 硝化液 · 0 %')
+            expect(labels['return2']).to_have_text('外回流 / 活性污泥 · — · 无效')
+            expect(labels['air-label']).to_have_text('空气总管 · — · 无效')
+            response = (503, b'{}')
+            for label in labels.values():
+                expect(label).to_contain_text('— · 离线')
+            page.screenshot(path=str(OUT/'rest-offline.png'))
+            readings['external.ratio']['quality'] = 'good'
+            readings['air.hz']['value'] = 40.2
+            response = (200, json.dumps({'points':rows},ensure_ascii=False).encode())
+            for key,value in [('return1','0 %'),('return2','62 %'),('air-label','40.2 Hz')]:
+                expect(labels[key]).to_contain_text(value)
+        finally:
+            server.shutdown()
+            thread.join()
 
 
 def main():
@@ -367,7 +458,9 @@ def main():
                 doc=exercise(page,base)
                 assert not errors,errors
                 result=dict(scene=7,nodes=len(doc['nodes']),pipes=len(doc['pipes']),
-                    bindings=sum(len(n['bindings']) for n in doc['nodes']+doc['pipes']),errors=errors)
+                    bindings=sum(len(n['bindings']) for n in doc['nodes']+doc['pipes']),
+                    inline_readouts=['sample','rest','zero','unbound','bad_quality','missing','offline','recovery'],
+                    errors=errors)
                 (OUT/'project.json').write_text(json.dumps(doc,ensure_ascii=False,indent=2),encoding='utf-8')
                 (OUT/'results.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
                 print(result,flush=True)
