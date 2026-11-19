@@ -1274,6 +1274,8 @@ async function boot() {
           : livePoints.value,
       );
       const pointDiagnosticDialog = ref(null);
+      const monitorLink = computed(() => connected.value ? "connected" :
+        connection.value === "等待数据" ? "waiting" : "disconnected");
       const diagnosticsOpen = ref(false), diagnosticsOnlyBad = ref(false);
       const locatedItem = ref(null);
       let locatedTimer;
@@ -1304,7 +1306,7 @@ async function boot() {
           const reading = waiting ? { raw: "—", value: "—", reason: "", quality: "等待数据" } :
             pointPreview(point, mapping);
           return [{
-            mapping, reading, objects: pointUsage.value.get(mapping.id),
+            mapping, reading, point, objects: pointUsage.value.get(mapping.id),
             sampleTime: monitorTime(point?.timestamp),
             receiveTime: monitorTime(point?.receivedAt),
           }];
@@ -1487,6 +1489,7 @@ async function boot() {
         sel,
         points,
         pointDiagnosticDialog,
+        monitorLink,
         diagnosticsOpen,
         diagnosticsOnlyBad,
         diagnosedMappings,

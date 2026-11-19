@@ -9,11 +9,14 @@ import subprocess
 import tempfile
 import threading
 import time
+from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 from urllib.request import urlopen
 
 from playwright.sync_api import expect, sync_playwright
+from studio_monitor_soak import observe
 from studio_ui import publish
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -378,6 +381,20 @@ def exercise(browser, base, source):
     viewer.reload()
     runtime_ready()
     assert not errors, errors
+    observer = browser.new_page()
+    try:
+        samples = []
+        arguments = SimpleNamespace(view=base + "/view", seconds=4, interval_seconds=4,
+                                    max_gap_seconds=6, release_check_seconds=60)
+        observations = {"maxObservationGapSeconds": 0, "observations": 0,
+                        "linkObservations": Counter(), "pointQualityObservations": Counter()}
+        observe(observer, arguments, lambda event, **sample: samples.append(sample), observations)
+        assert observations["observedSeconds"] >= 4
+        assert len(samples[-1]["points"]) == 3
+        assert all(p["quality"] == "good" for p in samples[-1]["points"])
+        assert samples[-1]["trendSamples"] == [[3]]
+    finally:
+        observer.close()
     return {"detectionMs": detection_ms, "recoveryMs": recovery_ms}
 
 
@@ -422,6 +439,7 @@ def main():
         "point crosswalk preserves canvas bindings and conversion with undo/redo",
         "CSV export round trip, row errors are atomic, blank entries preserve selections",
         "point diagnostics show raw out-of-range values, timestamps, device location and disconnect reason",
+        "live polling stays active across observation intervals longer than the configured data age",
         "alarm pagination stays pinned during refresh, opens device and returns to live",
         "device trend custom fields and gaps", "stale values while transport stays connected",
         "missing source records in publish review", "alarm lifecycle readback",

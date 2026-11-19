@@ -283,7 +283,9 @@
             :style="{...screenView.style,background:screen?doc.canvas.background:undefined}"
           >
             <screen-stage v-if="screen" :doc="assistantDoc" :points="points" :selected="ids" :editing="editing&&!assistantResult" :tool="screenTool" :proposal-ids="assistantResult?[...new Set(assistantResult.changes.map(c=>c.id))]:[]" :sequence="sequence" :source-version="sourceVersion" :diagnostic-target="locatedItem?.id" :blocked="!!dialog" @start="snapshot" @insert="screenInsert" @geometry="screenGeometry" @pipe="screenPipe" @library="screenLibraryPlace" @navigate="switchScreenPage" @select="screenSelect" @tool="setScreenTool" @command="screenCommand"></screen-stage>
-            <div v-if="screen" class="screen-source-badge" :class="{'screen-rehearsal-badge':previewSamples.size}">{{doc.title}} · {{sourceTitle}} · {{connection}}<span v-if="previewSamples.size"> · 工况演练</span></div>
+            <div v-if="screen" class="screen-source-badge" :class="{'screen-rehearsal-badge':previewSamples.size}"
+              :data-monitor-source="viewer ? doc.source.kind : null" :data-monitor-link="viewer ? monitorLink : null"
+              :data-monitor-max-age="viewer ? doc.source.maxAgeMs : null">{{doc.title}} · {{sourceTitle}} · {{connection}}<span v-if="previewSamples.size"> · 工况演练</span></div>
             <button v-if="diagnosedMappings.length" class="runtime-point-trigger" :class="{'has-issues':monitorIssues}"
               type="button" aria-label="测点诊断" aria-haspopup="dialog" @click="openPointDiagnostics">
               {{monitorIssues ? monitorIssues + ' 个异常测点' : '测点诊断'}}
@@ -751,7 +753,12 @@
           <table>
             <thead><tr><th scope="col">测点</th><th scope="col">读数</th><th scope="col">质量</th><th scope="col">时间</th><th scope="col">画面对象</th></tr></thead>
             <tbody>
-              <tr v-for="{mapping,reading,sampleTime,receiveTime,objects} in monitorRows" :key="mapping.id">
+              <tr v-for="{mapping,reading,point,sampleTime,receiveTime,objects} in monitorRows" :key="mapping.id"
+                :data-monitor-point="mapping.id" :data-monitor-kind="mapping.kind"
+                :data-monitor-quality="monitorLink === 'waiting' ? 'waiting' : point?.quality || 'unbound'"
+                :data-monitor-reason="monitorLink === 'waiting' ? null : point?.reason || null"
+                :data-monitor-sample-at="Number.isFinite(point?.timestamp) ? point.timestamp : null"
+                :data-monitor-received-at="point?.receivedAt || null">
                 <th scope="row">{{mapping.label || mapping.id}}<small v-if="mapping.label && mapping.label !== mapping.id">{{mapping.id}}</small></th>
                 <td><b>工程值 {{reading.value}}</b><small>原值 {{reading.raw}}</small></td>
                 <td>{{reading.quality}}<small v-if="reading.reason">{{reading.reason}}</small></td>
