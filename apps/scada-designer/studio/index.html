@@ -114,7 +114,7 @@
             </section>
             <p v-if="!screenLayerSections.length" class="muted">{{screenItems.length?'没有匹配的画布对象':'画布为空，去组件库放置图元。'}}</p>
           </template>
-          <screen-library v-else :doc="doc" :selected="ids" @start="snapshot" @place="setScreenTool('library:'+$event)"></screen-library>
+          <screen-library v-else :doc="doc" :selected="ids" @start="snapshot" @place="setScreenTool('library:'+$event)" @select="screenSelect"></screen-library>
         </template>
         <template v-else>
         <template v-if="activeStep === 'scene'">

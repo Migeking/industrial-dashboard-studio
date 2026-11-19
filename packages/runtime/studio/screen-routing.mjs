@@ -14,13 +14,14 @@ export function equipmentObstacle(node,padding=8,includeClassic=false){
     const x = node.x + node.w / 2, y = node.y + node.h / 2;
     return {id:node.id,left:x-halfWidth,right:x+halfWidth,top:y-halfHeight,bottom:y+halfHeight};
   }
-  const k=Math.min(node.w/d.w,node.h/d.h),width=d.w*k,height=d.pictureHeight*k;
-  const pictureBottom=node.y+d.pictureHeight/d.h*node.h/2+height/2;
-  const labelBottom=d.contractVersion&&!node.params?.compact
-    ? node.y+Math.min(1,(d.pictureHeight+111)/d.h)*node.h
-    : pictureBottom;
-  return {id:node.id,left:node.x+(node.w-width)/2-padding,right:node.x+(node.w+width)/2+padding,
-    top:node.y+d.pictureHeight/d.h*node.h/2-height/2-padding,bottom:Math.max(pictureBottom,labelBottom)+padding};
+  const scale = Math.min(node.w / d.w, node.h / d.h);
+  const width = d.w * scale;
+  const pictureTop = node.y + (node.h / d.h - scale) * d.pictureHeight / 2;
+  // The renderer places captions, status and readings below both individual and assembled artwork.
+  const visibleHeight = (d.pictureHeight + (node.params?.compact ? 0 : 111)) * scale;
+  return { id: node.id, left: node.x + (node.w - width) / 2 - padding,
+    right: node.x + (node.w + width) / 2 + padding,
+    top: pictureTop - padding, bottom: pictureTop + visibleHeight + padding };
 }
 export function routeScreenPipe(doc,pipe){
   if(pipe.vertices.length)return pipe.vertices; // Explicit engineering routes always win.

@@ -111,6 +111,39 @@ assert.match(changes.find((item) => item.key === "energy").to, /电耗 · 必绑
   assert.equal(plan.pipes[1], installed.pipes[1]);
   assert.throws(() => validate({ ...installed, nodes: plan.nodes, pipes: plan.pipes }, true), /电耗/);
 
+  const expanded = structuredClone(revised);
+  const tankDef = screenNode("tank", "inspection-tank", 760, 180);
+  tankDef.title = "取样池";
+  expanded.nodes.push(tankDef);
+  expanded.w = Math.max(expanded.w, tankDef.x + tankDef.w);
+  expanded.h = Math.max(expanded.h, tankDef.y + tankDef.h);
+  expanded.pipes.push({ ...structuredClone(expanded.pipes[0]), id: "test-branch", title: "取样支路",
+    source: { nodeId: "v", portId: "right" }, target: { nodeId: tankDef.id, portId: "left" },
+    vertices: [], bindings: {} });
+  const addition = planScreenSymbolUpgrade(installed, placed, expanded, () => `added-${++sequence}`);
+  assert.deepEqual(addition.additions, { nodes: ["取样池"], pipes: ["取样支路"] });
+  assert.deepEqual(addition.nodes.slice(0, -1), plan.nodes);
+  assert.deepEqual(addition.pipes.slice(0, -1), plan.pipes);
+  assert.equal(addition.nodes.at(-1).group, placedPump.group);
+  assert.equal(addition.nodes.at(-1).x, placedPump.x - pumpDef.x + tankDef.x);
+  assert.deepEqual(addition.nodes.at(-1).bindings, {});
+  assert.deepEqual(addition.pipes.at(-1).source, { nodeId: placedValve.id, portId: "right" });
+  assert.deepEqual(addition.pipes.at(-1).target,
+    { nodeId: addition.nodes.at(-1).id, portId: "left" });
+  assert.deepEqual(addition.memberIds, [...placed, addition.nodes.at(-1).id]);
+
+  const overflowing = structuredClone(expanded);
+  overflowing.nodes.at(-1).x = 1920 - tankDef.w;
+  overflowing.w = 1920;
+  assert.throws(() => planScreenSymbolUpgrade(installed, placed, overflowing), /取样池.*超出画布/);
+  const duplicate = structuredClone(revised);
+  duplicate.pipes.push({ ...structuredClone(duplicate.pipes[0]), id: "duplicate", title: "重复接管" });
+  assert.throws(() => planScreenSymbolUpgrade(installed, placed, duplicate), /重复接管.*与画面已有接管重复/);
+  const reconnect = structuredClone(expanded);
+  reconnect.pipes[0].target = { nodeId: tankDef.id, portId: "left" };
+  assert.throws(() => planScreenSymbolUpgrade(installed, placed, reconnect), /内部接管已改变/);
+  assert.deepEqual(installed, before);
+
   const resaved = makeScreenSymbol(installed, placed, unit.name, unit.id);
   assert.deepEqual(resaved.nodes.map((item) => item.id), unit.nodes.map((item) => item.id));
   assert.deepEqual(resaved.pipes[0].source, unit.pipes[0].source);

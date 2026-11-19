@@ -7,7 +7,7 @@ import {
 
 export const ScreenLibrary = {
   props: ["doc", "selected"],
-  emits: ["start", "place"],
+  emits: ["start", "place", "select"],
   setup(props, { emit }) {
     const name = Vue.ref(""),
       error = Vue.ref(""),
@@ -73,6 +73,7 @@ export const ScreenLibrary = {
         emit("start");
         doc.nodes = upgrade.nodes;
         doc.pipes = upgrade.pipes;
+        emit("select", upgrade.memberIds);
         notice.value = `已升级到修订 ${symbol.revision || 1}` +
           (upgrade.unbound.length ? `，发布前需补绑 ${upgrade.unbound.length} 个测点。` : "，可撤销本次升级。");
         review.value.close();
@@ -174,6 +175,11 @@ export const ScreenLibrary = {
             <template v-else>
               <p>保留 {{pending.connected}} 条已接管线、{{pending.bindings}} 处测点绑定和画面位置。</p>
               <p v-if="!pending.fromRevision">旧实例按唯一图元名称和内部接管关系匹配。</p>
+              <details v-if="pending.additions.nodes.length || pending.additions.pipes.length" open>
+                <summary>新增 {{pending.additions.nodes.length}} 个图元、{{pending.additions.pipes.length}} 条内部管线</summary>
+                <p v-if="pending.additions.nodes.length">图元 · {{pending.additions.nodes.join('、')}}</p>
+                <p v-if="pending.additions.pipes.length">管线 · {{pending.additions.pipes.join('、')}}</p>
+              </details>
               <details v-if="pending.unbound.length" open>
                 <summary>发布前需补绑 {{pending.unbound.length}} 个测点</summary>
                 <ul><li v-for="(slot,i) in pending.unbound" :key="i">{{slot}}</li></ul>

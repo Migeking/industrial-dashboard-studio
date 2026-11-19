@@ -4,6 +4,7 @@ import {
   screenEditingPage,
   screenPipeInSelection,
 } from "./screen-model.mjs";
+import { applyScreenNodeTheme } from "./screen-themes.mjs";
 import {
   screenMedia,
   screenPortSides,
@@ -144,32 +145,42 @@ export function placeScreenSymbol(doc, symbol, x, y, idFactory) {
   validateScreenSymbol(symbol);
   const dx = Math.max(0, Math.min(1920 - symbol.w, Math.round(x / 10) * 10)),
     dy = Math.max(0, Math.min(1080 - symbol.h, Math.round(y / 10) * 10));
-  const copies = JSON.parse(JSON.stringify(symbol)),
-    map = new Map(copies.nodes.map((n) => [n.id, idFactory()])),
-    group = copies.nodes.length > 1 ? idFactory() : undefined;
-  for (const n of copies.nodes) {
-    n.libraryRef = memberReference(symbol, n.id);
-    n.id = map.get(n.id);
-    if(n.symbol==='trendRange')n.params.targetId=map.get(n.params.targetId)||'';
-    n.x += dx;
-    n.y += dy;
-    n.bindings = {};
-    delete n.params.equipmentCode;
-    if (group) n.group = group;
-    else delete n.group;
+  const nodeIds = new Map(symbol.nodes.map((node) => [node.id, idFactory()]));
+  const group = symbol.nodes.length > 1 ? idFactory() : undefined;
+  const location = { dx, dy, group, nodeIds };
+  const nodes = symbol.nodes.map((node) => instantiateNode(symbol, node, location));
+  const pipes = symbol.pipes.map((pipe) => instantiatePipe(symbol, pipe, location, idFactory()));
+  doc.nodes.push(...nodes);
+  doc.pipes.push(...pipes);
+  return nodes.map((node) => node.id);
+}
+
+function instantiateNode(symbol, definition, { dx, dy, group, nodeIds }) {
+  const node = copy(definition);
+  node.libraryRef = memberReference(symbol, definition.id);
+  node.id = nodeIds.get(definition.id);
+  if (node.symbol === "trendRange") node.params.targetId = nodeIds.get(node.params.targetId) || "";
+  node.x += dx;
+  node.y += dy;
+  node.bindings = {};
+  delete node.params.equipmentCode;
+  if (group) node.group = group;
+  else delete node.group;
+  return node;
+}
+
+function instantiatePipe(symbol, definition, { dx, dy, nodeIds }, id) {
+  const pipe = copy(definition);
+  pipe.libraryRef = memberReference(symbol, definition.id);
+  pipe.id = id;
+  for (const key of ["source", "target"]) {
+    const end = pipe[key];
+    if (end.nodeId) end.nodeId = nodeIds.get(end.nodeId);
+    else pipe[key] = { x: end.x + dx, y: end.y + dy };
   }
-  for (const p of copies.pipes) {
-    p.libraryRef = memberReference(symbol, p.id);
-    p.id = idFactory();
-    for (const key of ["source", "target"])
-      if (p[key].nodeId) p[key].nodeId = map.get(p[key].nodeId);
-      else p[key] = { x: p[key].x + dx, y: p[key].y + dy };
-    p.vertices = p.vertices.map((v) => ({ x: v.x + dx, y: v.y + dy }));
-    p.bindings = {};
-  }
-  doc.nodes.push(...copies.nodes);
-  doc.pipes.push(...copies.pipes);
-  return copies.nodes.map((n) => n.id);
+  pipe.vertices = pipe.vertices.map((v) => ({ x: v.x + dx, y: v.y + dy }));
+  pipe.bindings = {};
+  return pipe;
 }
 
 function upgradeSelection(doc, selected, symbol) {
@@ -186,8 +197,8 @@ function upgradeSelection(doc, selected, symbol) {
     throw Error("选中的组合包含其他图元或来自不同修订");
   if (ref && ref.revision >= (symbol.revision || 1))
     throw Error("此实例已使用当前修订");
-  if (instance.length !== symbol.nodes.length)
-    throw Error("新版的子图元数量与当前实例不同，请检查组合后重新放置");
+  if (instance.length > symbol.nodes.length)
+    throw Error("新版减少了子图元，请先处理原有设备及接管");
   return instance;
 }
 
@@ -196,7 +207,7 @@ function portPairs(pipe, nodeIds) {
     ? [nodeIds.get(end.nodeId), end.portId] : null));
 }
 
-export function planScreenSymbolUpgrade(doc, selected, symbol) {
+export function planScreenSymbolUpgrade(doc, selected, symbol, idFactory = () => crypto.randomUUID()) {
   validateScreenSymbol(symbol);
   const nodes = upgradeSelection(doc, selected, symbol);
   const fromRevision = nodes[0].libraryRef?.revision;
@@ -214,15 +225,29 @@ export function planScreenSymbolUpgrade(doc, selected, symbol) {
   const touchesInstance = (pipe) => [pipe.source, pipe.target].some((end) => nodeIds.has(end.nodeId));
   const connected = doc.pipes.filter(touchesInstance);
   const internal = connected.filter((pipe) => fromRevision
-    ? pipe.libraryRef?.symbolId === symbol.id && pipe.libraryRef?.revision === fromRevision &&
-      [pipe.source, pipe.target].every((end) => !end.nodeId || nodeIds.has(end.nodeId))
+    ? pipe.libraryRef?.symbolId === symbol.id && pipe.libraryRef?.revision === fromRevision
     : screenPipeInSelection(pipe, nodeIds));
-  if (internal.length !== symbol.pipes.length)
-    throw Error("新版的内部管线数量与当前实例不同，请核对接管后重新放置");
+  if (internal.length > symbol.pipes.length)
+    throw Error("新版减少了内部管线数量，请先处理原有接管");
+
+  const addedDefinitions = symbol.nodes.filter((item) => !matched.has(item.id));
+  const [anchor] = nodes;
+  const anchorDefinition = symbol.nodes.find((item) => item.id === nodeIds.get(anchor.id));
+  const location = {
+    dx: anchor.x - anchorDefinition.x,
+    dy: anchor.y - anchorDefinition.y,
+    group: anchor.group || (addedDefinitions.length ? idFactory() : undefined),
+    nodeIds: new Map([...nodeIds].map(([id, memberId]) => [memberId, id])),
+  };
+  for (const definition of addedDefinitions) location.nodeIds.set(definition.id, idFactory());
 
   const changes = [], unbound = [], replacements = new Map();
   const mappings = new Map(doc.mappings.map((item) => [item.id, item]));
   let bindings = 0;
+  function recordUnbound(item) {
+    for (const slot of screenSlots(item))
+      if (slot.required && !item.bindings[slot.key]) unbound.push(`${item.title} · ${slot.label}`);
+  }
   function replace(item, definition) {
     const next = {
       ...item,
@@ -234,6 +259,7 @@ export function planScreenSymbolUpgrade(doc, selected, symbol) {
     if (definition.dataSlots !== undefined || JSON.stringify(nextSlots) !== JSON.stringify(previousSlots))
       next.dataSlots = copy(nextSlots);
     if (item.type !== "pipe") {
+      if (location.group) next.group = location.group;
       next.ports = copy(resizeScreenPorts(definition, item.w, item.h) ??
         screenPorts({ ...definition, w: item.w, h: item.h }));
       const usesPicture = definition.params.appearance === "picture";
@@ -260,25 +286,46 @@ export function planScreenSymbolUpgrade(doc, selected, symbol) {
     }
     if (item.action?.type === "trend" && !slots.has(item.action.slot))
       throw Error(`「${item.title}」的趋势动作仍引用已移除的测点槽位`);
-    for (const slot of nextSlots)
-      if (slot.required && !next.bindings[slot.key]) unbound.push(`${item.title} · ${slot.label}`);
+    recordUnbound(next);
     replacements.set(item.id, next);
   }
 
-  for (const definition of symbol.nodes) replace(matched.get(definition.id), definition);
+  for (const definition of symbol.nodes) {
+    const item = matched.get(definition.id);
+    if (item) replace(item, definition);
+  }
   const definitions = new Map(symbol.nodes.map((node) => [node.id, node.id]));
   const usedPipes = new Set();
-  for (const definition of symbol.pipes) {
-    const topology = portPairs(definition, definitions);
-    const byId = internal.find((pipe) => pipe.libraryRef?.itemId === definition.id);
-    const candidates = byId ? [byId] : internal.filter((pipe) => !usedPipes.has(pipe.id) &&
-      portPairs(pipe, nodeIds) === topology);
-    const [pipe] = candidates;
-    if (candidates.length !== 1 || usedPipes.has(pipe.id) || portPairs(pipe, nodeIds) !== topology)
-      throw Error(`「${definition.title}」的内部接管已改变或无法唯一匹配，请核对后重新放置`);
-    usedPipes.add(pipe.id);
+  for (const pipe of internal) {
+    const topology = portPairs(pipe, nodeIds);
+    const byId = symbol.pipes.find((item) => item.id === pipe.libraryRef?.itemId);
+    const candidates = byId ? [byId] : symbol.pipes.filter((definition) => !usedPipes.has(definition.id) &&
+      portPairs(definition, definitions) === topology);
+    const [definition] = candidates;
+    if (candidates.length !== 1 || usedPipes.has(definition.id) || portPairs(definition, definitions) !== topology)
+      throw Error(`「${pipe.title}」的内部接管已改变或无法唯一匹配，请先核对原有接管`);
+    usedPipes.add(definition.id);
     replace(pipe, definition);
   }
+  const addedNodes = addedDefinitions.map((definition) => {
+    const item = instantiateNode(symbol, definition, location);
+    if (item.x < 0 || item.y < 0 || item.x + item.w > doc.canvas.width + .01 ||
+        item.y + item.h > doc.canvas.height + .01)
+      throw Error(`新增图元「${item.title}」超出画布，请移动当前组合后重试`);
+    if (doc.canvas.theme) applyScreenNodeTheme(item, doc.canvas.theme);
+    return item;
+  });
+  const pipeKey = (pipe) => JSON.stringify([pipe.source, pipe.target].map((end) =>
+    end.nodeId ? [end.nodeId, end.portId] : [end.x, end.y]));
+  const existingConnections = new Set(connected.map(pipeKey));
+  const addedPipes = symbol.pipes.filter((definition) => !usedPipes.has(definition.id)).map((definition) => {
+    const item = instantiatePipe(symbol, definition, location, idFactory());
+    const key = pipeKey(item);
+    if (existingConnections.has(key)) throw Error(`新增管线「${item.title}」与画面已有接管重复`);
+    existingConnections.add(key);
+    return item;
+  });
+  for (const item of [...addedNodes, ...addedPipes]) recordUnbound(item);
 
   for (const pipe of connected) {
     for (const end of [pipe.source, pipe.target]) {
@@ -292,13 +339,16 @@ export function planScreenSymbolUpgrade(doc, selected, symbol) {
   }
 
   const items = (list) => list.map((item) => replacements.get(item.id) || item);
-  const proposed = { ...screenEditingPage(doc), nodes: items(doc.nodes), pipes: items(doc.pipes) };
+  const proposed = { ...screenEditingPage(doc), nodes: [...items(doc.nodes), ...addedNodes],
+    pipes: [...items(doc.pipes), ...addedPipes] };
   validateScreen(proposed, false);
   changes.push(...screenSymbolChanges({ nodes, pipes: internal }, {
-    nodes: items(nodes), pipes: items(internal),
+    nodes: [...items(nodes), ...addedNodes], pipes: [...items(internal), ...addedPipes],
   }));
   return {
     fromRevision, changes, unbound, bindings, connected: connected.length,
+    memberIds: [...location.nodeIds.values()],
+    additions: { nodes: addedNodes.map((node) => node.title), pipes: addedPipes.map((pipe) => pipe.title) },
     nodes: proposed.nodes, pipes: proposed.pipes,
   };
 }

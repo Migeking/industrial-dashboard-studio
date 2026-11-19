@@ -68,6 +68,15 @@ def verify_unit_revision(page, unit, original, url):
         "key": "outletTurbidity", "label": "出水复核浊度", "role": "extra",
         "kinds": ["number"], "required": True,
     })
+    filter_definition = next(node for node in revised["nodes"] if node["symbol"] == "pressureFilter")
+    sampling_filter = json.loads(json.dumps(filter_definition))
+    sampling_filter.update(id="sampling-filter", title="出水取样过滤器", x=1370, y=32)
+    revised["nodes"].append(sampling_filter)
+    branch = json.loads(json.dumps(revised["pipes"][3]))
+    branch.update(id="sampling-branch", title="出水取样支路", vertices=[], source={
+        "nodeId": filter_definition["id"], "portId": "right"}, target={
+        "nodeId": sampling_filter["id"], "portId": "left"})
+    revised["pipes"].append(branch)
     card.get_by_label("导入 " + unit["name"] + " 的修订文件", exact=True).set_input_files({
         "name": "scene13-v2.symbol.json", "mimeType": "application/json",
         "buffer": json.dumps(revised, ensure_ascii=False).encode("utf-8"),
@@ -107,7 +116,10 @@ def verify_unit_revision(page, unit, original, url):
     instance = page.get_by_role("dialog", name="实例升级预览")
     expect(instance).to_contain_text("修订 1 → 修订 2")
     expect(instance).to_contain_text(f'保留 {len(original["pipes"])} 条已接管线、36 处测点绑定')
-    expect(instance).to_contain_text("发布前需补绑 1 个测点")
+    expect(instance).to_contain_text("新增 1 个图元、1 条内部管线")
+    expect(instance).to_contain_text("出水取样过滤器")
+    expect(instance).to_contain_text("出水取样支路")
+    expect(instance).to_contain_text("发布前需补绑 2 个测点")
     expect(instance).to_contain_text("出水复核浊度")
     expect(instance.get_by_role("row", name="接口 · pacIn", exact=False)).to_contain_text(f"位置 {port['x']}%")
     page.screenshot(path=str(OUT / "existing-unit-upgrade-preview.png"))
@@ -122,7 +134,18 @@ def verify_unit_revision(page, unit, original, url):
         assert new["libraryRef"]["itemId"] == old["libraryRef"]["itemId"]
         assert {k: v for k, v in new.items() if k not in ("libraryRef", "ports", "dataSlots")} == {
             k: v for k, v in old.items() if k not in ("libraryRef", "ports", "dataSlots")}
-    assert len(upgraded["pipes"]) == len(original["pipes"])
+    published_url = url.replace("/api/draft?", "/api/published?")
+    assert page.request.get(published_url).json() == original
+    assert len(upgraded["nodes"]) == len(original["nodes"]) + 1
+    assert len(upgraded["pipes"]) == len(original["pipes"]) + 1
+    new_filter = upgraded["nodes"][-1]
+    old_filter = next(node for node in original["nodes"] if node["symbol"] == "pressureFilter")
+    assert new_filter["title"] == sampling_filter["title"]
+    assert new_filter["group"] == old_filter["group"] and new_filter["bindings"] == {}
+    new_branch = upgraded["pipes"][-1]
+    assert new_branch["source"] == {"nodeId": old_filter["id"], "portId": "right"}
+    assert new_branch["target"] == {"nodeId": new_filter["id"], "portId": "left"}
+    expect(page.get_by_role("button", name="组合测点绑定", exact=True)).to_be_visible()
     for old, new in zip(original["pipes"], upgraded["pipes"]):
         assert new["libraryRef"] == {**old["libraryRef"], "revision": 2}
         assert {k: v for k, v in new.items() if k not in ("libraryRef", "dataSlots")} == {
@@ -135,19 +158,47 @@ def verify_unit_revision(page, unit, original, url):
     page.get_by_role("button", name="重做", exact=True).click()
     assert save() == upgraded
     page.locator('.studio-header').get_by_role("button", name="预览发布", exact=True).click()
-    expect(page.locator(".screen-review-issue")).to_contain_text("出水复核浊度")
+    expect(page.locator(".screen-review-issue").filter(has_text="出水复核浊度")).to_have_count(1)
+    expect(page.locator(".screen-review-issue").filter(has_text="出水取样过滤器")).to_contain_text("出口压力")
     page.get_by_role("button", name="返回编辑", exact=True).click()
-    page.get_by_role("tab", name="图层", exact=False).click()
-    page.locator(f'[data-layer="{clarifier_before["id"]}"]').click(modifiers=["Alt"])
-    page.get_by_role("tab", name="动态与测点", exact=True).click()
-    page.get_by_label("出水复核浊度 · 绑定测点", exact=True).select_option("bench.outletTurbidity")
+    select_original()
+    page.get_by_role("button", name="组合测点绑定", exact=True).click()
+    group_binding = page.get_by_role("dialog", name="组合测点绑定")
+    device = group_binding.get_by_label("设备或管线")
+    device.select_option(clarifier_before["id"])
+    group_binding.get_by_label("出水复核浊度 · 组合测点", exact=True).select_option("bench.outletTurbidity")
+    device.select_option(new_filter["id"])
+    group_binding.get_by_label("出口压力 · 组合测点", exact=True).select_option("bench.samplingPressure")
+    expect(group_binding.get_by_role("status")).to_have_text("缺 0 个必绑槽位 · 2 处待应用")
+    group_binding.get_by_role("button", name="应用绑定", exact=True).click()
     publish(page)
     expect(page.locator(".status-message")).to_contain_text("已发布")
-    published = page.request.get(url.replace("/api/draft?", "/api/published?")).json()
+    published = page.request.get(published_url).json()
     assert published["pipes"] == upgraded["pipes"]
-    assert sum(len(node["bindings"]) for node in published["nodes"]) == 37
+    assert sum(len(node["bindings"]) for node in published["nodes"]) == 38
     page.goto(url.replace("/api/draft?", "/view?"))
-    expect(page.locator(".x6-edge")).to_have_count(len(original["pipes"]))
+    expect(page.locator(".x6-edge")).to_have_count(len(revised["pipes"]))
+    sampling = page.locator(f'.x6-node[data-cell-id="{new_filter["id"]}"]')
+    expect(sampling).to_contain_text("0.22 MPa")
+    label_bounds = []
+    for text in ("出水取样过滤器", "出口压力", "0.22 MPa"):
+        label = sampling.get_by_text(text, exact=True)
+        expect(label).to_be_visible()
+        label_bounds.append(label.bounding_box())
+    obscured = page.evaluate("""({branch, bounds}) => {
+        const group = document.querySelector(`[data-cell-id="${branch}"]`);
+        const path = group.querySelector('[data-selector="line"]') ||
+            [...group.querySelectorAll('path')].find(el => el.getAttribute('d'));
+        const matrix = path.getScreenCTM(), length = path.getTotalLength();
+        for (let offset = 0; offset <= length; offset += 1) {
+            const {x, y} = path.getPointAtLength(offset).matrixTransform(matrix);
+            if (bounds.some(r => x > r.x - 2 && x < r.x + r.width + 2 &&
+                y > r.y - 2 && y < r.y + r.height + 2)) return true;
+        }
+        return false;
+    }""", {"branch": new_branch["id"], "bounds": label_bounds})
+    assert not obscured, "Automatic routing crossed the sampling filter caption or readings"
+    page.screenshot(path=str(OUT / "expanded-unit-published.png"))
     pac = next(pipe for pipe in published["pipes"] if pipe["target"] == {
         "nodeId": clarifier_before["id"], "portId": "pacIn"})
     anchor_error = page.evaluate("""({pipe, device, x, y}) => {
@@ -171,20 +222,23 @@ def verify_unit_revision(page, unit, original, url):
     page.screenshot(path=str(OUT / "existing-unit-upgrade-published.png"))
     details.get_by_role("button", name="关闭详情", exact=True).click()
     page.get_by_role("button", name="测点诊断", exact=True).click()
-    expect(page.get_by_role("dialog", name="测点诊断")).to_contain_text("37 个画面测点 · 0 个异常")
+    expect(page.get_by_role("dialog", name="测点诊断")).to_contain_text("38 个画面测点 · 0 个异常")
     page.goto(url.replace("/api/draft?", "/editor?"))
     page.get_by_role("tab", name="我的图元", exact=True).click()
     page.get_by_role("button", name="放置 " + unit["name"], exact=True).click()
     bounds = page.locator(".board").bounding_box()
     page.mouse.click(bounds["x"] + 110, bounds["y"] + 100)
-    expect(page.locator(".x6-node")).to_have_count(2 * len(unit["nodes"]))
+    expect(page.locator(".x6-node")).to_have_count(2 * len(revised["nodes"]))
     placed = save()
-    assert placed["nodes"][:len(original["nodes"])] == published["nodes"]
-    assert placed["pipes"][:len(original["pipes"])] == published["pipes"]
-    assert len(placed["pipes"]) == 2 * len(original["pipes"])
-    new = next(n for n in placed["nodes"][len(original["nodes"]):] if n["symbol"] == "highRateClarifier")
+    assert placed["nodes"][:len(revised["nodes"])] == published["nodes"]
+    assert placed["pipes"][:len(revised["pipes"])] == published["pipes"]
+    assert len(placed["pipes"]) == 2 * len(revised["pipes"])
+    new = next(n for n in placed["nodes"][len(revised["nodes"]):] if n["symbol"] == "highRateClarifier")
     assert next(p for p in new["ports"] if p["id"] == "pacIn")["x"] == port["x"]
     assert any(s["key"] == "outletTurbidity" and s["required"] for s in new["dataSlots"])
+    (OUT / "expanded-unit-project.json").write_text(json.dumps(published, ensure_ascii=False, indent=2), "utf-8")
+    return {"revision": revised["revision"], "nodesAdded": 1, "pipesAdded": 1,
+            "preservedBindings": 36, "publishedBindings": 38, "labelAvoidanceVerified": True}
 
 
 def saved_project(page, url):
@@ -205,6 +259,8 @@ def configure_reused_points(page, unit, fixture):
     assert len(rows) == len(wanted) == 36
     rows.append({"id": "bench.outletTurbidity", "label": "试验出水复核浊度", "kind": "number",
                  "value": 1.7, "unit": "NTU", "quality": "good", "receivedAt": stamp})
+    rows.append({"id": "bench.samplingPressure", "label": "试验取样出口压力", "kind": "number",
+                 "value": .22, "unit": "MPa", "quality": "good", "receivedAt": stamp})
     page.get_by_role("button", name="数据连接", exact=True).click()
     source = page.get_by_role("dialog", name="数据连接与点位")
     source.get_by_label("样本内容").fill(json.dumps({"points": rows}, ensure_ascii=False))
@@ -284,6 +340,7 @@ def bind_reused_assembly(page, base, project_id, url, doc, definitions):
 def verify_unit_imports(page, base, fixture):
     units = ROOT / "apps/scada-designer/examples/units"
     errors = []
+    expansion = None
     for file in sorted(units.glob("*.symbol.json")):
         unit = json.loads(file.read_text("utf-8"))
         created = page.request.post(base + "/api/projects", data={
@@ -328,8 +385,9 @@ def verify_unit_imports(page, base, fixture):
             layer.click()
             bound = bind_reused_assembly(page, base, project_id, url, doc, fixture["definitions"])
             page.get_by_role("tab", name="我的图元", exact=True).click()
-            verify_unit_revision(page, unit, bound, url)
-    return errors
+            expansion = verify_unit_revision(page, unit, bound, url)
+    assert expansion is not None
+    return errors, expansion
 
 
 def exercise(browser, base, fixture):
@@ -469,14 +527,15 @@ def exercise(browser, base, fixture):
     artwork_errors.append(artwork_endpoints(local, resized, definition))
     local.screenshot(path=str(OUT / "offline-1366.png"))
     assert not network and not errors, (network, errors)
-    artwork_errors.extend(verify_unit_imports(page, base, fixture))
+    import_errors, expansion = verify_unit_imports(page, base, fixture)
+    artwork_errors.extend(import_errors)
     (OUT / "project.json").write_text(json.dumps(resized, ensure_ascii=False, indent=2), "utf-8")
     return {"scene": 13, "nodes": len(resized["nodes"]), "pipes": len(resized["pipes"]),
             "bindings": sum(len(n["bindings"]) for n in resized["nodes"]),
             "maxEndpointErrorPx": max(dists), "offlineBytes": offline.stat().st_size,
             "maxArtworkNozzleErrorPx": max(artwork_errors),
             "crossProjectImports": 3, "libraryRevisionVerified": True,
-            "crossProjectGroupBindings": 36, "errors": errors}
+            "crossProjectGroupBindings": 36, "expansion": expansion, "errors": errors}
 
 
 def main():
