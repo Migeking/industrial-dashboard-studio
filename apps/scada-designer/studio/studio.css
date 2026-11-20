@@ -25,6 +25,7 @@
 .runtime-point-dialog button{color:inherit;background:#fff;border-color:#a2b7c4}
 .runtime-point-filter{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 0}
 .runtime-point-filter p{margin:0}
+.runtime-point-options{display:flex;gap:8px 16px;flex-wrap:wrap}
 .runtime-point-filter label{display:flex;gap:6px;align-items:center;margin:0;color:inherit}
 .runtime-point-filter input{width:auto}
 .runtime-point-list{max-height:60vh;overflow:auto;border:1px solid #b8cbd8;background:#fff}
@@ -32,6 +33,7 @@
 .runtime-point-list thead{position:sticky;top:0;background:#e5eef3}
 .runtime-point-list :is(th,td){text-align:left;vertical-align:top;padding:8px 10px;color:inherit;border-bottom:1px solid #d6e2ea;overflow-wrap:anywhere}
 .runtime-point-list small{display:block;color:#435e6d;margin-top:3px}
+.runtime-point-list .runtime-point-reference{margin-top:6px;padding-top:5px;border-top:1px solid #d6e2ea}
 .runtime-point-objects button{margin:0 5px 4px 0;padding:5px 7px;text-align:left}
 .screen-chart{width:100%;height:100%;background:white;border:1px solid #b3c6d2;border-radius:5px;display:flex;flex-direction:column;overflow:hidden;color:#304c5d}
 .screen-table-host{flex:1;min-height:0;overflow:auto}.screen-table-host table{width:100%;border-collapse:collapse;background:transparent;font-size:15px;color:inherit}.screen-table-host th,.screen-table-host td{padding:8px 12px;border-bottom:1px solid #9fb6c344;text-align:left;white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis}.screen-table-host th{font-weight:600}.screen-table-host .severity-high{background:#cf575725;border-left:3px solid #cf5757}.screen-table-host .severity-warning{background:#d98b4525;border-left:3px solid #d98b45}.screen-chart-settings>h2,.screen-table-settings>h2{margin-top:20px}.screen-chart-settings .definition-heading{margin-bottom:10px}

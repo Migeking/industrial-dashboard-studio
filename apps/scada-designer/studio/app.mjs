@@ -1373,6 +1373,26 @@ async function boot() {
       const monitorLink = computed(() => connected.value ? "connected" :
         connection.value === "等待数据" ? "waiting" : "disconnected");
       const diagnosticsOpen = ref(false), diagnosticsOnlyBad = ref(false);
+      const diagnosticsShowLastGood = ref(false);
+      const canShowLastGood = computed(() => viewer && !offline && screen.value &&
+        !["json", "csv"].includes(doc.value.source.kind));
+      const lastGoodReadings = shallowRef(new Map());
+      if (viewer && !offline) watch([sourceVersion, livePoints], ([version, readings], [previous]) => {
+        if (!canShowLastGood.value) return;
+        let next = version === previous ? null : new Map();
+        for (const mapping of doc.value.mappings) {
+          const reading = readings[mapping.id];
+          if (mapping.kind === "dataset" || reading?.quality !== "good") continue;
+          const last = (next || lastGoodReadings.value).get(mapping.id);
+          if (last && (reading.timestamp < last.timestamp ||
+              (reading.timestamp === last.timestamp && reading.receivedAt === last.receivedAt &&
+               reading.value === last.value))) continue;
+          next ||= new Map(lastGoodReadings.value);
+          next.set(mapping.id, { value: reading.value, quality: reading.quality,
+            timestamp: reading.timestamp, receivedAt: reading.receivedAt });
+        }
+        if (next) lastGoodReadings.value = next;
+      });
       const locatedItem = ref(null);
       let locatedTimer;
       const pointUsage = computed(() => {
@@ -1404,8 +1424,13 @@ async function boot() {
           if (diagnosticsOnlyBad.value && (waiting || point?.quality === "good")) return [];
           const reading = waiting ? { raw: "—", value: "—", reason: "", quality: "等待数据" } :
             pointPreview(point, mapping);
+          const showReference = canShowLastGood.value && diagnosticsShowLastGood.value &&
+            !waiting && point?.quality !== "good" && mapping.kind !== "dataset";
+          const reference = showReference && lastGoodReadings.value.get(mapping.id);
           return [{
-            mapping, reading, point, waiting, dataset, objects: pointUsage.value.get(mapping.id),
+            mapping, reading, point, waiting, dataset, showReference, objects: pointUsage.value.get(mapping.id),
+            lastGood: reference ? { value: pointPreview(reference, mapping).value,
+              time: monitorTime(reference.timestamp) } : null,
             sampleTime: monitorTime(point?.timestamp),
             receiveTime: monitorTime(point?.receivedAt),
           }];
@@ -1590,6 +1615,8 @@ async function boot() {
         sel,
         points,
         pointDiagnosticDialog,
+        canShowLastGood,
+        diagnosticsShowLastGood,
         monitorLink,
         diagnosticsOpen,
         diagnosticsOnlyBad,

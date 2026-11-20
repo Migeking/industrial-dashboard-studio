@@ -360,7 +360,26 @@ def exercise(browser, base, source):
         expect(level_row).to_contain_text("原值 3999")
         expect(level_row).to_contain_text("原值超出输入量程")
         expect(level_row).not_to_contain_text("4.50 m")
+        old_reading = diagnostic.get_by_role("checkbox", name="显示上次有效值")
+        expect(old_reading).not_to_be_checked()
+        old_reading.check()
+        expect(level_row).to_contain_text("工程值 —")
+        expect(level_row.locator(".runtime-point-reference")).to_contain_text("上次有效 4.50 m")
+        expect(level_row.locator(".runtime-point-reference")).to_contain_text(re.compile(r"读数 \d{4}/"))
+        expect(level_row).to_have_attribute("data-monitor-quality", "bad")
+        expect(viewer.locator('[data-cell-id="level"]')).not_to_contain_text("4.50 m")
         viewer.screenshot(path=str(OUT / "point-diagnostics.png"))
+        new_viewer = browser.new_page()
+        try:
+            new_viewer.goto(base + "/view")
+            new_viewer.get_by_role("button", name="测点诊断", exact=True).click()
+            new_diagnostics = new_viewer.get_by_role("dialog", name="测点诊断", exact=True)
+            new_diagnostics.get_by_role("checkbox", name="显示上次有效值").check()
+            invalid = new_diagnostics.get_by_role("row", name="进水液位", exact=False)
+            expect(invalid).to_contain_text("本次打开后暂无有效读数")
+            expect(invalid).not_to_contain_text("4.50 m")
+        finally:
+            new_viewer.close()
         level_row.get_by_role("button", name="定位 进水池", exact=True).click()
         expect(diagnostic).not_to_be_visible()
         expect(viewer.locator('[data-cell-id="level-tank"]')).to_have_class(
@@ -426,6 +445,8 @@ def exercise(browser, base, source):
     runtime_ready()
     next_page.click()
     expect(events).to_contain_text("历史进水液位高")
+    Snapshot.level_raw = 12000
+    expect(level).to_contain_text("3.00 m")
     disconnected_at = time.monotonic()
     Snapshot.offline = True
     try:
@@ -439,9 +460,13 @@ def exercise(browser, base, source):
         expect(diagnostic).to_contain_text("3 个画面测点 · 3 个异常")
         expect(level_row).to_contain_text("离线")
         expect(level_row).to_contain_text("数据源连接中断")
-        expect(level_row).to_contain_text("原值 16000")
+        expect(level_row).to_contain_text("原值 12000")
+        expect(level_row).to_contain_text("上次有效 3.00 m")
+        expect(diagnostic.locator(".runtime-point-reference")).to_have_count(1)
+        expect(level).not_to_contain_text("3.00 m")
         diagnostic.get_by_role("button", name="关闭", exact=True).click()
     finally:
+        Snapshot.level_raw = 16000
         Snapshot.offline = False
     reconnect_at = time.monotonic()
     runtime_ready()
@@ -629,6 +654,7 @@ def main():
         "point crosswalk preserves canvas bindings and conversion with undo/redo",
         "CSV export round trip, row errors are atomic, blank entries preserve selections",
         "point diagnostics show raw out-of-range values, timestamps, device location and disconnect reason",
+        "optional last valid scalar values remain separate from live readings and reset on reopening",
         "live polling stays active across observation intervals longer than the configured data age",
         "observation summary identifies disconnected intervals, affected points, recovery, and display load",
         "alarm pagination stays pinned during refresh, opens device and returns to live",
