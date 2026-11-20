@@ -286,6 +286,7 @@
             <div v-if="screen" class="screen-source-badge" :class="{'screen-rehearsal-badge':previewSamples.size}"
               :data-monitor-source="viewer ? doc.source.kind : null" :data-monitor-link="viewer ? monitorLink : null"
               :data-monitor-max-age="viewer ? doc.source.maxAgeMs : null"
+              :data-monitor-timing="monitorTiming ? JSON.stringify(monitorTiming) : null"
               :data-monitor-datasets-link="viewer && datasetStatus ? datasetLink : null">{{doc.title}} · {{sourceTitle}} · {{connection}}<span v-if="datasetStatus"> · {{datasetStatus}}</span><span v-if="previewSamples.size"> · 工况演练</span></div>
             <button v-if="diagnosedMappings.length" class="runtime-point-trigger" :class="{'has-issues':monitorIssues}"
               type="button" aria-label="测点诊断" aria-haspopup="dialog" @click="openPointDiagnostics">

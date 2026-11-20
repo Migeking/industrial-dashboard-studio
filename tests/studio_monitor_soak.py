@@ -61,6 +61,7 @@ def probe(page):
             datasetsLink: badge.dataset.monitorDatasetsLink || null,
             source: badge.dataset.monitorSource,
             maxAgeMs: number(badge.dataset.monitorMaxAge),
+            timing: badge.dataset.monitorTiming ? JSON.parse(badge.dataset.monitorTiming) : null,
             nodes: document.querySelectorAll('.x6-node').length,
             pipes: document.querySelectorAll('.x6-edge').length,
             trendSamples: trendHosts.map(host => globalThis.echarts?.getInstanceByDom(host)

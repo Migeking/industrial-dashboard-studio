@@ -63,7 +63,7 @@ const kindNames = {
 };
 const projectKey = new URLSearchParams(location.search).get("project");
 const projectScopedApis = new Set(["/api/draft", "/api/published", "/api/publish", "/api/versions", "/api/rollback"]);
-async function api(url, data, decode) {
+async function api(url, data, decode, signal) {
   if (projectKey && projectScopedApis.has(url)) url += "?project=" + encodeURIComponent(projectKey);
   const r = await fetch(
     url,
@@ -71,6 +71,7 @@ async function api(url, data, decode) {
       ? {}
       : {
           method: "POST",
+          signal,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         },
@@ -904,12 +905,12 @@ async function boot() {
         });
         protocolBusy.value = false;
       }
-      async function once(s) {
+      async function once(s, signal) {
         if (s.kind === "json") return JSON.parse(s.data);
         if (s.kind === "csv") return csv(s.data);
         if (s.kind === "rest") return api("/api/sample", { url: s.url });
         if (["opcua", "modbus"].includes(s.kind))
-          return api("/api/protocol/sample", primarySourceSettings(s));
+          return api("/api/protocol/sample", primarySourceSettings(s), undefined, signal);
         return new Promise((ok, no) => {
           const ws = new WebSocket(s.url);
           const timer = setTimeout(() => {
@@ -932,11 +933,13 @@ async function boot() {
           };
         });
       }
+      // The studio server allows 5 s for an upstream read and 10 s for protocol bridge startup.
+      const restRequestTimeoutMs = 7000, protocolRequestTimeoutMs = 17000;
       function readRestFrame(url, reuseMs) {
         return api("/api/sample", { url, reuseMs }, async response => {
           const stamp = Number(response.headers.get("X-Studio-Received-At"));
           return { payload: await response.json(), receivedAt: Number.isSafeInteger(stamp) && stamp > 0 ? stamp : Date.now() };
-        });
+        }, AbortSignal.timeout(restRequestTimeoutMs));
       }
       function datasetPayload(payload) {
         if (!Array.isArray(payload?.points)) throw Error("历史与告警接口需要返回 points 数据集列表");
@@ -1238,6 +1241,27 @@ async function boot() {
         return "历史与告警 · " + ({ waiting: "等待数据", connected: "已连接",
           disconnected: "离线" })[datasetLink.value];
       });
+      const monitorTiming = shallowRef(null);
+      let lastClockTick = 0;
+      function updateMonitorPoll(channel, changes) {
+        const timing = monitorTiming.value;
+        if (!timing) return;
+        monitorTiming.value = { ...timing, [channel]: { ...timing[channel], ...changes } };
+      }
+      function monitorPollStarted(channel, due) {
+        if (!monitorTiming.value) return undefined;
+        const start = performance.now(), atMs = Date.now();
+        const scheduleDelayMs = due === undefined ? 0 : Math.max(0, Math.round(start - due));
+        const delay = scheduleDelayMs >= 1000 ? { lastDelayedStart: { atMs, scheduleDelayMs } } : {};
+        updateMonitorPoll(channel, { pending: true, startedAtMs: atMs, ...delay });
+        return start;
+      }
+      function monitorPollFinished(channel, start, outcome) {
+        if (start === undefined || !monitorTiming.value) return;
+        const atMs = Date.now(), durationMs = Math.round(performance.now() - start);
+        const delay = durationMs >= 1000 ? { lastSlowRequest: { atMs, durationMs, outcome } } : {};
+        updateMonitorPoll(channel, { pending: false, finishedAtMs: atMs, durationMs, outcome, ...delay });
+      }
       function restart() {
         previewSamples.value = new Map();
         rehearsal.value = { id: "", quality: "good", value: "", error: "" };
@@ -1246,11 +1270,15 @@ async function boot() {
         let closed = false,
           timer,
           datasetTimer,
+          nextPrimaryDue,
+          nextDatasetDue,
           ws,
           delay = 1000;
         const s = clone(doc.value.source);
         const pollMs = effectivePollMs(s);
         const reuseMs = Math.min(pollMs, s.maxAgeMs);
+        monitorTiming.value = viewer && !offline && ["rest", "opcua", "modbus"].includes(s.kind) ? {} : null;
+        lastClockTick = Date.now();
         raw.value = null;
         datasetFrame.value = offline?.datasetSnapshot ? {
           payload: offline.datasetSnapshot.payload,
@@ -1283,31 +1311,45 @@ async function boot() {
           }
         };
         async function poll() {
+          const started = monitorPollStarted("primary", nextPrimaryDue);
+          let outcome = "ok";
           try {
             if (s.kind === "rest") {
               const frame = await readRestFrame(s.url, reuseMs);
               accept(frame.payload, frame.receivedAt);
             } else {
-              const payload = await once(s);
+              const signal = ["opcua", "modbus"].includes(s.kind)
+                ? AbortSignal.timeout(protocolRequestTimeoutMs) : undefined;
+              const payload = await once(s, signal);
               const capturedAt = ["opcua", "modbus"].includes(s.kind) ? Date.parse(payload?.receivedAt) : NaN;
               accept(payload, Number.isFinite(capturedAt) ? capturedAt : undefined);
             }
           } catch (e) {
+            outcome = e.name === "TimeoutError" ? "timeout" : "error";
             fail(e);
           }
-          if (!closed && ["rest", "opcua", "modbus"].includes(s.kind))
+          if (closed) return;
+          monitorPollFinished("primary", started, outcome);
+          if (["rest", "opcua", "modbus"].includes(s.kind)) {
+            nextPrimaryDue = performance.now() + pollMs;
             timer = setTimeout(poll, pollMs);
+          }
         }
         async function pollDatasets(settings) {
+          const started = monitorPollStarted("datasets", nextDatasetDue);
+          let outcome = "ok";
           try {
             const frame = await readRestFrame(settings.url, reuseMs);
             if (closed) return;
             datasetFrame.value = { ...frame, payload: datasetPayload(frame.payload), link: "connected" };
-          } catch {
+          } catch (e) {
             if (closed) return;
+            outcome = e.name === "TimeoutError" ? "timeout" : "error";
             datasetFrame.value = { ...datasetFrame.value, link: "disconnected" };
           }
+          monitorPollFinished("datasets", started, outcome);
           sequence.value++;
+          nextDatasetDue = performance.now() + pollMs;
           datasetTimer = setTimeout(() => pollDatasets(settings), pollMs);
         }
         function connect() {
@@ -1478,7 +1520,13 @@ async function boot() {
       onMounted(() => {
         if (!viewer) document.addEventListener("pointerdown", closeProjectMenuOutside, true);
         if (native.value) collapsed.value = doc.value.nodes.filter((n) => n.editable && expandable(n)).map((n) => n.id);
-        clockId = setInterval(() => (clock.value = Date.now()), 500);
+        clockId = setInterval(() => {
+          const now = Date.now(), intervalMs = now - lastClockTick;
+          if (monitorTiming.value && intervalMs >= 1500)
+            monitorTiming.value = { ...monitorTiming.value, lastLongClockTick: { atMs: now, intervalMs } };
+          lastClockTick = now;
+          clock.value = now;
+        }, 500);
         observer = new ResizeObserver(
           () =>
             (zoom.value = Math.min(
@@ -1617,6 +1665,7 @@ async function boot() {
         pointDiagnosticDialog,
         canShowLastGood,
         diagnosticsShowLastGood,
+        monitorTiming,
         monitorLink,
         diagnosticsOpen,
         diagnosticsOnlyBad,
