@@ -175,13 +175,15 @@ export function importSnapshotCrosswalk(text, mappings, sampleRows, protocol = f
   return { choices: errors.length ? new Map() : choices, errors };
 }
 
-export function protocolMappings(rows, protocol, previous) {
+export function protocolMappings(rows, protocol, previous, localDemo = false) {
   return rows.map((r) => ({
     id: r.id,
     label: r.label || r.id,
     unit: r.unit || "",
     kind: r.kind,
-    ...bridgePointLocation(r.id, protocol === "opcua" ? "timestamp" : "receivedAt"),
+    ...bridgePointLocation(r.id, localDemo && !protocol && r.receivedAt == null
+      ? (r.timestamp == null ? "" : "timestamp")
+      : protocol === "opcua" ? "timestamp" : "receivedAt"),
     scale: 1,
     offset: 0,
     precision: r.unit === "原码" ? 0 : 2,

@@ -22,6 +22,7 @@ export const screenPidSymbols = {
     slots:[slot("run","联锁成立",["boolean"],true)]},
 };
 export const screenSymbols = {
+  controlPanel: { label: "控制面板", w: 445, h: 390, ports: [], slots: [] },
   modeSwitch:{label:'工况切换',w:580,h:85,ports:[],slots:[slot('value','当前工况',['number'],true)]},
   numberStepper:{label:'数值加减',w:240,h:100,ports:[],slots:[slot('value','调节数值',['number'],true)]},
   trendRange:{label:'趋势时间切换',w:210,h:44,ports:[],slots:[]},
@@ -277,7 +278,7 @@ export function screenRoleSlot(n, role) {
   return screenSlots(n).find((s) => (s.role || s.key) === role);
 }
 export function screenDefaultAction(n) {
-  return ["trend", "barChart", "pieChart", "gauge", "table", "events", "modeSwitch", "numberStepper", "trendRange"].includes(
+  return ["trend", "barChart", "pieChart", "gauge", "table", "events", "modeSwitch", "numberStepper", "trendRange", "controlPanel"].includes(
     n?.symbol,
   )
     ? "none"
@@ -776,7 +777,7 @@ export function registerScreenSymbols({ Graph, Shape }, renderChart) {
     "gauge",
     "table",
     "events",
-    "modeSwitch", "numberStepper", "trendRange",
+    "modeSwitch", "numberStepper", "trendRange", "controlPanel",
   ])
     Shape.HTML.register({
       shape: "screen-" + symbol,

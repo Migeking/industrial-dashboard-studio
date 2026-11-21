@@ -4,6 +4,7 @@ import {
   screenEditingPage,
   screenPipeInSelection,
 } from "./screen-model.mjs";
+import { clearScreenEquipmentCommands } from "./screen-controls.mjs";
 import { applyScreenNodeTheme } from "./screen-themes.mjs";
 import {
   screenMedia,
@@ -59,10 +60,15 @@ export function makeScreenSymbol(doc, selected, name, id) {
   for (const n of symbol.nodes) {
     if (n.symbol === "trendRange")
       n.params.targetId = ids.has(n.params.targetId) ? memberIds.get(n.params.targetId) : "";
+    if (n.symbol === "controlPanel")
+      n.params.targetIds = n.params.targetIds.filter(id => ids.has(id)).map(id => memberIds.get(id));
+    if (n.action?.type === "details" && n.action.targetId)
+      n.action.targetId = memberIds.get(n.action.targetId) || "";
     n.x -= minX;
     n.y -= minY;
     n.bindings = {};
     delete n.params.equipmentCode;
+    clearScreenEquipmentCommands(n);
     n.locked = false;
     n.ports = JSON.parse(JSON.stringify(screenPorts(n)));
     n.dataSlots = JSON.parse(JSON.stringify(screenSlots(n)));
@@ -160,10 +166,15 @@ function instantiateNode(symbol, definition, { dx, dy, group, nodeIds }) {
   node.libraryRef = memberReference(symbol, definition.id);
   node.id = nodeIds.get(definition.id);
   if (node.symbol === "trendRange") node.params.targetId = nodeIds.get(node.params.targetId) || "";
+  if (node.symbol === "controlPanel")
+    node.params.targetIds = node.params.targetIds.map(id => nodeIds.get(id)).filter(Boolean);
+  if (node.action?.type === "details" && node.action.targetId)
+    node.action.targetId = nodeIds.get(node.action.targetId) || "";
   node.x += dx;
   node.y += dy;
   node.bindings = {};
   delete node.params.equipmentCode;
+  clearScreenEquipmentCommands(node);
   if (group) node.group = group;
   else delete node.group;
   return node;

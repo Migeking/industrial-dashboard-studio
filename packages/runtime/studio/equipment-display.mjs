@@ -1,5 +1,7 @@
-import { screenSlots, screenRoleSlot, screenSymbols } from '../../components/studio/screen-symbols.mjs';
+import { screenSlots, screenRoleSlot } from '../../components/studio/screen-symbols.mjs';
 import { screenState } from './screen-model.mjs';
+
+import { screenEquipmentSummaryLimit } from './screen-controls.mjs';
 
 export function equipmentStatus(node, points) {
   const slots=screenSlots(node),fault=screenRoleSlot(node,'fault');
@@ -16,8 +18,11 @@ export function equipmentStatus(node, points) {
 }
 
 export function equipmentReadings(node, points, mappings) {
-  const limit=screenSymbols[node.symbol]?.category==='devices'?1:3;
-  return screenSlots(node).filter(s=>s.kinds.includes('number')).slice(0,limit).map(slot=>{
+  const slots = screenSlots(node).filter(slot => slot.kinds.includes("number"));
+  const visible = node.panel?.summary
+    ? slots.filter(slot => node.panel.summary.includes(slot.key))
+    : slots.slice(0, screenEquipmentSummaryLimit(node));
+  return visible.map(slot => {
     const id=node.bindings[slot.key],point=points[id],mapping=mappings.find(m=>m.id===id);
     const unit=(slot.role==='value'?node.params.unit:'')||mapping?.unit||'';
     const valid=point?.quality==='good'&&typeof point.value==='number'&&Number.isFinite(point.value);

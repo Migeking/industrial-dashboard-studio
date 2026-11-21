@@ -409,7 +409,7 @@ export const ScreenInspector = {
     </p>
     <div class="inspector-tabs" role="tablist" aria-label="图元设置"><button role="tab" :aria-selected="tab==='appearance'" @click="$emit('tab','appearance')">外观</button><button role="tab" :aria-selected="tab==='binding'" @click="$emit('tab','binding')">动态与测点</button><button role="tab" :aria-selected="tab==='definition'" @click="$emit('tab','definition')">元素定义</button><button v-if="item.type!=='pipe'" role="tab" :aria-selected="tab==='action'" @click="$emit('tab','action')">交互</button></div>
     <screen-definitions v-if="tab==='definition'" :item="item" :doc="doc" @start="$emit('start')" @tool="$emit('tab',$event)"></screen-definitions>
-    <p v-else-if="tab==='action'&&screenControlKinds.has(item.symbol)" class="muted">本组件的运行交互在“外观 → 运行交互设置”中配置。</p><p class="muted" v-else-if="tab==='action'&&screenControlKinds.has(item.symbol)">本组件的运行交互在“外观 → 运行交互设置”中配置。</p><screen-actions v-else-if="tab==='action'&&item.type!=='pipe'" :item="item" :project="project" @start="$emit('start')"></screen-actions><template v-else-if="tab==='binding'">
+    <p v-else-if="tab==='action'&&screenControlKinds.has(item.symbol)" class="muted">本组件的运行交互在“外观 → 运行交互设置”中配置。</p><p class="muted" v-else-if="tab==='action'&&screenControlKinds.has(item.symbol)">本组件的运行交互在“外观 → 运行交互设置”中配置。</p><screen-actions v-else-if="tab==='action'&&item.type!=='pipe'" :item="item" :project="project" @start="$emit('start')" @data="$emit('data')"></screen-actions><template v-else-if="tab==='binding'">
       <button class="source-link wide" @click="$emit('data')">管理连接与点位</button>
       <p class="muted">选择测点后立即显示结果。{{doc.mappings.length}} 个测点可用。</p>
       <input aria-label="搜索测点" placeholder="查找名称或业务编号" v-model="search" />
@@ -425,6 +425,7 @@ export const ScreenInspector = {
       <screen-rules :item="item" :doc="doc" @start="$emit('start')"></screen-rules>
     </template>
     <template v-else>
+      <button v-if="item.symbol==='controlPanel'" class="primary wide" @click="$emit('tab','action')">配置控制面板</button>
       <label>名称 / 位号<input aria-label="图元名称" v-model="item.title" @focus="$emit('start')" /></label>
       <label v-if="waterEquipment[item.symbol]||['trend','table','events'].includes(item.symbol)||(item.symbol==='readout'&&item.params.appearance!=='inline')" class="screen-check"><input type="checkbox" aria-label="简洁显示" :checked="!!item.params.compact" @change="$emit('start');item.params.compact=$event.target.checked" />{{waterEquipment[item.symbol]?'仅显示设备图稿（异常仍提示）':'隐藏标题脚注 / 有效质量文字（异常仍显示）'}}</label>
       <screen-control-settings v-if="screenControlKinds.has(item.symbol)" :item="item" :doc="doc" :points="points" @start="$emit('start')"></screen-control-settings><template v-if="item.type!=='pipe'"><screen-chart-settings v-if="screenChartKinds.has(item.symbol)" :item="item" :doc="doc" :points="points" @start="$emit('start')"></screen-chart-settings><screen-table-settings v-if="screenTableKinds.has(item.symbol)" :item="item" :doc="doc" :points="points" @start="$emit('start')"></screen-table-settings>

@@ -1,4 +1,4 @@
-import {screenControlDefaults,validateScreenControl} from './screen-controls.mjs';
+import {screenControlDefaults,validateScreenControl,validateScreenEquipmentPanel,clearScreenEquipmentCommands,screenValvePosition} from './screen-controls.mjs';
 import {
   screenSymbols,
   screenSlots,
@@ -70,6 +70,7 @@ export function screenNode(symbol, id, x, y, siblings = []) {
                 "gauge",
                 "table",
                 "events",
+                "controlPanel",
               ].includes(symbol)
             ? "#ffffff"
             : symbol === "junction"
@@ -490,7 +491,8 @@ export function validateScreen(doc, publishing, project = doc) {
     }
     validateScreenRules(n);
     validateScreenWidget(n);
-    validateScreenControl(n,doc,publishing);
+    validateScreenControl(n,doc,publishing,project);
+    validateScreenEquipmentPanel(n);
     if (n.action !== undefined) {
       if (
         !n.action ||
@@ -508,6 +510,10 @@ export function validateScreen(doc, publishing, project = doc) {
         )
       )
         throw Error(n.title + " 的导航目标不存在");
+      if (n.action.type === "details" && n.action.targetId !== undefined &&
+          (typeof n.action.targetId !== "string" || publishing && n.action.targetId &&
+           ![project, ...(project.pages || [])].some(page => page.nodes.some(item => item.id === n.action.targetId))))
+        throw Error(n.title + " 的弹窗目标不存在");
       if (n.action.type === "link" && (publishing || n.action.url)) {
         let url;
         try {
@@ -558,6 +564,10 @@ export function screenState(n, points) {
     ),
     faultSlot = screenRoleSlot(n, "fault");
   if (fault?.quality === "good" && fault.value === true) return "故障";
+  if (n.symbol === "valve" && n.params.valveMode !== "control" && n.panel?.operation?.closed) {
+    if (n.bindings?.[faultSlot?.key] && fault?.quality !== "good") return "未知";
+    return screenValvePosition(n, points).label;
+  }
   if (
     (n.bindings?.[faultSlot?.key] && fault?.quality !== "good") ||
     feedback?.quality !== "good"
@@ -629,8 +639,13 @@ export function copyScreenSelection(
     const c = JSON.parse(JSON.stringify(n));
     c.id = remap.get(n.id);
     if(c.symbol==='trendRange')c.params.targetId=remap.get(c.params.targetId)||c.params.targetId;
+    if (c.symbol === "controlPanel")
+      c.params.targetIds = c.params.targetIds.map(id => remap.get(id) || id);
+    if (c.action?.type === "details" && c.action.targetId)
+      c.action.targetId = remap.get(c.action.targetId) || c.action.targetId;
     c.title += " 副本";
     delete c.params.equipmentCode;
+    clearScreenEquipmentCommands(c);
     if (!keepBindings) c.bindings = {};
     c.locked = false;
     c.x += dx;
@@ -819,6 +834,9 @@ export function validateScreenSymbolDefinition(symbol) {
     )
   )
     throw Error("图元定义不应携带站点实际绑定");
+  if (symbol.nodes.some(n => n.panel?.operation?.start || n.panel?.operation?.stop ||
+    n.panel?.operation?.frequency?.command || n.panel?.custom?.items.some(row => row.command)))
+    throw Error("图元定义不应携带站点命令点");
   return symbol;
 }
 

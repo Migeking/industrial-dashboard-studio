@@ -1,4 +1,9 @@
-import {screenControlKinds,screenControlTransition,projectScreenControl} from './screen-controls.mjs';
+import {
+  screenControlKinds, screenControlTransition, projectScreenControl, screenDemoAllowed,
+  screenEquipmentOperationContext, screenEquipmentSwitchEnabled, screenFrequencyPointId,
+  screenPanelFrequency, screenPanelEquipmentEnabled,
+} from './screen-controls.mjs';
+import {beginEquipmentOperation, updateEquipmentOperation} from "./equipment-operation.mjs";
 import {
   screenSymbols,
   screenPidSymbols,
@@ -20,6 +25,7 @@ import { waterArtwork } from '../../components/studio/water-artwork.mjs';
 import { equipmentStatus, equipmentReadings } from './equipment-display.mjs';
 import {routeScreenPipe} from './screen-routing.mjs';
 import { ScreenRuntimeTrend } from "./screen-trend-panel.mjs";
+import { ScreenControlPanel } from "./screen-control-panel.mjs";
 import {
   screenChartKinds,
   screenTableKinds,
@@ -326,6 +332,7 @@ class ScreenGraph {
     host.className = "screen-chart-host";
     const symbol = this.props().doc.nodes.find((n) => n.id === cell.id)?.symbol;
     const table = screenTableKinds.has(symbol);
+    const panel = symbol === "controlPanel";
     const control = screenControlKinds.has(symbol);
     if (table) {
       host.className = "screen-table-host";
@@ -344,9 +351,14 @@ class ScreenGraph {
       card.append(entry.pager.nav);
     }
     this.charts.set(cell.id, entry);
+    if (panel) {
+      card.classList.add("is-control-panel");
+      quality.hidden = true;
+      this.emit("panel-host", { id: cell.id, host });
+    }
     requestAnimationFrame(() => {
       if (!host.isConnected) return;
-      if (table||control) {
+      if (table||control||panel) {
         this.project();
         return;
       }
@@ -362,6 +374,7 @@ class ScreenGraph {
     chart?.observer?.disconnect();
     chart?.chart?.dispose();
     this.charts.delete(id);
+    if (chart?.card.classList.contains("is-control-panel")) this.emit("panel-host", { id, host: null });
   }
   bindEvents() {
     const graph = this.graph;
@@ -543,7 +556,7 @@ class ScreenGraph {
       const p = this.props(),
         n = p.doc.nodes.find((n) => n.id === node.id);
       if (!p.editing) {
-        if(screenControlKinds.has(n.symbol))return;
+        if(n.symbol==="controlPanel"||screenControlKinds.has(n.symbol))return;
         const action = n.action;
         if (action?.type === "none") return;
         if (action?.type === "navigate") {
@@ -567,7 +580,7 @@ class ScreenGraph {
           return;
         }
         if (action?.type === "details") {
-          this.emit("faceplate", n.id);
+          this.emit("faceplate", action.targetId || n.id);
           return;
         }
         if (screenDefaultAction(n) === "details") this.emit("faceplate", n.id);
@@ -892,8 +905,9 @@ class ScreenGraph {
             state:{x:def.w/2,y:def.pictureHeight+48,text:status,fill:color,transform:screenArtworkAt(n,def.w/2,def.pictureHeight+48)},
             stateBadge:{x:def.w/2-48,y:def.pictureHeight+31,width:96,height:24,fill:p.doc.canvas.theme==='cockpit-dark'?'#102d42':'#f1f6f7',stroke:color,transform:screenArtworkAt(n,def.w/2,def.pictureHeight+43)},
           };
-          equipmentReadings(n,p.points,p.doc.mappings).forEach((reading,i)=>{
-            const count=def.category==='devices'?1:Math.min(3,screenSlots(n).filter(s=>s.kinds.includes('number')).length),x=def.w*(i+.5)/count;
+          const readings = equipmentReadings(n, p.points, p.doc.mappings);
+          readings.forEach((reading,i)=>{
+            const x = def.w * (i + .5) / readings.length;
             attrs['metricLabel'+i]={text:reading.label,fill:n.style.color,fontFamily:'Microsoft YaHei,sans-serif',transform:screenArtworkAt(n,x,def.pictureHeight+77)};
             attrs['metricValue'+i]={text:reading.text,fill:n.style.color,fontFamily:'Consolas,Microsoft YaHei,sans-serif',transform:screenArtworkAt(n,x,def.pictureHeight+100)};
           });
@@ -902,8 +916,12 @@ class ScreenGraph {
             const warning=!['运行','停止','只读监视'].includes(status);
             attrs.state.visibility=warning?'visible':'hidden';attrs.stateBadge.visibility=warning?'visible':'hidden';
             if(warning){Object.assign(attrs.state,{x:def.w-52,y:23,transform:screenArtworkAt(n,def.w-52,18)});Object.assign(attrs.stateBadge,{x:def.w-100,y:6,transform:screenArtworkAt(n,def.w-52,18)});}
-            for(let i=0;i<3;i++){if(attrs['metricLabel'+i])attrs['metricLabel'+i].visibility='hidden';if(attrs['metricValue'+i])attrs['metricValue'+i].visibility='hidden';}
-          }else{attrs.caption.visibility='visible';attrs.state.visibility='visible';attrs.stateBadge.visibility='visible';for(let i=0;i<3;i++){if(attrs['metricLabel'+i])attrs['metricLabel'+i].visibility='visible';if(attrs['metricValue'+i])attrs['metricValue'+i].visibility='visible';}}
+          }else{attrs.caption.visibility='visible';attrs.state.visibility='visible';attrs.stateBadge.visibility='visible';}
+          for (let i = 0; i < 3; i++) {
+            const visibility = !n.params.compact && i < readings.length ? "visible" : "hidden";
+            attrs["metricLabel" + i] = { ...attrs["metricLabel" + i], visibility };
+            attrs["metricValue" + i] = { ...attrs["metricValue" + i], visibility };
+          }
           cell.attr('root/data-state',status);
         } else if (["pump", "fan", "valve", "status"].includes(n.symbol)) {
           const state = screenState(n, p.points),
@@ -915,7 +933,7 @@ class ScreenGraph {
                   ? state === "运行"
                     ? n.params.onColor || screenStateColors[state]
                     : n.params.offColor || screenStateColors[state]
-                  : screenStateColors[state],
+                  : screenStateColors[state] ?? screenStateColors["未知"],
               stroke: n.style.stroke,
             },
             stubs: { stroke: n.style.stroke },
@@ -1397,6 +1415,7 @@ class ScreenGraph {
       fontSize: n.style.fontSize + "px",
       fontWeight: n.style.fontWeight || 600,
     });
+    if (n.symbol === "controlPanel") return;
     if(screenControlKinds.has(n.symbol)){projectScreenControl(n,entry,p,data=>this.emit('control',data));return;}
     if (screenTableKinds.has(n.symbol)) {
       entry.card.classList.toggle("is-compact", n.params.compact || n.h < 180);
@@ -1544,9 +1563,10 @@ class ScreenGraph {
 }
 
 export const ScreenStage = {
-  components: { ScreenRuntimeTrend },
+  components: { ScreenRuntimeTrend, ScreenControlPanel },
   props: [
     "doc",
+    "project",
     "points",
     "selected",
     "editing",
@@ -1576,7 +1596,26 @@ export const ScreenStage = {
     const demoValues=ref({}),windows=ref({}),controlError=ref({});
     const runtimePoints=computed(()=>Object.fromEntries(Object.entries(props.points).map(([id,p])=>[id,p.quality==='good'&&Object.hasOwn(demoValues.value,id)?{...p,value:demoValues.value[id]}:p])));
     const graphProps=()=>({...props,points:runtimePoints.value,windows:windows.value,controlError:controlError.value});
-    watch(()=>[props.editing,props.sourceVersion,props.doc.title],()=>{demoValues.value={};windows.value={};controlError.value={};});
+    const panelHosts = Vue.shallowRef({});
+    const panelPages = computed(() => {
+      const project = props.project || props.doc;
+      return [project, ...(project.pages || [])];
+    });
+    const projectNodes = computed(() => {
+      return new Map(panelPages.value.flatMap(page => page.nodes).map(node => [node.id, node]));
+    });
+    const equipment = computed(() => {
+      return new Map([...projectNodes.value].filter(([, node]) => screenPanelEquipmentEnabled(node)));
+    });
+    const inlinePanels = computed(() => props.doc.nodes.filter(node =>
+      node.symbol === "controlPanel" && panelHosts.value[node.id]).map(node => ({
+        node,
+        host: panelHosts.value[node.id],
+        targets: node.params.targetIds.map(id => node.params.targetKind === "equipment"
+          ? equipment.value.get(id)
+          : projectNodes.value.get(id)).filter(target => target &&
+            (node.params.targetKind === "equipment" || screenControlKinds.has(target.symbol))),
+      })));
     let adapter;
     let pointDrag;
     const pointObject = computed(() =>
@@ -1623,7 +1662,7 @@ export const ScreenStage = {
     };
     const endPoint = () => (pointDrag = null);
     const object = computed(() =>
-      props.doc.nodes.find((n) => n.id === faceplate.value),
+      projectNodes.value.get(faceplate.value),
     );
     const faceplateType = computed(() => {
       const symbol = object.value?.symbol;
@@ -1634,14 +1673,19 @@ export const ScreenStage = {
       if (["tank", "readout", "gauge", "barGauge"].includes(symbol)) return "模拟量仪表";
       return "测点详情";
     });
-    const status = computed(() =>
-      waterEquipment[object.value?.symbol] ? equipmentStatus(object.value,runtimePoints.value) : object.value && ["pump", "fan", "valve"].includes(object.value.symbol)
-        ? screenState(object.value, runtimePoints.value)
-        : "",
-    );
+    const deviceStatus = item => {
+      if (waterEquipment[item?.symbol]) return equipmentStatus(item, runtimePoints.value);
+      if (item && (screenEquipmentSwitchEnabled(item) || screenPanelFrequency(item) || ["pump", "fan", "valve"].includes(item.symbol)))
+        return screenState(item, runtimePoints.value);
+      return "";
+    };
+    const status = computed(() => deviceStatus(object.value));
     const fields = computed(() =>
-      object.value
-        ? screenSlots(object.value).map((slot) => {
+      object.value && (!object.value.panel?.custom || trendMode.value)
+        ? screenSlots(object.value).filter(slot =>
+            slot.key !== screenPanelFrequency(object.value)?.readback &&
+              (!object.value.panel?.details || object.value.panel.details.includes(slot.key)),
+          ).map((slot) => {
             const point = runtimePoints.value[object.value.bindings[slot.key]],
               map = props.doc.mappings.find(
                 (m) => m.id === object.value.bindings[slot.key],
@@ -1680,9 +1724,176 @@ export const ScreenStage = {
       if (byKey.size) sections.push({ id: "extras", label: "其他测点", fields: [...byKey.values()] });
       return sections;
     });
+    const pendingSelection = ref(null), rejection = ref(null);
+    const records = ref({});
+    const frequencyDrafts = ref({});
+    let sampleNumber = 0;
+    let operationTimers = [];
+    const demoEnabled = computed(() => screenDemoAllowed(props.doc));
+    const busy = computed(() => Object.values(records.value).some(record => ["submitted", "accepted"].includes(record.status)));
+    const context = (item, target, actionId) => screenEquipmentOperationContext(item, props.doc, runtimePoints.value, target, sampleNumber, actionId);
+    const blocked = id => props.blocked || busy.value || !!(pendingSelection.value && pendingSelection.value.itemId !== id);
+    const equipmentPanelState = item => {
+      if (!screenPanelEquipmentEnabled(item)) return null;
+      const frequency = screenPanelFrequency(item);
+      const point = runtimePoints.value[screenFrequencyPointId(item, props.doc)];
+      const readback = point?.quality === "good" && Number.isFinite(point.value) ? point.value : null;
+      const input = frequencyDrafts.value[item.id] ?? readback ?? "";
+      const target = input === "" ? NaN : Number(input);
+      const valve = item.symbol === "valve";
+      const actions = screenEquipmentSwitchEnabled(item) ? [
+        { target: true, label: valve ? "开阀" : "启动设备" },
+        { target: false, label: valve ? "关阀" : "停止设备" },
+      ].map(action => ({ ...action, problem: context(item, action.target).problem })) : [];
+      const request = frequency ? {
+        target, label: "将频率设定为 " + target + " Hz",
+        problem: input === "" ? "请输入给定频率" : context(item, target).problem,
+      } : null;
+      const progress = ({
+        submitted: "演示命令已提交，等待回执",
+        accepted: "模拟服务已接收，等待设备反馈",
+        confirmed: "收到模拟设备反馈，操作完成",
+        unconfirmed: "结果待确认，请查看最新有效反馈",
+        rejected: "模拟服务拒绝",
+      })[records.value[item.id]?.status] || "";
+      return {
+        id: item.id, title: item.title, valve, actions, frequency, readback, input, request, progress,
+        customTitle: item.panel?.custom?.title || item.title,
+        customRows: item.panel?.custom?.items.map(row => {
+          const id = item.bindings[row.slot];
+          const point = runtimePoints.value[id];
+          const unit = props.doc.mappings.find(mapping => mapping.id === id)?.unit || "";
+          const read = point?.quality === "good" ? point.value : null;
+          const text = read == null ? "—" : typeof read === "boolean" ? (read ? "有效" : "无效") :
+            Array.isArray(read) ? read.length + " 行" : String(read);
+          const input = frequencyDrafts.value[JSON.stringify([item.id,row.id])] ?? read ?? "";
+          const target = row.type === "setpoint" ? (input === "" ? NaN : Number(input)) : row.value;
+          const label = row.type === "setpoint" ? row.label + "设为 " + target + (unit ? " " + unit : "") : row.label;
+          return { ...row, text, unit, input, quality: screenQualityLabels[point?.quality] || "未绑定",
+            action: row.type === "read" ? null : {
+              actionId: row.id, target, label, problem: context(item, target, row.id).problem,
+            } };
+        }),
+        locked: blocked(item.id), deviceStatus: deviceStatus(item),
+        pending: pendingSelection.value?.itemId === item.id ? pendingSelection.value : null,
+        error: rejection.value?.itemId === item.id ? rejection.value.message : "",
+      };
+    };
+    const resetSelection = () => {
+      pendingSelection.value = null;
+      rejection.value = null;
+    };
+    watch(pendingSelection, (selected, previous, onCleanup) => {
+      if (!selected) return;
+      const timer = setTimeout(() => {
+        if (pendingSelection.value !== selected) return;
+        resetSelection();
+        rejection.value = { itemId: selected.itemId, message: "二次确认已超时，请重新预选" };
+      }, Math.max(0, selected.confirmBy - Date.now()));
+      onCleanup(() => clearTimeout(timer));
+    });
+    const clearOperationTimers = () => {
+      for (const timer of operationTimers) clearTimeout(timer);
+      operationTimers = [];
+    };
+    const resetOperations = () => {
+      clearOperationTimers();
+      records.value = {};
+      frequencyDrafts.value = {};
+      resetSelection();
+    };
+    watch([() => props.project, () => props.editing, () => props.sourceVersion, demoEnabled], () => {
+      resetOperations();
+      demoValues.value = {};
+      windows.value = {};
+      controlError.value = {};
+    });
+    watch(() => props.doc.nodes, () => {
+      faceplate.value = "";
+      resetSelection();
+    });
+    watch(faceplate, (id, previous) => {
+      if (id === previous || pendingSelection.value?.itemId !== previous) return;
+      if (!inlinePanels.value.some(panel => !panel.node.hidden && panel.targets[0]?.id === previous)) resetSelection();
+    });
+    const selectOperation = (item, action) => {
+      if (blocked(item.id) || pendingSelection.value) return;
+      const current = context(item, action.target, action.actionId);
+      if (current.problem) return;
+      rejection.value = null;
+      pendingSelection.value = {
+        ...current.intent,
+        signature: current.signature,
+        itemId: item.id,
+        label: action.label,
+        actionId: action.actionId,
+        confirmBy: Date.now() + 15000,
+      };
+    };
+    const confirmOperation = item => {
+      const selected = pendingSelection.value;
+      if (!selected || selected.itemId !== item.id || blocked(item.id)) return;
+      resetSelection();
+      const current = context(item, selected.target, selected.actionId);
+      const at = Date.now();
+      try {
+        if (current.problem) throw Error(current.problem);
+        if (current.signature !== selected.signature) throw Error("控制点已改变，请重新预选");
+        records.value[item.id] = beginEquipmentOperation({ ...selected, id: crypto.randomUUID() }, current.state, at, 5000);
+      } catch (error) {
+        rejection.value = { itemId: item.id, message: error.message };
+        return;
+      }
+      clearOperationTimers();
+      const id = records.value[item.id].id;
+      const update = event => {
+        const record = records.value[item.id];
+        if (record?.id === id) records.value[item.id] = updateEquipmentOperation(record, event);
+      };
+      operationTimers = [
+        setTimeout(() => update({ type: "receipt", id, accepted: true, at: Date.now() }), 250),
+        setTimeout(() => {
+          const targetItem = equipment.value.get(selected.itemId);
+          const latest = context(targetItem, selected.target, selected.actionId);
+          if (latest.problem || latest.signature !== selected.signature ||
+              latest.state.feedback.value !== selected.previous || !records.value[item.id]?.accepted) return;
+          demoValues.value = { ...demoValues.value, ...latest.updates };
+          update({
+            type: "feedback",
+            pointId: selected.pointId,
+            ...context(targetItem, selected.target, selected.actionId).state?.feedback,
+            sequence: ++sampleNumber,
+            at: Date.now(),
+          });
+          if (typeof selected.target === "number")
+            delete frequencyDrafts.value[selected.actionId ? JSON.stringify([item.id, selected.actionId]) : item.id];
+        }, 900),
+        setTimeout(() => update({ type: "timeout", at: Date.now() }), 5050),
+      ];
+    };
+    const panelCommand = (command, id, value) => {
+      const item = equipment.value.get(id);
+      if (!item || props.editing || props.blocked || !demoEnabled.value) return;
+      if (command === "select") selectOperation(item, value);
+      else if (command === "confirm") confirmOperation(item);
+      else if (command === "cancel" && pendingSelection.value?.itemId === id) resetSelection();
+      else if (command === "input" && !blocked(id)) frequencyDrafts.value[id] = value;
+      else if (command === "custom-input" && !blocked(id))
+        frequencyDrafts.value[JSON.stringify([id, value.row])] = value.input;
+    };
     const dispatch = (event, data) => {
+      if (event === "panel-host") {
+        const next = { ...panelHosts.value };
+        if (data.host) next[data.id] = data.host;
+        else delete next[data.id];
+        panelHosts.value = next;
+        return;
+      }
       if(event==='control'){
-        try{const result=screenControlTransition(props.doc,runtimePoints.value,data);
+        if(props.editing||props.blocked)return;
+        const page = panelPages.value.find(page => page.nodes.some(node => node.id === data.id));
+        const doc = page && page.nodes !== props.doc.nodes ? { ...props.doc, nodes: page.nodes } : props.doc;
+        try{const result=screenControlTransition(doc,runtimePoints.value,data);
           if(result.updates)demoValues.value={...demoValues.value,...result.updates};
           if(result.window)windows.value={...windows.value,[result.window.id]:result.window.seconds};
           controlError.value={...controlError.value,[data.id]:''};
@@ -1763,9 +1974,18 @@ export const ScreenStage = {
       window.removeEventListener("mousemove", movePoint);
       window.removeEventListener("mouseup", endPoint);
       adapter?.dispose();
+      resetOperations();
     });
     return {
       host,
+      demoEnabled,
+      panelEnabled: computed(() => screenPanelEquipmentEnabled(object.value)),
+      equipmentPanelState,
+      inlinePanels,
+      panelCommand,
+      runLocal: data => dispatch("control", data),
+      windows,
+      controlError,
       runtimePoints,
       object,
       faceplateType,
@@ -1778,5 +1998,14 @@ export const ScreenStage = {
       trendMode,
     };
   },
-  template: `<div class="screen-stage" :class="{'is-design':editing,'is-connecting':editing&&(tool==='pipe'||selectedPipe)}"><div ref="host" class="screen-graph"></div><svg v-if="pointObject" class="screen-point-overlay" width="1920" height="1080"><g :transform="'translate('+pointObject.x+' '+pointObject.y+') rotate('+pointObject.angle+' '+pointObject.w/2+' '+pointObject.h/2+')'"><circle v-for="(point,i) in pointObject.points" :key="i" :cx="point.x*pointObject.w/100" :cy="point.y*pointObject.h/100" r="6" :data-shape-point="i" :aria-label="'图形顶点 '+(i+1)" @mousedown="startPoint($event,i)" /></g></svg><div v-if="!doc.nodes.length&&!doc.pipes.length&&editing" class="screen-empty"><b>从空白画布开始设计</b><span v-if="doc.canvas.purpose==='cockpit'">从左侧放入指标、图表或状态组件，再到右侧绑定测点。</span><span v-else>拖入设备或成套工艺单元，再连接接口并绑定测点。</span></div><section v-if="object&&!editing" class="screen-faceplate" :class="{'is-dark':doc.canvas.theme==='cockpit-dark'}" role="dialog" :aria-label="object.title+' 设备详情'"><header><div><small>{{faceplateType}}<template v-if="object.params.equipmentCode && object.params.equipmentCode !== object.title"> · {{object.params.equipmentCode}}</template> · 只读监视</small><b>{{object.title}}</b></div><button @click="faceplate=''">关闭详情</button></header><strong v-if="status" :data-state="status">{{status}}</strong><screen-runtime-trend v-if="trendMode" :key="object.id+':'+sourceVersion" :item="object" :doc="doc" :points="runtimePoints" :sequence="sequence"></screen-runtime-trend><section v-for="part in fieldSections" :key="part.id" class="faceplate-part"><h3 v-if="part.label">{{part.label}}</h3><dl><div v-for="field in part.fields" :key="field.key"><dt>{{field.label}}</dt><dd>{{field.value}} <small>{{field.quality}}</small></dd></div></dl></section></section></div>`,
+  template: `<div class="screen-stage" :class="{'is-design':editing,'is-connecting':editing&&(tool==='pipe'||selectedPipe)}"><div ref="host" class="screen-graph"></div>
+    <teleport v-for="panel in inlinePanels" :key="panel.node.id" :to="panel.host">
+      <screen-control-panel :node="panel.node" :targets="panel.targets" :doc="doc" :points="runtimePoints"
+        :windows="windows" :control-error="controlError" :editing="editing" :blocked="blocked" :demo="demoEnabled"
+        :state="panel.node.params.targetKind==='equipment'?equipmentPanelState(panel.targets[0]):null"
+        @command="panelCommand" @local="runLocal"></screen-control-panel>
+    </teleport><svg v-if="pointObject" class="screen-point-overlay" width="1920" height="1080"><g :transform="'translate('+pointObject.x+' '+pointObject.y+') rotate('+pointObject.angle+' '+pointObject.w/2+' '+pointObject.h/2+')'"><circle v-for="(point,i) in pointObject.points" :key="i" :cx="point.x*pointObject.w/100" :cy="point.y*pointObject.h/100" r="6" :data-shape-point="i" :aria-label="'图形顶点 '+(i+1)" @mousedown="startPoint($event,i)" /></g></svg><div v-if="!doc.nodes.length&&!doc.pipes.length&&editing" class="screen-empty"><b>从空白画布开始设计</b><span v-if="doc.canvas.purpose==='cockpit'">从左侧放入指标、图表或状态组件，再到右侧绑定测点。</span><span v-else>拖入设备或成套工艺单元，再连接接口并绑定测点。</span></div><section v-if="object&&!editing" class="screen-faceplate" :class="{'is-dark':doc.canvas.theme==='cockpit-dark'}" role="dialog" :aria-label="object.title+' 设备详情'"><header><div><small>{{faceplateType}}<template v-if="object.params.equipmentCode && object.params.equipmentCode !== object.title"> · {{object.params.equipmentCode}}</template> · {{panelEnabled&&demoEnabled?'演示操作':'只读监视'}}</small><b>{{!trendMode&&object.panel?.custom?.title || object.title}}</b></div><button @click="faceplate=''">关闭详情</button></header><strong v-if="status" :data-state="status">{{status}}</strong><screen-runtime-trend v-if="trendMode" :key="object.id+':'+sourceVersion" :item="object" :doc="doc" :points="runtimePoints" :sequence="sequence"></screen-runtime-trend><section v-for="part in fieldSections" :key="part.id" class="faceplate-part"><h3 v-if="part.label">{{part.label}}</h3><dl><div v-for="field in part.fields" :key="field.key"><dt>{{field.label}}</dt><dd>{{field.value}} <small>{{field.quality}}</small></dd></div></dl></section>
+      <screen-control-panel v-if="panelEnabled&&!trendMode" :state="equipmentPanelState(object)"
+        :demo="demoEnabled" :blocked="blocked" @command="panelCommand"></screen-control-panel>
+    </section></div>`,
 };

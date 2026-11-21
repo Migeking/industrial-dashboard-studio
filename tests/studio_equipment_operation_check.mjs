@@ -1,3 +1,8 @@
+import { blankScreen, screenNode, screenState, validateScreen } from "../packages/runtime/studio/screen-model.mjs";
+import {
+  screenEquipmentControlSlots, screenEquipmentFrequencySlots, screenEquipmentOperationContext,
+} from "../packages/runtime/studio/screen-controls.mjs";
+import { makeScreenSymbol } from "../packages/runtime/studio/screen-library.mjs";
 import assert from "node:assert/strict";
 import { beginEquipmentOperation, updateEquipmentOperation } from "../packages/runtime/studio/equipment-operation.mjs";
 
@@ -59,3 +64,72 @@ assert.equal(lateConfirmation.id, intent.id);
 assert.equal(lateConfirmation.late, true);
 
 console.log("PASS: permission, interlock, preselection expiry, refusal, receipt identity, fresh readback, timeout and reconnect");
+
+// The valve derives one position from two independent limit switches. Ambiguous readings
+// must never look like a confirmed endpoint or allow a new operation.
+const panelDoc = blankScreen();
+const valve = screenNode("valve", "valve", 80, 80);
+const valveSetup = screenEquipmentControlSlots(valve);
+valve.dataSlots = valveSetup.slots;
+const valveOp = valve.panel = { operation: { ...valveSetup.operation, start: "valve.open", stop: "valve.close" } };
+for (const role of ["feedback", "closed", "permit", "interlock"])
+  valve.bindings[valveOp.operation[role]] = "valve." + role;
+const good = value => ({ quality: "good", value });
+const panelPoints = {
+  "valve.feedback": good(false), "valve.closed": good(true),
+  "valve.permit": good(true), "valve.interlock": good(false),
+  "pump.run": good(true), "pump.actual": good(32), "pump.set": good(36),
+};
+const pointMap = id => ({
+  id, label: id, kind: typeof panelPoints[id].value === "number" ? "number" : "boolean",
+  unit: typeof panelPoints[id].value === "number" ? "Hz" : "", path: "value", scale: 1, offset: 0, precision: 2,
+});
+panelDoc.mappings = Object.keys(panelPoints).map(pointMap);
+panelDoc.nodes.push(valve);
+validateScreen(panelDoc, false);
+const controlContext = (item, target, points = panelPoints) =>
+  screenEquipmentOperationContext(item, panelDoc, points, target, 1);
+assert.equal(screenState(valve, panelPoints), "关闭");
+assert.deepEqual(controlContext(valve, true).updates, { "valve.feedback": true, "valve.closed": false });
+for (const [key, value, label] of [
+  ["valve.feedback", good(true), "到位反馈冲突"],
+  ["valve.closed", good(false), "位置待确认"],
+  ["valve.closed", { quality: "stale", value: true }, "到位反馈无效"],
+]) {
+  const samples = { ...panelPoints, [key]: value };
+  assert.equal(screenState(valve, samples), label);
+  assert.equal(controlContext(valve, true, samples).problem, label);
+}
+
+const pump = screenNode("pump", "pump", 350, 80);
+const pumpSwitch = screenEquipmentControlSlots(pump);
+pump.dataSlots = pumpSwitch.slots;
+pump.panel = { operation: { ...pumpSwitch.operation, start: "pump.start" } };
+const pumpSetup = screenEquipmentFrequencySlots(pump);
+assert.equal(pumpSetup.operation.enabled, true);
+pump.dataSlots = pumpSetup.slots;
+pump.panel.operation = pumpSetup.operation;
+const pumpOp = pump.panel.operation;
+Object.assign(pumpOp.frequency, { min: 28, max: 48, step: 0.5, command: "pump.freq" });
+Object.assign(pump.bindings, {
+  [pumpOp.feedback]: "pump.run", [pumpOp.permit]: "valve.permit", [pumpOp.interlock]: "valve.interlock",
+  value: "pump.actual", [pumpOp.frequency.readback]: "pump.set",
+});
+panelDoc.nodes.push(pump);
+validateScreen(panelDoc, false);
+assert.match(controlContext(pump, 48.5).problem, /允许范围/);
+assert.match(controlContext(pump, 40.2).problem, /步长/);
+assert.deepEqual(controlContext(pump, 40.5).updates, { "pump.set": 40.5 });
+const staleSetpoint = { ...panelPoints, "pump.set": { quality: "stale", value: 36 } };
+assert.match(controlContext(pump, 40.5, staleSetpoint).problem, /反馈无效/);
+pump.bindings[pumpOp.frequency.readback] = "pump.actual";
+assert.match(controlContext(pump, 40.5).problem, /独立的 Hz/);
+panelDoc.source.demo = false;
+assert.match(controlContext(pump, 40.5).problem, /只读/);
+const portable = makeScreenSymbol(panelDoc, ["pump", "valve"], "泵阀支路", "test");
+const portablePump = portable.nodes.find(node => node.id === "pump");
+assert.deepEqual(portablePump.bindings, {});
+assert.equal(portablePump.panel.operation.start, undefined);
+assert.equal(portablePump.panel.operation.frequency.command, undefined);
+assert.equal(portablePump.panel.operation.frequency.step, 0.5);
+console.log("PASS: valve limit conflicts, frequency range/step, independent readback, legacy enable and template reuse");

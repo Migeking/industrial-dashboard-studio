@@ -282,7 +282,7 @@
               @pointerdown.self="ids = []"
             :style="{...screenView.style,background:screen?doc.canvas.background:undefined}"
           >
-            <screen-stage v-if="screen" :doc="assistantDoc" :points="points" :selected="ids" :editing="editing&&!assistantResult" :tool="screenTool" :proposal-ids="assistantResult?[...new Set(assistantResult.changes.map(c=>c.id))]:[]" :sequence="sequence" :source-version="sourceVersion" :diagnostic-target="locatedItem?.id" :blocked="!!dialog" @start="snapshot" @insert="screenInsert" @geometry="screenGeometry" @pipe="screenPipe" @library="screenLibraryPlace" @navigate="switchScreenPage" @select="screenSelect" @tool="setScreenTool" @command="screenCommand"></screen-stage>
+            <screen-stage v-if="screen" :doc="assistantDoc" :project="assistantResult?.project||project" :points="points" :selected="ids" :editing="editing&&!assistantResult" :tool="screenTool" :proposal-ids="assistantResult?[...new Set(assistantResult.changes.map(c=>c.id))]:[]" :sequence="sequence" :source-version="sourceVersion" :diagnostic-target="locatedItem?.id" :blocked="!!dialog" @start="snapshot" @insert="screenInsert" @geometry="screenGeometry" @pipe="screenPipe" @library="screenLibraryPlace" @navigate="switchScreenPage" @select="screenSelect" @tool="setScreenTool" @command="screenCommand"></screen-stage>
             <div v-if="screen" class="screen-source-badge" :class="{'screen-rehearsal-badge':previewSamples.size}"
               :data-monitor-source="viewer ? doc.source.kind : null" :data-monitor-link="viewer ? monitorLink : null"
               :data-monitor-max-age="viewer ? doc.source.maxAgeMs : null"

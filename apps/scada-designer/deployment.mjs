@@ -25,6 +25,7 @@ export const files = new Map(
     "/packages/runtime/studio/equipment-display.mjs": "../../packages/runtime/studio/equipment-display.mjs",
     "/packages/components/studio/screen-symbols.mjs": "../../packages/components/studio/screen-symbols.mjs",
     "/packages/runtime/studio/screen-model.mjs": "../../packages/runtime/studio/screen-model.mjs",
+    "/packages/runtime/studio/screen-control-panel.mjs": "../../packages/runtime/studio/screen-control-panel.mjs",
     "/packages/runtime/studio/screen-renderer.mjs": "../../packages/runtime/studio/screen-renderer.mjs",
     "/screen-assistant.mjs": "studio/screen-assistant.mjs",
     "/packages/runtime/studio/screen-commands.mjs": "../../packages/runtime/studio/screen-commands.mjs",

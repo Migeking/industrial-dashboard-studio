@@ -71,7 +71,10 @@ export function removeScreenPage(project, id) {
 }
 export function screenActionProblem(n, project) {
   const action = n.action;
-  if (!action || ["none", "details"].includes(action.type)) return "";
+  if (!action || action.type === "none") return "";
+  if (action.type === "details")
+    return action.targetId && !screenPages(project).some(page => page.nodes.some(node => node.id === action.targetId))
+      ? "弹窗目标已不存在，请重新选择" : "";
   if (action.type === "trend") {
     const slot = screenSlots(n).find((s) => s.key === action.slot),
       mapping = project.mappings.find(

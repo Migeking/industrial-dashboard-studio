@@ -1,4 +1,4 @@
-import {screenControlKinds,screenControlProblem} from '../../../packages/runtime/studio/screen-controls.mjs';
+import {screenControlKinds,screenControlProblem,screenControlPanelProblem} from '../../../packages/runtime/studio/screen-controls.mjs';
 import {
   types,
   fans,
@@ -49,7 +49,7 @@ const screenPaletteGroups = {
   devices: { label: "独立设备", symbols: ["pump", "valve", "checkValve", "tank", "fan", ...waterEquipmentGroups.devices] },
   units: { label:'成套工艺单元', symbols:waterEquipmentGroups.units },
   measurements: { label: "数据与素材", symbols: ["readout", "trend", "image"] },
-  widgets: { label: "驾驶舱组件", symbols: ["modeSwitch", "numberStepper", "trendRange", "status", "barGauge", "gauge", "barChart", "pieChart", "table", "events", "button"] },
+  widgets: { label: "驾驶舱组件", symbols: ["controlPanel", "modeSwitch", "numberStepper", "trendRange", "status", "barGauge", "gauge", "barChart", "pieChart", "table", "events", "button"] },
   pid: { label: "工业控制 · P&ID", symbols: Object.keys(screenPidSymbols) },
   shapes: { label:'基础图形与管网', symbols:['junction','rect','ellipse','line','polyline','polygon','text'] },
 };
@@ -430,7 +430,12 @@ async function boot() {
         const binding = bindingProblem(n, doc.value.mappings);
         if (binding) return { tab: "binding", reason: binding };
         if (!screen.value) return null;
-        const control=screenControlProblem(n,screenPages(project.value).find(p=>p.nodes.some(item=>item.id===n.id))||doc.value);
+        const page = screenPages(project.value).find(p => p.nodes.some(item => item.id === n.id)) || doc.value;
+        if (n.symbol === "controlPanel") {
+          const reason = screenControlPanelProblem(n, project.value);
+          return reason ? { tab: "action", reason } : null;
+        }
+        const control = screenControlProblem(n, page);
         if(control)return {tab:'appearance',reason:control};
         const asset = screenAssetProblem(n);
         if (asset) return { tab: "appearance", reason: asset };
@@ -448,7 +453,7 @@ async function boot() {
       });
       const bindingNodes = computed(() => {
         const items = screen.value ? screenPageItems(project.value) : screenItems.value;
-        return items.filter((n) => mapped(n) || (screen.value && (screenControlKinds.has(n.symbol) || screenAssetProblem(n) || n.action?.type && n.action.type !== "none")));
+        return items.filter((n) => mapped(n) || (screen.value && (n.symbol === "controlPanel" || screenControlKinds.has(n.symbol) || screenAssetProblem(n) || n.action?.type && n.action.type !== "none")));
       });
       const bindingReason = (n) => reviewIssue(n)?.reason || "";
       const bindingIssueLabel = (n) => (reviewIssue(n)?.tab === "binding" ? "去绑定：" : "去配置：") + n.title;
@@ -576,24 +581,39 @@ async function boot() {
         clockId,
         observer,
         drag;
+      const historyEntry = () => ({
+        document: JSON.stringify(project.value),
+        pageId: activePageId.value,
+      });
+      function restoreHistory(entry) {
+        doc.value = JSON.parse(entry.document);
+        if (screen.value) switchScreenPage(entry.pageId);
+        ids.value = [];
+      }
       function snapshot() {
         redoHistory.length = 0; redoCount.value = 0;
-        const value = JSON.stringify(project.value);
-        if (history.at(-1) !== value) {
-          history.push(value);
-          if (history.length > 50) history.shift();
-          undoCount.value = history.length;
-        }
+        const entry = historyEntry();
+        if (history.at(-1)?.document === entry.document) history[history.length - 1] = entry;
+        else history.push(entry);
+        if (history.length > 50) history.shift();
+        undoCount.value = history.length;
       }
       function undo() {
         if (history.length) {
-          redoHistory.push(JSON.stringify(project.value)); redoCount.value = redoHistory.length;
-          doc.value = JSON.parse(history.pop());
-          ids.value = [];
+          redoHistory.push(historyEntry());
+          restoreHistory(history.pop());
+          redoCount.value = redoHistory.length;
           undoCount.value = history.length;
         }
       }
-      function redo() { if (redoHistory.length) { history.push(JSON.stringify(project.value)); doc.value = JSON.parse(redoHistory.pop()); redoCount.value = redoHistory.length; undoCount.value = history.length; ids.value = []; } }
+      function redo() {
+        if (redoHistory.length) {
+          history.push(historyEntry());
+          restoreHistory(redoHistory.pop());
+          redoCount.value = redoHistory.length;
+          undoCount.value = history.length;
+        }
+      }
       function pick(n, e) {
         if (!editing.value) return;
         if (e?.shiftKey) {
@@ -982,6 +1002,7 @@ async function boot() {
           rows,
           sample.value.protocol,
           config.value.mappings,
+          config.value.source.demo === true && ["json", "csv"].includes(config.value.source.kind),
         );
         mappingIndex.value = 0;
       }
